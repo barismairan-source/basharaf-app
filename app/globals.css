@@ -1,0 +1,138 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─────────────────────────────────────────────────────────────────
+   Design tokens — match prototype's stone/emerald/rose/amber palette
+   All values in HSL so Tailwind's hsl(var(--token)) pattern works.
+   ───────────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Surface — Notion-style off-white background, near-black foreground (stone-50/stone-900) */
+    --background: 30 9% 98%;          /* #fafaf9 — stone-50 with a hint warmth */
+    --foreground: 24 10% 10%;          /* #1c1917 — stone-900 */
+
+    /* Borders — subtle stone-200 */
+    --border: 24 6% 90%;               /* approx stone-200 */
+
+    /* Muted — stone-50 / stone-500 */
+    --muted: 30 9% 96%;
+    --muted-foreground: 25 5% 45%;     /* stone-500 */
+
+    /* Primary — dark navy/charcoal (stone-900) for primary buttons */
+    --primary: 24 10% 10%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Status — emerald-600 / rose-600 / amber-600 */
+    --success: 142 71% 30%;            /* emerald-700 (#15803d) */
+    --success-foreground: 0 0% 100%;
+    --success-subtle: 138 76% 97%;     /* emerald-50 */
+
+    --danger: 350 89% 41%;             /* rose-700 (#be123c) */
+    --danger-foreground: 0 0% 100%;
+    --danger-subtle: 356 100% 97%;     /* rose-50 */
+
+    --warning: 32 95% 44%;             /* amber-600 (#d97706) */
+    --warning-foreground: 0 0% 100%;
+    --warning-subtle: 48 100% 96%;     /* amber-50 */
+
+    --radius: 0.5rem;
+  }
+
+  /* Dark mode is set up but not enabled by default — preferences toggle controls it. */
+  .dark {
+    --background: 24 10% 8%;
+    --foreground: 30 9% 96%;
+    --border: 24 6% 18%;
+    --muted: 24 6% 14%;
+    --muted-foreground: 24 5% 65%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 24 10% 10%;
+  }
+
+  html,
+  body {
+    @apply bg-background text-foreground;
+    /* OpenType features the prototype uses to make Latin glyphs less aggressive next to Persian */
+    font-feature-settings: 'ss01', 'ss02';
+    letter-spacing: 0;
+  }
+
+  body {
+    @apply font-sans antialiased;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Scrollbar — slim, neutral, matches the prototype exactly
+   ───────────────────────────────────────────────────────────────── */
+@layer base {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d6d3d1; /* stone-300 */
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #a8a29e; /* stone-400 */
+    background-clip: content-box;
+    border: 2px solid transparent;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Utilities — tabular-nums for currency, RTL-aware select arrow
+   ───────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Native <select> arrow placement in RTL — prototype puts it on the left */
+select {
+  background-position: left 0.6rem center;
+}
+
+/* ─── Print styles ──────────────────────────────────────────── */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm 2cm;
+  }
+
+  body {
+    font-family: 'Vazirmatn', sans-serif;
+    font-size: 12pt;
+    color: #000;
+    background: #fff;
+  }
+
+  /* حذف عناصر غیرضروری هنگام چاپ */
+  .print\:hidden { display: none !important; }
+
+  /* نمایش عناصر چاپ */
+  .hidden.print\:block { display: block !important; }
+  .hidden.print\:table-cell { display: table-cell !important; }
+
+  /* جلوگیری از شکستن جداول */
+  table { page-break-inside: auto; }
+  tr { page-break-inside: avoid; }
+
+  /* رنگ‌های مناسب برای چاپ */
+  .text-emerald-700 { color: #047857 !important; }
+  .text-rose-700 { color: #be123c !important; }
+  .text-stone-500 { color: #78716c !important; }
+
+  /* border برای چاپ */
+  .border, .border-stone-200 { border-color: #d6d3d1 !important; }
+}
