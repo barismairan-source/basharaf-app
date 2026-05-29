@@ -52,7 +52,7 @@ export default function PublicMenuPage() {
           {loading && <p className="py-20 text-center text-muted-foreground">{loadingLabel}</p>}
           {error && <p className="py-20 text-center text-sm" style={{ color: 'hsl(350 89% 41%)' }}>{pick('Error: ', 'خطا: ')}{error}</p>}
           {!loading && !error && sections.map(section => <MenuSection key={section.id} section={section} />)}
-          {!loading && !error && sections.every(s => s.items.length === 0) && (
+          {!loading && !error && sections.every(s => s.items.every(i => !i.isAvailable)) && (
             <p className="py-20 text-center text-muted-foreground">{pick('The menu is being updated.', 'منو در حال به‌روزرسانی است.')}</p>
           )}
         </div>

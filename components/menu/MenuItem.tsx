@@ -12,7 +12,7 @@ export function MenuItem({ item }: { item: MenuItemType }) {
   const sold = !item.isAvailable;
 
   return (
-    <li className={['group py-5 transition-opacity duration-200', sold ? 'opacity-50' : 'opacity-100'].join(' ')} aria-disabled={sold || undefined}>
+    <li className={['group py-5 transition-opacity duration-200', sold ? 'opacity-50' : 'opacity-100'].join(' ')}>
       <div className="flex items-baseline gap-3">
         <h3 className="flex-1 text-lg leading-snug text-foreground">
           <span className={sold ? 'line-through decoration-1' : undefined}>{title}</span>

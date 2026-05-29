@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import QRCode from 'qrcode';
 import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip } from '@/components/ui';
 import { useAppStore } from '@/store';
@@ -8,7 +9,7 @@ import { fmt, cn } from '@/lib/utils';
 import { FA_FONTS } from '@/lib/menu/fonts';
 import type { MenuItem } from '@/types';
 
-type Tab = 'items' | 'categories' | 'settings';
+type Tab = 'items' | 'categories' | 'settings' | 'qr';
 
 export default function MenuAdminPage() {
   const user = useAppStore(s => s.user);
@@ -56,7 +57,7 @@ export default function MenuAdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-stone-200">
-          {([['items', 'آیتم‌ها'], ['categories', 'دسته‌ها'], ['settings', 'تنظیمات']] as [Tab, string][]).map(([t, label]) => (
+          {([['items', 'آیتم‌ها'], ['categories', 'دسته‌ها'], ['settings', 'تنظیمات'], ['qr', 'کد QR']] as [Tab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={cn('px-4 h-10 text-[13px] border-b-2 -mb-px transition-colors',
                 tab === t ? 'border-stone-900 text-stone-900' : 'border-transparent text-stone-500 hover:text-stone-800')}>
@@ -75,6 +76,7 @@ export default function MenuAdminPage() {
         {tab === 'settings' && settings && (
           <SettingsTab settings={settings} onUpdate={updateSettings} showToast={showToast} />
         )}
+        {tab === 'qr' && <QrTab showToast={showToast} />}
       </div>
     </div>
   );
@@ -288,6 +290,66 @@ function SettingsTab({ settings, onUpdate, showToast }: any) {
         <Field label="اینستاگرام (بدون @)"><Input dir="ltr" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
         <div className="flex justify-end">
           <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSave}>ذخیره</Button>
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
+// ─── QR Tab ──────────────────────────────────────────────────────
+function QrTab({ showToast }: { showToast: any }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [url, setUrl] = useState('');
+
+  useEffect(() => {
+    const menuUrl = `${window.location.origin}/m`;
+    setUrl(menuUrl);
+    if (canvasRef.current) {
+      QRCode.toCanvas(canvasRef.current, menuUrl, {
+        width: 280,
+        margin: 2,
+        color: { dark: '#1c1917', light: '#ffffff' },
+      }).catch(() => {});
+    }
+  }, []);
+
+  function handleDownload() {
+    if (!canvasRef.current) return;
+    const link = document.createElement('a');
+    link.download = 'basharaf-menu-qr.png';
+    link.href = canvasRef.current.toDataURL('image/png');
+    link.click();
+    showToast('کد QR دانلود شد', 'success');
+  }
+
+  function handleCopyUrl() {
+    navigator.clipboard.writeText(url).then(() => showToast('لینک کپی شد', 'success'));
+  }
+
+  return (
+    <Card>
+      <CardHeader title="کد QR منو" sub="چاپ کنید و روی میز بگذارید — مشتری اسکن می‌کند" />
+      <CardBody className="flex flex-col items-center gap-5 py-8">
+        <div className="rounded-xl border border-stone-200 p-4 bg-white">
+          <canvas ref={canvasRef} />
+        </div>
+
+        <div className="w-full max-w-sm space-y-3">
+          <div className="flex items-center gap-2 p-2.5 rounded-md bg-stone-50 border border-stone-200">
+            <span className="flex-1 text-[12px] text-stone-600 truncate" dir="ltr">{url}</span>
+            <button onClick={handleCopyUrl} className="text-[11px] text-stone-500 hover:text-stone-900 px-2 py-1 rounded hover:bg-stone-100">
+              کپی
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="primary" size="sm" icon={QrCode} onClick={handleDownload}>دانلود PNG</Button>
+            <Button variant="default" size="sm" icon={ExternalLink} onClick={() => window.open(url, '_blank')}>مشاهده منو</Button>
+          </div>
+
+          <p className="text-[11px] text-stone-400 leading-6 text-center pt-2">
+            این کد به صفحه منوی عمومی وصل است. هر تغییری در منو فوری در آن دیده می‌شود — نیازی به ساخت دوباره QR نیست.
+          </p>
         </div>
       </CardBody>
     </Card>

@@ -9,7 +9,8 @@ export function MenuSection({ section }: { section: MenuSectionType }) {
   const label = pick(section.labelEn, section.labelFa);
   const eyebrow = pick('— Menu', '— منو');
 
-  if (section.items.length === 0) return null;
+  const visibleItems = section.items.filter((i) => i.isAvailable);
+  if (visibleItems.length === 0) return null;
 
   return (
     <section className="mt-16 first:mt-0 sm:mt-20">
@@ -19,7 +20,7 @@ export function MenuSection({ section }: { section: MenuSectionType }) {
       </header>
       <div className="mt-6 border-t border-border">
         <ul className="divide-y divide-border">
-          {section.items.map((item) => <MenuItem key={item.id} item={item} />)}
+          {visibleItems.map((item) => <MenuItem key={item.id} item={item} />)}
         </ul>
       </div>
     </section>

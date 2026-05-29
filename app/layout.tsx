@@ -32,18 +32,30 @@ export const metadata: Metadata = {
   },
   description: 'سامانه حسابداری ساده برای رستوران‌های چندشعبه‌ای',
   applicationName: 'با شرف',
-  authors: [{ name: 'Ba Sharaf' }],
-  formatDetection: {
-    telephone: false,
-    email: false,
-    address: false,
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'با شرف',
   },
+  icons: {
+    apple: '/apple-touch-icon.png',
+    icon: [
+      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+  },
+  formatDetection: { telephone: false, email: false, address: false },
 };
 
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
   colorScheme: 'light',
+  themeColor: '#1c1917',
 };
 
 export default function RootLayout({

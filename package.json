@@ -1,6 +1,6 @@
 {
   "name": "basharaf-app",
-  "version": "0.5.0-demo",
+  "version": "0.5.2-demo",
   "private": true,
   "description": "سامانه حسابداری چندشعبه‌ای با شرف — basharaf demo 0.1",
   "scripts": {
@@ -27,6 +27,7 @@
     "lucide-react": "^0.453.0",
     "next": "14.2.15",
     "postgres": "^3.4.5",
+    "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.53.0",
@@ -40,6 +41,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.16.11",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.20",
