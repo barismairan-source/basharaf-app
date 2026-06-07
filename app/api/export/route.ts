@@ -60,10 +60,10 @@ export async function GET(req: Request) {
       conditions.push(eq(schema.transactions.type, params.type as any));
     }
     if (params.from) {
-      conditions.push(gte(schema.transactions.createdAt, new Date(params.from)));
+      conditions.push(gte(schema.transactions.date, params.from));
     }
     if (params.to) {
-      conditions.push(lte(schema.transactions.createdAt, new Date(params.to)));
+      conditions.push(lte(schema.transactions.date, params.to));
     }
 
     const rows = await db

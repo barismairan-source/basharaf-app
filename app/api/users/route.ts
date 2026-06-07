@@ -33,6 +33,7 @@ export async function GET() {
         initials: u.initials,
         lastSeen: u.lastSeen,
         joined: u.joined,
+        permissions: u.permissions ?? null,
       })),
     });
   } catch (e) {
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
         initials: inserted.initials,
         lastSeen: inserted.lastSeen,
         joined: inserted.joined,
+        permissions: inserted.permissions ?? null,
       },
     }, { status: 201 });
   } catch (e) {

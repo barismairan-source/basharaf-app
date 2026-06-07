@@ -66,3 +66,17 @@ export function jalaliToDate(jalali: string): Date | null {
     return null;
   }
 }
+
+/**
+ * تبدیل Date گریگوری به رشته‌ی شمسی (برای نمایش تاریخ‌های ذخیره‌شده‌ی میلادی).
+ * `dateToJalali(new Date(2026,4,21))` → '۱۴۰۵/۰۲/۳۱'
+ * در صورت نامعتبر بودن، امروز شمسی را برمی‌گرداند.
+ */
+export function dateToJalali(date: Date): string {
+  try {
+    const obj = new DateObject({ calendar: persian, locale: persian_fa, date });
+    return obj.format('YYYY/MM/DD');
+  } catch {
+    return getTodayJalali();
+  }
+}

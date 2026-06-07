@@ -5,7 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
-import { applyBalance, reverseBalance } from '@/lib/db/balanceHelpers';
+import { applyBalance, reverseBalance, applyContactBalance, reverseContactBalance } from '@/lib/db/balanceHelpers';
 import { audit } from '@/lib/auth/audit';
 
 const patchBodySchema = z.object({
@@ -65,11 +65,13 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       await db.transaction(async (dbTx) => {
         // ۱. معکوس کردن اثر قدیمی
         await reverseBalance(dbTx, tx);
+        await reverseContactBalance(dbTx, tx);
         // ۲. آپدیت تراکنش
         await dbTx.update(schema.transactions).set(updates)
           .where(eq(schema.transactions.id, params.id));
         // ۳. اعمال اثر جدید با amount جدید
         await applyBalance(dbTx, { ...tx, amount: input.amount! });
+        await applyContactBalance(dbTx, { ...tx, amount: input.amount! });
       });
       audit({ action: 'transaction.deleted', userId: session.sub, meta: { txId: params.id, note: 'amount edited, balance adjusted' } });
     } else {
@@ -103,6 +105,10 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     await db.transaction(async (dbTx) => {
       if (tx.status === 'approved' && tx.accountId) {
         await reverseBalance(dbTx, tx);
+      }
+      if (tx.status === 'approved') {
+        // نسیه: مانده‌ی طرف‌حساب را هم برگردان (تابع خودش گارد contactId/isCredit دارد)
+        await reverseContactBalance(dbTx, tx);
       }
       await dbTx.delete(schema.transactions)
         .where(eq(schema.transactions.id, params.id));

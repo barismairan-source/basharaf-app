@@ -23,14 +23,14 @@ export const userSchema = z
       .email('ایمیل معتبر وارد کنید')
       .max(254)
       .transform((v) => v.trim().toLowerCase()),
-    role: z.enum(['SuperAdmin', 'BranchUser'], {
+    role: z.enum(['SuperAdmin', 'BranchUser', 'Warehouse'], {
       required_error: 'نقش الزامی است',
     }),
     assignedBranch: z.string().nullable(),
   })
   .superRefine((data, ctx) => {
     // invariant: BranchUser باید شعبه داشته باشد
-    if (data.role === 'BranchUser' && !data.assignedBranch) {
+    if ((data.role === 'BranchUser' || data.role === 'Warehouse') && !data.assignedBranch) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'برای کاربر شعبه باید یک شعبه انتخاب کنید',

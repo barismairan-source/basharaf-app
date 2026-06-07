@@ -4,7 +4,7 @@
  * - SuperAdmin: دسترسی به همه شعب، تنظیمات، مدیریت تیم
  * - BranchUser: فقط داده‌های شعبه‌ی تخصیص‌یافته خود را می‌بیند
  */
-export type UserRole = 'SuperAdmin' | 'BranchUser';
+export type UserRole = 'SuperAdmin' | 'BranchUser' | 'Warehouse';
 
 /**
  * Discriminated union: یک SuperAdmin همیشه `assignedBranch === null` دارد،
@@ -22,6 +22,7 @@ export type User =
       initials: string;
       lastSeen: string;
       joined: string;
+      permissions?: string[] | null;
     }
   | {
       id: string;
@@ -32,4 +33,16 @@ export type User =
       initials: string;
       lastSeen: string;
       joined: string;
+      permissions?: string[] | null;
+    }
+  | {
+      id: string;
+      name: string;
+      email: string;
+      role: 'Warehouse';
+      assignedBranch: string; // branch.id — انباردار به یک شعبه تخصیص می‌یابد
+      initials: string;
+      lastSeen: string;
+      joined: string;
+      permissions?: string[] | null;
     };

@@ -18,7 +18,12 @@ export type AuditAction =
   | 'transaction.deleted'
   | 'user.created'
   | 'user.deleted'
-  | 'branch.deleted';
+  | 'branch.deleted'
+  | 'inv.produce'
+  | 'inv.stocktake'
+  | 'inv.voucher.approved'
+  | 'inv.voucher.rejected'
+  | 'inv.voucher.created';
 
 export async function audit(params: {
   action: AuditAction;

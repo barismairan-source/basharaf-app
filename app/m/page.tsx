@@ -16,7 +16,7 @@ export default function PublicMenuPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/menu')
+    fetch('/api/menu', { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         if (cancelled) return;
@@ -33,8 +33,6 @@ export default function PublicMenuPage() {
     document.documentElement.setAttribute('data-fa-font', font);
   }, [settings]);
 
-  const restaurantName = pick('SAFASITI BA SHARAF', 'صفاسیتی با شرافت');
-  const tagline = pick('A neighborhood kitchen', 'آشپزخانهٔ محله');
   const footerLine = pick('All prices in Toman. Allergens on request.', 'قیمت‌ها به تومان است. اطلاعات حساسیت غذایی را از پرسنل بپرسید.');
   const loadingLabel = pick('Loading menu…', 'در حال بارگذاری منو…');
   const address = pick(settings?.addressEn, settings?.addressFa);
@@ -43,12 +41,9 @@ export default function PublicMenuPage() {
     <div className={['menu-root', mounted ? 'animate-fade-in' : ''].join(' ')}>
       <LanguageToggle />
       <div className="mx-auto max-w-2xl px-6 pb-24 pt-20 sm:px-8 sm:pt-28">
-        <header className="border-b border-border pb-10 text-center">
-          <h1 className="text-4xl leading-[1.1] text-foreground sm:text-5xl">{restaurantName}</h1>
-          <p className="mt-4 text-sm text-muted-foreground sm:text-base">{tagline}</p>
-        </header>
+        {/* عنوان hard-code حذف شد؛ بعداً جای لوگو اینجاست */}
 
-        <div className="mt-12">
+        <div className="mt-4">
           {loading && <p className="py-20 text-center text-muted-foreground">{loadingLabel}</p>}
           {error && <p className="py-20 text-center text-sm" style={{ color: 'hsl(350 89% 41%)' }}>{pick('Error: ', 'خطا: ')}{error}</p>}
           {!loading && !error && sections.map(section => <MenuSection key={section.id} section={section} />)}

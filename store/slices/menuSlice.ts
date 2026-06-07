@@ -29,7 +29,7 @@ export const createMenuSlice: StateCreator<MenuSlice> = (set, get) => ({
 
   async loadMenu() {
     try {
-      const res = await fetch('/api/menu', { credentials: 'include' });
+      const res = await fetch('/api/menu', { credentials: 'include', cache: 'no-store' });
       if (!res.ok) return;
       const d = await res.json();
       set({ menuSections: d.sections ?? [], menuSettings: d.settings ?? null, menuLoaded: true });

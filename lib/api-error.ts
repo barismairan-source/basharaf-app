@@ -97,6 +97,39 @@ export function handleError(error: unknown): NextResponse<ErrorBody> {
 }
 
 /**
+ * مثل handleError ولی خطاهای ناشناخته (۵۰۰) را در دیتابیس هم لاگ می‌کند.
+ * در route handler به‌جای handleError استفاده کنید و req را پاس دهید:
+ *
+ *   } catch (e) {
+ *     return await handleErrorLogged(e, req);
+ *   }
+ */
+export async function handleErrorLogged(
+  error: unknown,
+  req?: Request,
+  extra?: { category?: string; userId?: string; userEmail?: string }
+): Promise<NextResponse<ErrorBody>> {
+  // فقط خطاهای واقعی سرور (نه validation/auth/domain) را لاگ کن
+  const isExpected =
+    error instanceof ZodError ||
+    error instanceof UnauthorizedError ||
+    error instanceof ForbiddenError ||
+    error instanceof ApiError;
+
+  if (!isExpected) {
+    // dynamic import تا dependency حلقوی نشود
+    try {
+      const { logError } = await import('@/lib/logger');
+      await logError(error, req, { statusCode: 500, ...extra });
+    } catch {
+      /* اگر لاگ fail شد، بی‌خیال */
+    }
+  }
+
+  return handleError(error);
+}
+
+/**
  * Custom error class برای domain-specific errors.
  *
  * مثال:

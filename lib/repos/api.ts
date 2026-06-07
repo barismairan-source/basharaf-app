@@ -10,6 +10,7 @@ import type {
   User,
   UserRole,
 } from '@/types';
+import { inventoryRepo } from './inventory.api';
 import type {
   BranchesRepo,
   CategoriesRepo,
@@ -44,7 +45,7 @@ const BASE_URL =
     ? process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
     : ''; // relative URLs در browser
 
-async function apiFetch<T>(
+export async function apiFetch<T>(
   path: string,
   options?: RequestInit
 ): Promise<T> {
@@ -331,5 +332,6 @@ export function createApiRepos(): Repos {
     branches: branchesRepo,
     categories: categoriesRepo,
     notifications: notificationsRepo,
+    inventory: inventoryRepo,
   };
 }

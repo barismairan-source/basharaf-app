@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifyToken } from '@/lib/auth/jwt';
+import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
 
 /**
  * Middleware — Edge runtime auth guard با JWT verification.
@@ -12,7 +13,7 @@ import { verifyToken } from '@/lib/auth/jwt';
 
 const SESSION_COOKIE = 'basharaf-session';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu'];
+const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/logs', '/employees', '/payroll', '/inventory', '/recruitment'];
 const AUTH_ROUTES = ['/login', '/signup', '/forgot'];
 
 export async function middleware(request: NextRequest) {
@@ -39,6 +40,14 @@ export async function middleware(request: NextRequest) {
 
   if (isAuthRoute && isAuthed) {
     return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // گارد دسترسی بخش‌محور: اگر authed ولی به این بخش دسترسی ندارد → داشبورد
+  if (isProtected && isAuthed && session) {
+    const section = sectionForPath(pathname);
+    if (section && !canAccessSection(session, section)) {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   return NextResponse.next();

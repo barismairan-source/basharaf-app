@@ -10,7 +10,7 @@ export const transactionSchema = z.object({
 
   amount: z.number().positive('مبلغ باید بزرگ‌تر از صفر باشد').max(999_999_999_999),
 
-  payee: z.string().min(1, 'طرف معامله الزامی است').max(120).transform(v => v.trim()),
+  payee: z.string().max(120).optional().transform(v => (v ?? '').trim()),
 
   branchId: z.string().min(1, 'یک شعبه انتخاب کنید'),
 

@@ -5,6 +5,9 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
 
+export const dynamic = 'force-dynamic';
+
+
 const patchSchema = z.object({
   faFont: z.string().max(40).optional(),
   phone: z.string().max(40).optional(),

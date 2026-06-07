@@ -47,10 +47,11 @@ export async function GET(req: Request) {
     }
 
     if (params.from) {
-      conditions.push(gte(schema.transactions.createdAt, new Date(params.from)));
+      // فیلتر بر اساس تاریخ شمسی سند (نه زمان ثبت سیستم). مقایسه‌ی رشته‌ای روی YYYY/MM/DD درست است.
+      conditions.push(gte(schema.transactions.date, params.from));
     }
     if (params.to) {
-      conditions.push(lte(schema.transactions.createdAt, new Date(params.to)));
+      conditions.push(lte(schema.transactions.date, params.to));
     }
 
     const where = and(...conditions);

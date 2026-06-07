@@ -6,6 +6,9 @@ import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToMenuCategory } from '@/lib/db/menuSerializers';
 
+export const dynamic = 'force-dynamic';
+
+
 const patchSchema = z.object({
   labelEn: z.string().min(1).max(80).optional(),
   labelFa: z.string().min(1).max(80).optional(),

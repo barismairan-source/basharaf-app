@@ -13,7 +13,7 @@ export interface UsersSlice {
   ) => Promise<User | null>;
   updateUser: (
     id: string,
-    patch: Partial<Pick<User, 'name' | 'email' | 'lastSeen'>>,
+    patch: Partial<Pick<User, 'name' | 'email' | 'lastSeen' | 'permissions'>>,
     actingUser: User
   ) => Promise<boolean>;
   deleteUser: (id: string, actingUser: User) => Promise<boolean>;

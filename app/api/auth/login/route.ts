@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { verifyPassword } from '@/lib/auth/password';
 import { setServerSession } from '@/lib/auth/session';
-import { ApiError, handleError } from '@/lib/api-error';
+import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import {
   checkRateLimit,
   recordFailedAttempt,
@@ -91,6 +91,7 @@ export async function POST(req: Request) {
       userId: user.id,
       role: user.role,
       branchId: user.assignedBranchId,
+      permissions: user.permissions ?? null,
     });
 
     return NextResponse.json({
@@ -103,9 +104,10 @@ export async function POST(req: Request) {
         initials: user.initials,
         lastSeen: user.lastSeen,
         joined: user.joined,
+        permissions: user.permissions ?? null,
       },
     });
   } catch (e) {
-    return handleError(e);
+    return await handleErrorLogged(e, req, { category: 'auth' });
   }
 }

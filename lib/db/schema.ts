@@ -9,8 +9,12 @@ import {
   primaryKey,
   index,
   integer,
+  date,
+  jsonb,
+  numeric,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 /**
  * ─────────────────────────────────────────────────────────────────
@@ -38,7 +42,7 @@ import { relations } from 'drizzle-orm';
  * ───────────────────────────────────────────────────────────────── */
 
 // ─── Enums ───
-export const userRoleEnum = pgEnum('user_role', ['SuperAdmin', 'BranchUser']);
+export const userRoleEnum = pgEnum('user_role', ['SuperAdmin', 'BranchUser', 'Warehouse']);
 export const txTypeEnum = pgEnum('tx_type', ['income', 'expense', 'transfer']);
 export const txStatusEnum = pgEnum('tx_status', [
   'pending',
@@ -77,6 +81,7 @@ export const users = pgTable(
     /** bcrypt hash — نه plaintext */
     passwordHash: text('password_hash').notNull(),
     role: userRoleEnum('role').notNull(),
+    permissions: jsonb('permissions').$type<string[] | null>(),
     /** برای BranchUser الزامی، برای SuperAdmin null */
     assignedBranchId: uuid('assigned_branch_id').references(() => branches.id, {
       onDelete: 'restrict',
@@ -391,6 +396,44 @@ export const contacts = pgTable('contacts', {
 
 export type Contact = typeof contacts.$inferSelect;
 
+// ─── Recruitment (استخدام) ──────────────────────────────────────
+export const applicationStatusEnum = pgEnum('application_status', [
+  'new', 'shortlist', 'accepted', 'rejected',
+]);
+export const applicationAreaEnum = pgEnum('application_area', ['hall', 'kitchen']);
+export const applicantGenderEnum = pgEnum('applicant_gender', ['male', 'female']);
+
+export const jobApplications = pgTable(
+  'job_applications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    firstName: text('first_name').notNull(),
+    lastName: text('last_name').notNull(),
+    phone: text('phone').notNull(),
+    age: integer('age'),
+    gender: applicantGenderEnum('gender'),
+    city: text('city'),
+    hasResume: boolean('has_resume').notNull().default(false),
+    resumeUrl: text('resume_url'),
+    resumePath: text('resume_path'),
+    manualInfo: text('manual_info'),
+    answers: jsonb('answers').notNull().default({}),
+    area: applicationAreaEnum('area'),
+    status: applicationStatusEnum('status').notNull().default('new'),
+    score: integer('score'),
+    reviewerNote: text('reviewer_note'),
+    reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    statusIdx: index('job_applications_status_idx').on(table.status),
+    createdIdx: index('job_applications_created_idx').on(table.createdAt),
+  })
+);
+
+export type JobApplication = typeof jobApplications.$inferSelect;
+
 // ─── Menu (منوی دیجیتال صفاسیتی) ─────────────────────────────────
 /**
  * منوی دیجیتال دوزبانه — کاتالوگ نمایشی.
@@ -432,3 +475,534 @@ export const menuSettings = pgTable('menu_settings', {
 export type MenuCategory = typeof menuCategories.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type MenuSettings = typeof menuSettings.$inferSelect;
+
+// ─── System Logs (سیستم لاگ مرکزی برای تحلیل) ───────────────────
+/**
+ * لاگ مرکزی رویدادها و خطاها.
+ * برخلاف audit_log (که فقط اعمال کاربر را ثبت می‌کند)، این جدول
+ * خطاهای سیستمی، اتصال دیتابیس، و رویدادهای فنی را هم نگه می‌دارد.
+ *
+ * level:
+ *   error = خطا (خطای سرور، اتصال، استثنا)
+ *   warn  = هشدار (تلاش ناموفق ورود، دسترسی غیرمجاز)
+ *   info  = اطلاع (ورود موفق، عملیات مهم)
+ */
+export const systemLogs = pgTable(
+  'system_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    level: text('level').notNull().default('info'),
+    /** دسته رویداد: auth, db, api, transaction, ... */
+    category: text('category').notNull().default('general'),
+    /** پیام خوانا */
+    message: text('message').notNull(),
+    /** مسیر API یا صفحه */
+    path: text('path'),
+    /** متد HTTP */
+    method: text('method'),
+    /** کد وضعیت HTTP */
+    statusCode: integer('status_code'),
+    /** کاربر مرتبط (اگر لاگین بود) */
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+    userEmail: text('user_email'),
+    /** جزئیات اضافه (JSON string) */
+    context: text('context'),
+    /** stack trace خطا */
+    stack: text('stack'),
+    ip: text('ip'),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    levelIdx: index('logs_level_idx').on(t.level),
+    categoryIdx: index('logs_category_idx').on(t.category),
+    createdIdx: index('logs_created_idx').on(t.createdAt),
+  })
+);
+
+export type SystemLog = typeof systemLogs.$inferSelect;
+// ─── Payroll Enums (۸ عدد) ───────────────────────────────────────
+export const employeeRoleEnum = pgEnum('employee_role', [
+  'manager', 'chef', 'cook', 'waiter', 'cashier',
+  'dishwasher', 'delivery', 'cleaner', 'other',
+]);
+export const payrollEventTypeEnum = pgEnum('payroll_event_type', [
+  'advance', 'deduction', 'bonus', 'settlement',
+]);
+export const genderEnum = pgEnum('gender', ['male', 'female', 'other']);
+export const maritalStatusEnum = pgEnum('marital_status', ['single', 'married', 'other']);
+export const insuranceStatusEnum = pgEnum('insurance_status', [
+  'insured', 'uninsured', 'pending', 'exempt',
+]);
+export const documentTypeEnum = pgEnum('document_type', [
+  'national_id_card', 'birth_certificate', 'health_card', 'contract',
+  'insurance_doc', 'education', 'photo', 'other',
+]);
+export const payrollRunStatusEnum = pgEnum('payroll_run_status', [
+  'draft', 'calculated', 'approved', 'posted',
+]);
+export const journalVoucherStatusEnum = pgEnum('journal_voucher_status', [
+  'built', 'posted', 'reversed',
+]);
+
+// ─── employees — پرونده پرسنلی ────────────────────────────────────
+export const employees = pgTable(
+  'employees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    fullName: text('full_name').notNull(),
+    nationalId: text('national_id'),
+    phone: text('phone').notNull(),
+    role: text('role').notNull().default('other'),
+
+    // ── repoint به branches هسته ──
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    branchName: text('branch_name'),
+
+    // اطلاعات شخصی
+    fatherName: text('father_name'),
+    birthDate: date('birth_date', { mode: 'date' }),
+    gender: genderEnum('gender'),
+    maritalStatus: maritalStatusEnum('marital_status'),
+    address: text('address'),
+    emergencyContactName: text('emergency_contact_name'),
+    emergencyContactPhone: text('emergency_contact_phone'),
+    iban: text('iban'),
+    bankAccount: text('bank_account'),
+
+    // بیمه
+    insuranceStatus: insuranceStatusEnum('insurance_status').notNull().default('uninsured'),
+    insuranceNumber: text('insurance_number'),
+    insuranceStartDate: date('insurance_start_date', { mode: 'date' }),
+
+    // کارت بهداشت
+    healthCardNumber: text('health_card_number'),
+    healthCardIssueDate: date('health_card_issue_date', { mode: 'date' }),
+    healthCardExpiryDate: date('health_card_expiry_date', { mode: 'date' }),
+
+    // استخدام
+    joinDate: date('join_date', { mode: 'date' }).notNull(),
+    terminationDate: date('termination_date', { mode: 'date' }),
+
+    // پول — bigint تومان صحیح (منطبق با هسته)
+    baseMonthlySalary: bigint('base_monthly_salary', { mode: 'number' }).notNull().default(0),
+
+    isActive: boolean('is_active').notNull().default(true),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    nationalIdUniq: uniqueIndex('employees_national_id_uniq')
+      .on(t.nationalId)
+      .where(sql`${t.nationalId} IS NOT NULL`),
+    activeIdx: index('employees_active_idx').on(t.isActive),
+    nameIdx: index('employees_full_name_idx').on(t.fullName),
+    branchIdx: index('employees_branch_idx').on(t.branchId),
+  })
+);
+
+// ─── employee_documents — مدارک (metadata؛ فایل در storage) ───────
+export const employeeDocuments = pgTable(
+  'employee_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'cascade' }),
+    type: documentTypeEnum('type').notNull(),
+    title: text('title').notNull(),
+    storagePath: text('storage_path').notNull(),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type'),
+    fileSize: bigint('file_size', { mode: 'number' }),
+    expiryDate: date('expiry_date', { mode: 'date' }),
+    // ── repoint به users هسته ──
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    employeeIdx: index('employee_documents_employee_idx').on(t.employeeId),
+    typeIdx: index('employee_documents_type_idx').on(t.type),
+  })
+);
+
+// ─── payroll_events — مساعده/کسری/پاداش/تسویه ────────────────────
+export const payrollEvents = pgTable(
+  'payroll_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    type: payrollEventTypeEnum('type').notNull(),
+    amount: bigint('amount', { mode: 'number' }).notNull(),
+    periodYearMonth: text('period_year_month').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    description: text('description'),
+    settlementMethod: text('settlement_method'),
+    settledAmount: bigint('settled_amount', { mode: 'number' }),
+    // ── repoint به users هسته ──
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    voidedAt: timestamp('voided_at', { withTimezone: true }),
+    voidReason: text('void_reason'),
+  },
+  (t) => ({
+    employeePeriodIdx: index('payroll_events_employee_period_idx').on(t.employeeId, t.periodYearMonth),
+    periodIdx: index('payroll_events_period_idx').on(t.periodYearMonth),
+    typeIdx: index('payroll_events_type_idx').on(t.type),
+    oneActiveSettlement: uniqueIndex('payroll_events_one_active_settlement_per_month')
+      .on(t.employeeId, t.periodYearMonth)
+      .where(sql`voided_at IS NULL AND type = 'settlement'`),
+  })
+);
+
+// ─── payroll_parameters — پارامترهای قانونی نسخه‌دار به سال شمسی ──
+export const payrollParameters = pgTable('payroll_parameters', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jalaliYear: integer('jalali_year').notNull().unique(),
+  minDailyWage: bigint('min_daily_wage', { mode: 'number' }).notNull(),
+  minMonthlyWage: bigint('min_monthly_wage', { mode: 'number' }).notNull(),
+  housingAllowance: bigint('housing_allowance', { mode: 'number' }).notNull(),
+  groceryAllowance: bigint('grocery_allowance', { mode: 'number' }).notNull(),
+  marriageAllowance: bigint('marriage_allowance', { mode: 'number' }).notNull(),
+  seniorityDaily: bigint('seniority_daily', { mode: 'number' }).notNull(),
+  childAllowancePer: bigint('child_allowance_per', { mode: 'number' }).notNull(),
+  taxExemptMonthly: bigint('tax_exempt_monthly', { mode: 'number' }).notNull(),
+  taxBrackets: jsonb('tax_brackets').notNull(),
+  insuranceEmployeeRate: numeric('insurance_employee_rate', { precision: 5, scale: 4 }).notNull(),
+  insuranceEmployerRate: numeric('insurance_employer_rate', { precision: 5, scale: 4 }).notNull(),
+  overtimeMultiplier: numeric('overtime_multiplier', { precision: 4, scale: 2 }).notNull(),
+  nightShiftPremium: numeric('night_shift_premium', { precision: 4, scale: 2 }).notNull(),
+  holidayMultiplier: numeric('holiday_multiplier', { precision: 4, scale: 2 }).notNull(),
+  childMinInsuranceDays: integer('child_min_insurance_days').notNull().default(720),
+  standardMonthlyHours: numeric('standard_monthly_hours', { precision: 6, scale: 2 }).notNull().default('192'),
+  effectiveFrom: date('effective_from', { mode: 'date' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ─── payroll_runs — اجرای حقوق یک دوره ───────────────────────────
+export const payrollRuns = pgTable(
+  'payroll_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // ── repoint به branches هسته ──
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    branchName: text('branch_name'),
+    periodYearMonth: text('period_year_month').notNull(),
+    parametersId: uuid('parameters_id').notNull().references(() => payrollParameters.id),
+    status: payrollRunStatusEnum('status').notNull().default('draft'),
+    calculatedAt: timestamp('calculated_at', { withTimezone: true }),
+    // ── repoint به users هسته ──
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    postedToBasharafAt: timestamp('posted_to_basharaf_at', { withTimezone: true }),
+    journalVoucherId: uuid('journal_voucher_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchPeriodUniq: uniqueIndex('payroll_runs_branch_period_uniq').on(t.branchId, t.periodYearMonth),
+    periodIdx: index('payroll_runs_period_idx').on(t.periodYearMonth),
+  })
+);
+
+// ─── payslips — فیش حقوقی هر کارمند در هر اجرا ────────────────────
+export const payslips = pgTable(
+  'payslips',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    payrollRunId: uuid('payroll_run_id').notNull().references(() => payrollRuns.id, { onDelete: 'cascade' }),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    periodYearMonth: text('period_year_month').notNull(),
+    workedDays: numeric('worked_days', { precision: 5, scale: 2 }).notNull(),
+    grossEarnings: bigint('gross_earnings', { mode: 'number' }).notNull(),
+    taxableBase: bigint('taxable_base', { mode: 'number' }).notNull(),
+    insuranceBase: bigint('insurance_base', { mode: 'number' }).notNull(),
+    insuranceEmployee: bigint('insurance_employee', { mode: 'number' }).notNull(),
+    insuranceEmployer: bigint('insurance_employer', { mode: 'number' }).notNull(),
+    incomeTax: bigint('income_tax', { mode: 'number' }).notNull(),
+    totalDeductions: bigint('total_deductions', { mode: 'number' }).notNull(),
+    netPay: bigint('net_pay', { mode: 'number' }).notNull(),
+    calcSnapshot: jsonb('calc_snapshot').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    runIdx: index('payslips_run_idx').on(t.payrollRunId),
+    employeePeriodIdx: index('payslips_employee_period_idx').on(t.employeeId, t.periodYearMonth),
+  })
+);
+
+// ─── journal_vouchers — سند کل (posting به GL: مرحله‌ی بعد) ───────
+export const journalVouchers = pgTable('journal_vouchers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  payrollRunId: uuid('payroll_run_id').notNull().references(() => payrollRuns.id, { onDelete: 'cascade' }),
+  period: text('period').notNull(),
+  // ── repoint به branches هسته (set null) ──
+  branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+  lines: jsonb('lines').notNull(),
+  totalDebit: bigint('total_debit', { mode: 'number' }).notNull(),
+  totalCredit: bigint('total_credit', { mode: 'number' }).notNull(),
+  idempotencyKey: text('idempotency_key').notNull().unique(),
+  basharafVoucherId: text('basharaf_voucher_id'),
+  status: journalVoucherStatusEnum('status').notNull().default('built'),
+  postedAt: timestamp('posted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ─── Types ───────────────────────────────────────────────────────
+export type Employee = typeof employees.$inferSelect;
+export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
+export type PayrollEvent = typeof payrollEvents.$inferSelect;
+export type PayrollParameter = typeof payrollParameters.$inferSelect;
+export type PayrollRun = typeof payrollRuns.$inferSelect;
+export type Payslip = typeof payslips.$inferSelect;
+export type JournalVoucher = typeof journalVouchers.$inferSelect;
+// ─── Inventory Enums (۵ عدد) ─────────────────────────────────────
+export const invItemKindEnum = pgEnum('inv_item_kind', ['raw', 'prep']);
+//   raw  = ماده خام (از خرید وارد می‌شود)
+//   prep = نیمه‌آماده (از تولید ساخته می‌شود؛ prepRecipe دارد)
+
+export const invVoucherKindEnum = pgEnum('inv_voucher_kind', [
+  'in',       // رسید ورود
+  'out',      // حواله خروج/مصرف
+  'waste',    // ضایعات
+  'sale',     // مصرف ناشی از فروش روزانه
+  'produce',  // تولید نیمه‌آماده
+  'stocktake',// اصلاح انبارگردانی
+]);
+
+// منطبق با txStatusEnum هسته (همان Maker-Checker)
+export const invVoucherStatusEnum = pgEnum('inv_voucher_status', [
+  'pending',  // ثبت انباردار، در انتظار حسابدار — فقط موجودی فیزیکی
+  'approved', // تأیید حسابدار — موجودی قطعی + میانگین موزون
+  'rejected', // ارجاع با دلیل
+]);
+
+export const invUnitEnum = pgEnum('inv_unit', [
+  'kg', 'g', 'L', 'ml', 'pcs', 'can', 'pack',
+]);
+
+export const invCookModeEnum = pgEnum('inv_cook_mode', ['daily', 'batch']);
+//   daily = روزانه تازه (به‌سفارش، ماندگاری ۱ روز)
+//   batch = دسته‌ای (قابل نگهداری چند روز)
+
+// ─── inv_items — کالا (خام و نیمه‌آماده) ──────────────────────────
+export const invItems = pgTable(
+  'inv_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull(),            // کد یکتا در هر شعبه (MEAT-01)
+    name: text('name').notNull(),
+    category: text('category').notNull().default('سایر'),
+    kind: invItemKindEnum('kind').notNull().default('raw'),
+
+    // ── repoint به branches هسته ──
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+
+    // واحد طبیعی + ضریب تبدیل به پایه
+    unit: invUnitEnum('unit').notNull().default('kg'),
+    basePerUnit: numeric('base_per_unit', { precision: 14, scale: 4 }).notNull().default('1000'),
+
+    // افت بار (درصد قابل‌استفاده): ۱۰۰ یعنی بدون افت
+    yieldPct: numeric('yield_pct', { precision: 5, scale: 2 }).notNull().default('100'),
+
+    // موجودی دو لایه (واحد پایه)
+    //   qtyPhysical = فیزیکی (با ثبت انباردار فوری آپدیت)
+    //   qtyBase     = قطعی (فقط با تأیید حسابدار)
+    qtyPhysical: numeric('qty_physical', { precision: 16, scale: 4 }).notNull().default('0'),
+    qtyBase: numeric('qty_base', { precision: 16, scale: 4 }).notNull().default('0'),
+
+    // میانگین موزون — ریال/تومان هر واحد پایه (numeric برای دقت اعشاری)
+    avgCostPerBase: numeric('avg_cost_per_base', { precision: 18, scale: 6 }).notNull().default('0'),
+
+    // حداقل موجودی برای هشدار (واحد پایه)
+    minBase: numeric('min_base', { precision: 16, scale: 4 }).notNull().default('0'),
+
+    // فقط نیمه‌آماده‌ها:
+    batchYieldBase: numeric('batch_yield_base', { precision: 16, scale: 4 }), // مقدار هر بَچ
+    shelfLifeDays: integer('shelf_life_days').notNull().default(1),           // ماندگاری
+    // دستور تولید نیمه‌آماده: [{ code, qtyBase }] — JSON ساده
+    prepRecipe: jsonb('prep_recipe'),
+
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchCodeUniq: uniqueIndex('inv_items_branch_code_uniq').on(t.branchId, t.code),
+    kindIdx: index('inv_items_kind_idx').on(t.kind),
+    branchIdx: index('inv_items_branch_idx').on(t.branchId),
+    activeIdx: index('inv_items_active_idx').on(t.isActive),
+  })
+);
+
+// ─── inv_recipes — رسپی غذاها ─────────────────────────────────────
+export const invRecipes = pgTable(
+  'inv_recipes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+
+    portions: integer('portions').notNull().default(1),       // تعداد پرس هر پخت
+    targetFcPct: numeric('target_fc_pct', { precision: 5, scale: 2 }).notNull().default('30'),
+    price: bigint('price', { mode: 'number' }).notNull().default(0), // قیمت فروش (تومان)
+
+    cookMode: invCookModeEnum('cook_mode').notNull().default('daily'),
+    shelfLifeDays: integer('shelf_life_days').notNull().default(1),
+
+    // اتصال اختیاری به آیتم منوی دیجیتال موجود (menu_items هسته)
+    menuItemId: uuid('menu_item_id').references(() => menuItems.id, { onDelete: 'set null' }),
+
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchIdx: index('inv_recipes_branch_idx').on(t.branchId),
+    activeIdx: index('inv_recipes_active_idx').on(t.isActive),
+  })
+);
+
+// ─── inv_recipe_lines — مواد هر رسپی ──────────────────────────────
+export const invRecipeLines = pgTable(
+  'inv_recipe_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    recipeId: uuid('recipe_id').notNull().references(() => invRecipes.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id').notNull().references(() => invItems.id, { onDelete: 'restrict' }),
+    qtyBase: numeric('qty_base', { precision: 16, scale: 4 }).notNull(), // مقدار (واحد پایه) هر پخت
+    overridePct: numeric('override_pct', { precision: 5, scale: 2 }),    // افت override (اختیاری)
+  },
+  (t) => ({
+    recipeIdx: index('inv_recipe_lines_recipe_idx').on(t.recipeId),
+    itemIdx: index('inv_recipe_lines_item_idx').on(t.itemId),
+  })
+);
+
+// ─── inv_vouchers — برگه (Maker-Checker) ──────────────────────────
+/**
+ * برگه = سند مقداری انبار. انباردار ثبت می‌کند (pending، فقط فیزیکی)،
+ * حسابدار قیمت نهایی می‌زند و تأیید می‌کند (approved، قطعی + میانگین موزون).
+ * این دقیقاً همان state machine تراکنش‌های هسته است.
+ *
+ * invariant: موجودی قطعی (qtyBase) و میانگین موزون فقط روی approved تغییر می‌کند.
+ * هر approve/reject باید atomic باشد (مثل balanceHelpers هسته).
+ */
+export const invVouchers = pgTable(
+  'inv_vouchers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    no: text('no').notNull(),                 // شماره خوانا (R-140304-001)
+    kind: invVoucherKindEnum('kind').notNull(),
+    status: invVoucherStatusEnum('status').notNull().default('pending'),
+
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+
+    // مبالغ (تومان) — برآوردی هنگام ثبت، نهایی هنگام تأیید
+    estTotal: bigint('est_total', { mode: 'number' }).notNull().default(0),
+    finalTotal: bigint('final_total', { mode: 'number' }),
+
+    note: text('note').notNull().default(''),
+
+    // متادیتای فروش (فقط kind=sale): { lines:[{recipeId,name,qty,price}], revenue, date }
+    saleMeta: jsonb('sale_meta'),
+
+    // ── Maker (انباردار) ──
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    makerDate: text('maker_date').notNull(),  // Jalali string
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+
+    // ── Checker (حسابدار) ──
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    rejectedBy: uuid('rejected_by').references(() => users.id, { onDelete: 'set null' }),
+    rejectedAt: timestamp('rejected_at', { withTimezone: true }),
+    rejectionReason: text('rejection_reason'),
+
+    // اتصال اختیاری به تراکنش مالی هسته (وقتی برگه به سند مالی تبدیل شد)
+    linkedTransactionId: uuid('linked_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchNoUniq: uniqueIndex('inv_vouchers_branch_no_uniq').on(t.branchId, t.no),
+    statusIdx: index('inv_vouchers_status_idx').on(t.status),
+    kindIdx: index('inv_vouchers_kind_idx').on(t.kind),
+    branchStatusIdx: index('inv_vouchers_branch_status_idx').on(t.branchId, t.status),
+  })
+);
+
+// ─── inv_voucher_lines — خطوط هر برگه ─────────────────────────────
+export const invVoucherLines = pgTable(
+  'inv_voucher_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    voucherId: uuid('voucher_id').notNull().references(() => invVouchers.id, { onDelete: 'cascade' }),
+    itemId: uuid('item_id').notNull().references(() => invItems.id, { onDelete: 'restrict' }),
+    qtyBase: numeric('qty_base', { precision: 16, scale: 4 }).notNull(),
+    // قیمت هر واحد پایه: برآوردی (انباردار) و نهایی (حسابدار)
+    estUnitCost: numeric('est_unit_cost', { precision: 18, scale: 6 }).notNull().default('0'),
+    finalUnitCost: numeric('final_unit_cost', { precision: 18, scale: 6 }),
+  },
+  (t) => ({
+    voucherIdx: index('inv_voucher_lines_voucher_idx').on(t.voucherId),
+    itemIdx: index('inv_voucher_lines_item_idx').on(t.itemId),
+  })
+);
+
+// ─── inv_stock_tx — دفتر حرکت موجودی (لاگ) ────────────────────────
+/**
+ * هر ورود/خروج قطعی یک ردیف اینجا ثبت می‌کند (مثل دفتر کل برای انبار).
+ * grams مثبت = ورود، منفی = خروج. value به تومان.
+ */
+export const invStockTx = pgTable(
+  'inv_stock_tx',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    itemId: uuid('item_id').notNull().references(() => invItems.id, { onDelete: 'cascade' }),
+    voucherId: uuid('voucher_id').references(() => invVouchers.id, { onDelete: 'set null' }),
+    kind: invVoucherKindEnum('kind').notNull(),
+    deltaBase: numeric('delta_base', { precision: 16, scale: 4 }).notNull(), // +ورود / -خروج
+    value: bigint('value', { mode: 'number' }).notNull().default(0),         // تومان
+    note: text('note').notNull().default(''),
+    jalaliDate: text('jalali_date').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    itemIdx: index('inv_stock_tx_item_idx').on(t.itemId),
+    createdIdx: index('inv_stock_tx_created_idx').on(t.createdAt),
+  })
+);
+
+// ─── inv_daily_sales — گزارش فروش روزانه (تأییدشده) ───────────────
+/**
+ * وقتی برگه‌ی فروش (kind=sale) تأیید شد، یک ردیف اینجا ثبت می‌شود
+ * تا گزارش فروش/سود ساخته شود. COGS نهایی از میانگین موزون لحظه تأیید.
+ */
+export const invDailySales = pgTable(
+  'inv_daily_sales',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    voucherId: uuid('voucher_id').references(() => invVouchers.id, { onDelete: 'set null' }),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    jalaliDate: text('jalali_date').notNull(),
+    // خطوط: [{ recipeId, name, qty, price, cogs }]
+    lines: jsonb('lines').notNull(),
+    totalCogs: bigint('total_cogs', { mode: 'number' }).notNull().default(0),
+    totalRevenue: bigint('total_revenue', { mode: 'number' }).notNull().default(0),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchDateIdx: index('inv_daily_sales_branch_date_idx').on(t.branchId, t.jalaliDate),
+  })
+);
+
+// ─── Types ───────────────────────────────────────────────────────
+export type InvItem = typeof invItems.$inferSelect;
+export type InvRecipe = typeof invRecipes.$inferSelect;
+export type InvRecipeLine = typeof invRecipeLines.$inferSelect;
+export type InvVoucher = typeof invVouchers.$inferSelect;
+export type InvVoucherLine = typeof invVoucherLines.$inferSelect;
+export type InvStockTx = typeof invStockTx.$inferSelect;
+export type InvDailySale = typeof invDailySales.$inferSelect;

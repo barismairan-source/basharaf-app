@@ -13,6 +13,7 @@ const patchBodySchema = z.object({
     .max(254)
     .transform((v) => v.trim().toLowerCase())
     .optional(),
+  permissions: z.array(z.string().max(40)).max(20).nullable().optional(),
 });
 
 export async function PATCH(
@@ -27,6 +28,11 @@ export async function PATCH(
     // فقط می‌تواند خود را ویرایش کند، یا اگر admin است هر کسی را
     if (session.role !== 'SuperAdmin' && session.sub !== params.id) {
       throw new ApiError(403, 'دسترسی به ویرایش این کاربر ندارید', 'FORBIDDEN');
+    }
+
+    // permissions را فقط مدیر کل می‌تواند تغییر دهد (نه کاربر روی خودش)
+    if (input.permissions !== undefined && session.role !== 'SuperAdmin') {
+      throw new ApiError(403, 'فقط مدیر کل می‌تواند دسترسی‌ها را تغییر دهد', 'FORBIDDEN');
     }
 
     // اگر email تغییر می‌کند، چک duplicate
@@ -61,6 +67,7 @@ export async function PATCH(
         initials: updated.initials,
         lastSeen: updated.lastSeen,
         joined: updated.joined,
+        permissions: updated.permissions ?? null,
       },
     });
   } catch (e) {

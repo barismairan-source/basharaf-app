@@ -29,6 +29,9 @@ import { createAppSettingsSlice, type AppSettingsSlice } from './slices/appSetti
 import { createAccountsSlice, type AccountsSlice } from './slices/accountsSlice';
 import { createContactsSlice, type ContactsSlice } from './slices/contactsSlice';
 import { createMenuSlice, type MenuSlice } from './slices/menuSlice';
+import { createEmployeesSlice, type EmployeesSlice } from './slices/employeesSlice';
+import { createPayrollSlice, type PayrollSlice } from './slices/payrollSlice';
+import { createRecruitmentSlice, type RecruitmentSlice } from './slices/recruitmentSlice';
 
 export type AppStore = AuthSlice &
   TransactionsSlice &
@@ -41,7 +44,10 @@ export type AppStore = AuthSlice &
   AppSettingsSlice &
   AccountsSlice &
   ContactsSlice &
-  MenuSlice & {
+  MenuSlice &
+  EmployeesSlice &
+  PayrollSlice &
+  RecruitmentSlice & {
     bootstrapped: boolean;
     bootstrap: () => Promise<void>;
   };
@@ -96,6 +102,9 @@ export const useAppStore = create<AppStore>()(
       ...createAccountsSlice(set as any, get as any, api as any),
       ...createContactsSlice(set as any, get as any, api as any),
       ...createMenuSlice(set as any, get as any, api as any),
+      ...createEmployeesSlice(set as any, get as any, api as any),
+      ...createPayrollSlice(set as any, get as any, api as any),
+      ...createRecruitmentSlice(set as any, get as any, api as any),
 
       transactions: [],
       users: [],
@@ -115,6 +124,15 @@ export const useAppStore = create<AppStore>()(
       menuSettings: null,
       menuLoaded: false,
       menuError: null,
+      employees: [],
+      employeesLoaded: false,
+      employeesError: null,
+      payrollRuns: [],
+      payrollRunsLoaded: false,
+      payrollEvents: [],
+      applications: [],
+      applicationsLoaded: false,
+      applicationsError: null,
       bootstrapped: false,
 
       async bootstrap() {

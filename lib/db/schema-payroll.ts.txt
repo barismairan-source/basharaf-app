@@ -1,0 +1,246 @@
+// ═══════════════════════════════════════════════════════════════════
+//  الحاقیه‌ی حقوق و دستمزد (HR & Payroll)
+//
+//  این بلوک به انتهای lib/db/schema.ts اضافه می‌شود.
+//  ۷ جدول + ۸ enum. هیچ‌یک از ۱۳ جدول هسته تغییر نمی‌کند.
+//
+//  ⚠️ پیش‌نیاز import — این موارد را به import اصلی pg-core در بالای
+//  schema.ts اضافه کنید (اگر نیستند): date, jsonb, numeric, uniqueIndex
+//  و از 'drizzle-orm': sql
+//
+//  جدول stub `branches` ماژول حقوق حذف شد؛ همه‌ی FKها به branches/users هسته.
+// ═══════════════════════════════════════════════════════════════════
+
+// ─── Payroll Enums (۸ عدد) ───────────────────────────────────────
+export const employeeRoleEnum = pgEnum('employee_role', [
+  'manager', 'chef', 'cook', 'waiter', 'cashier',
+  'dishwasher', 'delivery', 'cleaner', 'other',
+]);
+export const payrollEventTypeEnum = pgEnum('payroll_event_type', [
+  'advance', 'deduction', 'bonus', 'settlement',
+]);
+export const genderEnum = pgEnum('gender', ['male', 'female', 'other']);
+export const maritalStatusEnum = pgEnum('marital_status', ['single', 'married', 'other']);
+export const insuranceStatusEnum = pgEnum('insurance_status', [
+  'insured', 'uninsured', 'pending', 'exempt',
+]);
+export const documentTypeEnum = pgEnum('document_type', [
+  'national_id_card', 'birth_certificate', 'health_card', 'contract',
+  'insurance_doc', 'education', 'photo', 'other',
+]);
+export const payrollRunStatusEnum = pgEnum('payroll_run_status', [
+  'draft', 'calculated', 'approved', 'posted',
+]);
+export const journalVoucherStatusEnum = pgEnum('journal_voucher_status', [
+  'built', 'posted', 'reversed',
+]);
+
+// ─── employees — پرونده پرسنلی ────────────────────────────────────
+export const employees = pgTable(
+  'employees',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    fullName: text('full_name').notNull(),
+    nationalId: text('national_id'),
+    phone: text('phone').notNull(),
+    role: employeeRoleEnum('role').notNull().default('other'),
+
+    // ── repoint به branches هسته ──
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    branchName: text('branch_name'),
+
+    // اطلاعات شخصی
+    fatherName: text('father_name'),
+    birthDate: date('birth_date', { mode: 'date' }),
+    gender: genderEnum('gender'),
+    maritalStatus: maritalStatusEnum('marital_status'),
+    address: text('address'),
+    emergencyContactName: text('emergency_contact_name'),
+    emergencyContactPhone: text('emergency_contact_phone'),
+    iban: text('iban'),
+    bankAccount: text('bank_account'),
+
+    // بیمه
+    insuranceStatus: insuranceStatusEnum('insurance_status').notNull().default('uninsured'),
+    insuranceNumber: text('insurance_number'),
+    insuranceStartDate: date('insurance_start_date', { mode: 'date' }),
+
+    // کارت بهداشت
+    healthCardNumber: text('health_card_number'),
+    healthCardIssueDate: date('health_card_issue_date', { mode: 'date' }),
+    healthCardExpiryDate: date('health_card_expiry_date', { mode: 'date' }),
+
+    // استخدام
+    joinDate: date('join_date', { mode: 'date' }).notNull(),
+    terminationDate: date('termination_date', { mode: 'date' }),
+
+    // پول — bigint تومان صحیح (منطبق با هسته)
+    baseMonthlySalary: bigint('base_monthly_salary', { mode: 'number' }).notNull().default(0),
+
+    isActive: boolean('is_active').notNull().default(true),
+    notes: text('notes'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    nationalIdUniq: uniqueIndex('employees_national_id_uniq')
+      .on(t.nationalId)
+      .where(sql`${t.nationalId} IS NOT NULL`),
+    activeIdx: index('employees_active_idx').on(t.isActive),
+    nameIdx: index('employees_full_name_idx').on(t.fullName),
+    branchIdx: index('employees_branch_idx').on(t.branchId),
+  })
+);
+
+// ─── employee_documents — مدارک (metadata؛ فایل در storage) ───────
+export const employeeDocuments = pgTable(
+  'employee_documents',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'cascade' }),
+    type: documentTypeEnum('type').notNull(),
+    title: text('title').notNull(),
+    storagePath: text('storage_path').notNull(),
+    fileName: text('file_name').notNull(),
+    mimeType: text('mime_type'),
+    fileSize: bigint('file_size', { mode: 'number' }),
+    expiryDate: date('expiry_date', { mode: 'date' }),
+    // ── repoint به users هسته ──
+    uploadedBy: uuid('uploaded_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    employeeIdx: index('employee_documents_employee_idx').on(t.employeeId),
+    typeIdx: index('employee_documents_type_idx').on(t.type),
+  })
+);
+
+// ─── payroll_events — مساعده/کسری/پاداش/تسویه ────────────────────
+export const payrollEvents = pgTable(
+  'payroll_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    type: payrollEventTypeEnum('type').notNull(),
+    amount: bigint('amount', { mode: 'number' }).notNull(),
+    periodYearMonth: text('period_year_month').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    description: text('description'),
+    settlementMethod: text('settlement_method'),
+    settledAmount: bigint('settled_amount', { mode: 'number' }),
+    // ── repoint به users هسته ──
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    voidedAt: timestamp('voided_at', { withTimezone: true }),
+    voidReason: text('void_reason'),
+  },
+  (t) => ({
+    employeePeriodIdx: index('payroll_events_employee_period_idx').on(t.employeeId, t.periodYearMonth),
+    periodIdx: index('payroll_events_period_idx').on(t.periodYearMonth),
+    typeIdx: index('payroll_events_type_idx').on(t.type),
+    oneActiveSettlement: uniqueIndex('payroll_events_one_active_settlement_per_month')
+      .on(t.employeeId, t.periodYearMonth)
+      .where(sql`voided_at IS NULL AND type = 'settlement'`),
+  })
+);
+
+// ─── payroll_parameters — پارامترهای قانونی نسخه‌دار به سال شمسی ──
+export const payrollParameters = pgTable('payroll_parameters', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  jalaliYear: integer('jalali_year').notNull().unique(),
+  minDailyWage: bigint('min_daily_wage', { mode: 'number' }).notNull(),
+  minMonthlyWage: bigint('min_monthly_wage', { mode: 'number' }).notNull(),
+  housingAllowance: bigint('housing_allowance', { mode: 'number' }).notNull(),
+  groceryAllowance: bigint('grocery_allowance', { mode: 'number' }).notNull(),
+  marriageAllowance: bigint('marriage_allowance', { mode: 'number' }).notNull(),
+  seniorityDaily: bigint('seniority_daily', { mode: 'number' }).notNull(),
+  childAllowancePer: bigint('child_allowance_per', { mode: 'number' }).notNull(),
+  taxExemptMonthly: bigint('tax_exempt_monthly', { mode: 'number' }).notNull(),
+  taxBrackets: jsonb('tax_brackets').notNull(),
+  insuranceEmployeeRate: numeric('insurance_employee_rate', { precision: 5, scale: 4 }).notNull(),
+  insuranceEmployerRate: numeric('insurance_employer_rate', { precision: 5, scale: 4 }).notNull(),
+  overtimeMultiplier: numeric('overtime_multiplier', { precision: 4, scale: 2 }).notNull(),
+  nightShiftPremium: numeric('night_shift_premium', { precision: 4, scale: 2 }).notNull(),
+  holidayMultiplier: numeric('holiday_multiplier', { precision: 4, scale: 2 }).notNull(),
+  childMinInsuranceDays: integer('child_min_insurance_days').notNull().default(720),
+  standardMonthlyHours: numeric('standard_monthly_hours', { precision: 6, scale: 2 }).notNull().default('192'),
+  effectiveFrom: date('effective_from', { mode: 'date' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ─── payroll_runs — اجرای حقوق یک دوره ───────────────────────────
+export const payrollRuns = pgTable(
+  'payroll_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // ── repoint به branches هسته ──
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    branchName: text('branch_name'),
+    periodYearMonth: text('period_year_month').notNull(),
+    parametersId: uuid('parameters_id').notNull().references(() => payrollParameters.id),
+    status: payrollRunStatusEnum('status').notNull().default('draft'),
+    calculatedAt: timestamp('calculated_at', { withTimezone: true }),
+    // ── repoint به users هسته ──
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'set null' }),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    postedToBasharafAt: timestamp('posted_to_basharaf_at', { withTimezone: true }),
+    journalVoucherId: uuid('journal_voucher_id'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchPeriodUniq: uniqueIndex('payroll_runs_branch_period_uniq').on(t.branchId, t.periodYearMonth),
+    periodIdx: index('payroll_runs_period_idx').on(t.periodYearMonth),
+  })
+);
+
+// ─── payslips — فیش حقوقی هر کارمند در هر اجرا ────────────────────
+export const payslips = pgTable(
+  'payslips',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    payrollRunId: uuid('payroll_run_id').notNull().references(() => payrollRuns.id, { onDelete: 'cascade' }),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    periodYearMonth: text('period_year_month').notNull(),
+    workedDays: numeric('worked_days', { precision: 5, scale: 2 }).notNull(),
+    grossEarnings: bigint('gross_earnings', { mode: 'number' }).notNull(),
+    taxableBase: bigint('taxable_base', { mode: 'number' }).notNull(),
+    insuranceBase: bigint('insurance_base', { mode: 'number' }).notNull(),
+    insuranceEmployee: bigint('insurance_employee', { mode: 'number' }).notNull(),
+    insuranceEmployer: bigint('insurance_employer', { mode: 'number' }).notNull(),
+    incomeTax: bigint('income_tax', { mode: 'number' }).notNull(),
+    totalDeductions: bigint('total_deductions', { mode: 'number' }).notNull(),
+    netPay: bigint('net_pay', { mode: 'number' }).notNull(),
+    calcSnapshot: jsonb('calc_snapshot').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    runIdx: index('payslips_run_idx').on(t.payrollRunId),
+    employeePeriodIdx: index('payslips_employee_period_idx').on(t.employeeId, t.periodYearMonth),
+  })
+);
+
+// ─── journal_vouchers — سند کل (posting به GL: مرحله‌ی بعد) ───────
+export const journalVouchers = pgTable('journal_vouchers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  payrollRunId: uuid('payroll_run_id').notNull().references(() => payrollRuns.id, { onDelete: 'cascade' }),
+  period: text('period').notNull(),
+  // ── repoint به branches هسته (set null) ──
+  branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+  lines: jsonb('lines').notNull(),
+  totalDebit: bigint('total_debit', { mode: 'number' }).notNull(),
+  totalCredit: bigint('total_credit', { mode: 'number' }).notNull(),
+  idempotencyKey: text('idempotency_key').notNull().unique(),
+  basharafVoucherId: text('basharaf_voucher_id'),
+  status: journalVoucherStatusEnum('status').notNull().default('built'),
+  postedAt: timestamp('posted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ─── Types ───────────────────────────────────────────────────────
+export type Employee = typeof employees.$inferSelect;
+export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
+export type PayrollEvent = typeof payrollEvents.$inferSelect;
+export type PayrollParameter = typeof payrollParameters.$inferSelect;
+export type PayrollRun = typeof payrollRuns.$inferSelect;
+export type Payslip = typeof payslips.$inferSelect;
+export type JournalVoucher = typeof journalVouchers.$inferSelect;

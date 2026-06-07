@@ -14,6 +14,7 @@ import {
 import { useAppStore, useVisibleTransactions } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 import { TxDetailPanel } from '@/components/transactions/TxDetailPanel';
+import { ImportPanel } from '@/components/transactions/ImportPanel';
 import type { Transaction, TransactionStatus, TransactionType } from '@/types';
 
 type StatusFilter = 'all' | TransactionStatus;
@@ -155,6 +156,7 @@ export default function TransactionsPage() {
             <div className="text-[12px] text-stone-500 mt-1">{filtered.length} تراکنش</div>
           </div>
           <div className="flex items-center gap-2">
+            <ImportPanel onDone={() => window.location.reload()} />
             <button
               onClick={() => window.print()}
               className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-stone-200 text-[12px] text-stone-600 hover:bg-stone-50 transition-colors"

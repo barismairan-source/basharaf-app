@@ -4,6 +4,9 @@ import { db, schema } from '@/lib/db/client';
 import { handleError } from '@/lib/api-error';
 import { rowToMenuItem, rowToMenuCategory } from '@/lib/db/menuSerializers';
 
+export const dynamic = 'force-dynamic';
+
+
 /**
  * GET /api/menu — منوی کامل (عمومی، بدون auth).
  * دسته‌ها + آیتم‌ها + تنظیمات در یک پاسخ.

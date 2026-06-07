@@ -33,13 +33,22 @@ function createClient() {
     );
   }
 
-  const sslMode = process.env.DATABASE_SSL;
-  const ssl =
-    sslMode === 'false'
-      ? false
-      : sslMode === 'require' || process.env.NODE_ENV === 'production'
-        ? { rejectUnauthorized: false }  // برای Supabase و Liara
-        : false;
+  const sslMode = (process.env.DATABASE_SSL || '').trim().toLowerCase();
+
+  // تشخیص هوشمند SSL:
+  // 1. اگر صریحاً 'false' یا 'disable' → خاموش (برنده مطلق)
+  // 2. اگر صریحاً 'require'/'true' → روشن
+  // 3. در غیر این صورت: host داخلی (بدون نقطه، یا .liara) → خاموش، وگرنه روشن
+  let ssl: false | { rejectUnauthorized: boolean };
+  if (sslMode === 'false' || sslMode === 'disable' || sslMode === '0') {
+    ssl = false;
+  } else if (sslMode === 'require' || sslMode === 'true' || sslMode === '1') {
+    ssl = { rejectUnauthorized: false };
+  } else {
+    // auto: اگر host داخلی Liara باشد (بدون دامنه عمومی) SSL لازم نیست
+    const isInternalHost = /@[^.:/@]+(:\d+)?\//.test(url) || url.includes('.liara');
+    ssl = isInternalHost ? false : { rejectUnauthorized: false };
+  }
 
   return postgres(url, {
     max: 10,

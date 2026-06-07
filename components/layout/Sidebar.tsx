@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Receipt, Plus, BarChart3,
-  Landmark, Users, UtensilsCrossed, Settings as SettingsIcon, type LucideIcon,
+  Landmark, Users, UtensilsCrossed, ScrollText, Briefcase, Calculator, Package, UserPlus, Settings as SettingsIcon, type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { BrandMark } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
 import type { UserRole } from '@/types';
 
 interface NavItem {
@@ -26,7 +27,12 @@ const NAV_ALL: ReadonlyArray<NavItem> = [
   { href: '/accounts', label: 'صندوق‌ها', icon: Landmark, roles: ['SuperAdmin', 'BranchUser'] },
   { href: '/contacts', label: 'طرف‌حساب‌ها', icon: Users, roles: ['SuperAdmin', 'BranchUser'] },
   { href: '/reports', label: 'گزارش مالی', icon: BarChart3, roles: ['SuperAdmin', 'BranchUser'] },
+  { href: '/employees', label: 'پرسنل', icon: Briefcase, roles: ['SuperAdmin'] },
+  { href: '/payroll', label: 'حقوق و دستمزد', icon: Calculator, roles: ['SuperAdmin'] },
+  { href: '/inventory', label: 'انبار و آشپزخانه', icon: Package, roles: ['SuperAdmin', 'Warehouse'] },
   { href: '/menu', label: 'مدیریت منو', icon: UtensilsCrossed, roles: ['SuperAdmin'] },
+  { href: '/recruitment', label: 'استخدام', icon: UserPlus, roles: ['SuperAdmin'] },
+  { href: '/logs', label: 'لاگ سیستم', icon: ScrollText, roles: ['SuperAdmin'] },
   {
     href: '/settings', label: 'تنظیمات', icon: SettingsIcon,
     roles: ['SuperAdmin', 'BranchUser'],
@@ -50,9 +56,12 @@ export function SidebarContent({ onNavClick }: SidebarContentProps) {
   const pathname = usePathname();
   const user = useAppStore(s => s.user);
 
-  const visible = NAV_ALL.filter(item =>
-    !user || item.roles.includes(user.role)
-  );
+  const visible = NAV_ALL.filter(item => {
+    if (!user) return false;
+    const section = sectionForPath(item.href);
+    if (!section) return item.roles.includes(user.role);
+    return canAccessSection(user, section);
+  });
 
   return (
     <div className="flex flex-col h-full">

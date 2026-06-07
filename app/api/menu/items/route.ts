@@ -5,6 +5,9 @@ import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToMenuItem } from '@/lib/db/menuSerializers';
 
+export const dynamic = 'force-dynamic';
+
+
 const createSchema = z.object({
   categoryId: z.string().uuid(),
   titleEn: z.string().min(1).max(160),

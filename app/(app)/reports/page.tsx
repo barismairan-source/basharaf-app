@@ -10,7 +10,7 @@ import {
   Building2, Download, Printer, type LucideIcon,
 } from 'lucide-react';
 import {
-  Button, Card, CardBody, CardHeader, Select, Field,
+  Button, Card, CardBody, CardHeader, Select, Field, JalaliDatePicker,
 } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
@@ -94,12 +94,10 @@ export default function ReportsPage() {
             </Field>
           )}
           <Field label="از تاریخ">
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)} dir="ltr"
-              className="w-full h-10 px-3 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-500 bg-white" />
+            <JalaliDatePicker value={from} onChange={setFrom} />
           </Field>
           <Field label="تا تاریخ">
-            <input type="date" value={to} onChange={e => setTo(e.target.value)} dir="ltr"
-              className="w-full h-10 px-3 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-500 bg-white" />
+            <JalaliDatePicker value={to} onChange={setTo} />
           </Field>
         </div>
 

@@ -56,7 +56,6 @@ export default function NewTransactionPage() {
       title: '',
       category: '',
       amount: 0,
-      payee: '',
       branchId: defaultBranchId,
       method: 'نقد',
       receipt: '',
@@ -107,13 +106,17 @@ export default function NewTransactionPage() {
     // محاسبه VAT — اگر فعال باشد، vatAmount = amount * rate / 100
     const vatAmount = includeVat ? Math.round((data.amount * vatRate) / 100) : 0;
 
+    // payee از روی طرف حساب انتخاب‌شده پر می‌شود (فیلد متنی جدا حذف شد)
+    const selectedContact = contacts.find((c) => c.id === contactId);
+    const payeeValue = selectedContact?.name || data.title || '—';
+
     const tx = await submitTransaction(
       {
         type: data.type,
         title: data.title,
         category: data.category ?? '',
         amount: data.amount,
-        payee: data.payee,
+        payee: payeeValue,
         branchId: data.branchId,
         method: data.method,
         receipt: data.receipt,
@@ -202,10 +205,6 @@ export default function NewTransactionPage() {
                 />
               </Field>
 
-              {/* Payee */}
-              <Field label="طرف معامله" error={errors.payee?.message}>
-                <Input placeholder="مثلاً: قصاب کریمی" hasError={!!errors.payee} {...register('payee')} />
-              </Field>
 
               {/* Category (فقط برای غیر transfer) */}
               {!isTransfer && (

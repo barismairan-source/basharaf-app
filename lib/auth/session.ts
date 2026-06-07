@@ -34,13 +34,15 @@ const THIRTY_DAYS_SECONDS = 60 * 60 * 24 * 30;
  */
 export async function setServerSession(payload: {
   userId: string;
-  role: 'SuperAdmin' | 'BranchUser';
+  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse';
   branchId: string | null;
+  permissions?: string[] | null;
 }): Promise<void> {
   const token = await signToken({
     sub: payload.userId,
     role: payload.role,
     branchId: payload.branchId,
+    permissions: payload.permissions ?? null,
   });
 
   cookies().set(SESSION_COOKIE, token, {
@@ -105,6 +107,17 @@ export async function requireSession(): Promise<JWTPayload> {
 export async function requireAdmin(): Promise<JWTPayload> {
   const session = await requireSession();
   if (session.role !== 'SuperAdmin') {
+    throw new ForbiddenError();
+  }
+  return session;
+}
+
+/** اجازه بر اساس فهرستی از نقش‌های مجاز. */
+export async function requireRole(
+  ...roles: Array<'SuperAdmin' | 'BranchUser' | 'Warehouse'>
+): Promise<JWTPayload> {
+  const session = await requireSession();
+  if (!roles.includes(session.role)) {
     throw new ForbiddenError();
   }
   return session;

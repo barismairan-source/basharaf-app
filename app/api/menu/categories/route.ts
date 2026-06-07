@@ -5,6 +5,9 @@ import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToMenuCategory } from '@/lib/db/menuSerializers';
 
+export const dynamic = 'force-dynamic';
+
+
 const createSchema = z.object({
   slug: z.string().min(1).max(60).regex(/^[a-z0-9-]+$/, 'فقط حروف کوچک انگلیسی، عدد و خط تیره'),
   labelEn: z.string().min(1).max(80),

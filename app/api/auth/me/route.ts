@@ -38,6 +38,7 @@ export async function GET() {
         initials: user.initials,
         lastSeen: user.lastSeen,
         joined: user.joined,
+        permissions: user.permissions ?? null,
       },
     });
   } catch (e) {

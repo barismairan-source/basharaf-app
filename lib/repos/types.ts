@@ -10,6 +10,7 @@ import type {
   User,
   UserRole,
 } from '@/types';
+import type { InventoryRepo } from './inventory.types';
 
 /**
  * ─────────────────────────────────────────────────────────────────
@@ -148,4 +149,5 @@ export interface Repos {
   branches: BranchesRepo;
   categories: CategoriesRepo;
   notifications: NotificationsRepo;
+  inventory: InventoryRepo;
 }

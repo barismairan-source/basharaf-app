@@ -4,20 +4,22 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { UserPlus, Trash2, Mail, User as UserIcon, X, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { UserPlus, Trash2, Mail, User as UserIcon, X, Eye, EyeOff, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import {
   Avatar, Button, Card, CardBody, CardHeader, Chip, Empty,
   Field, Input, Select, Th, Td, TableContainer,
 } from '@/components/ui';
 import { useAppStore } from '@/store';
+import { SECTIONS, CAPABILITIES, capStorageKey } from '@/lib/auth/permissions';
+import type { User } from '@/types';
 
 const createSchema = z.object({
   name: z.string().min(2, 'نام الزامی است').max(80).transform(v => v.trim()),
   email: z.string().email('ایمیل معتبر وارد کنید').max(254).transform(v => v.trim().toLowerCase()),
   password: z.string().min(8, 'رمز باید حداقل ۸ کاراکتر باشد').max(128),
-  role: z.enum(['SuperAdmin', 'BranchUser']),
+  role: z.enum(['SuperAdmin', 'BranchUser', 'Warehouse']),
   assignedBranchId: z.string().nullable(),
-}).refine(d => !(d.role === 'BranchUser' && !d.assignedBranchId), {
+}).refine(d => !((d.role === 'BranchUser' || d.role === 'Warehouse') && !d.assignedBranchId), {
   message: 'برای کاربر شعبه یک شعبه انتخاب کنید',
   path: ['assignedBranchId'],
 });
@@ -35,6 +37,7 @@ export function TeamPane() {
   const [showAdd, setShowAdd] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [permUser, setPermUser] = useState<User | null>(null);
 
   if (!currentUser) return null;
 
@@ -79,7 +82,7 @@ export function TeamPane() {
                 {users.map(u => {
                   const isSelf = u.id === currentUser.id;
                   const isDeleting = deletingId === u.id;
-                  const branch = u.role === 'BranchUser'
+                  const branch = (u.role === 'BranchUser' || u.role === 'Warehouse')
                     ? branches.find(b => b.id === u.assignedBranch)?.name ?? '—'
                     : '—';
                   return (
@@ -97,7 +100,7 @@ export function TeamPane() {
                       </Td>
                       <Td>
                         <Chip tone={u.role === 'SuperAdmin' ? 'neutral' : 'green'}>
-                          {u.role === 'SuperAdmin' ? 'مدیر کل' : 'کاربر شعبه'}
+                          {u.role === 'SuperAdmin' ? 'مدیر کل' : u.role === 'Warehouse' ? 'انباردار' : 'کاربر شعبه'}
                         </Chip>
                       </Td>
                       <Td className="hidden md:table-cell">
@@ -112,7 +115,12 @@ export function TeamPane() {
                             <Button variant="default" size="sm" disabled={actionLoading} onClick={() => setDeletingId(null)}>لغو</Button>
                           </div>
                         ) : (
-                          <Button variant="danger" size="sm" icon={Trash2} onClick={() => setDeletingId(u.id)}>حذف</Button>
+                          <div className="flex items-center gap-1 justify-end">
+                            {u.role !== 'SuperAdmin' && (
+                              <Button variant="default" size="sm" icon={SlidersHorizontal} onClick={() => setPermUser(u)}>دسترسی‌ها</Button>
+                            )}
+                            <Button variant="danger" size="sm" icon={Trash2} onClick={() => setDeletingId(u.id)}>حذف</Button>
+                          </div>
                         )}
                       </Td>
                     </tr>
@@ -124,6 +132,7 @@ export function TeamPane() {
         )}
       </Card>
       {showAdd && <AddUserModal onClose={() => setShowAdd(false)} />}
+      {permUser && <PermissionsModal user={permUser} onClose={() => setPermUser(null)} />}
     </div>
   );
 }
@@ -143,7 +152,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
 
   const role = watch('role');
 
-  function handleRoleChange(r: 'SuperAdmin' | 'BranchUser') {
+  function handleRoleChange(r: 'SuperAdmin' | 'BranchUser' | 'Warehouse') {
     setValue('role', r);
     setValue('assignedBranchId', r === 'SuperAdmin' ? null : (branches[0]?.id ?? null));
   }
@@ -204,10 +213,11 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             <Field label="نقش" error={errors.role?.message}>
               <Select value={role} onChange={e => handleRoleChange(e.target.value as any)}>
                 <option value="BranchUser">کاربر شعبه</option>
+                <option value="Warehouse">انباردار</option>
                 <option value="SuperAdmin">مدیر کل</option>
               </Select>
             </Field>
-            {role === 'BranchUser' && (
+            {(role === 'BranchUser' || role === 'Warehouse') && (
               <Field label="شعبه" error={errors.assignedBranchId?.message}>
                 <Select {...register('assignedBranchId')}>
                   {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -221,6 +231,83 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
           </form>
         </div>
       </Card>
+    </div>
+  );
+}
+
+/* ───── modal مدیریت دسترسی بخش‌های یک کاربر ───── */
+function PermissionsModal({ user, onClose }: { user: User; onClose: () => void }) {
+  const updateUser = useAppStore(s => s.updateUser);
+  const currentUser = useAppStore(s => s.user);
+  const showToast = useAppStore(s => s.showToast);
+
+  // اگر کاربر permissions صریح ندارد، خالی شروع کن (یعنی پیش‌فرض نقش)
+  const [selected, setSelected] = useState<string[]>(user.permissions ?? []);
+  const [saving, setSaving] = useState(false);
+  const [useDefault, setUseDefault] = useState(!user.permissions || user.permissions.length === 0);
+
+  function toggle(key: string) {
+    setSelected(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  }
+
+  async function save() {
+    if (!currentUser) return;
+    setSaving(true);
+    // اگر «پیش‌فرض نقش» انتخاب شده، permissions را null کن
+    const perms = useDefault ? null : selected;
+    const ok = await updateUser(user.id, { permissions: perms }, currentUser);
+    setSaving(false);
+    if (ok) { showToast('دسترسی‌ها ذخیره شد', 'success'); onClose(); }
+    else showToast('خطا در ذخیره دسترسی‌ها', 'danger');
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-1">
+          <h2 className="text-[16px] font-medium text-stone-900">دسترسی‌های {user.name}</h2>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+        </div>
+        <p className="text-[11.5px] text-stone-500 mb-4 leading-relaxed">
+          مشخص کنید این کاربر کدام بخش‌ها را ببیند. تغییرات از <b>ورود بعدی</b> کاربر اعمال می‌شود.
+        </p>
+
+        <label className="flex items-center gap-2 mb-3 cursor-pointer">
+          <input type="checkbox" checked={useDefault} onChange={e => setUseDefault(e.target.checked)} className="accent-stone-900" />
+          <span className="text-[12.5px] text-stone-700">دسترسی پیش‌فرض نقش (توصیه‌شده)</span>
+        </label>
+
+        {!useDefault && (
+          <div className="space-y-1.5 border-t border-stone-100 pt-3">
+            <div className="text-[11.5px] text-stone-500 mb-1">بخش‌های مجاز را تیک بزنید:</div>
+            {SECTIONS.map(s => (
+              <label key={s.key} className="flex items-center gap-2 py-1 cursor-pointer">
+                <input type="checkbox" checked={selected.includes(s.key)} onChange={() => toggle(s.key)} className="accent-stone-900" />
+                <span className="text-[12.5px] text-stone-800">{s.label}</span>
+              </label>
+            ))}
+            {selected.length === 0 && (
+              <div className="text-[11px] text-amber-600 mt-1">هیچ بخشی انتخاب نشده — کاربر فقط داشبورد را می‌بیند.</div>
+            )}
+
+            <div className="text-[11.5px] text-stone-500 mt-3 mb-1 pt-3 border-t border-stone-100">اجازه‌های ویژه:</div>
+            {CAPABILITIES.map(c => {
+              const key = capStorageKey(c.key);
+              return (
+                <label key={c.key} className="flex items-center gap-2 py-1 cursor-pointer">
+                  <input type="checkbox" checked={selected.includes(key)} onChange={() => toggle(key)} className="accent-stone-900" />
+                  <span className="text-[12.5px] text-stone-800">{c.label}</span>
+                </label>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="flex gap-2 mt-5">
+          <Button variant="primary" onClick={save} loading={saving}>ذخیره</Button>
+          <Button variant="default" onClick={onClose}>انصراف</Button>
+        </div>
+      </div>
     </div>
   );
 }
