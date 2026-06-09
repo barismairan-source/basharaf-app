@@ -8,6 +8,43 @@
 
 ---
 
+## آخرین تغییرات — 2026-06-09: Sidebar UX Redesign
+
+### چه شد
+بازطراحی کامل ناوبری (Sidebar + Mobile) با رعایت UX استانداردهای ERP:
+
+**Desktop Sidebar:**
+- عرض ۲۴۰px حالت باز / ۶۴px حالت بسته (icon-only)
+- دکمه toggle (ChevronRight/Left) در بالای sidebar
+- انیمیشن `transition-[width] duration-200` بدون layout shift
+- حالت collapsed: فقط آیکون، tooltip با `title` attribute هنگام hover
+- بخش footer: Avatar + نام + ایمیل + دکمه logout (در حالت expanded)؛ Avatar + logout (در حالت collapsed)
+- تنظیم collapsed/expanded persist در `preferencesSlice` (localStorage)
+
+**Mobile:**
+- Drawer از راست (RTL start) با `transition-transform duration-300`
+- Overlay با `transition-opacity` (بدون blink از mount/unmount)
+- Bottom Tab Bar جدید (`BottomTabBar.tsx`) — ۵ تب: داشبورد، تراکنش‌ها، انبار، گزارش، تنظیمات
+- فقط تب‌هایی که کاربر به آن‌ها دسترسی دارد نمایش می‌یابند
+- حداقل ارتفاع ۴۸px برای tap target
+- `pb-16 lg:pb-0` روی main برای فضای bottom tab bar
+
+### فایل‌های تغییریافته
+- `types/preferences.ts` — اضافه شدن `sidebarCollapsed: boolean`
+- `components/layout/Sidebar.tsx` — بازنویسی کامل
+- `components/layout/MobileMenu.tsx` — بهبود overlay + حذف inline cn
+- `components/layout/BottomTabBar.tsx` — **فایل جدید**
+- `components/layout/index.ts` — export جدید `BottomTabBar`
+- `app/(app)/layout.tsx` — اضافه شدن `<BottomTabBar />` + `pb-16 lg:pb-0`
+
+### وضعیت build
+`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
+
+### بعدی
+- بدون مورد باز جدید — ادامه‌ی TODOهای بخش ۱۰
+
+---
+
 ## ۰. وضعیت فعلی
 
 - **نسخه:** `9.0.0` (در `package.json`)

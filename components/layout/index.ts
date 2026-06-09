@@ -1,3 +1,4 @@
+export { BottomTabBar } from './BottomTabBar';
 export { Header } from './Header';
 export { MobileMenu } from './MobileMenu';
 export { NotificationsBell } from './NotificationsBell';

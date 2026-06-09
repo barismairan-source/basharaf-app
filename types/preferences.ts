@@ -9,6 +9,7 @@ export interface Preferences {
   calendar: 'jalali' | 'gregorian';
   notifyPending: boolean;
   weeklyEmail: boolean;
+  sidebarCollapsed: boolean;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -19,4 +20,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   calendar: 'jalali',
   notifyPending: true,
   weeklyEmail: false,
+  sidebarCollapsed: false,
 };
