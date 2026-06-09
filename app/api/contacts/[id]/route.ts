@@ -30,6 +30,17 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
     await requireAdmin();
+    const [contact] = await db.select({ balance: schema.contacts.balance })
+      .from(schema.contacts).where(eq(schema.contacts.id, params.id)).limit(1);
+    if (!contact) throw new ApiError(404, 'طرف‌حساب پیدا نشد', 'NOT_FOUND');
+    const balance = Number(contact.balance);
+    if (balance !== 0) {
+      const formatted = new Intl.NumberFormat('fa-IR').format(Math.abs(balance));
+      const msg = balance > 0
+        ? `این طرف‌حساب ${formatted} تومان به ما بدهکار است و قابل حذف نیست. ابتدا تسویه کنید.`
+        : `این طرف‌حساب ${formatted} تومان طلب دارد و قابل حذف نیست. ابتدا تسویه کنید.`;
+      throw new ApiError(409, msg, 'NON_ZERO_BALANCE');
+    }
     await db.update(schema.contacts).set({ isActive: false, updatedAt: new Date() })
       .where(eq(schema.contacts.id, params.id));
     return NextResponse.json({ ok: true });

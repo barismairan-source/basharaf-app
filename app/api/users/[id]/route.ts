@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, count } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
@@ -86,6 +86,18 @@ export async function DELETE(
         400,
         'نمی‌توانید حساب خودتان را حذف کنید',
         'SELF_DELETE'
+      );
+    }
+
+    const txRows = await db.select({ total: count() }).from(schema.transactions)
+      .where(eq(schema.transactions.createdBy, params.id));
+    const total = txRows[0]?.total ?? 0;
+    if (total > 0) {
+      const formatted = new Intl.NumberFormat('fa-IR').format(total);
+      throw new ApiError(
+        409,
+        `این کاربر ${formatted} تراکنش ثبت‌شده دارد و قابل حذف نیست.`,
+        'HAS_TRANSACTIONS',
       );
     }
 

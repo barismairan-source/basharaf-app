@@ -30,6 +30,18 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
     await requireAdmin();
+    const [account] = await db.select({ balance: schema.accounts.balance })
+      .from(schema.accounts).where(eq(schema.accounts.id, params.id)).limit(1);
+    if (!account) throw new ApiError(404, 'حساب پیدا نشد', 'NOT_FOUND');
+    const balance = Number(account.balance);
+    if (balance !== 0) {
+      const formatted = new Intl.NumberFormat('fa-IR').format(Math.abs(balance));
+      throw new ApiError(
+        409,
+        `این صندوق ${formatted} تومان موجودی دارد و قابل حذف نیست. ابتدا موجودی را به صفر برسانید.`,
+        'NON_ZERO_BALANCE',
+      );
+    }
     await db.update(schema.accounts)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(schema.accounts.id, params.id));

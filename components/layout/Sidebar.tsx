@@ -34,8 +34,9 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     label: 'عملیات اصلی',
     items: [
       { href: '/dashboard',     label: 'داشبورد',          icon: LayoutDashboard, roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/transactions',  label: 'صندوق‌ها و فروش',  icon: Receipt,         roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
+      { href: '/transactions',  label: 'تراکنش‌ها',         icon: Receipt,         roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
       { href: '/accounts',      label: 'صندوق‌ها',          icon: Landmark,        roles: ['SuperAdmin', 'BranchUser'] },
+      { href: '/contacts',      label: 'طرف‌حساب‌ها',       icon: Users,           roles: ['SuperAdmin', 'BranchUser'] },
     ],
   },
   {
@@ -51,7 +52,6 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: '/customers',    label: 'امور مشتریان',    icon: UserCircle,  roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
       { href: '/reservations', label: 'رزرو میز',        icon: CalendarClock, roles: ['SuperAdmin', 'BranchUser'] },
       { href: '/coupons',      label: 'کوپن‌ها',          icon: Ticket,      roles: ['SuperAdmin'] },
-      { href: '/contacts',     label: 'طرف‌حساب‌ها',      icon: Users,       roles: ['SuperAdmin', 'BranchUser'] },
       { href: '/employees',    label: 'پرسنل',            icon: Briefcase,   roles: ['SuperAdmin'] },
       { href: '/payroll',      label: 'حقوق و دستمزد',    icon: Calculator,  roles: ['SuperAdmin'] },
       { href: '/recruitment',  label: 'استخدام',          icon: UserPlus,    roles: ['SuperAdmin'] },

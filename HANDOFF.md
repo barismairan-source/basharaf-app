@@ -8,6 +8,38 @@
 
 ---
 
+## آخرین تغییرات — 2026-06-09: رفع ۴ باگ بحرانی + اصلاح Sidebar
+
+### چه شد
+
+**API — حفاظ‌های حذف:**
+
+1. `app/api/accounts/[id]/route.ts` — DELETE حالا ابتدا `balance` را بررسی می‌کند؛ اگر != 0 باشد، خطای ۴۰۹ با پیام فارسی «این صندوق X تومان موجودی دارد و قابل حذف نیست» برمی‌گرداند.
+2. `app/api/contacts/[id]/route.ts` — DELETE مشابه بالا؛ پیام بر اساس جهت بدهی: بدهکار (مانده مثبت) یا طلبکار (مانده منفی).
+3. `app/api/coupons/route.ts` — GET حالا `eq(isActive, true)` دارد؛ کوپن‌های soft-delete دیگر برنمی‌گردند.
+4. `app/api/users/[id]/route.ts` — DELETE ابتدا count تراکنش‌های کاربر را بررسی می‌کند؛ اگر > 0 باشد، خطای ۴۰۹ با پیام فارسی برمی‌گرداند (به جای crash پنهان FK constraint).
+
+**Sidebar — اصلاح نام‌گذاری و گروه‌بندی:**
+
+5. `components/layout/Sidebar.tsx` — «صندوق‌ها و فروش» → «تراکنش‌ها» (رفع تداخل نام با «صندوق‌ها»).
+6. `components/layout/Sidebar.tsx` — «طرف‌حساب‌ها» از گروه «روابط و منابع» به «عملیات اصلی» منتقل شد.
+
+### فایل‌های تغییریافته
+- `app/api/accounts/[id]/route.ts`
+- `app/api/contacts/[id]/route.ts`
+- `app/api/coupons/route.ts`
+- `app/api/users/[id]/route.ts`
+- `components/layout/Sidebar.tsx`
+
+### وضعیت build
+`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
+
+### بعدی
+- موارد 🟡 باقی‌مانده از domain-audit.md (اختیاری)
+- اضافه کردن تست integration برای balance guard
+
+---
+
 ## آخرین تغییرات — 2026-06-09: Sidebar UX Redesign
 
 ### چه شد
