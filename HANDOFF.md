@@ -45,6 +45,24 @@
 
 ---
 
+## آخرین تغییرات — 2026-06-09: رفع باگ حذف قلم انبار
+
+### باگ
+حذف قلم انبار toast موفقیت نشان می‌داد ولی با refresh صفحه قلم برمی‌گشت.
+
+### ریشه‌ی مشکل
+`DELETE /api/inventory/items/[id]` یک **soft-delete** است — فقط `isActive = false` می‌کند (به دلیل FK‌های `restrict` از `inv_recipe_lines` و `inv_voucher_lines`، حذف فیزیکی بلوک می‌شد). اما `GET /api/inventory/items` هیچ فیلتری روی `isActive` نداشت و همه‌ی رکوردها شامل غیرفعال‌ها را برمی‌گرداند. بعد از حذف، `onChange()` صفحه یک re-fetch می‌زد و قلم «حذف‌شده» دوباره برمی‌گشت.
+
+### اصلاح
+`app/api/inventory/items/route.ts` — اضافه شدن `ne(isActive, false)` به `where` clause در GET:
+- BranchUser: `AND(isActive != false, branchId = X)`
+- SuperAdmin/Warehouse: `isActive != false`
+
+### فایل تغییریافته
+- `app/api/inventory/items/route.ts`
+
+---
+
 ## ۰. وضعیت فعلی
 
 - **نسخه:** `9.0.0` (در `package.json`)

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvItem } from '@/lib/db/inventory.serializers';
 
@@ -31,13 +32,16 @@ const createItemSchema = z.object({
 export async function GET() {
   try {
     const session = await requireSession();
+    const activeFilter = ne(schema.invItems.isActive, false);
     const where = session.role === 'BranchUser' && session.branchId
-      ? eq(schema.invItems.branchId, session.branchId)
-      : undefined;
+      ? and(activeFilter, eq(schema.invItems.branchId, session.branchId))
+      : activeFilter;
 
     const rows = await db.select().from(schema.invItems)
       .where(where).orderBy(desc(schema.invItems.createdAt));
-    return NextResponse.json({ items: rows.map(rowToInvItem) });
+    // تفکیک وظایف: انباردار / کاربران بدون مجوز مالی، بهای تمام‌شده را نمی‌بینند
+    const maskCosts = !canDo(session, 'inventory.viewCosts');
+    return NextResponse.json({ items: rows.map((r) => rowToInvItem(r, maskCosts)) });
   } catch (e) {
     return handleError(e);
   }
