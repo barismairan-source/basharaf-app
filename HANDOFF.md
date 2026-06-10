@@ -1,580 +1,216 @@
-# سند تحویل (Handoff) — «با شرف» v9.0.0
+# HANDOFF.md — دفتر وضعیت زنده‌ی پروژه «با شرف»
 
-> این سند وضعیت **واقعی و فعلی** کد را مستند می‌کند.
-> هرجا چیزی پیاده‌سازی نشده، صریح نوشته شده.
-> تاریخ: **2026-06-10** — نسخه `9.0.0` (به‌روز شده همین روز)
->
-> **فایل تفصیلی‌تر:** `project-docs/handoff.md` (شامل ریزجزئیات Batch 3–4 و hotfixها).
+> این فایل **دفتر رله‌ی بین دو اکانت Claude Code** است که نوبتی روی همین پوشه کار می‌کنند.
+> قانون طلایی: **هر جلسه اول بخش ۰ را بخوان؛ آخر جلسه بخش ۰ + ژورنال را به‌روز کن و commit/push کن.**
+> جزئیات تاریخی قدیمی‌تر: `project-docs/handoff-archive.md` (اگر نبود، اولین جلسه بسازد).
 
 ---
 
-## آخرین تغییرات — 2026-06-10: ۴ ابزار آشپزخانه (اولویت S)
+## ⚡ بخش ۰ — وضعیت لحظه‌ای (اول این را بخوان)
 
-### چه شد
+| | |
+|---|---|
+| **نسخه** | `9.1.0` |
+| **آخرین به‌روزرسانی** | 2026-06-10 — اکانت: ۱ |
+| **Build/tsc** | هر دو سبز ✅ |
+| **دیپلوی** | Vercel+Supabase کامل کار می‌کند ✅ — Liara: مشکل `28P01`، راهنما در `DEPLOY-LIARA.md` |
+| **کار نیمه‌تمام (in-progress)** | — هیچ |
+| **کار بعدی پیشنهادی** | 🟠 stocktake accounting entry — مغایرت انبارگردانی در P&L ثبت شود (Backlog #1) |
+| **بلاک‌شده/منتظر کاربر** | — |
 
-**۱. کارت بهای تمام‌شده رسپی (بهبود RecipeCard)**
-- Grid آمار از ۳ ستون به ۴ ستون: بهای هر پرس | قیمت فروش | food cost% | حاشیه سود
-- **حاشیه سود = ۱۰۰ − foodCostPct** — قرمز اگر margin < 30%
-- قیمت پیشنهادی (بر اساس targetFcPct) فقط وقتی >5% با قیمت فعلی فرق دارد نشان داده می‌شود
-
-**۲. ماشین‌حساب پرس (Portion Calculator)**
-- بدون نیاز به API جدید — محاسبه client-side با `useMemo`
-- فرمول: `پرس_ممکن = (qtyBase × yieldPct/100) / (line.qtyBase / portions)`
-- badge سبز/زرد/قرمز در سرتیتر هر RecipeCard با تعداد پرس ممکن
-- گلوگاه (bottleneck ingredient) با نام در tooltip و زیر سرتیتر نشان داده می‌شود
-- `overridePct` روی خطوط رسپی لحاظ می‌شود
-
-**۳. کارت رسپی چاپ‌پذیر آشپزخانه**
-- دکمه `Printer` در سرتیتر هر RecipeCard
-- یک پنجره‌ی جدید با HTML+CSS خالص باز می‌کند و `window.print()` فراخوانی می‌کند
-- ستون‌ها: ماده اولیه | هر پرس | کل پخت (N پرس)
-- اعداد لاتین (خواناتر در آشپزخانه)، بدون قیمت، بدون مارکه مالی
-
-**۴. هشدار انقضای مواد**
-- API جدید: `GET /api/inventory/expiry` — اقلامی که `expiryDate` در ۳ روز آینده دارند
-- داده از `inv_stock_tx.expiryDate` (Jalali text) با `jalaliToDate` تبدیل می‌شود
-- UI: `ExpiryWarningsSection` در بالای تب موجودی — badge قرمز «منقضی شده» یا زرد «X روز دیگر»
-- اگر هشداری نباشد، هیچ چیزی نمایش داده نمی‌شود
-
-### فایل‌های تغییریافته / ایجادشده
-- `types/inventory.ts` — افزوده: `ExpiryWarning` interface
-- `app/api/inventory/expiry/route.ts` — **فایل جدید**
-- `lib/repos/inventory.types.ts` — افزوده: `expiryWarnings()` method
-- `lib/repos/inventory.api.ts` — پیاده‌سازی `expiryWarnings()`
-- `app/(app)/inventory/page.tsx` — `RecipeCard` (props + ماشین‌حساب + چاپ + margin)، `ExpiryWarningsSection` (جدید)، `RecipesTab` (pass items)
-
-### وضعیت build
-`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
-
-### بعدی
-- موارد 🟡 باقیمانده از `inventory-audit.md`:
-  - stocktake accounting entry (مغایرت انبارگردانی در P&L ثبت نمی‌شود)
-  - account selection در خرید (انتخاب دستی صندوق به‌جای اولین حساب فعال)
+> ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
 ---
 
-## آخرین تغییرات — 2026-06-10: رفع ۳ باگ بحرانی انبار ↔ حسابداری
+## 🔁 پروتکل رله‌ی دو اکانت
 
-### چه شد
+### شروع هر جلسه (الزامی — به ترتیب)
+1. این فایل، بخش ۰ + جدیدترین ورودی ژورنال را بخوان.
+2. `git status` بزن — اگر تغییرات commit‌نشده هست، یعنی جلسه‌ی قبل ناقص بسته شده: اول وضعیت را با کاربر روشن کن، چیزی را کورکورانه commit یا revert نکن.
+3. `git log -5 --oneline` — تطبیق بده با ژورنال.
+4. به کاربر خلاصه بگو: «وضعیت X است، کار نیمه‌تمام Y، پیشنهاد بعدی Z» و منتظر تأیید بمان.
 
-**۱. باگ yield تولید نیمه‌آماده — `lib/db/inventoryHelpers.ts` (`produceConfirmed`)**
-- قبلاً: `issueConfirmed(itemId, r.qtyBase * b)` — افت (yieldPct) اعمال نمی‌شد
-- حالا: برای هر خط رسپی، `yieldPct` ماده‌ی خام از DB خوانده و ضریب `100/yieldPct` اعمال می‌شود
-- دقیقاً همان فرمول `menuSaleDeduction`: `gross = qtyBase × (100/yield)`
-- اثر: موجودی مواد خام بعد از تولید اکنون دقیق است
+### پایان هر جلسه / بعد از هر تغییر معنادار (الزامی)
+1. یک ورودی ژورنال با **قالب زیر** به بالای بخش ژورنال اضافه کن.
+2. بخش ۰ را به‌روز کن (نسخه، تاریخ، اکانت، کار نیمه‌تمام، کار بعدی).
+3. اگر ژورنال بیش از **۷ ورودی** شد، قدیمی‌ها را به `project-docs/handoff-archive.md` منتقل کن.
+4. `git add -A && git commit -m "..." && git push` — **بدون push جلسه را نبند.**
 
-**۲. لاگ مفقود انبارگردانی از طریق برگه — `app/api/inventory/vouchers/[id]/approve/route.ts`**
-- قبلاً: `if (kind === 'stocktake') continue;` — هیچ `invStockTx` ثبت نمی‌شد
-- حالا: قبل از `approveVoucherTx`، موجودی فعلی هر قلم پیش‌خوانی می‌شود (`preStocktakeQtys`)؛ پس از تأیید، اختلاف محاسبه و `invStockTx` درج می‌شود
-- دقیقاً مثل مسیر مستقیم API (`stocktake/route.ts`)
-
-**۳. موجودی ناکافی فروش منو — اعلان به مدیر کل — `app/api/transactions/[id]/approve/route.ts`**
-- قبلاً: فقط `audit()` در لاگ پنهان — مدیر هرگز نمی‌دید
-- حالا: علاوه بر audit، اعلان `type: 'info'` برای همه‌ی SuperAdmin‌ها در جدول `notifications` درج می‌شود
-- فروش همچنان block نمی‌شود؛ فقط اطلاع‌رسانی می‌شود
-
-### فایل‌های تغییریافته
-- `lib/db/inventoryHelpers.ts`
-- `app/api/inventory/vouchers/[id]/approve/route.ts`
-- `app/api/transactions/[id]/approve/route.ts`
-
-### وضعیت build
-`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
-
-### بعدی
-- پیاده‌سازی ابزارهای آشپزخانه (اولویت S از inventory-audit.md: کارت رسپی، ماشین‌حساب پرس، کارت چاپ)
-- رفع موارد 🟡 باقیمانده از inventory-audit.md (stocktake accounting entry، account selection در خرید)
+### قالب اجباری ورودی ژورنال
+```markdown
+## 📓 [تاریخ] — [عنوان کوتاه] — اکانت [۱/۲]
+**چه شد:** (۲–۵ خط، تصمیم‌های مهم + چرایی)
+**فایل‌ها:** (مسیر کامل ایجاد/ویرایش‌شده‌ها)
+**Build:** tsc/build سبز یا خطا + متن خطا
+**ناتمام:** دقیقاً کجا متوقف شد، چه چیزی نیمه‌کاره است (اگر هیچ: «—»)
+**برای جلسه‌ی بعد:** کار بعدی مشخص + هر هشداری که اکانت دیگر باید بداند
+```
 
 ---
 
-## آخرین تغییرات — 2026-06-09: آدیت یکپارچگی انبار ↔ حسابداری
+## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
-### چه شد
-ردیابی end-to-end شش جریان کامل انبار ↔ حسابداری در کد + پیشنهاد ابزار آشپزخانه.
-نتایج در `project-docs/inventory-audit.md`.
+## 📓 2026-06-10 — سامان‌دهی commitهای CRM + cleanup — اکانت ۱
+**چه شد:** همه‌ی فایل‌های uncommit از جلسات قبل (ماژول CRM + SQL migrationها) در دو commit منطقی جدا سامان‌دهی شدند. `*.zip` و `release-artifacts/` به `.gitignore` اضافه شد. tsc (۰ خطا) و build (سبز) تأیید شد. ژورنال‌های عقب‌افتاده بازسازی شدند و ۲ ورودی قدیمی به `project-docs/handoff-archive.md` منتقل شد.
+**فایل‌ها:** ماژول CRM (customers/reservations/coupons/loyalty + sliceها)، `supabase-v5/v6/v7-migration.sql`، `customers-migration.sql`، `cleanup-rice.sql`، `CLAUDE.md`، `.claude/`، `package-lock.json`، `project-docs/financial-integrity-spec.md`، `.gitignore`، `HANDOFF.md`.
+**Build:** tsc سبز ✅ / build سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** stocktake accounting entry (Backlog #1) — مغایرت انبارگردانی در P&L ثبت شود. قبل از کد، طرح را تأیید کن.
 
-### یافته‌های بحرانی (🔴 — کد تأیید شد)
+## 📓 2026-06-10 — رفع ۴ باگ production (بازسازی از commit 3050ae4) — اکانت _(؟)_
+**چه شد:** (۱) نوع طرف‌حساب read-only بود: `z.enum→z.string` در POST/PATCH schema؛ ردیف ویرایش inline با datalist آزاد اضافه شد. (۲) دکمه‌ی «ثبت تراکنش» از header صفحه‌ی تراکنش‌ها حذف شده بود؛ بازگردانده شد. (۳) خطای import bulk پیام generic نشان می‌داد؛ اصلاح: `data.error` قبل از fallback عمومی. (۴) ارسال voucher با 500 crash می‌کرد: conditional spread برای `expiryDate` (جلوگیری از column-not-found پیش از migration v6)؛ باگ FK در approve route (`id`→`linkedTransactionId ?? null`) اصلاح شد.
+**فایل‌ها:** `app/(app)/contacts/page.tsx`، `app/(app)/transactions/page.tsx`، `app/api/contacts/[id]/route.ts`، `app/api/contacts/route.ts`، `app/api/inventory/vouchers/[id]/approve/route.ts`، `app/api/inventory/vouchers/route.ts`، `components/transactions/ImportPanel.tsx`.
+**Build:** سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** —
 
-1. **باگ: تولید نیمه‌آماده — افت (yieldPct) اعمال نمی‌شود**
-   - فایل: `lib/db/inventoryHelpers.ts:200` — `produceConfirmed`
-   - `issueConfirmed(r.itemId, r.qtyBase * b)` — بدون ضریب افت
-   - فروش منو درست است (`factor = 100/yield`), تولید ندارد → ناسازگاری
-   - اثر: موجودی مواد خام بالاتر از واقعیت، COGS نیمه‌آماده کمتر
+## 📓 2026-06-10 — ۴ ابزار آشپزخانه (اولویت S) — اکانت _(؟)_
+**چه شد:** (۱) کارت بهای رسپی: grid ۴ستونه با حاشیه سود = ۱۰۰−foodCost٪ (قرمز اگر <۳۰٪)؛ قیمت پیشنهادی فقط وقتی >۵٪ اختلاف. (۲) ماشین‌حساب پرس client-side با `useMemo` — badge سبز/زرد/قرمز + گلوگاه (bottleneck) با نام؛ `overridePct` لحاظ شد. (۳) کارت رسپی چاپ‌پذیر: پنجره‌ی HTML خالص + `window.print()`، اعداد لاتین، بدون قیمت. (۴) هشدار انقضا: API جدید `GET /api/inventory/expiry` از `inv_stock_tx.expiryDate` (جلالی→`jalaliToDate`)، UI به‌صورت `ExpiryWarningsSection` بالای تب موجودی.
+**فایل‌ها:** `types/inventory.ts` (+`ExpiryWarning`)، `app/api/inventory/expiry/route.ts` (جدید)، `lib/repos/inventory.types.ts` و `inventory.api.ts` (+`expiryWarnings()`)، `app/(app)/inventory/page.tsx` (RecipeCard + ExpiryWarningsSection + RecipesTab).
+**Build:** سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** دو 🟡 باقی‌مانده‌ی `inventory-audit.md`: stocktake accounting entry (مغایرت در P&L ثبت نمی‌شود) و account selection در خرید (انتخاب دستی صندوق به‌جای اولین حساب فعال).
 
-2. **باگ: برگه انبارگردانی — invStockTx ثبت نمی‌شود**
-   - فایل: `app/api/inventory/vouchers/[id]/approve/route.ts:69`
-   - `if (kind === 'stocktake') continue;` — لاگ حرکت موجودی رد می‌شود
-   - انبارگردانی مستقیم (API) لاگ می‌نویسد؛ انبارگردانی از طریق برگه نمی‌نویسد
+## 📓 2026-06-10 — رفع ۳ باگ بحرانی انبار↔حسابداری — اکانت _(؟)_
+**چه شد:** (۱) `produceConfirmed` در `lib/db/inventoryHelpers.ts`: yield اعمال نمی‌شد؛ حالا برای هر خط رسپی `yieldPct` از DB خوانده و ضریب `100/yield` اعمال می‌شود (هم‌فرمول `menuSaleDeduction`). (۲) برگه‌ی انبارگردانی `invStockTx` نمی‌نوشت (`continue` رد می‌کرد)؛ حالا `preStocktakeQtys` پیش‌خوانی و بعد از تأیید، اختلاف درج می‌شود — هم‌رفتار مسیر مستقیم API. (۳) موجودی ناکافی فروش منو فقط در audit پنهان بود؛ حالا اعلان `info` به همه‌ی SuperAdminها (فروش block نمی‌شود).
+**فایل‌ها:** `lib/db/inventoryHelpers.ts`، `app/api/inventory/vouchers/[id]/approve/route.ts`، `app/api/transactions/[id]/approve/route.ts`.
+**Build:** سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ابزارهای آشپزخانه (انجام شد در ورودی بالا) + دو 🟡 stocktake/account-selection.
 
-3. **ریسک: موجودی ناکافی در فروش منو — هشدار فقط در audit log**
-   - فایل: `lib/inventory/menuSaleDeduction.ts:104`
-   - warnings.push(...) → فقط در جدول audit_logs، هیچ toast/اعلانی به مدیر نمی‌رسد
-   - COGS کمتر از واقعیت اگر stock کافی نباشد
+## 📓 2026-06-09 — آدیت یکپارچگی انبار↔حسابداری — اکانت _(؟)_
+**چه شد:** ردیابی e2e شش جریان انبار↔حسابداری؛ گزارش در `project-docs/inventory-audit.md`. سه 🔴: yield تولید اعمال نمی‌شود؛ برگه‌ی انبارگردانی لاگ نمی‌نویسد؛ هشدار موجودی ناکافی به مدیر نمی‌رسد. هیچ کدی تغییر نکرد — فقط آدیت.
+**فایل‌ها:** `project-docs/inventory-audit.md` (جدید).
+**Build:** بدون تغییر کد.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** رفع سه 🔴 (انجام شد در ورودی بالا).
 
-### هیچ کدی تغییر نکرد — فقط آدیت و مستندسازی
+## 📓 2026-06-09 — رفع ۴ باگ بحرانی + اصلاح Sidebar — اکانت _(؟)_
+**چه شد:** حفاظ‌های حذف: صندوق با مانده≠۰ → خطای ۴۰۹ فارسی؛ طرف‌حساب با بدهی/طلب → ۴۰۹ (پیام بر اساس جهت)؛ کوپن GET فیلتر `isActive` گرفت؛ حذف کاربر دارای تراکنش → ۴۰۹ به‌جای crash پنهان FK. Sidebar: «صندوق‌ها و فروش»→«تراکنش‌ها»، «طرف‌حساب‌ها» به گروه «عملیات اصلی».
+**فایل‌ها:** `app/api/accounts/[id]/route.ts`، `app/api/contacts/[id]/route.ts`، `app/api/coupons/route.ts`، `app/api/users/[id]/route.ts`، `components/layout/Sidebar.tsx`.
+**Build:** سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** موارد 🟡 domain-audit (اختیاری) + تست integration برای balance guard.
 
-### بعدی
-- رفع باگ شماره ۱ (produce yield): یک خط تغییر در `produceConfirmed`
-- رفع باگ شماره ۲ (stocktake log): اضافه کردن insert به invStockTx در مسیر برگه
-- پیاده‌سازی ابزارهای آشپزخانه (اولویت S: کارت رسپی، ماشین‌حساب پرس، کارت چاپ)
-
----
-
-## آخرین تغییرات — 2026-06-09: رفع ۴ باگ بحرانی + اصلاح Sidebar
-
-### چه شد
-
-**API — حفاظ‌های حذف:**
-
-1. `app/api/accounts/[id]/route.ts` — DELETE حالا ابتدا `balance` را بررسی می‌کند؛ اگر != 0 باشد، خطای ۴۰۹ با پیام فارسی «این صندوق X تومان موجودی دارد و قابل حذف نیست» برمی‌گرداند.
-2. `app/api/contacts/[id]/route.ts` — DELETE مشابه بالا؛ پیام بر اساس جهت بدهی: بدهکار (مانده مثبت) یا طلبکار (مانده منفی).
-3. `app/api/coupons/route.ts` — GET حالا `eq(isActive, true)` دارد؛ کوپن‌های soft-delete دیگر برنمی‌گردند.
-4. `app/api/users/[id]/route.ts` — DELETE ابتدا count تراکنش‌های کاربر را بررسی می‌کند؛ اگر > 0 باشد، خطای ۴۰۹ با پیام فارسی برمی‌گرداند (به جای crash پنهان FK constraint).
-
-**Sidebar — اصلاح نام‌گذاری و گروه‌بندی:**
-
-5. `components/layout/Sidebar.tsx` — «صندوق‌ها و فروش» → «تراکنش‌ها» (رفع تداخل نام با «صندوق‌ها»).
-6. `components/layout/Sidebar.tsx` — «طرف‌حساب‌ها» از گروه «روابط و منابع» به «عملیات اصلی» منتقل شد.
-
-### فایل‌های تغییریافته
-- `app/api/accounts/[id]/route.ts`
-- `app/api/contacts/[id]/route.ts`
-- `app/api/coupons/route.ts`
-- `app/api/users/[id]/route.ts`
-- `components/layout/Sidebar.tsx`
-
-### وضعیت build
-`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
-
-### بعدی
-- موارد 🟡 باقی‌مانده از domain-audit.md (اختیاری)
-- اضافه کردن تست integration برای balance guard
+## 📓 2026-06-09 — بازطراحی UX ناوبری (Sidebar/Mobile) — اکانت _(؟)_
+**چه شد:** Sidebar دسکتاپ ۲۴۰/۶۴px با toggle و persist در `preferencesSlice`؛ موبایل: drawer راست + `BottomTabBar.tsx` جدید (۵ تب، فقط بخش‌های مجاز کاربر، tap target ≥۴۸px)؛ `pb-16 lg:pb-0` روی main.
+**فایل‌ها:** `types/preferences.ts`، `components/layout/Sidebar.tsx` (بازنویسی)، `MobileMenu.tsx`، `BottomTabBar.tsx` (جدید)، `layout/index.ts`، `app/(app)/layout.tsx`.
+**Build:** سبز ✅
+**ناتمام:** — | **برای جلسه‌ی بعد:** ادامه‌ی backlog.
 
 ---
 
-## آخرین تغییرات — 2026-06-09: Sidebar UX Redesign
+## 📌 Backlog یکپارچه (به ترتیب اولویت)
 
-### چه شد
-بازطراحی کامل ناوبری (Sidebar + Mobile) با رعایت UX استانداردهای ERP:
+### 🟠 فوری/مهم
+1. **stocktake accounting entry** — مغایرت انبارگردانی در P&L ثبت نمی‌شود (`inventory-audit.md`).
+2. **account selection در خرید** — انتخاب دستی صندوق به‌جای «اولین حساب فعال» (`inventory-audit.md`).
+3. **چک `/api/_diag`** — اگر هنوز در کد هست، قبل از production حذف شود (افشای اطلاعات اتصال).
+4. **Liara `28P01`** — طبق `DEPLOY-LIARA.md` حل شود (الان فقط Vercel+Supabase لایو است).
 
-**Desktop Sidebar:**
-- عرض ۲۴۰px حالت باز / ۶۴px حالت بسته (icon-only)
-- دکمه toggle (ChevronRight/Left) در بالای sidebar
-- انیمیشن `transition-[width] duration-200` بدون layout shift
-- حالت collapsed: فقط آیکون، tooltip با `title` attribute هنگام hover
-- بخش footer: Avatar + نام + ایمیل + دکمه logout (در حالت expanded)؛ Avatar + logout (در حالت collapsed)
-- تنظیم collapsed/expanded persist در `preferencesSlice` (localStorage)
+### 🟡 متوسط
+5. تست integration برای balance guardها.
+6. موارد 🟡 باقی‌مانده‌ی `project-docs/domain-audit.md`.
+7. Seed منو روی دیتابیس تازه خالی است (۳۱ آیتم فقط در `supabase-v4-menu-migration.sql` آرشیوی).
 
-**Mobile:**
-- Drawer از راست (RTL start) با `transition-transform duration-300`
-- Overlay با `transition-opacity` (بدون blink از mount/unmount)
-- Bottom Tab Bar جدید (`BottomTabBar.tsx`) — ۵ تب: داشبورد، تراکنش‌ها، انبار، گزارش، تنظیمات
-- فقط تب‌هایی که کاربر به آن‌ها دسترسی دارد نمایش می‌یابند
-- حداقل ارتفاع ۴۸px برای tap target
-- `pb-16 lg:pb-0` روی main برای فضای bottom tab bar
+### 🔵 ساختاری/بلندمدت
+8. GL دوطرفه‌ی کامل — `journal_vouchers` فقط برای حقوق؛ هسته single-entry.
+9. FIFO انبار — `expiryDate` ثبت می‌شود ولی موتور هزینه WAC است نه FIFO.
+10. منو → POS — منو کاتالوگ است؛ backflushing فقط از تراکنش income دستی.
+11. Password reset با ایمیل — پیاده نشده.
+12. Rate-limit در حافظه — در multi-instance سراسری نیست.
+13. وابستگی Realtime/Storage به Supabase — روی هاست خالص کار نمی‌کند.
 
-### فایل‌های تغییریافته
-- `types/preferences.ts` — اضافه شدن `sidebarCollapsed: boolean`
-- `components/layout/Sidebar.tsx` — بازنویسی کامل
-- `components/layout/MobileMenu.tsx` — بهبود overlay + حذف inline cn
-- `components/layout/BottomTabBar.tsx` — **فایل جدید**
-- `components/layout/index.ts` — export جدید `BottomTabBar`
-- `app/(app)/layout.tsx` — اضافه شدن `<BottomTabBar />` + `pb-16 lg:pb-0`
-
-### وضعیت build
-`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
-
-### بعدی
-- بدون مورد باز جدید — ادامه‌ی TODOهای بخش ۱۰
+### ❓ برای تأیید (جلسه‌ی بعدی با کد تطبیق دهد — ممکن است خطای مستندات باشد نه کد)
+- لیست SQL بخش ۸، فایلی برای **`job_applications`** (استخدام)، **ستون `users.permissions`**، و **نقش `Warehouse`** ندارد. یا در `db-setup.sql` ادغام شده‌اند یا فایل‌هایشان (`db-recruitment-migration.sql`، `db-user-permissions.sql`، `db-warehouse-role.sql`) از لیست جا افتاده. تطبیق و این سند اصلاح شود.
+- `@types/file-saver` یتیم است (خود `file-saver` نصب نیست) — حذف یا نصب.
 
 ---
 
-## آخرین تغییرات — 2026-06-09: آدیت دامین‌لاجیک
-
-گزارش کامل در `project-docs/domain-audit.md`. خلاصه‌ی یافته‌های بحرانی:
-1. 🔴 صندوق با مانده != 0 قابل soft-delete (بدون هشدار)
-2. 🔴 طرف‌حساب با بدهی/مطالبه قابل soft-delete (بدون هشدار)
-3. 🔴 کوپن GET فیلتر isActive ندارد — کوپن‌های حذف‌شده برمی‌گردند
-4. 🔴 حذف کاربر با تراکنش → crash پنهان (FK restrict پوشش نشده)
-5. 🟡 گروه‌بندی sidebar: «روابط و منابع» ۷ آیتم ناهمگون دارد
-6. 🟡 «صندوق‌ها» و «صندوق‌ها و فروش» در sidebar — نام تداخل دارد
-
-هیچ کدی تغییر نکرد — فقط آدیت و مستندسازی.
-
----
-
-## آخرین تغییرات — 2026-06-09: رفع باگ حذف قلم انبار
-
-### باگ
-حذف قلم انبار toast موفقیت نشان می‌داد ولی با refresh صفحه قلم برمی‌گشت.
-
-### ریشه‌ی مشکل
-`DELETE /api/inventory/items/[id]` یک **soft-delete** است — فقط `isActive = false` می‌کند (به دلیل FK‌های `restrict` از `inv_recipe_lines` و `inv_voucher_lines`، حذف فیزیکی بلوک می‌شد). اما `GET /api/inventory/items` هیچ فیلتری روی `isActive` نداشت و همه‌ی رکوردها شامل غیرفعال‌ها را برمی‌گرداند. بعد از حذف، `onChange()` صفحه یک re-fetch می‌زد و قلم «حذف‌شده» دوباره برمی‌گشت.
-
-### اصلاح
-`app/api/inventory/items/route.ts` — اضافه شدن `ne(isActive, false)` به `where` clause در GET:
-- BranchUser: `AND(isActive != false, branchId = X)`
-- SuperAdmin/Warehouse: `isActive != false`
-
-### فایل تغییریافته
-- `app/api/inventory/items/route.ts`
-
----
-
-## ۰. وضعیت فعلی
-
-- **نسخه:** `9.0.0` (در `package.json`)
-- **Repo:** `github.com/barismairan-source/basharaf-app` (شاخه `main`)
-- **Build/TypeCheck:** `npx tsc --noEmit` و `npm run build` هر دو سبز ✅
-- **وضعیت دیپلوی:**
-  - **Vercel + Supabase:** کامل کار می‌کند.
-  - **Liara:** فایل راهنما `DEPLOY-LIARA.md` در ریشه‌ی پروژه. مشکل قدیمی `28P01` از طریق آن راهنما باید حل شود.
-
----
+# 📚 مرجع پایدار (کم‌تغییر — فقط وقتی معماری عوض شد به‌روز کن)
 
 ## ۱. Tech Stack
 
 | لایه | ابزار |
 |---|---|
-| Framework | Next.js 14 (App Router) |
+| Framework | Next.js 14 (App Router) — `14.2.15` |
 | Language | TypeScript strict |
 | Database | PostgreSQL (Supabase-hosted) |
-| ORM | Drizzle ORM + درایور `postgres` (خام، نه supabase-js برای داده) |
+| ORM | Drizzle ORM `^0.36.1` + درایور `postgres` `^3.4.5` (خام؛ supabase-js برای داده نه) |
 | Auth | JWT دست‌ساز — `jose` (HS256) + `bcryptjs` |
-| State | Zustand (slice-based) |
-| Styling | Tailwind CSS + tailwindcss-rtl (RTL کامل) |
-| Supabase SDK | فقط برای Realtime و Storage |
-| Realtime | `@supabase/supabase-js` → `lib/realtime/` |
-| Storage | Supabase Storage → `lib/storage/receipts.ts` و `lib/storage/resumes.ts` |
+| State | Zustand (slice-based) `^4.5.5` |
+| Styling | Tailwind CSS + tailwindcss-rtl |
+| Supabase SDK | فقط Realtime (`lib/realtime/`) و Storage (`lib/storage/receipts.ts`, `resumes.ts`) |
 | Forms | react-hook-form + zod |
-| Charts | recharts |
-| Export | xlsx |
-| Date | react-multi-date-picker (Jalali) — `components/ui/JalaliDatePicker.tsx` |
-| QR | qrcode |
+| Charts | recharts · Export: xlsx · QR: qrcode |
+| Date | react-multi-date-picker (جلالی) — `components/ui/JalaliDatePicker.tsx` |
 
----
-
-## ۲. مدل داده — Schema (`lib/db/schema.ts`) — ۳۰+ جدول
+## ۲. مدل داده — `lib/db/schema.ts` (۳۰+ جدول)
 
 ### قراردادهای کلیدی
-- **پول:** همه‌جا `bigint({ mode: 'number' })` — تومان صحیح (نه ریال).
-- **بهای واحد در انبار:** `numeric(24,6)` — گسترش‌یافته برای جلوگیری از سرریز عددی (hotfix v4.1).
-- **تاریخ کاربری:** رشته‌ی شمسی (`text`)، مثلاً `'۱۴۰۳/۰۵/۱۲'`.
-- **تاریخ سیستمی:** `timestamp with time zone` (میلادی، خودکار).
-- **PK:** همه‌جا `uuid().defaultRandom()` — استثنا: `menu_settings.id = integer(1)`.
-- **نوع/وضعیت:** ستون `text` با check، نه enum جدید (از ساخت `pgEnum` اضافه پرهیز می‌شود).
-- **denormalization عمدی:** `branch_name`, `category_name` در تراکنش ذخیره می‌شوند.
+- **پول:** `bigint({ mode: 'number' })` — تومان صحیح.
+- **بهای واحد انبار:** `numeric(24,6)` (hotfix v4.1 برای سرریز).
+- **تاریخ کاربری:** رشته‌ی جلالی `text`؛ **تاریخ سیستمی:** timestamptz.
+- **PK:** `uuid().defaultRandom()` — استثنا: `menu_settings.id = integer(1)`.
+- **نوع/وضعیت:** `text` با check (نه pgEnum جدید).
+- **denormalization عمدی:** `branch_name`, `category_name` در تراکنش.
 
-### فهرست جداول
-
-**هسته‌ی حسابداری (۱۳ جدول اصلی)**
-
-| جدول | توضیح |
-|---|---|
-| `branches` | شعب |
-| `users` | کاربران (role: text — `SuperAdmin`\|`BranchUser`\|`Warehouse`; permissions: jsonb) |
-| `categories` | دسته‌بندی درآمد/هزینه |
-| `transactions` | تراکنش‌ها (single-entry) — شامل `saleMeta` (jsonb) برای ردپای فروش منو |
-| `notifications` | اعلان‌ها |
-| `app_settings` | تنظیمات key/value |
-| `audit_log` | لاگ اعمال (append-only) |
-| `accounts` | صندوق/بانک |
-| `contacts` | طرف‌حساب (نسیه) |
-| `system_logs` | لاگ مرکزی سیستم |
-| `menu_categories` | دسته‌بندی منو |
-| `menu_items` | آیتم منو |
-| `menu_settings` | تنظیمات منو (تک‌ردیفی) |
-
-**پرسنل و حقوق (۶ جدول)**
-
-| جدول | توضیح |
-|---|---|
-| `employees` | کارکنان (اطلاعات شخصی، بیمه، کارت بهداشت، حقوق پایه) |
-| `employee_documents` | مدارک کارکنان (metadata — فایل در Supabase Storage) |
-| `payroll_events` | مساعده/کسری/پاداش/تسویه |
-| `payroll_parameters` | پارامترهای محاسبه (حداقل حقوق، نرخ بیمه، مالیات) |
-| `payroll_runs` | اجراهای دوره‌ای حقوق (draft→calculated→approved→posted) |
-| `payslips` | فیش حقوقی هر کارمند در هر اجرا |
-| `journal_vouchers` | سند کل ناشی از posting حقوق (خطوط بدهکار/بستانکار در jsonb) |
-
-**انبار و آشپزخانه (۷ جدول)**
-
-| جدول | توضیح |
-|---|---|
-| `inv_items` | اقلام (خام `raw` / نیمه‌آماده `prep`) با موجودی دو لایه‌ای و WAC |
-| `inv_recipes` | دستور پخت (سرفصل) |
-| `inv_recipe_lines` | خطوط دستور پخت (مواد + ضریب بازدهی) |
-| `inv_vouchers` | برگه‌های انبار (ورود/خروج/ضایعات/فروش/تولید/انبارگردانی) |
-| `inv_voucher_lines` | خطوط برگه (شامل `expiryDate` برای ردیابی انقضا) |
-| `inv_stock_tx` | لاگ حرکت موجودی (append-only — هر تأیید برگه یک رکورد) |
-| `inv_daily_sales` | فروش روزانه تجمیعی (ناشی از backflushing منو) |
-
-**استخدام (۱ جدول)**
-
-| جدول | توضیح |
-|---|---|
-| `job_applications` | فرم‌های درخواست کار (از صفحه‌ی عمومی `/apply`) |
-
-**مشتریان، وفاداری و رزرو (۷ جدول)**
-
-| جدول | توضیح |
-|---|---|
-| `customers` | مشتریان (امتیاز، سطح، تعداد بازدید، مجموع خرید) |
-| `loyalty_entries` | تاریخچه‌ی امتیاز (earn/redeem/adjust) — اتمیک با SQL مستقیم |
-| `coupons` | کوپن‌های تخفیف (درصدی/مبلغی، محدودیت استفاده) |
-| `coupon_redemptions` | استفاده از کوپن (قفل race-condition با unique record) |
-| `feedback` | بازخورد مشتری (ستاره ۱–۵) |
-| `tables` (export: `restaurantTables`) | میزهای رستوران |
-| `reservations` | رزرواسیون (state machine: pending→confirmed→seated→...) |
-
----
+### جداول
+**هسته (۱۳):** `branches`, `users` (role: text — SuperAdmin|BranchUser|Warehouse؛ permissions: jsonb), `categories`, `transactions` (+`saleMeta` jsonb), `notifications`, `app_settings`, `audit_log`, `accounts`, `contacts`, `system_logs`, `menu_categories`, `menu_items`, `menu_settings`.
+**پرسنل/حقوق (۷):** `employees`, `employee_documents`, `payroll_events`, `payroll_parameters`, `payroll_runs` (draft→calculated→approved→posted), `payslips`, `journal_vouchers` (خطوط jsonb).
+**انبار (۷):** `inv_items` (raw/prep، موجودی دولایه + WAC), `inv_recipes`, `inv_recipe_lines`, `inv_vouchers` (in/out/waste/sale/produce/stocktake), `inv_voucher_lines` (+`expiryDate`), `inv_stock_tx` (append-only), `inv_daily_sales`.
+**استخدام (۱):** `job_applications`.
+**مشتریان/وفاداری/رزرو (۷):** `customers`, `loyalty_entries` (اتمیک با SQL مستقیم), `coupons`, `coupon_redemptions` (race-safe با unique), `feedback`, `tables` (export: `restaurantTables`), `reservations` (state machine: pending→confirmed→seated→…).
 
 ## ۳. احراز هویت و مجوزها
-
-### نقش‌ها (۳ تا)
-- `SuperAdmin` — دسترسی کامل، همه‌ی شعب.
-- `BranchUser` — محدود به شعبه‌ی `assigned_branch_id` خودش.
-- `Warehouse` — انباردار، محدود به شعبه‌ی خودش، پیش‌فرضاً فقط به ماژول انبار دسترسی دارد.
-
-### مدل مجوز (منبع: `lib/auth/permissions.ts`)
-- **Section permissions:** هر کاربر می‌تواند `permissions: string[]` داشته باشد که مشخص می‌کند کدام بخش‌ها برایش فعال است. SuperAdmin همیشه به همه دسترسی دارد.
-- **Capability permissions:** با پیشوند `cap:` — مثلاً `cap:inventory.approve`، `cap:inventory.viewCosts`.
-- **به‌روزرسانی فوری:** middleware با کش کوتاه (`revalidate: 5s`) از `/api/auth/permissions` می‌خواند تا تغییر دسترسی بدون نیاز به logout فوری اعمال شود.
-
-### Enforcement (سه لایه)
-1. `middleware.ts` (Edge) — چک JWT + section access.
-2. API routes — `requireSession()` / `requireAdmin()` / `canDo()`.
-3. Client — نمایشی، نه امنیتی.
-
----
+- نقش‌ها: `SuperAdmin` (همه‌چیز) / `BranchUser` (شعبه‌ی خودش) / `Warehouse` (انبار شعبه‌ی خودش).
+- **Section permissions:** `users.permissions: string[]` — SuperAdmin همیشه همه.
+- **Capability:** پیشوند `cap:` — مثل `cap:inventory.approve`, `cap:inventory.viewCosts`.
+- **اعمال فوری:** middleware با کش ۵ ثانیه از `/api/auth/permissions` می‌خواند (logout لازم نیست).
+- سه لایه: `middleware.ts` (Edge) → API (`requireSession`/`requireAdmin`/`canDo`) → Client (نمایشی).
+- منبع: `lib/auth/permissions.ts`.
 
 ## ۴. منطق مالی کلیدی
+- **Single-entry** (هر transaction یک رکورد income/expense/transfer)؛ GL دوطرفه فقط در `journal_vouchers` حقوق.
+- **اتمیک موجودی:** `lib/db/balanceHelpers.ts` — apply/reverse برای صندوق و طرف‌حساب. فقط `approved` اثر دارد.
+- **PATCH immutability:** فیلدهای مالی پس از approved تغییرناپذیر (۴۲۲).
+- **DELETE atomic rollback:** برگشت کامل صندوق + طرف‌حساب + کسر انبار فروش منو.
+- **انبار↔حسابداری** (`lib/inventory/postToAccounting.ts`): تأیید خرید→هزینه+کسر صندوق؛ فروش→درآمد+افزایش؛ ضایعات→هزینه‌ی non-cash.
+- **حقوق↔حسابداری** (`lib/payroll/postToBasharaf.ts`): posting → journal_voucher + تراکنش هزینه‌ی خالص.
+- **Backflushing منو:** تأیید income فروش منو → کسر خودکار مواد طبق رسپی + COGS.
+- **WAC:** هر تأیید خرید `avg_cost_per_base` را بازمحاسبه؛ `computeAutoRecost` نیمه‌آماده‌های متأثر را اتمیک recost می‌کند.
+- **Yield:** هم فروش منو هم تولید (`produceConfirmed`) ضریب `100/yieldPct` اعمال می‌کنند (هم‌فرمول — رفع 2026-06-10).
 
-### Single-entry (نه GL دوطرفه)
-- مدل اصلی single-entry است: هر `transaction` یک رکورد با `type` (income/expense/transfer).
-- برای حقوق: `journal_vouchers` سند متوازن دوطرفه را در `lines` (jsonb) نگه می‌دارد ولی در جدول مجزاست.
+## ۵. API Routes
+**هسته:** `/api/auth/{login,logout,me,change-password,permissions}` · `/api/transactions` (+`[id]`, `[id]/approve|reject`, `import`, `import/template`) · `/api/accounts` (+`[id]`, `[id]/ledger`, `recalculate`) · `/api/contacts`, `/api/categories`, `/api/branches`, `/api/users` (CRUD) · `/api/notifications` · `/api/reports` · `/api/settings` (+`wipe` = Factory Reset فقط SuperAdmin) · `/api/export`, `/api/upload`, `/api/audit`, `/api/logs`, `/api/dashboard`.
+**منو:** `/api/menu` (عمومی) · `items`, `categories`, `settings` (mutation).
+**انبار:** `items` (+import/template) · `recipes` (+`[id]/costing`) · `vouchers` (+approve/reject, import/template) · `produce` · `stocktake` · `forecast` · `expiry` (هشدار انقضا — جدید 06-10).
+**حقوق:** `employees` · `payroll/events` · `payroll/runs` (+calculate/approve/post).
+**استخدام:** `recruitment` (+questions, upload).
+**CRM:** `customers` · `coupons` (+validate) · `feedback` (+summary) · `tables` · `reservations`.
 
-### اتمیک بودن موجودی
-- `lib/db/balanceHelpers.ts`: `applyBalance`, `reverseBalance`, `applyContactBalance`, `reverseContactBalance`.
-- فقط تراکنش `approved` روی موجودی اثر دارد.
-- **PATCH immutability:** فیلدهای مالی پس از `approved` immutable‌اند — خطای 422.
-- **DELETE atomic rollback:** حذف `approved` تراکنش، موجودی صندوق + طرف‌حساب + کسر انبار فروش منو را به‌صورت اتمیک معکوس می‌کند.
+## ۶. صفحات UI — `app/(app)/`
+`/dashboard` · `/transactions(+/new)` · `/accounts(+/[id])` · `/contacts` · `/reports` · `/employees` · `/payroll` · `/inventory` · `/menu` · `/recruitment` · `/customers` · `/reservations` · `/coupons` · `/logs` · `/settings`.
+**خارج از app:** `/m` (منوی عمومی)، `/apply` (استخدام عمومی)، `/login`, `/signup`, `/forgot`.
 
-### اتصال انبار ↔ حسابداری (`lib/inventory/postToAccounting.ts`)
-- تأیید برگه‌ی خرید (`in`): تراکنش هزینه + کسر صندوق.
-- تأیید برگه‌ی فروش: تراکنش درآمد + افزایش صندوق.
-- تأیید برگه‌ی ضایعات (`waste`): تراکنش هزینه (non-cash — بدون اثر روی صندوق).
+## ۷. Zustand — ۱۸ slice
+auth, transactions, users, refs, accounts, contacts, menu, notifications, appSettings, preferences (تنها persist‌شونده), ui, employees, payroll, recruitment, customers, coupons, reservations, feedback.
 
-### اتصال حقوق ↔ حسابداری (`lib/payroll/postToBasharaf.ts`)
-- posting حقوق: ساخت `journal_voucher` + تراکنش هزینه‌ی خالص پرداختی در هسته.
+## ۸. Migrationها (idempotent)
+`db-setup.sql` (هسته ۱۳ جدول) · `db-seed.sql` (۳ شعبه، ۴ کاربر، ۹ دسته، ۳ صندوق) · `db-inventory-migration.sql` · `db-payroll-migration.sql` · `db-stage-payroll-full.sql` · `customers-migration.sql` · `supabase-v5-menu-sale-deduction-migration.sql` (sale_meta) · `supabase-v6-waste-expiry-migration.sql` (expiry_date) · `supabase-v7-bigint-migration.sql` (numeric 24,6) · `db-role-to-text.sql` · `fix-categories.sql` · `supabase-logs-migration.sql`.
+آرشیو: `migrations-archive/`. ⚠️ به آیتم «برای تأیید» در Backlog نگاه کن (فایل‌های recruitment/permissions/warehouse-role در این لیست نیستند).
 
-### Backflushing منو
-- تأیید تراکنش درآمد از فروش منو: مواد مصرفی بر اساس دستور پخت به‌صورت خودکار از انبار کسر می‌شوند + سند COGS.
+## ۹. قابلیت‌های تأییدشده
+JWT + RBAC سه‌لایه + rate-limit ورود · مجوز granular با اعمال فوری · CRUD همه‌ی ماژول‌ها · موجودی اتمیک + گردش حساب + بازسازی · PATCH immutability · DELETE atomic rollback · VAT، نسیه، گزارش، Excel · انبار WAC + recipe explosion + backflushing + waste GL · حقوق با بیمه/مالیات + posting · استخدام عمومی · CRM وفاداری/کوپن/رزرو · Factory Reset · منوی دیجیتال + QR + PWA + Realtime · لاگ مرکزی.
 
-### WAC (Weighted Average Cost)
-- هر تأیید رسید خرید `avg_cost_per_base` را بازمحاسبه می‌کند.
-- `computeAutoRecost` پس از تأیید خرید، بهای نیمه‌آماده‌های متأثر را به‌صورت اتمیک بازمحاسبه می‌کند.
-
----
-
-## ۵. API Routes (مسیرهای کامل)
-
-### هسته
-| مسیر | متدها |
-|---|---|
-| `/api/auth/login,logout,me,change-password,permissions` | POST/GET |
-| `/api/transactions` | GET, POST |
-| `/api/transactions/[id]` | GET, PATCH, DELETE |
-| `/api/transactions/[id]/approve,reject` | POST |
-| `/api/transactions/import` | POST |
-| `/api/transactions/import/template` | GET |
-| `/api/accounts`, `/api/accounts/[id]`, `/api/accounts/[id]/ledger` | CRUD + GET |
-| `/api/accounts/recalculate` | POST |
-| `/api/contacts`, `/api/contacts/[id]` | CRUD |
-| `/api/categories`, `/api/categories/[id]` | CRUD |
-| `/api/branches`, `/api/branches/[id]` | CRUD |
-| `/api/users`, `/api/users/[id]` | CRUD |
-| `/api/notifications` | GET, PATCH |
-| `/api/reports` | GET |
-| `/api/settings` | GET, PATCH |
-| `/api/settings/wipe` | POST (Factory Reset — SuperAdmin فقط) |
-| `/api/export` | GET/POST |
-| `/api/upload` | POST |
-| `/api/audit` | GET |
-| `/api/logs` | GET, DELETE |
-| `/api/dashboard` | GET |
-
-### منو
-| مسیر | متدها |
-|---|---|
-| `/api/menu` | GET (عمومی) |
-| `/api/menu/items`, `/api/menu/items/[id]` | POST, PATCH, DELETE |
-| `/api/menu/categories`, `/api/menu/categories/[id]` | POST, PATCH, DELETE |
-| `/api/menu/settings` | PATCH |
-
-### انبار
-| مسیر | متدها |
-|---|---|
-| `/api/inventory/items`, `/api/inventory/items/[id]` | GET, POST, PATCH |
-| `/api/inventory/items/import` | POST |
-| `/api/inventory/items/import/template` | GET |
-| `/api/inventory/recipes`, `/api/inventory/recipes/[id]` | CRUD |
-| `/api/inventory/recipes/[id]/costing` | GET |
-| `/api/inventory/vouchers`, `/api/inventory/vouchers/[id]` | CRUD |
-| `/api/inventory/vouchers/[id]/approve,reject` | POST |
-| `/api/inventory/vouchers/import` | POST |
-| `/api/inventory/vouchers/import/template` | GET |
-| `/api/inventory/produce` | POST |
-| `/api/inventory/stocktake` | POST |
-| `/api/inventory/forecast` | GET |
-
-### پرسنل و حقوق
-| مسیر | متدها |
-|---|---|
-| `/api/employees`, `/api/employees/[id]` | CRUD |
-| `/api/payroll/events`, `/api/payroll/events/[id]` | CRUD |
-| `/api/payroll/runs`, `/api/payroll/runs/[id]` | GET, POST |
-| `/api/payroll/runs/[id]/calculate,approve,post` | POST |
-
-### استخدام
-| مسیر | متدها |
-|---|---|
-| `/api/recruitment`, `/api/recruitment/[id]` | CRUD |
-| `/api/recruitment/questions` | GET |
-| `/api/recruitment/upload` | POST |
-
-### مشتریان و رزرو
-| مسیر | متدها |
-|---|---|
-| `/api/customers`, `/api/customers/[id]` | CRUD |
-| `/api/coupons`, `/api/coupons/[id]`, `/api/coupons/validate` | CRUD + POST |
-| `/api/feedback`, `/api/feedback/summary` | GET, POST |
-| `/api/tables`, `/api/tables/[id]` | CRUD |
-| `/api/reservations`, `/api/reservations/[id]` | CRUD |
-
----
-
-## ۶. صفحات UI (`app/(app)/`)
-
-| مسیر | ماژول |
-|---|---|
-| `/dashboard` | داشبورد |
-| `/transactions`, `/transactions/new` | تراکنش‌ها + ثبت جدید |
-| `/accounts`, `/accounts/[id]` | صندوق‌ها + گردش حساب |
-| `/contacts` | طرف‌حساب‌ها |
-| `/reports` | گزارش مالی (اعداد خالص) |
-| `/employees` | پرسنل |
-| `/payroll` | حقوق و دستمزد |
-| `/inventory` | انبار و آشپزخانه |
-| `/menu` | مدیریت منو |
-| `/recruitment` | استخدام |
-| `/customers` | مشتریان + وفاداری + FeedbackSummaryCard |
-| `/reservations` | رزرواسیون |
-| `/coupons` | کوپن‌ها |
-| `/logs` | لاگ سیستم (SuperAdmin) |
-| `/settings` | تنظیمات (تب‌بندی شده) |
-
-**صفحات خارج از app:**
-- `/m` — منوی دیجیتال عمومی (بدون auth)
-- `/apply` — فرم درخواست کار عمومی (بدون auth)
-- `/login`, `/signup`, `/forgot` — احراز هویت
-
----
-
-## ۷. State — Zustand Slices (`store/slices/`)
-
-18 slice:
-`authSlice`, `transactionsSlice`, `usersSlice`, `refsSlice`, `accountsSlice`,
-`contactsSlice`, `menuSlice`, `notificationsSlice`, `appSettingsSlice`,
-`preferencesSlice` (persist), `uiSlice`,
-`employeesSlice`, `payrollSlice`, `recruitmentSlice`,
-`customersSlice`, `couponsSlice`, `reservationsSlice`, `feedbackSlice`.
-
-فقط `preferencesSlice` در localStorage persist می‌شود.
-
----
-
-## ۸. Migration و دیتابیس
-
-**فایل‌های SQL فعلی (idempotent):**
-- `db-setup.sql` — کل ساختار هسته‌ی اولیه (۱۳ جدول).
-- `db-seed.sql` — داده اولیه (۳ شعبه، ۴ کاربر، ۹ دسته، ۳ صندوق).
-- `db-inventory-migration.sql` — جداول انبار.
-- `db-payroll-migration.sql` — جداول حقوق و پرسنل.
-- `db-stage-payroll-full.sql` — نسخه‌ی کامل payroll برای staging.
-- `customers-migration.sql` — جداول مشتریان/وفاداری/رزرو/کوپن.
-- `supabase-v5-menu-sale-deduction-migration.sql` — ستون `sale_meta`.
-- `supabase-v6-waste-expiry-migration.sql` — `expiry_date` روی خطوط برگه.
-- `supabase-v7-bigint-migration.sql` — گسترش `numeric(18,6)` → `numeric(24,6)` برای بهای واحد.
-- `db-role-to-text.sql` — مهاجرت از enum به text برای `user_role`.
-- `fix-categories.sql` — اصلاح دسته‌بندی‌ها.
-- `supabase-logs-migration.sql` — فقط جدول `system_logs` (برای دیتابیس‌های موجود).
-
-**آرشیو:** فایل‌های قدیمی پراکنده در `migrations-archive/`.
-
-**توجه:** seed آیتم‌های منو (۳۱ آیتم) فقط در `supabase-v4-menu-migration.sql` آرشیوی هست — در `db-setup.sql` جدید نیست.
-
----
-
-## ۹. قابلیت‌های کامل (تأییدشده)
-
-- احراز هویت JWT، RBAC سه‌لایه (SuperAdmin/BranchUser/Warehouse)، rate-limit ورود.
-- مدل مجوز گرانولار section + capability با به‌روزرسانی فوری در middleware.
-- CRUD کامل برای همه‌ی ماژولها.
-- موجودی اتمیک (apply/reverse)، گردش حساب، بازسازی موجودی.
-- PATCH immutability روی فیلدهای مالی پس از تأیید.
-- DELETE atomic rollback (برگشت کامل موجودی + انبار + COGS).
-- VAT، تراکنش نسیه، گزارش aggregate، خروجی Excel.
-- سیستم انبار با WAC + recipe explosion + backflushing + waste GL.
-- سیستم حقوق با محاسبه‌ی اتوماتیک بیمه/مالیات + posting به GL.
-- فرم درخواست کار عمومی + مدیریت استخدام.
-- CRM وفاداری (امتیاز اتمیک) + کوپن (race-condition safe) + رزرواسیون (state machine).
-- Factory Reset با عبارت تأییدی سخت (`POST /api/settings/wipe`).
-- منوی دیجیتال + QR، PWA، Realtime، آپلود رسید.
-- سیستم لاگ مرکزی (`/logs`).
-
----
-
-## ۱۰. باگ‌های شناخته‌شده / TODOهای باز
-
-- **`/api/_diag` endpoint موقت** — اگر هنوز در کد هست، قبل از production باید حذف شود (اطلاعات اتصال را افشا می‌کند).
-- **GL دوطرفه کامل** — `journal_vouchers` فقط برای حقوق وجود دارد؛ هسته still single-entry.
-- **FIFO انبار** — `expiryDate` ثبت می‌شود ولی موتور WAC هنوز FIFO نیست.
-- **منو → POS/فروش** — منو فقط کاتالوگ است؛ هیچ تراکنش مالی مستقیم از منو ساخته نمی‌شود (backflushing فقط از تراکنش income دستی فعال می‌شود).
-- **Password reset با ایمیل** — پیاده‌سازی نشده.
-- **Rate-limit در حافظه** — در محیط multi-instance سراسری نیست.
-- **Seed منو خالی** — روی دیتابیس تازه آیتم‌های منو نیاز به ورود دستی دارند.
-- **Realtime و Storage** — به Supabase گره خورده‌اند؛ روی هاست خالص بدون Supabase کار نمی‌کنند.
-
----
+## ۱۰. اطلاعات عملیاتی (که نباید گم شود)
+- **لاگین تست:** `admin@basharaf.app` / `basharaf123` (SuperAdmin).
+- **Repo:** `github.com/barismairan-source/basharaf-app` (شاخه `main`).
+- **JWT_SECRET باید ≥ ۳۲ کاراکتر باشد** — کمتر = لاگین کلاً خراب (درس پرهزینه‌ی گذشته).
+- TS strict: `arr[0]` با گارد؛ `Record[key]` با `!` یا `?? fallback`؛ آیکن Lucide prop `dir` ندارد؛ enum از map نیاز به `as` cast.
+- فایل route فقط متد HTTP و config export کند؛ helper در `lib/`.
+- فایل‌های SQL: بایت اول `2d 2d` (خط تیره)؛ کامنت ASCII.
+- روال هر تغییر: `npx tsc --noEmit` (۰ خطا) → `npm run build` → ژورنال + بخش ۰ → commit/push.
 
 ## ۱۱. وابستگی‌های کلیدی
-
-| بسته | نسخه | نکته |
-|---|---|---|
-| `next` | `14.2.15` | App Router |
-| `react` | `^18.3.1` | |
-| `typescript` | `^5.6.3` | strict |
-| `drizzle-orm` | `^0.36.1` | |
-| `postgres` | `^3.4.5` | درایور خام |
-| `@supabase/supabase-js` | `^2.45.4` | فقط Realtime + Storage |
-| `jose` | `^5.9.6` | JWT |
-| `bcryptjs` | `^2.4.3` | hashing |
-| `zustand` | `^4.5.5` | |
-| `zod` | `^3.23.8` | |
-| `recharts` | `^3.8.1` | |
-| `xlsx` | `^0.18.5` | |
-| `qrcode` | `^1.5.4` | |
-| `react-multi-date-picker` | `^4.5.2` | Jalali — هنوز در پروژه |
-| `@types/file-saver` | — | وابستگی یتیم (خود `file-saver` نصب نیست) |
-
----
-
-## پروتکل تحویل بین نشست‌ها
-
-> هر نشست AI که پیش از خاتمه تغییراتی انجام داده، این فایل را با موارد زیر به‌روز کند:
-> - نسخه‌ی جدید، بخش‌های تغییریافته.
-> - فایل‌های ایجاد/ویرایش‌شده (مسیر کامل).
-> - قرارداد یا الگوی جدید.
-> - وضعیت build/tsc.
-> - کارهای ناتمام.
+next `14.2.15` · react `^18.3.1` · typescript `^5.6.3` · drizzle-orm `^0.36.1` · postgres `^3.4.5` · @supabase/supabase-js `^2.45.4` · jose `^5.9.6` · bcryptjs `^2.4.3` · zustand `^4.5.5` · zod `^3.23.8` · recharts `^3.8.1` · xlsx `^0.18.5` · qrcode `^1.5.4` · react-multi-date-picker `^4.5.2` · ⚠️ `@types/file-saver` یتیم.
