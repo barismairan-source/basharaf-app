@@ -24,6 +24,54 @@ declare global {
   var __basharaf_db: ReturnType<typeof drizzle> | undefined;
 }
 
+/**
+ * پارس دستی connection string.
+ *
+ * چرا: پارسر داخلی postgres-js برای جدا کردن host از userinfo از
+ * `host.indexOf('@')` (اولین @) استفاده می‌کند، نه آخرین. اگر پسورد
+ * (مثلاً پسورد auto-generated پنل Liara که معمولاً شامل کاراکترهای خاص
+ * مثل @ # % است) به‌درستی percent-encode نشده باشد، این پارسر host/user/pass
+ * را اشتباه می‌شکند و نتیجه‌اش خطای Postgres `28P01` (password authentication
+ * failed) است — حتی وقتی پسورد در پنل کاملاً درست است.
+ *
+ * راه‌حل: با یک regex حریصانه، آخرین `@` قبل از host را پیدا می‌کنیم (هاست‌نیم
+ * نمی‌تواند شامل @ یا / باشد) و user/pass/host/port/db را جدا می‌کنیم تا
+ * به‌صورت آبجکت جداگانه به postgres() داده شوند — در این حالت اصلاً پارسر
+ * رشته‌ای داخلی صدا زده نمی‌شود. اگر پسورد percent-encode شده بود هم با
+ * decodeURIComponent (با fallback امن) درست خوانده می‌شود.
+ */
+function parseDatabaseUrl(raw: string): {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  database: string;
+} | null {
+  const match = raw.match(/^postgres(?:ql)?:\/\/(.*)@([^@/]+?)(?::(\d+))?\/([^?]*)/);
+  if (!match) return null;
+
+  const [, userInfo = '', host = '', port = '', database = ''] = match;
+  const sepIndex = userInfo.indexOf(':');
+  const rawUser = sepIndex === -1 ? userInfo : userInfo.slice(0, sepIndex);
+  const rawPass = sepIndex === -1 ? '' : userInfo.slice(sepIndex + 1);
+
+  const safeDecode = (s: string) => {
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return s;
+    }
+  };
+
+  return {
+    host,
+    port: port ? Number(port) : 5432,
+    username: safeDecode(rawUser),
+    password: safeDecode(rawPass),
+    database: safeDecode(database) || 'postgres',
+  };
+}
+
 function createClient() {
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -50,12 +98,20 @@ function createClient() {
     ssl = isInternalHost ? false : { rejectUnauthorized: false };
   }
 
-  return postgres(url, {
+  const baseOptions = {
     max: 10,
     idle_timeout: 20,
     connect_timeout: 10,
     ssl,
-  });
+  };
+
+  const parsed = parseDatabaseUrl(url);
+  if (parsed) {
+    return postgres({ ...parsed, ...baseOptions });
+  }
+
+  // fallback برای فرمت‌های غیرمنتظره — رفتار قبلی (پاس کامل رشته اتصال)
+  return postgres(url, baseOptions);
 }
 
 // Singleton — جلوگیری از multiple connection در dev HMR
