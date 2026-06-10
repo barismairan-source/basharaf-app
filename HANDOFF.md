@@ -15,7 +15,7 @@
 | **Build/tsc** | هر دو سبز ✅ |
 | **دیپلوی** | Vercel+Supabase کامل کار می‌کند ✅ — Liara: مشکل `28P01`، راهنما در `DEPLOY-LIARA.md` |
 | **کار نیمه‌تمام (in-progress)** | — هیچ |
-| **کار بعدی پیشنهادی** | 🟠 account selection در خرید — انتخاب دستی صندوق به‌جای «اولین حساب فعال» (Backlog #2) |
+| **کار بعدی پیشنهادی** | 🟡 تست integration برای balance guardها (Backlog #5) یا چک `/api/_diag` (Backlog #3) |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-10 — account selection در تأیید رسید خرید (Backlog #2) — اکانت ۱
+**چه شد:** `postPurchaseToAccounting` جستجوی داخلی حساب را حذف کرد و `resolvedAccountId` را به‌عنوان آرگومان صریح دریافت می‌کند. approve route: `accountId` (optional uuid) به `bodySchema` اضافه شد؛ priority: body.accountId (validate) → first active account for branch → 422 `NO_ACTIVE_ACCOUNT`. UI: تأیید رسید (kind='in') modal انتخاب صندوق نشان می‌دهد (accounts از store، موجودی نمایشی)؛ سایر انواع بدون تغییر. `tsconfig.json`: `release-artifacts/` و `graphify-out/` از کامپایل خارج شدند.
+**فایل‌ها:** `lib/inventory/postToAccounting.ts`، `app/api/inventory/vouchers/[id]/approve/route.ts`، `lib/repos/inventory.types.ts`، `lib/repos/inventory.api.ts`، `app/(app)/inventory/page.tsx`، `tsconfig.json`.
+**Build:** tsc سبز ✅ / build سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** Backlog #3 (حذف `/api/_diag` اگر هنوز هست) یا Backlog #5 (تست integration برای balance guardها).
 
 ## 📓 2026-06-10 — stocktake accounting entry (Backlog #1) — اکانت ۱
 **چه شد:** تابع `postStocktakeToAccounting` به `lib/inventory/postToAccounting.ts` اضافه شد. در approve route، قبل از loop متغیر `stocktakeVarianceCost` تعریف شد؛ داخل loop به‌ازای هر خط `diff * pre.a` (WAC قبل از تأیید) انباشته می‌شود. بعد از loop، اگر مغایرت ≠ ۰، یک تراکنش با `accountId: null` ساخته می‌شود: کسری → expense «هزینه مغایرت انبارگردانی - فیش شماره X»، مازاد → income «درآمد تعدیل انبارگردانی - فیش شماره X». اتمیک با همان db.transaction؛ idempotent با linkedTransactionId؛ برگه با txId وصل می‌شود.
@@ -92,26 +99,13 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** رفع سه 🔴 (انجام شد در ورودی بالا).
 
-## 📓 2026-06-09 — رفع ۴ باگ بحرانی + اصلاح Sidebar — اکانت _(؟)_
-**چه شد:** حفاظ‌های حذف: صندوق با مانده≠۰ → خطای ۴۰۹ فارسی؛ طرف‌حساب با بدهی/طلب → ۴۰۹ (پیام بر اساس جهت)؛ کوپن GET فیلتر `isActive` گرفت؛ حذف کاربر دارای تراکنش → ۴۰۹ به‌جای crash پنهان FK. Sidebar: «صندوق‌ها و فروش»→«تراکنش‌ها»، «طرف‌حساب‌ها» به گروه «عملیات اصلی».
-**فایل‌ها:** `app/api/accounts/[id]/route.ts`، `app/api/contacts/[id]/route.ts`، `app/api/coupons/route.ts`، `app/api/users/[id]/route.ts`، `components/layout/Sidebar.tsx`.
-**Build:** سبز ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** موارد 🟡 domain-audit (اختیاری) + تست integration برای balance guard.
-
-## 📓 2026-06-09 — بازطراحی UX ناوبری (Sidebar/Mobile) — اکانت _(؟)_
-**چه شد:** Sidebar دسکتاپ ۲۴۰/۶۴px با toggle و persist در `preferencesSlice`؛ موبایل: drawer راست + `BottomTabBar.tsx` جدید (۵ تب، فقط بخش‌های مجاز کاربر، tap target ≥۴۸px)؛ `pb-16 lg:pb-0` روی main.
-**فایل‌ها:** `types/preferences.ts`، `components/layout/Sidebar.tsx` (بازنویسی)، `MobileMenu.tsx`، `BottomTabBar.tsx` (جدید)، `layout/index.ts`، `app/(app)/layout.tsx`.
-**Build:** سبز ✅
-**ناتمام:** — | **برای جلسه‌ی بعد:** ادامه‌ی backlog.
-
 ---
 
 ## 📌 Backlog یکپارچه (به ترتیب اولویت)
 
 ### 🟠 فوری/مهم
 1. ~~**stocktake accounting entry**~~ — ✅ انجام شد (2026-06-10، commit a90cd9d).
-2. **account selection در خرید** — انتخاب دستی صندوق به‌جای «اولین حساب فعال» (`inventory-audit.md`).
+2. ~~**account selection در خرید**~~ — ✅ انجام شد (2026-06-10، commit 1a4c9f5).
 3. **چک `/api/_diag`** — اگر هنوز در کد هست، قبل از production حذف شود (افشای اطلاعات اتصال).
 4. **Liara `28P01`** — طبق `DEPLOY-LIARA.md` حل شود (الان فقط Vercel+Supabase لایو است).
 
