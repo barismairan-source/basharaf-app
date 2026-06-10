@@ -150,6 +150,65 @@ export async function postWasteToAccounting(
 }
 
 /**
+ * انبارگردانی (kind='stocktake') → سند P&L خالص بدون اثر روی صندوق.
+ *
+ * varianceCost = Σ (physicalQty − systemQty) × WAC   (signed)
+ *   منفی (کسری) → expense: دارایی انبار کم شد، هزینه ثبت می‌شود
+ *   مثبت (مازاد) → income:  دارایی انبار زیاد شد، درآمد غیرنقدی ثبت می‌شود
+ *
+ * accountId: null — هیچ صندوق/نقدینگی‌ای دست نمی‌خورد؛ خالص دفترداری مثل COGS.
+ * idempotent با linkedTransactionId. داخل همان db.transaction تأیید صدا زده شود.
+ */
+export async function postStocktakeToAccounting(
+  dbTx: any,
+  voucher: { id: string; no: string; branchId: string | null; makerDate: string; linkedTransactionId: string | null },
+  varianceCost: number,
+  userId: string,
+): Promise<string | null> {
+  const amount = Math.round(Math.abs(varianceCost));
+  if (amount === 0) return null;
+  if (voucher.linkedTransactionId) return voucher.linkedTransactionId;
+
+  let branchName = '';
+  if (voucher.branchId) {
+    const [b] = await dbTx.select().from(schema.branches).where(eq(schema.branches.id, voucher.branchId)).limit(1);
+    branchName = b?.name ?? '';
+  }
+
+  const isDeficit = varianceCost < 0;
+
+  const [coreTx] = await dbTx.insert(schema.transactions).values({
+    type: isDeficit ? 'expense' : 'income',
+    title: isDeficit
+      ? `هزینه مغایرت انبارگردانی - فیش شماره ${voucher.no}`
+      : `درآمد تعدیل انبارگردانی - فیش شماره ${voucher.no}`,
+    categoryId: null,
+    categoryName: isDeficit ? 'مغایرت انبارگردانی' : 'تعدیل انبارگردانی (مازاد)',
+    amount,
+    payee: 'انبار',
+    branchId: voucher.branchId,
+    branchName,
+    method: 'انبار',
+    accountId: null,
+    vatAmount: 0,
+    isCredit: false,
+    date: voucher.makerDate,
+    note: `ثبت خودکار — مغایرت انبارگردانی برگه ${voucher.no} (بدهکار: ${isDeficit ? 'هزینه مغایرت' : 'دارایی انبار'} / بستانکار: ${isDeficit ? 'دارایی انبار' : 'درآمد تعدیل'})`,
+    status: 'approved',
+    createdBy: userId,
+    approvedBy: userId,
+    approvedAt: new Date(),
+  }).returning();
+  if (!coreTx) throw new Error('ساخت تراکنش مغایرت انبارگردانی ناموفق بود');
+
+  await dbTx.update(schema.invVouchers)
+    .set({ linkedTransactionId: coreTx.id })
+    .where(eq(schema.invVouchers.id, voucher.id));
+
+  return coreTx.id;
+}
+
+/**
  * فروش روزانه (kind='sale') → سند درآمد در حسابداری + افزایش موجودی صندوق.
  * idempotent با linkedTransactionId. داخل همان db.transaction تأیید صدا زده شود.
  */

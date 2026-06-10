@@ -6,7 +6,7 @@ import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { approveVoucherTx } from '@/lib/db/inventoryHelpers';
-import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting } from '@/lib/inventory/postToAccounting';
+import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting, postStocktakeToAccounting } from '@/lib/inventory/postToAccounting';
 import { computeAutoRecost } from '@/lib/inventory/costing';
 import { audit } from '@/lib/auth/audit';
 import { canDo } from '@/lib/auth/permissions';
@@ -76,6 +76,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       // اعمال اتمیک: reverse فیزیکی، سپس apply قطعی + میانگین موزون
       const total = await approveVoucherTx(dbTx, kind, prepared);
 
+      // انباشت مغایرت پولی انبارگردانی (WAC قبل از تأیید × اختلاف مقدار)
+      let stocktakeVarianceCost = 0;
+
       // ثبت قیمت نهایی خطوط + لاگ حرکت موجودی
       for (const l of lines) {
         if (kind === 'stocktake') {
@@ -83,6 +86,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           const counted = parseFloat(l.qtyBase);
           const pre = preStocktakeQtys[l.itemId] ?? { q: 0, a: 0 };
           const diff = counted - pre.q;
+          stocktakeVarianceCost += diff * pre.a;
           if (Math.abs(diff) > 1e-6) {
             await dbTx.insert(schema.invStockTx).values({
               itemId: l.itemId,
@@ -159,6 +163,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           dbTx,
           { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
           total,
+          session.sub,
+        );
+      }
+
+      // انبارگردانی → سند P&L مغایرت (بدون اثر روی صندوق)
+      if (kind === 'stocktake') {
+        await postStocktakeToAccounting(
+          dbTx,
+          { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
+          stocktakeVarianceCost,
           session.sub,
         );
       }
