@@ -6,7 +6,8 @@ import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { approveVoucherTx } from '@/lib/db/inventoryHelpers';
-import { postPurchaseToAccounting, postSaleToAccounting } from '@/lib/inventory/postToAccounting';
+import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting } from '@/lib/inventory/postToAccounting';
+import { computeAutoRecost } from '@/lib/inventory/costing';
 import { audit } from '@/lib/auth/audit';
 import { canDo } from '@/lib/auth/permissions';
 
@@ -19,8 +20,15 @@ import { canDo } from '@/lib/auth/permissions';
  * body: { finalUnitCosts: { [itemId]: number } } — قیمت نهایی هر واحد پایه (برای رسید ورود).
  */
 
+// مثل lineSchema در ثبت برگه: عدد باید finite و در سقف معقول باشد تا داده‌ی
+// خراب/غول‌آسا حین تأیید باعث numeric field overflow در محاسبات میانگین موزون نشود.
+const MONEY_MAX = 100_000_000_000; // ۱۰۰ میلیارد تومان — سقف معقول برای بهای هر واحد پایه
+
 const bodySchema = z.object({
-  finalUnitCosts: z.record(z.string(), z.number().min(0)).optional().default({}),
+  finalUnitCosts: z
+    .record(z.string(), z.number().finite('بهای نهایی نامعتبر است').min(0).max(MONEY_MAX, 'بهای نهایی بیش از حد مجاز است'))
+    .optional()
+    .default({}),
 });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -54,12 +62,40 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         finalUnitCost: finalUnitCosts[l.itemId] ?? null,
       }));
 
+      // پیش‌خوانی موجودی برای انبارگردانی — اختلاف پس از تأیید را می‌سنجیم
+      // (approveVoucherTx موجودی را به‌روز می‌کند، پس باید قبل از آن بخوانیم)
+      const preStocktakeQtys: Record<string, { q: number; a: number }> = {};
+      if (kind === 'stocktake') {
+        for (const l of lines) {
+          const [it] = await dbTx.select({ q: schema.invItems.qtyBase, a: schema.invItems.avgCostPerBase })
+            .from(schema.invItems).where(eq(schema.invItems.id, l.itemId)).limit(1);
+          preStocktakeQtys[l.itemId] = { q: parseFloat(it?.q ?? '0'), a: parseFloat(it?.a ?? '0') };
+        }
+      }
+
       // اعمال اتمیک: reverse فیزیکی، سپس apply قطعی + میانگین موزون
       const total = await approveVoucherTx(dbTx, kind, prepared);
 
-      // ثبت قیمت نهایی خطوط (انبارگردانی قیمت ندارد و لاگ حرکتش داخل خودش است)
+      // ثبت قیمت نهایی خطوط + لاگ حرکت موجودی
       for (const l of lines) {
-        if (kind === 'stocktake') continue;
+        if (kind === 'stocktake') {
+          // لاگ invStockTx برای انبارگردانی — دقیقاً مثل مسیر مستقیم API/stocktake
+          const counted = parseFloat(l.qtyBase);
+          const pre = preStocktakeQtys[l.itemId] ?? { q: 0, a: 0 };
+          const diff = counted - pre.q;
+          if (Math.abs(diff) > 1e-6) {
+            await dbTx.insert(schema.invStockTx).values({
+              itemId: l.itemId,
+              voucherId: current.id,
+              kind: 'stocktake',
+              deltaBase: String(diff),
+              value: Math.round(diff * pre.a),
+              note: `برگه ${current.no}`,
+              jalaliDate: current.makerDate,
+            });
+          }
+          continue;
+        }
         const fu = finalUnitCosts[l.itemId];
         if (fu != null) {
           await dbTx.update(schema.invVoucherLines)
@@ -76,6 +112,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           deltaBase: String(signedQty),
           value: Math.round((fu ?? parseFloat(l.estUnitCost)) * parseFloat(l.qtyBase)),
           note: `برگه ${current.no}`,
+          expiryDate: l.expiryDate ?? null,
           jalaliDate: current.makerDate,
         });
       }
@@ -88,6 +125,37 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       // اتصال به حسابداری: برگه‌ی خرید → سند هزینه‌ی واقعی + کسر از صندوق
       if (kind === 'in') {
         await postPurchaseToAccounting(
+          dbTx,
+          { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
+          total,
+          session.sub,
+        );
+
+        // نوسان قیمت / WAC: قیمت ماده‌ی خام تغییر کرد → بهای نیمه‌آماده‌های متأثر را
+        // خودکار بازمحاسبه کن (همان زنجیره‌ی resolvePrepCostChain، بدون تکرار منطق)
+        const branchFilter = current.branchId ? eq(schema.invItems.branchId, current.branchId) : undefined;
+        const allItems = await dbTx.select().from(schema.invItems).where(branchFilter);
+        const recostInput = allItems.map((it: any) => ({
+          id: it.id, name: it.name, unit: it.unit, kind: it.kind as 'raw' | 'prep',
+          avgCostPerBase: parseFloat(it.avgCostPerBase),
+          yieldPct: parseFloat(it.yieldPct) || 100,
+          batchYieldBase: parseFloat(it.batchYieldBase) || 0,
+          prepRecipe: (it.prepRecipe as any) ?? null,
+        }));
+        const { changed } = computeAutoRecost({ items: recostInput });
+        for (const c of changed) {
+          await dbTx.update(schema.invItems)
+            .set({ avgCostPerBase: String(c.avgCostPerBase), updatedAt: now })
+            .where(eq(schema.invItems.id, c.itemId));
+        }
+        if (changed.length > 0) {
+          audit({ action: 'inv.autoRecost.afterPurchase', userId: session.sub, meta: { voucherId: current.id, changedCount: changed.length } });
+        }
+      }
+
+      // ضایعات → سند هزینه‌ی ضایعات (دفترداری، بدون اثر بر صندوق — مثل COGS فروش منو)
+      if (kind === 'waste') {
+        await postWasteToAccounting(
           dbTx,
           { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
           total,

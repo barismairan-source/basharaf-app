@@ -195,10 +195,16 @@ export async function produceConfirmed(
   const recipe = prep.prepRecipe as Array<{ itemId: string; qtyBase: number }>;
   const b = Math.max(1, batches);
 
-  // خروج مواد خام با میانگین موزون
+  // خروج مواد خام با میانگین موزون — با احتساب افت (yieldPct) دقیقاً مثل menuSaleDeduction.
+  // qtyBase در prepRecipe مقدار خالص (net) است؛ برای کسر فیزیکی باید به مقدار ناخالص (gross)
+  // تبدیل شود: gross = qtyBase × (100 / yieldPct).
   let totalCost = 0;
   for (const r of recipe) {
-    totalCost += await issueConfirmed(tx, r.itemId, r.qtyBase * b);
+    const [rawItem] = await tx.select({ yieldPct: schema.invItems.yieldPct })
+      .from(schema.invItems).where(eq(schema.invItems.id, r.itemId)).limit(1);
+    const yieldPct = n(rawItem?.yieldPct) || 100;
+    const factor = yieldPct > 0 ? 100 / yieldPct : 1;
+    totalCost += await issueConfirmed(tx, r.itemId, r.qtyBase * b * factor);
   }
 
   // ورود نیمه‌آماده

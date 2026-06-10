@@ -2,9 +2,43 @@
 
 > این سند وضعیت **واقعی و فعلی** کد را مستند می‌کند.
 > هرجا چیزی پیاده‌سازی نشده، صریح نوشته شده.
-> تاریخ: **2026-06-09** — نسخه `9.0.0`
+> تاریخ: **2026-06-10** — نسخه `9.0.0`
 >
 > **فایل تفصیلی‌تر:** `project-docs/handoff.md` (شامل ریزجزئیات Batch 3–4 و hotfixها).
+
+---
+
+## آخرین تغییرات — 2026-06-10: رفع ۳ باگ بحرانی انبار ↔ حسابداری
+
+### چه شد
+
+**۱. باگ yield تولید نیمه‌آماده — `lib/db/inventoryHelpers.ts` (`produceConfirmed`)**
+- قبلاً: `issueConfirmed(itemId, r.qtyBase * b)` — افت (yieldPct) اعمال نمی‌شد
+- حالا: برای هر خط رسپی، `yieldPct` ماده‌ی خام از DB خوانده و ضریب `100/yieldPct` اعمال می‌شود
+- دقیقاً همان فرمول `menuSaleDeduction`: `gross = qtyBase × (100/yield)`
+- اثر: موجودی مواد خام بعد از تولید اکنون دقیق است
+
+**۲. لاگ مفقود انبارگردانی از طریق برگه — `app/api/inventory/vouchers/[id]/approve/route.ts`**
+- قبلاً: `if (kind === 'stocktake') continue;` — هیچ `invStockTx` ثبت نمی‌شد
+- حالا: قبل از `approveVoucherTx`، موجودی فعلی هر قلم پیش‌خوانی می‌شود (`preStocktakeQtys`)؛ پس از تأیید، اختلاف محاسبه و `invStockTx` درج می‌شود
+- دقیقاً مثل مسیر مستقیم API (`stocktake/route.ts`)
+
+**۳. موجودی ناکافی فروش منو — اعلان به مدیر کل — `app/api/transactions/[id]/approve/route.ts`**
+- قبلاً: فقط `audit()` در لاگ پنهان — مدیر هرگز نمی‌دید
+- حالا: علاوه بر audit، اعلان `type: 'info'` برای همه‌ی SuperAdmin‌ها در جدول `notifications` درج می‌شود
+- فروش همچنان block نمی‌شود؛ فقط اطلاع‌رسانی می‌شود
+
+### فایل‌های تغییریافته
+- `lib/db/inventoryHelpers.ts`
+- `app/api/inventory/vouchers/[id]/approve/route.ts`
+- `app/api/transactions/[id]/approve/route.ts`
+
+### وضعیت build
+`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
+
+### بعدی
+- پیاده‌سازی ابزارهای آشپزخانه (اولویت S از inventory-audit.md: کارت رسپی، ماشین‌حساب پرس، کارت چاپ)
+- رفع موارد 🟡 باقیمانده از inventory-audit.md (stocktake accounting entry، account selection در خرید)
 
 ---
 
