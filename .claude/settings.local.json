@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(zip -r basharaf-4bugfix-liara.zip . --exclude *.git* --exclude node_modules/* --exclude .next/* --exclude *.zip --exclude graphify-out/* --exclude release-artifacts/*)",
+      "Bash(git show *)"
+    ]
+  }
+}

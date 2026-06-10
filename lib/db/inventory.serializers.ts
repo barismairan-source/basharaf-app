@@ -15,7 +15,11 @@ function toNum(v: bigint | number | string | null | undefined): number {
   return v;
 }
 
-export function rowToInvItem(row: typeof schema.invItems.$inferSelect) {
+/**
+ * @param maskCosts اگر true باشد، فیلدهای مالی (avgCostPerBase) پنهان می‌شوند —
+ *   تفکیک وظایف انبار/حسابداری: نقش انباردار فقط مقدار فیزیکی را می‌بیند.
+ */
+export function rowToInvItem(row: typeof schema.invItems.$inferSelect, maskCosts = false) {
   return {
     id: row.id,
     code: row.code,
@@ -28,7 +32,7 @@ export function rowToInvItem(row: typeof schema.invItems.$inferSelect) {
     yieldPct: toNum(row.yieldPct),
     qtyPhysical: toNum(row.qtyPhysical),
     qtyBase: toNum(row.qtyBase),
-    avgCostPerBase: toNum(row.avgCostPerBase),
+    avgCostPerBase: maskCosts ? null : toNum(row.avgCostPerBase),
     minBase: toNum(row.minBase),
     batchYieldBase: row.batchYieldBase == null ? null : toNum(row.batchYieldBase),
     shelfLifeDays: row.shelfLifeDays,
@@ -67,7 +71,8 @@ export function rowToInvRecipe(
 
 export function rowToInvVoucher(
   row: typeof schema.invVouchers.$inferSelect,
-  lines?: Array<typeof schema.invVoucherLines.$inferSelect>
+  lines?: Array<typeof schema.invVoucherLines.$inferSelect>,
+  maskCosts = false
 ) {
   return {
     id: row.id,
@@ -75,8 +80,8 @@ export function rowToInvVoucher(
     kind: row.kind,
     status: row.status,
     branchId: row.branchId,
-    estTotal: toNum(row.estTotal),
-    finalTotal: row.finalTotal == null ? null : toNum(row.finalTotal),
+    estTotal: maskCosts ? null : toNum(row.estTotal),
+    finalTotal: maskCosts ? null : (row.finalTotal == null ? null : toNum(row.finalTotal)),
     note: row.note,
     saleMeta: row.saleMeta ?? null,
     createdBy: row.createdBy,
@@ -92,8 +97,10 @@ export function rowToInvVoucher(
       id: l.id,
       itemId: l.itemId,
       qtyBase: toNum(l.qtyBase),
-      estUnitCost: toNum(l.estUnitCost),
-      finalUnitCost: l.finalUnitCost == null ? null : toNum(l.finalUnitCost),
+      estUnitCost: maskCosts ? null : toNum(l.estUnitCost),
+      finalUnitCost: maskCosts ? null : (l.finalUnitCost == null ? null : toNum(l.finalUnitCost)),
+      // تاریخ انقضا یک داده‌ی مقداری/ردیابی است نه مالی — برای انباردار هم قابل مشاهده است
+      expiryDate: (l as any).expiryDate ?? null,
     })),
     updatedAt: row.updatedAt.toISOString(),
   };

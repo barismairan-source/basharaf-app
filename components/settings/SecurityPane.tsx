@@ -11,9 +11,11 @@ import {
   Trash2,
   UserPlus,
   AlertTriangle,
+  Skull,
 } from 'lucide-react';
-import { Card, CardBody, CardHeader, Empty } from '@/components/ui';
+import { Card, CardBody, CardHeader, Empty, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
+import { useAppStore } from '@/store';
 
 /**
  * SecurityPane — لاگ امنیتی و آمار.
@@ -141,6 +143,120 @@ export function SecurityPane() {
           </div>
         )}
       </Card>
+
+      <DangerZone />
     </div>
+  );
+}
+
+/* ============================================================================
+ * DangerZone — عملیات بسیار خطرناک و غیرقابل بازگشت.
+ * فقط SuperAdmin (همان gate سطح بالاتر cap="settings.security").
+ * ========================================================================= */
+
+const FACTORY_RESET_PHRASE = 'تایید حذف کل سیستم';
+
+function DangerZone() {
+  const showToast = useAppStore((s) => s.showToast);
+  const [open, setOpen] = useState(false);
+  const [phrase, setPhrase] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<{ truncatedTables: string[]; preserved: string[] } | null>(null);
+
+  async function doFactoryReset() {
+    if (phrase !== FACTORY_RESET_PHRASE) {
+      showToast('عبارت تاییدی را دقیقاً مطابق متن بنویسید', 'danger');
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch('/api/settings/wipe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ target: 'factory_reset', confirmPhrase: phrase }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+      setResult({ truncatedTables: data.truncatedTables ?? [], preserved: data.preserved ?? [] });
+      showToast('سامانه به تنظیمات کارخانه بازگشت — تمام داده‌ها پاک شد', 'danger');
+      setOpen(false);
+      setPhrase('');
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : 'خطا در بازگشت به تنظیمات کارخانه', 'danger');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="border-rose-200">
+      <CardHeader title="منطقهٔ خطر" sub="عملیات‌های زیر غیرقابل بازگشت هستند — با احتیاط کامل استفاده کنید" />
+      <CardBody>
+        <div className="rounded-lg border border-rose-200 bg-rose-50/50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="flex-shrink-0 text-rose-600 mt-0.5">
+              <Skull size={18} strokeWidth={1.5} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-[13px] font-medium text-rose-700">
+                بازگشت به تنظیمات کارخانه (حذف کل اطلاعات سیستم)
+              </div>
+              <div className="text-[12px] text-rose-600/80 mt-1 leading-6">
+                تمام داده‌های عملیاتی و اطلاعات پایه — تراکنش‌ها، انبار و دستور پخت‌ها، منو،
+                مشتریان و وفاداری، رزروها، بازخوردها و... — برای همیشه پاک می‌شوند و سامانه
+                به حالت کاملاً خالی بازمی‌گردد. <b>فقط</b> حساب‌های کاربری و شعب حفظ می‌شوند
+                تا از سامانه بیرون نمانید.
+              </div>
+              <div className="mt-3">
+                <Button variant="destructive" size="sm" icon={Skull} onClick={() => setOpen(true)}>
+                  بازگشت به تنظیمات کارخانه (حذف کل اطلاعات سیستم)
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {open && (
+          <div className="mt-4 rounded-lg border border-rose-300 bg-white p-4 space-y-3">
+            <div className="text-[12.5px] text-stone-700">
+              این عملیات قابل بازگشت نیست. برای تایید، عبارت زیر را دقیقاً (با همان حروف و فاصله‌ها) در کادر بنویسید:
+            </div>
+            <div className="text-[13px] font-medium text-rose-700 bg-rose-50 border border-rose-200 rounded-md px-3 py-2 select-all" dir="rtl">
+              {FACTORY_RESET_PHRASE}
+            </div>
+            <Input
+              value={phrase}
+              onChange={(e) => setPhrase(e.target.value)}
+              placeholder="عبارت تاییدی را اینجا بنویسید"
+              dir="rtl"
+            />
+            <div className="flex items-center gap-2 justify-end">
+              <Button variant="ghost" size="sm" onClick={() => { setOpen(false); setPhrase(''); }} disabled={busy}>
+                انصراف
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                icon={Skull}
+                onClick={doFactoryReset}
+                disabled={busy || phrase !== FACTORY_RESET_PHRASE}
+              >
+                {busy ? 'در حال حذف کامل…' : 'تایید نهایی و حذف کل سیستم'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {result && (
+          <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 p-4 text-[12px] text-stone-600 leading-6">
+            <div className="font-medium text-stone-700 mb-1">سامانه بازنشانی شد.</div>
+            <div>
+              {result.truncatedTables.length} جدول پاک شد، و این موارد حفظ شدند: {result.preserved.join('، ')}
+            </div>
+          </div>
+        )}
+      </CardBody>
+    </Card>
   );
 }

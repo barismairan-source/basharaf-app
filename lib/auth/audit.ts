@@ -16,6 +16,7 @@ export type AuditAction =
   | 'transaction.approved'
   | 'transaction.rejected'
   | 'transaction.deleted'
+  | 'transaction.nonFinancialEdit'
   | 'user.created'
   | 'user.deleted'
   | 'branch.deleted'
@@ -23,7 +24,13 @@ export type AuditAction =
   | 'inv.stocktake'
   | 'inv.voucher.approved'
   | 'inv.voucher.rejected'
-  | 'inv.voucher.created';
+  | 'inv.voucher.created'
+  | 'inv.autoRecost.afterPurchase'
+  | 'transaction.menuSaleDeduction.warning'
+  | 'settings.factoryReset'
+  | 'loyalty.earn'
+  | 'loyalty.redeem'
+  | 'loyalty.adjust';
 
 export async function audit(params: {
   action: AuditAction;

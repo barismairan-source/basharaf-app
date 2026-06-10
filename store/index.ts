@@ -32,6 +32,10 @@ import { createMenuSlice, type MenuSlice } from './slices/menuSlice';
 import { createEmployeesSlice, type EmployeesSlice } from './slices/employeesSlice';
 import { createPayrollSlice, type PayrollSlice } from './slices/payrollSlice';
 import { createRecruitmentSlice, type RecruitmentSlice } from './slices/recruitmentSlice';
+import { createCustomersSlice, type CustomersSlice } from './slices/customersSlice';
+import { createCouponsSlice, type CouponsSlice } from './slices/couponsSlice';
+import { createReservationsSlice, type ReservationsSlice } from './slices/reservationsSlice';
+import { createFeedbackSlice, type FeedbackSlice } from './slices/feedbackSlice';
 
 export type AppStore = AuthSlice &
   TransactionsSlice &
@@ -47,7 +51,11 @@ export type AppStore = AuthSlice &
   MenuSlice &
   EmployeesSlice &
   PayrollSlice &
-  RecruitmentSlice & {
+  RecruitmentSlice &
+  CustomersSlice &
+  CouponsSlice &
+  ReservationsSlice &
+  FeedbackSlice & {
     bootstrapped: boolean;
     bootstrap: () => Promise<void>;
   };
@@ -105,6 +113,10 @@ export const useAppStore = create<AppStore>()(
       ...createEmployeesSlice(set as any, get as any, api as any),
       ...createPayrollSlice(set as any, get as any, api as any),
       ...createRecruitmentSlice(set as any, get as any, api as any),
+      ...createCustomersSlice(set as any, get as any, api as any),
+      ...createCouponsSlice(set as any, get as any, api as any),
+      ...createReservationsSlice(set as any, get as any, api as any),
+      ...createFeedbackSlice(set as any, get as any, api as any),
 
       transactions: [],
       users: [],
@@ -133,6 +145,19 @@ export const useAppStore = create<AppStore>()(
       applications: [],
       applicationsLoaded: false,
       applicationsError: null,
+      customers: [],
+      customersLoaded: false,
+      customersError: null,
+      coupons: [],
+      couponsLoaded: false,
+      couponsError: null,
+      reservations: [],
+      reservationsLoaded: false,
+      reservationsError: null,
+      tables: [],
+      tablesLoaded: false,
+      feedbackSummary: [],
+      feedbackSummaryLoaded: false,
       bootstrapped: false,
 
       async bootstrap() {
@@ -161,6 +186,7 @@ export const useAppStore = create<AppStore>()(
           get()._loadAppSettings();
           get().loadAccounts();
           get().loadContacts();
+          get().loadCustomers();
         } catch (e) {
           console.error('Bootstrap failed:', e);
           set({ bootstrapped: true });

@@ -1,6 +1,42 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth/jwt';
+import { verifyToken, type JWTPayload } from '@/lib/auth/jwt';
 import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
+
+/**
+ * اعمال فوری تغییر دسترسی:
+ * permissions در JWT baked می‌شود (فقط با ورود بعدی به‌روز می‌شد). چون middleware
+ * در Edge runtime اجرا می‌شود و به driver postgres دسترسی مستقیم ندارد، یک نسخه‌ی
+ * تازه از role/permissions را از /api/auth/permissions می‌گیریم — با کش بسیار کوتاه
+ * (HTTP Cache-Control + Next fetch revalidate) تا هم تقریباً فوری باشد، هم فشار
+ * زیادی روی DB نگذارد. اگر fetch fail شود (شبکه/تایم‌اوت)، با مقادیر JWT ادامه
+ * می‌دهیم — یعنی کاربر هیچ‌وقت به‌خاطر این لایه‌ی اضافه قفل نمی‌شود.
+ */
+async function fetchFreshAccess(
+  request: NextRequest,
+  token: string,
+  fallback: JWTPayload
+): Promise<Pick<JWTPayload, 'role' | 'branchId' | 'permissions'>> {
+  try {
+    const url = new URL('/api/auth/permissions', request.url);
+    const res = await fetch(url, {
+      headers: { authorization: `Bearer ${token}` },
+      // کش کوتاه سمت Next/Edge — چند ثانیه کافی است تا «فوری» حس شود
+      next: { revalidate: 5 },
+    });
+    if (!res.ok) {
+      // کاربر حذف/غیرفعال شده یا توکن نامعتبر شناخته شد → دسترسی را کاملاً ببند
+      if (res.status === 404 || res.status === 401) {
+        return { role: fallback.role, branchId: fallback.branchId, permissions: ['__revoked__'] };
+      }
+      return fallback;
+    }
+    const fresh = (await res.json()) as { role: JWTPayload['role']; branchId: string | null; permissions: string[] | null };
+    return fresh;
+  } catch {
+    // شبکه/تایم‌اوت: روی داده‌ی JWT برگرد تا کاربر قفل نشود
+    return fallback;
+  }
+}
 
 /**
  * Middleware — Edge runtime auth guard با JWT verification.
@@ -13,7 +49,7 @@ import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
 
 const SESSION_COOKIE = 'basharaf-session';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/logs', '/employees', '/payroll', '/inventory', '/recruitment'];
+const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/logs', '/employees', '/payroll', '/inventory', '/recruitment', '/customers', '/reservations', '/coupons'];
 const AUTH_ROUTES = ['/login', '/signup', '/forgot'];
 
 export async function middleware(request: NextRequest) {
@@ -43,10 +79,16 @@ export async function middleware(request: NextRequest) {
   }
 
   // گارد دسترسی بخش‌محور: اگر authed ولی به این بخش دسترسی ندارد → داشبورد
-  if (isProtected && isAuthed && session) {
+  // به‌جای اعتماد کامل به permissions بِیک‌شده در JWT (که فقط با ورود بعدی
+  // به‌روز می‌شد)، یک نسخه‌ی تازه (با کش کوتاه) از DB می‌گیریم تا تغییر
+  // دسترسی توسط مدیر تقریباً فوری اعمال شود — بدون نیاز به logout/login مجدد.
+  if (isProtected && isAuthed && session && token) {
     const section = sectionForPath(pathname);
-    if (section && !canAccessSection(session, section)) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+    if (section) {
+      const access = await fetchFreshAccess(request, token, session);
+      if (!canAccessSection(access, section)) {
+        return NextResponse.redirect(new URL('/dashboard', request.url));
+      }
     }
   }
 

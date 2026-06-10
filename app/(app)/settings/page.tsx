@@ -47,27 +47,27 @@ export default function SettingsPage() {
             {activeTab === 'profile' && <ProfilePane />}
             {activeTab === 'preferences' && <PreferencesPane />}
             {activeTab === 'team' && (
-              <RouterGuard requires="manage:users" fallbackTitle="مدیریت تیم">
+              <RouterGuard cap="settings.team" fallbackTitle="مدیریت تیم">
                 <TeamPane />
               </RouterGuard>
             )}
             {activeTab === 'branches' && (
-              <RouterGuard requires="manage:branches" fallbackTitle="مدیریت شعب">
+              <RouterGuard cap="settings.branches" fallbackTitle="مدیریت شعب">
                 <BranchesPane />
               </RouterGuard>
             )}
             {activeTab === 'categories' && (
-              <RouterGuard requires="manage:categories" fallbackTitle="دسته‌بندی‌ها">
+              <RouterGuard cap="settings.categories" fallbackTitle="دسته‌بندی‌ها">
                 <CategoriesPane />
               </RouterGuard>
             )}
             {activeTab === 'content' && (
-              <RouterGuard requires="manage:users" fallbackTitle="متن‌های سامانه">
+              <RouterGuard cap="settings.content" fallbackTitle="متن‌های سامانه">
                 <ContentPane />
               </RouterGuard>
             )}
             {activeTab === 'security' && (
-              <RouterGuard requires="manage:users" fallbackTitle="امنیت">
+              <RouterGuard cap="settings.security" fallbackTitle="امنیت">
                 <SecurityPane />
               </RouterGuard>
             )}

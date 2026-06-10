@@ -37,3 +37,7 @@ next-env.d.ts
 # IDE
 .vscode/
 .idea/
+
+# deploy artifacts
+*.zip
+release-artifacts/

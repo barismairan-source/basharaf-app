@@ -159,6 +159,14 @@ export const transactions = pgTable(
     note: text('note').notNull().default(''),
     hasReceipt: boolean('has_receipt').notNull().default(false),
 
+    /**
+     * متادیتای فروش منو (فقط type=income، فروش‌های ثبت‌شده از طریق منو):
+     * { lines: [{ menuItemId, qty }], deductedAt?: ISOString }
+     * با تأیید تراکنش، رسپی هر آیتم منو expand و کسر/COGS به‌صورت سیستمی اعمال می‌شود.
+     * فیلد deductedAt جلوی کسر تکراری را می‌گیرد (idempotency).
+     */
+    saleMeta: jsonb('sale_meta'),
+
     // status — pending/approved/rejected
     status: txStatusEnum('status').notNull().default('pending'),
 
@@ -810,7 +818,9 @@ export const invItems = pgTable(
     qtyBase: numeric('qty_base', { precision: 16, scale: 4 }).notNull().default('0'),
 
     // میانگین موزون — ریال/تومان هر واحد پایه (numeric برای دقت اعشاری)
-    avgCostPerBase: numeric('avg_cost_per_base', { precision: 18, scale: 6 }).notNull().default('0'),
+    // precision=24 (به‌جای ۱۸) تا داده‌ی خراب/بزرگ (مثلاً avgCost اشتباهاً وارد شده در حد میلیاردها)
+    // هنگام ضرب در qtyBase باعث «numeric field overflow» نشود — سقف امن تا ~10^18.
+    avgCostPerBase: numeric('avg_cost_per_base', { precision: 24, scale: 6 }).notNull().default('0'),
 
     // حداقل موجودی برای هشدار (واحد پایه)
     minBase: numeric('min_base', { precision: 16, scale: 4 }).notNull().default('0'),
@@ -942,8 +952,12 @@ export const invVoucherLines = pgTable(
     itemId: uuid('item_id').notNull().references(() => invItems.id, { onDelete: 'restrict' }),
     qtyBase: numeric('qty_base', { precision: 16, scale: 4 }).notNull(),
     // قیمت هر واحد پایه: برآوردی (انباردار) و نهایی (حسابدار)
-    estUnitCost: numeric('est_unit_cost', { precision: 18, scale: 6 }).notNull().default('0'),
-    finalUnitCost: numeric('final_unit_cost', { precision: 18, scale: 6 }),
+    // precision=24 (هم‌سو با inv_items.avg_cost_per_base) — جلوگیری از numeric field overflow
+    // وقتی هزینه‌ی واحد بزرگ/خراب در qtyBase ضرب می‌شود.
+    estUnitCost: numeric('est_unit_cost', { precision: 24, scale: 6 }).notNull().default('0'),
+    finalUnitCost: numeric('final_unit_cost', { precision: 24, scale: 6 }),
+    // ردیابی/انقضا (زمینه‌ساز FIFO آینده): تاریخ انقضای محموله — رشته‌ی جلالی، اختیاری
+    expiryDate: text('expiry_date'),
   },
   (t) => ({
     voucherIdx: index('inv_voucher_lines_voucher_idx').on(t.voucherId),
@@ -966,6 +980,8 @@ export const invStockTx = pgTable(
     deltaBase: numeric('delta_base', { precision: 16, scale: 4 }).notNull(), // +ورود / -خروج
     value: bigint('value', { mode: 'number' }).notNull().default(0),         // تومان
     note: text('note').notNull().default(''),
+    // ردیابی/انقضا: از خط برگه به دفتر کل حرکت موجودی منتقل می‌شود (زمینه‌ساز FIFO آینده)
+    expiryDate: text('expiry_date'),
     jalaliDate: text('jalali_date').notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1006,3 +1022,167 @@ export type InvVoucher = typeof invVouchers.$inferSelect;
 export type InvVoucherLine = typeof invVoucherLines.$inferSelect;
 export type InvStockTx = typeof invStockTx.$inferSelect;
 export type InvDailySale = typeof invDailySales.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول مشتریان — customers / loyalty / coupons / reservations / feedback
+// پول bigint تومان. type/status متنی با کامنت مقادیر مجاز. تاریخ کاربری شمسی text.
+// ════════════════════════════════════════════════════════════════
+
+export const customers = pgTable(
+  'customers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    phone: text('phone').notNull(),
+    birthday: text('birthday'), // Jalali string
+    homeBranchId: uuid('home_branch_id').references(() => branches.id, { onDelete: 'set null' }),
+    /** برای مشتریان دارای حساب نسیه → contacts هسته */
+    contactId: uuid('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
+    tier: text('tier').notNull().default('bronze'), // bronze | silver | gold | platinum
+    points: bigint('points', { mode: 'number' }).notNull().default(0),
+    visitCount: integer('visit_count').notNull().default(0),
+    totalSpent: bigint('total_spent', { mode: 'number' }).notNull().default(0),
+    note: text('note'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    phoneUniq: uniqueIndex('customers_phone_uniq').on(t.phone),
+    branchIdx: index('customers_branch_idx').on(t.homeBranchId),
+    activeIdx: index('customers_active_idx').on(t.isActive),
+  })
+);
+
+// customers.points مانده‌ی denormalized است؛ فقط با helper اتمیک تغییر می‌کند.
+export const loyaltyEntries = pgTable(
+  'loyalty_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id').notNull().references(() => customers.id, { onDelete: 'cascade' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    type: text('type').notNull(), // earn | redeem | adjust
+    points: integer('points').notNull(), // +earn / -redeem / ±adjust
+    reason: text('reason').notNull().default(''),
+    refTransactionId: uuid('ref_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    customerIdx: index('loyalty_entries_customer_idx').on(t.customerId),
+    branchIdx: index('loyalty_entries_branch_idx').on(t.branchId),
+    createdIdx: index('loyalty_entries_created_idx').on(t.createdAt),
+  })
+);
+
+// branch_id = null یعنی همه شعب
+export const coupons = pgTable(
+  'coupons',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').notNull(),
+    discountType: text('discount_type').notNull(), // percent | fixed
+    value: bigint('value', { mode: 'number' }).notNull(),
+    minOrder: bigint('min_order', { mode: 'number' }).notNull().default(0),
+    maxDiscount: bigint('max_discount', { mode: 'number' }),
+    validFrom: text('valid_from').notNull(), // Jalali string
+    validTo: text('valid_to').notNull(),     // Jalali string
+    usageLimit: integer('usage_limit'),
+    usedCount: integer('used_count').notNull().default(0),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    codeUniq: uniqueIndex('coupons_code_uniq').on(t.code),
+    branchIdx: index('coupons_branch_idx').on(t.branchId),
+    activeIdx: index('coupons_active_idx').on(t.isActive),
+  })
+);
+
+export const couponRedemptions = pgTable(
+  'coupon_redemptions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    couponId: uuid('coupon_id').notNull().references(() => coupons.id, { onDelete: 'cascade' }),
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    discountAmount: bigint('discount_amount', { mode: 'number' }).notNull(),
+    refTransactionId: uuid('ref_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    couponIdx: index('coupon_redemptions_coupon_idx').on(t.couponId),
+    customerIdx: index('coupon_redemptions_customer_idx').on(t.customerId),
+    branchIdx: index('coupon_redemptions_branch_idx').on(t.branchId),
+  })
+);
+
+// جدول DB اسمش `tables` است؛ export را restaurantTables گذاشتم تا با کلمه‌ی رایج TS تداخل نکند.
+export const restaurantTables = pgTable(
+  'tables',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    capacity: integer('capacity').notNull().default(0),
+    area: text('area'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchIdx: index('tables_branch_idx').on(t.branchId),
+  })
+);
+
+export const reservations = pgTable(
+  'reservations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    tableId: uuid('table_id').references(() => restaurantTables.id, { onDelete: 'set null' }),
+    date: text('date').notNull(), // Jalali string
+    time: text('time').notNull(),
+    partySize: integer('party_size').notNull().default(1),
+    status: text('status').notNull().default('pending'), // pending|confirmed|seated|cancelled|no_show
+    note: text('note'),
+    createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchIdx: index('reservations_branch_idx').on(t.branchId),
+    customerIdx: index('reservations_customer_idx').on(t.customerId),
+    statusIdx: index('reservations_status_idx').on(t.status),
+    branchDateIdx: index('reservations_branch_date_idx').on(t.branchId, t.date),
+  })
+);
+
+export const feedback = pgTable(
+  'feedback',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id').references(() => customers.id, { onDelete: 'set null' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    rating: integer('rating').notNull(), // 1..5
+    comment: text('comment'),
+    source: text('source').notNull().default('in_store'),
+    refTransactionId: uuid('ref_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchIdx: index('feedback_branch_idx').on(t.branchId),
+    customerIdx: index('feedback_customer_idx').on(t.customerId),
+    createdIdx: index('feedback_created_idx').on(t.createdAt),
+  })
+);
+
+export type Customer = typeof customers.$inferSelect;
+export type LoyaltyEntry = typeof loyaltyEntries.$inferSelect;
+export type Coupon = typeof coupons.$inferSelect;
+export type CouponRedemption = typeof couponRedemptions.$inferSelect;
+export type RestaurantTable = typeof restaurantTables.$inferSelect;
+export type Reservation = typeof reservations.$inferSelect;
+export type Feedback = typeof feedback.$inferSelect;

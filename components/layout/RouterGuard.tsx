@@ -5,6 +5,7 @@ import { ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui';
 import type { Action } from '@/lib/rbac';
 import { can } from '@/lib/rbac';
+import { canDo, type CapabilityKey } from '@/lib/auth/permissions';
 import { useAppStore } from '@/store';
 
 /**
@@ -26,7 +27,10 @@ import { useAppStore } from '@/store';
  * - در فاز ۱۰، API هم همین رفتار را خواهد داشت (403 با پیام)
  */
 interface RouterGuardProps {
-  requires: Action;
+  /** بررسی مبتنی بر نقش (سیستم قدیمی‌تر) — یکی از requires/cap باید داده شود */
+  requires?: Action;
+  /** بررسی مبتنی بر مجوز گرانولار (cap:) — اولویت با این است اگر داده شود */
+  cap?: CapabilityKey;
   children: React.ReactNode;
   /** پیام سفارشی — در صورتی که خواستید پیام پیش‌فرض را override کنید */
   fallbackTitle?: string;
@@ -35,6 +39,7 @@ interface RouterGuardProps {
 
 export function RouterGuard({
   requires,
+  cap,
   children,
   fallbackTitle = 'دسترسی غیرمجاز',
   fallbackMessage = 'برای مشاهده این بخش، باید با حساب مدیر کل وارد شوید.',
@@ -46,7 +51,10 @@ export function RouterGuard({
     return null;
   }
 
-  if (!can(user, requires)) {
+  // اولویت با مجوز گرانولار (cap:) — اگر داده شده باشد، بررسی نقشِ ثابت نادیده گرفته می‌شود
+  const allowed = cap ? canDo(user, cap) : (requires ? can(user, requires) : true);
+
+  if (!allowed) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center px-6">
         <div className="text-center max-w-sm">

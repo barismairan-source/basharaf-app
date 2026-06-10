@@ -16,5 +16,10 @@ export { DEFAULT_PREFERENCES } from './preferences';
 export type { Account } from './transaction';
 export type { Contact } from './transaction';
 export type { MenuCategory, MenuItem, MenuSection, MenuSettings } from './menu';
+export type {
+  Customer, CustomerTier, LoyaltyEntry, Reservation, ReservationStatus,
+  Feedback, CustomerDetail, Coupon, CouponRedemption, CouponDiscountType,
+  CouponValidationResult, RestaurantTable, FeedbackSummaryRow,
+} from './customer';
 export * from './payroll';
 export * from './inventory';

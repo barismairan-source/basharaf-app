@@ -98,6 +98,58 @@ export async function reversePurchasePost(dbTx: any, voucherId: string): Promise
 }
 
 /**
+ * ضایعات (kind='waste') → سند هزینه‌ی ضایعات در حسابداری (بدون اثر روی صندوق).
+ *
+ * issueConfirmed همان لحظه‌ی approve، انبار را به‌بهای میانگین موزون «بستانکار»
+ * می‌کند (qtyBase کم می‌شود)؛ این فقط طرف «بدهکار» را در دفاتر می‌نویسد —
+ * دقیقاً مثل سند COGS خودکار فروش منو (یک نوشته‌ی صرفاً دفترداری، بدون نقدینگی).
+ * idempotent با linkedTransactionId. باید داخل همان db.transaction تأیید برگه صدا زده شود.
+ */
+export async function postWasteToAccounting(
+  dbTx: any,
+  voucher: { id: string; no: string; branchId: string | null; makerDate: string; linkedTransactionId: string | null },
+  totalAmount: number,
+  userId: string,
+): Promise<string | null> {
+  if (totalAmount <= 0) return null;
+  if (voucher.linkedTransactionId) return voucher.linkedTransactionId;
+
+  let branchName = '';
+  if (voucher.branchId) {
+    const [b] = await dbTx.select().from(schema.branches).where(eq(schema.branches.id, voucher.branchId)).limit(1);
+    branchName = b?.name ?? '';
+  }
+
+  const [coreTx] = await dbTx.insert(schema.transactions).values({
+    type: 'expense',
+    title: `ضایعات انبار — برگه ${voucher.no}`,
+    categoryId: null,
+    categoryName: 'ضایعات انبار (Waste Expense)',
+    amount: totalAmount,
+    payee: 'انبار',
+    branchId: voucher.branchId,
+    branchName,
+    method: 'انبار',
+    accountId: null, // فقط دفترداری — انبار قبلاً به بهای میانگین موزون بستانکار شده؛ این سند فقط بدهکار را می‌نویسد
+    vatAmount: 0,
+    isCredit: false,
+    date: voucher.makerDate,
+    note: `ثبت خودکار از انبار — ضایعات ${voucher.no} (بستانکار: انبار به میانگین موزون / بدهکار: هزینه‌ی ضایعات)`,
+    status: 'approved',
+    createdBy: userId,
+    approvedBy: userId,
+    approvedAt: new Date(),
+  }).returning();
+  if (!coreTx) throw new Error('ساخت تراکنش هزینه‌ی ضایعات ناموفق بود');
+
+  await dbTx.update(schema.invVouchers)
+    .set({ linkedTransactionId: coreTx.id })
+    .where(eq(schema.invVouchers.id, voucher.id));
+
+  return coreTx.id;
+}
+
+/**
  * فروش روزانه (kind='sale') → سند درآمد در حسابداری + افزایش موجودی صندوق.
  * idempotent با linkedTransactionId. داخل همان db.transaction تأیید صدا زده شود.
  */

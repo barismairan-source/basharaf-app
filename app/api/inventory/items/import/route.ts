@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
+import { eq, and } from 'drizzle-orm';
 import * as XLSX from 'xlsx';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { receiveConfirmed } from '@/lib/db/inventoryHelpers';
+import { applyBalance } from '@/lib/db/balanceHelpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,7 +63,7 @@ export async function POST(req: Request) {
     const findBranch = (n: string) => branches.find(b => norm(b.name) === norm(n));
 
     const errors: string[] = [];
-    const prepared: Array<typeof schema.invItems.$inferInsert> = [];
+    const prepared: Array<{ row: typeof schema.invItems.$inferInsert; initialQty: number; unitCost: number }> = [];
     const seenCodes = new Set<string>(); // code|branch داخل همین فایل
 
     rows.forEach((row, i) => {
@@ -96,16 +99,21 @@ export async function POST(req: Request) {
       const avgCostPerBase = basePerUnit > 0 ? unitCost / basePerUnit : 0;
 
       prepared.push({
-        code, name,
-        category: cell(row, 'دسته', 'category') || 'سایر',
-        kind, branchId: branch.id, unit,
-        basePerUnit: String(basePerUnit),
-        yieldPct: String(yieldPct),
-        qtyPhysical: String(initialQty),
-        qtyBase: String(initialQty),
-        avgCostPerBase: String(avgCostPerBase),
-        minBase: String(minBase),
-        isActive: true,
+        row: {
+          code, name,
+          category: cell(row, 'دسته', 'category') || 'سایر',
+          kind, branchId: branch.id, unit,
+          basePerUnit: String(basePerUnit),
+          yieldPct: String(yieldPct),
+          // مقدار اولیه از طریق pipeline اتمیک اعمال می‌شود — اینجا صفر شروع می‌کنیم
+          qtyPhysical: '0',
+          qtyBase: '0',
+          avgCostPerBase: '0',
+          minBase: String(minBase),
+          isActive: true,
+        },
+        initialQty,
+        unitCost: avgCostPerBase,
       });
     });
 
@@ -113,11 +121,76 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, imported: 0, errors }, { status: 422 });
     }
 
+    const todayJalali = new Date().toISOString().slice(0, 10);
     let imported = 0;
+
+    // مجموع ارزش موجودی اولیه به تفکیک شعبه — برای ثبت یک تراکنش حسابداری تجمیعی
+    const branchTotals = new Map<string, { branchId: string; branchName: string; total: number }>();
+
     await db.transaction(async (dbTx) => {
       for (const p of prepared) {
-        await dbTx.insert(schema.invItems).values(p);
+        const [row] = await dbTx.insert(schema.invItems).values(p.row).returning();
+        if (!row) continue;
         imported++;
+
+        if (p.initialQty > 0) {
+          const totalCost = Math.round(p.initialQty * p.unitCost);
+          // ۱) ورود قطعی از طریق pipeline اتمیک — qtyBase/avgCostPerBase را به‌درستی محاسبه و به‌روزرسانی می‌کند
+          await receiveConfirmed(dbTx, row.id, p.initialQty, totalCost);
+          // ۲) ثبت در دفتر حرکات انبار — تا ردپای حسابرسی موجود باشد (نه بدون منشأ)
+          await dbTx.insert(schema.invStockTx).values({
+            itemId: row.id,
+            kind: 'in',
+            deltaBase: String(p.initialQty),
+            value: totalCost,
+            note: 'موجودی اولیه — ورود دسته‌ای از اکسل',
+            jalaliDate: todayJalali,
+          });
+
+          if (totalCost > 0) {
+            const key = row.branchId!;
+            const t = branchTotals.get(key) ?? { branchId: row.branchId!, branchName: '', total: 0 };
+            t.total += totalCost;
+            branchTotals.set(key, t);
+          }
+        }
+      }
+
+      // ۳) ثبت تراکنش حسابداری تجمیعی به‌ازای هر شعبه — تا ارزش موجودی اولیه در هسته‌ی مالی هم منعکس شود
+      for (const t of branchTotals.values()) {
+        const [b] = await dbTx.select().from(schema.branches).where(eq(schema.branches.id, t.branchId)).limit(1);
+        let account: { id: string } | undefined;
+        const [a1] = await dbTx.select().from(schema.accounts)
+          .where(and(eq(schema.accounts.branchId, t.branchId), eq(schema.accounts.isActive, true))).limit(1);
+        account = a1;
+        if (!account) {
+          const [a2] = await dbTx.select().from(schema.accounts).where(eq(schema.accounts.isActive, true)).limit(1);
+          account = a2;
+        }
+        const accountId = account?.id ?? null;
+
+        const [coreTx] = await dbTx.insert(schema.transactions).values({
+          type: 'expense',
+          title: 'ثبت موجودی اولیه انبار — ورود دسته‌ای از اکسل',
+          categoryId: null,
+          categoryName: 'موجودی اولیه انبار',
+          amount: t.total,
+          payee: 'انبار',
+          branchId: t.branchId,
+          branchName: b?.name ?? '',
+          method: 'انبار',
+          accountId,
+          vatAmount: 0,
+          isCredit: false,
+          date: todayJalali,
+          note: 'ثبت خودکار از ورود دسته‌ای اقلام انبار (ارزش موجودی اولیه)',
+          status: 'approved',
+          createdBy: session.sub,
+          approvedBy: session.sub,
+          approvedAt: new Date(),
+        }).returning();
+
+        if (coreTx && accountId) await applyBalance(dbTx, coreTx);
       }
     });
 

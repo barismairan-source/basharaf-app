@@ -55,7 +55,14 @@ export const ALL_SECTION_KEYS: ReadonlyArray<SectionKey> = SECTIONS.map((s) => s
  * مثلاً «تأیید برگه‌ی انبار» یک عملیات است، نه یک بخش. این‌ها هم در همان
  * لیست user.permissions ذخیره می‌شوند ولی با پیشوند `cap:` تا با کلید بخش قاطی نشوند.
  */
-export type CapabilityKey = 'inventory.approve';
+export type CapabilityKey =
+  | 'inventory.approve'
+  | 'inventory.viewCosts'
+  | 'settings.team'
+  | 'settings.branches'
+  | 'settings.categories'
+  | 'settings.content'
+  | 'settings.security';
 
 export interface CapabilityDef {
   key: CapabilityKey;
@@ -67,6 +74,14 @@ export interface CapabilityDef {
 export const CAPABILITIES: ReadonlyArray<CapabilityDef> = [
   // پیش‌فرض: فقط مدیر کل تأیید می‌کند (مثل قبل). با دادن این مجوز، حسابدار هم می‌تواند.
   { key: 'inventory.approve', label: 'تأیید برگه‌ی انبار', defaultRoles: ['SuperAdmin'] },
+  // تفکیک وظایف انبار/حسابداری: انباردار فقط مقدار فیزیکی می‌بیند، نه بهای تمام‌شده/مبالغ
+  { key: 'inventory.viewCosts', label: 'مشاهده‌ی بهای تمام‌شده و مبالغ مالی انبار', defaultRoles: ['SuperAdmin', 'BranchUser'] },
+  // زیرتب‌های تنظیمات — به‌صورت گرانولار قابل اعطا به نقش‌های غیر مدیر کل
+  { key: 'settings.team', label: 'مدیریت تیم (تنظیمات)', defaultRoles: ['SuperAdmin'] },
+  { key: 'settings.branches', label: 'مدیریت شعب (تنظیمات)', defaultRoles: ['SuperAdmin'] },
+  { key: 'settings.categories', label: 'دسته‌بندی‌ها (تنظیمات)', defaultRoles: ['SuperAdmin'] },
+  { key: 'settings.content', label: 'متن‌های سامانه (تنظیمات)', defaultRoles: ['SuperAdmin'] },
+  { key: 'settings.security', label: 'امنیت (تنظیمات)', defaultRoles: ['SuperAdmin'] },
 ];
 
 const CAP_PREFIX = 'cap:';

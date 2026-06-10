@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { can, type Action } from '@/lib/rbac';
+import { canDo, type CapabilityKey } from '@/lib/auth/permissions';
 import { cn } from '@/lib/utils';
 
 export type SettingsTab =
@@ -27,17 +27,17 @@ interface TabDef {
   id: SettingsTab;
   label: string;
   icon: LucideIcon;
-  requires?: Action;
+  requires?: CapabilityKey;
 }
 
 const TABS: ReadonlyArray<TabDef> = [
   { id: 'profile', label: 'پروفایل', icon: UserIcon },
   { id: 'preferences', label: 'تنظیمات', icon: Settings2 },
-  { id: 'team', label: 'تیم', icon: Users, requires: 'view:settings.team' },
-  { id: 'branches', label: 'شعب', icon: Building2, requires: 'view:settings.branches' },
-  { id: 'categories', label: 'دسته‌بندی‌ها', icon: Tags, requires: 'view:settings.categories' },
-  { id: 'content', label: 'متن‌های سامانه', icon: PenLine, requires: 'view:settings.team' },
-  { id: 'security', label: 'امنیت', icon: Shield, requires: 'view:settings.team' },
+  { id: 'team', label: 'تیم', icon: Users, requires: 'settings.team' },
+  { id: 'branches', label: 'شعب', icon: Building2, requires: 'settings.branches' },
+  { id: 'categories', label: 'دسته‌بندی‌ها', icon: Tags, requires: 'settings.categories' },
+  { id: 'content', label: 'متن‌های سامانه', icon: PenLine, requires: 'settings.content' },
+  { id: 'security', label: 'امنیت', icon: Shield, requires: 'settings.security' },
 ];
 
 interface SettingsNavProps {
@@ -49,7 +49,7 @@ export function SettingsNav({ active, onChange }: SettingsNavProps) {
   const user = useAppStore((s) => s.user);
   if (!user) return null;
 
-  const visible = TABS.filter((t) => !t.requires || can(user, t.requires));
+  const visible = TABS.filter((t) => !t.requires || canDo(user, t.requires));
 
   return (
     <nav className="lg:w-56 flex-shrink-0">

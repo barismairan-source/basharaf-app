@@ -10,6 +10,7 @@ import {
   BranchSummary,
   RecentList,
   DashboardSkeleton,
+  UnifiedOverview,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import {
@@ -121,6 +122,9 @@ export default function DashboardPage() {
           {/* BranchPicker فقط برای SuperAdmin */}
           {isAdmin && <BranchPicker />}
         </div>
+
+        {/* ─── داشبورد یکپارچه: انبار + فروش/مالی + پرسنل/حقوق در یک نگاه ─── */}
+        <UnifiedOverview />
 
         {/* ─── KPI grid ─── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

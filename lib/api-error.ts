@@ -77,6 +77,17 @@ export function handleError(error: unknown): NextResponse<ErrorBody> {
         { status: 409 }
       );
     }
+    // سرریز عددی (مثلاً ضرب مقدار × بهای واحدِ خراب/غول‌آسا که از ظرفیت ستون
+    // numeric/bigint بیشتر شده) — پیام خوانا به‌جای خطای داخلی کور
+    if (msg.includes('numeric field overflow') || msg.includes('out of range')) {
+      return NextResponse.json(
+        {
+          error: 'مقدار محاسبه‌شده بیش از حد مجاز است — بهای واحد یا مقدار وارد‌شده را بررسی کنید',
+          code: 'NUMERIC_OVERFLOW',
+        },
+        { status: 422 }
+      );
+    }
     if (msg.includes('foreign key') || msg.includes('violates')) {
       return NextResponse.json(
         {
