@@ -41,3 +41,7 @@ next-env.d.ts
 # deploy artifacts
 *.zip
 release-artifacts/
+graphify-out/
+
+# local claude settings (machine-specific)
+.claude/settings.local.json
