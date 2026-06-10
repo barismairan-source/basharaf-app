@@ -15,7 +15,7 @@
 | **Build/tsc** | هر دو سبز ✅ |
 | **دیپلوی** | Vercel+Supabase کامل کار می‌کند ✅ — Liara: مشکل `28P01`، راهنما در `DEPLOY-LIARA.md` |
 | **کار نیمه‌تمام (in-progress)** | — هیچ |
-| **کار بعدی پیشنهادی** | 🟠 stocktake accounting entry — مغایرت انبارگردانی در P&L ثبت شود (Backlog #1) |
+| **کار بعدی پیشنهادی** | 🟠 account selection در خرید — انتخاب دستی صندوق به‌جای «اولین حساب فعال» (Backlog #2) |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-10 — stocktake accounting entry (Backlog #1) — اکانت ۱
+**چه شد:** تابع `postStocktakeToAccounting` به `lib/inventory/postToAccounting.ts` اضافه شد. در approve route، قبل از loop متغیر `stocktakeVarianceCost` تعریف شد؛ داخل loop به‌ازای هر خط `diff * pre.a` (WAC قبل از تأیید) انباشته می‌شود. بعد از loop، اگر مغایرت ≠ ۰، یک تراکنش با `accountId: null` ساخته می‌شود: کسری → expense «هزینه مغایرت انبارگردانی - فیش شماره X»، مازاد → income «درآمد تعدیل انبارگردانی - فیش شماره X». اتمیک با همان db.transaction؛ idempotent با linkedTransactionId؛ برگه با txId وصل می‌شود.
+**فایل‌ها:** `lib/inventory/postToAccounting.ts` (+`postStocktakeToAccounting`)، `app/api/inventory/vouchers/[id]/approve/route.ts` (+import، +variance accumulator، +accounting call).
+**Build:** tsc سبز ✅ / build سبز ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** account selection در خرید (Backlog #2) — انتخاب دستی صندوق هنگام ثبت برگه‌ی خرید به‌جای «اولین حساب فعال».
 
 ## 📓 2026-06-10 — سامان‌دهی commitهای CRM + cleanup — اکانت ۱
 **چه شد:** همه‌ی فایل‌های uncommit از جلسات قبل (ماژول CRM + SQL migrationها) در دو commit منطقی جدا سامان‌دهی شدند. `*.zip` و `release-artifacts/` به `.gitignore` اضافه شد. tsc (۰ خطا) و build (سبز) تأیید شد. ژورنال‌های عقب‌افتاده بازسازی شدند و ۲ ورودی قدیمی به `project-docs/handoff-archive.md` منتقل شد.
@@ -103,7 +110,7 @@
 ## 📌 Backlog یکپارچه (به ترتیب اولویت)
 
 ### 🟠 فوری/مهم
-1. **stocktake accounting entry** — مغایرت انبارگردانی در P&L ثبت نمی‌شود (`inventory-audit.md`).
+1. ~~**stocktake accounting entry**~~ — ✅ انجام شد (2026-06-10، commit a90cd9d).
 2. **account selection در خرید** — انتخاب دستی صندوق به‌جای «اولین حساب فعال» (`inventory-audit.md`).
 3. **چک `/api/_diag`** — اگر هنوز در کد هست، قبل از production حذف شود (افشای اطلاعات اتصال).
 4. **Liara `28P01`** — طبق `DEPLOY-LIARA.md` حل شود (الان فقط Vercel+Supabase لایو است).
