@@ -7,7 +7,7 @@ import { ApiError, handleError } from '@/lib/api-error';
 
 const createSchema = z.object({
   name: z.string().min(2).max(120).transform(v => v.trim()),
-  type: z.enum(['customer', 'supplier', 'other']).default('customer'),
+  type: z.string().min(1).max(50).default('customer'),
   phone: z.string().max(20).optional().nullable(),
   note: z.string().max(300).optional().nullable(),
 });

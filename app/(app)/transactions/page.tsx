@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Search, Receipt, Clock, CheckCircle2, XCircle,
-  ArrowUpRight, ArrowDownLeft, Printer, ArrowLeftRight,
+  ArrowUpRight, ArrowDownLeft, Printer, ArrowLeftRight, Plus,
   type LucideIcon,
 } from 'lucide-react';
 
 import {
-  Card, CardBody, Chip, Empty, Input, Select, Th, Td,
+  Button, Card, CardBody, Chip, Empty, Input, Select, Th, Td,
 } from '@/components/ui';
 import { useAppStore, useVisibleTransactions } from '@/store';
 import { fmt, cn } from '@/lib/utils';
@@ -156,6 +156,9 @@ export default function TransactionsPage() {
             <div className="text-[12px] text-stone-500 mt-1">{filtered.length} تراکنش</div>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" icon={Plus} onClick={() => router.push('/transactions/new')}>
+              ثبت تراکنش
+            </Button>
             <ImportPanel onDone={() => window.location.reload()} />
             <button
               onClick={() => window.print()}

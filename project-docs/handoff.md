@@ -5,6 +5,72 @@
 
 ---
 
+## 0. وضعیت فعلی نسخه — v9.0.1 (Bug-fix patch)
+
+### باگ‌فیکس‌های v9.0.1 — ۴ باگ گزارش‌شده از محیط تولید (basharaf.me)
+
+**۱. صفحه‌ی طرف‌حساب‌ها — نوع read-only بود**
+- **علت ریشه‌ای (API):** `createSchema` و `patchSchema` از `z.enum(['customer','supplier','other'])` استفاده می‌کردند که انواع سفارشی را رد می‌کرد.
+- **علت ریشه‌ای (UI):** هیچ فرم ویرایش inline‌ای برای طرف‌حساب‌های موجود نبود.
+- **فایل‌های تغییریافته:**
+  - `app/api/contacts/route.ts` — `z.enum` → `z.string().min(1).max(50)`
+  - `app/api/contacts/[id]/route.ts` — همان تغییر در patchSchema
+  - `app/(app)/contacts/page.tsx` — افزودن edit inline با آیکون مداد؛ فیلد نوع با `<input list>` + `<datalist>` که هم انتخاب از پیش‌فرض‌ها و هم تایپ آزاد را پشتیبانی می‌کند
+
+**۲. صفحه‌ی تراکنش‌ها — دکمه‌ی «ثبت تراکنش» نبود**
+- **علت ریشه‌ای:** دکمه‌ی `+ ثبت تراکنش` به اشتباه از هدر صفحه حذف شده بود.
+- **فایل تغییریافته:** `app/(app)/transactions/page.tsx` — دکمه‌ی `Button` با `Plus` icon اضافه شد که به `/transactions/new` هدایت می‌کند
+
+**۳. ورود دسته‌ای تراکنش — «خطای نامشخص»**
+- **علت ریشه‌ای:** `ImportPanel` فقط `data.errors` را نمایش می‌داد؛ هر خطایی که از `handleError` می‌آید (فرمت `{error, code}` بدون `errors`) به‌صورت «خطای نامشخص» نشان داده می‌شد.
+- **فایل تغییریافته:** `components/transactions/ImportPanel.tsx` — fallback به `data.error` قبل از «خطای نامشخص»
+
+**۴. ثبت برگه‌ی انبار — «خطای داخلی سرور»**
+- **علت ریشه‌ای (اصلی):** ستون `expiry_date` به schema/کد اضافه شده بود ولی migration `supabase-v6-waste-expiry-migration.sql` در پایگاه داده‌ی تولیدی اجرا نشده بود. `INSERT INTO inv_voucher_lines (..., expiry_date) VALUES (...)` با خطای «column expiry_date does not exist» ناموفق می‌شد و `handleError` آن را به 500 تبدیل می‌کرد.
+- **علت فرعی (approve route):** `txId: updated.id` در notification insert از voucher ID به‌جای transaction ID استفاده می‌کرد → FK violation.
+- **فایل‌های تغییریافته:**
+  - `app/api/inventory/vouchers/route.ts` — insert فقط وقتی `expiryDate` non-null است آن را include می‌کند (conditional spread)
+  - `app/api/inventory/vouchers/[id]/approve/route.ts` — همان fix برای `invStockTx` insert؛ و `txId: updated.linkedTransactionId ?? null` (اصلاح FK violation)
+- **⚠️ لازم:** migration `supabase-v6-waste-expiry-migration.sql` باید روی پایگاه داده‌ی تولیدی اجرا شود تا ردیابی تاریخ انقضا به‌طور کامل فعال شود. بدون migration، ثبت برگه کار می‌کند ولی `expiryDate` ذخیره نمی‌شود.
+
+**وضعیت build/tsc پس از فیکس‌ها:** `npx tsc --noEmit` و `npm run build` هر دو سبز ✅
+
+---
+
+## 0. وضعیت قبلی — v9.0.0 (Stable / Enterprise-grade milestone)
+
+> **نسخه‌ی فعلی سامانه: `v9.0.0`** (در `package.json` ثبت شده — قبلاً `0.9.23` بود؛
+> این جهش نسخه به‌معنای رسیدن به یک نقطه‌عطف پایدار و enterprise-grade است، نه صرفاً افزایش شماره).
+
+تغییرات تثبیت‌شده و کاملاً یکپارچه‌شده در این نسخه:
+
+- **Batch 5 — UI/UX Redesign:** بازطراحی کامل سایدبار به سبک ERPهای صنعتی (Toast/Odoo) —
+  گروه‌بندی منطقی ناوبری (عملیات اصلی / پشت صحنه / روابط و منابع / تحلیل و گزارش) با
+  «تنظیمات» به‌صورت کاملاً مجزا و پین‌شده در پایین سایدبار؛ همچنین جابجایی
+  `<FeedbackSummaryCard />` از صفحه‌ی گزارش‌ها (که اکنون فقط داده‌ی مالی/عددی دارد)
+  به ماژول مشتریان (`app/(app)/customers/page.tsx`) — محل منطقی آن.
+- **Financial Integrity Spec — تکمیل کامل:**
+  - سند رسمی مشخصات در `project-docs/financial-integrity-spec.md`
+  - **DELETE atomic rollback (Bug #1 بسته شد):** بازنویسی کامل `DELETE /api/transactions/[id]`
+    به یک `db.transaction` اتمیک که به‌ترتیب معکوس، balance صندوق، مانده‌ی طرف‌حساب،
+    کسر انبار فروش منو (backflushing)، و سند COGS را خنثی/باطل می‌کند — بدون هیچ
+    رکورد یتیمی. توابع پایه‌ای جدید: `reverseSaleDeduction` و `voidCogsTransaction`
+    در `lib/db/balanceHelpers.ts` (با الگوی اتمیک `sql\`col + ${amount}\``، امن برای
+    هم‌روندی). برای امکان‌پذیری این بازگشت دقیق، `applyMenuSaleDeduction` اکنون
+    `deductionLines` (ردپای دقیق هر خط کسر) را در `saleMeta` ثبت می‌کند.
+  - **PATCH immutability policy (Bug/Gap بسته شد):** فیلدهای غیرمالی
+    (`title`, `categoryId`, `payee`, `method`, `receipt`, `date`, `note`) همیشه آزادانه
+    قابل ویرایش‌اند؛ فیلدهای مالی (`amount`, `accountId`, `destinationAccountId`,
+    `type`, `isCredit`, `contactId`, `vatAmount`) پس از `approved` شدن کاملاً
+    immutable شده‌اند و هرگونه تلاش برای تغییرشان بلافاصله با خطای ۴۲۲ و پیام صریح
+    «برای اصلاح، تراکنش را حذف و یک تراکنش جدید ثبت کنید» مسدود می‌شود — مسیر
+    reverse/apply قدیمی حذف شده تا ریسک balance-drift از ریشه از بین برود.
+- **وضعیت build/tsc:** `npx tsc --noEmit` و `npm run build` هر دو سبز ✅ — سامانه در
+  وضعیت کاملاً قابل‌دیپلوی است.
+- **بسته‌ی دیپلوی این نسخه:** `basharaf-v9.0.0-deploy.zip` (ریشه‌ی پروژه)
+
+---
+
 ## 1. System Overview & Tech Stack
 
 - **Framework:** Next.js 14 (App Router), TypeScript (strict mode)

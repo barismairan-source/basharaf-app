@@ -112,7 +112,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           deltaBase: String(signedQty),
           value: Math.round((fu ?? parseFloat(l.estUnitCost)) * parseFloat(l.qtyBase)),
           note: `برگه ${current.no}`,
-          expiryDate: l.expiryDate ?? null,
+          ...(l.expiryDate ? { expiryDate: l.expiryDate } : {}),
           jalaliDate: current.makerDate,
         });
       }
@@ -199,7 +199,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         sub: `برگه ${updated.no} — مبلغ ${finalTotal.toLocaleString('fa-IR')}`,
         time: 'به‌تازگی',
         read: false,
-        txId: updated.id,
+        txId: updated.linkedTransactionId ?? null,
         userId: updated.createdBy,
       });
     }

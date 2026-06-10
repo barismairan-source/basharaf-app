@@ -39,8 +39,7 @@ export function ImportPanel({ onDone }: { onDone?: () => void }) {
         setFile(null); if (inputRef.current) inputRef.current.value = '';
         onDone?.();
       } else {
-        // خطای اعتبارسنجی — هیچ‌چیز وارد نشده
-        setResult({ imported: 0, errors: data.errors ?? ['خطای نامشخص'] });
+        setResult({ imported: 0, errors: data.errors ?? (data.error ? [data.error] : ['خطای نامشخص']) });
       }
     } catch { showToast('خطا در ورود فایل', 'danger'); }
     finally { setBusy(false); }

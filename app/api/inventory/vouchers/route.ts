@@ -3,6 +3,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
@@ -16,10 +17,18 @@ import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
  * بعد از approve (که در route جداگانه است). اینجا فقط qtyPhysical آپدیت می‌شود.
  */
 
+// مبالغ/مقادیر باید finite و در محدوده‌ی امن باشند — نه Infinity/NaN و نه چنان بزرگ
+// که در numeric(24,6) ستون‌های بهای واحد (یا در ضرب qty × cost) سرریز ایجاد کند.
+// سقف ۱۰۰ میلیارد تومان برای «بهای هر واحد پایه» با فاصله‌ی زیاد از مقادیر واقعی است
+// و همزمان مقدار خراب نمونه (۶۵.۵ میلیارد) را هم به‌صورت خوانا رد می‌کند.
+const MONEY_MAX = 100_000_000_000; // ۱۰۰ میلیارد تومان
+
 const lineSchema = z.object({
   itemId: z.string().uuid(),
-  qtyBase: z.number().positive(),
-  estUnitCost: z.number().min(0).default(0),
+  qtyBase: z.number().finite().positive().max(1_000_000_000, 'مقدار خیلی بزرگ است'),
+  estUnitCost: z.number().finite('بهای واحد نامعتبر است').min(0).max(MONEY_MAX, 'بهای واحد بیش از حد مجاز است — لطفاً بررسی کنید').default(0),
+  // تاریخ انقضای محموله (جلالی، اختیاری) — برای ردیابی/هشدار انقضا (زمینه‌ساز FIFO آینده)
+  expiryDate: z.string().max(20).optional().nullable(),
 });
 
 const createVoucherSchema = z.object({
@@ -47,12 +56,15 @@ export async function GET(req: Request) {
     const rows = await db.select().from(schema.invVouchers)
       .where(where).orderBy(desc(schema.invVouchers.createdAt));
 
+    // تفکیک وظایف: انباردار / کاربران بدون مجوز مالی، مبالغ برگه را نمی‌بینند
+    const maskCosts = !canDo(session, 'inventory.viewCosts');
+
     // خطوط هر برگه
     const result = [];
     for (const v of rows) {
       const lines = await db.select().from(schema.invVoucherLines)
         .where(eq(schema.invVoucherLines.voucherId, v.id));
-      result.push(rowToInvVoucher(v, lines));
+      result.push(rowToInvVoucher(v, lines, maskCosts));
     }
     return NextResponse.json({ vouchers: result });
   } catch (e) {
@@ -108,6 +120,7 @@ export async function POST(req: Request) {
           itemId: l.itemId,
           qtyBase: String(l.qtyBase),
           estUnitCost: String(l.estUnitCost),
+          ...(l.expiryDate ? { expiryDate: l.expiryDate } : {}),
         });
         // فقط لایه‌ی فیزیکی (قطعی بعد از تأیید). انبارگردانی استثناست:
         // qtyBase آن «موجودی شمرده‌شده» است نه حرکت، پس فیزیکی را تغییر نمی‌دهیم.
@@ -125,7 +138,7 @@ export async function POST(req: Request) {
     await createPendingNotifications(inserted.v.id, `برگه ${no}`, input.branchId);
 
     return NextResponse.json(
-      { voucher: rowToInvVoucher(inserted.v, inserted.lines) },
+      { voucher: rowToInvVoucher(inserted.v, inserted.lines, !canDo(session, 'inventory.viewCosts')) },
       { status: 201 }
     );
   } catch (e) {
