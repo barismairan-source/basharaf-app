@@ -1,16 +1,27 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
-import { Package, ClipboardList, AlertTriangle, Check, X, Loader2, Plus, FileText, ChefHat, TrendingUp, Trash2, Calculator, FileSpreadsheet, Download, Upload, ChevronDown, ChevronLeft } from 'lucide-react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Package, ClipboardList, AlertTriangle, Check, X, Loader2, Plus, FileText, ChefHat, TrendingUp, Trash2, Calculator, FileSpreadsheet, Download, Upload, ChevronDown, ChevronLeft, Printer, CalendarClock } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
 import { fmt } from '@/lib/utils';
 import { JalaliDatePicker } from '@/components/ui';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
-import type { InventoryItem, InventoryVoucher, InventoryRecipe, ForecastResult, InvVoucherKind, InvUnit, RecipeCosting } from '@/types';
+import type { InventoryItem, InventoryVoucher, InventoryRecipe, ForecastResult, InvVoucherKind, InvUnit, RecipeCosting, ExpiryWarning } from '@/types';
 
 const repos = createRepos(null as never);
+
+/**
+ * پیام خطای واقعی را از Error استخراج می‌کند (apiFetch پیام سرور را در .message
+ * می‌گذارد) و در کنسول لاگ می‌کند — به‌جای نمایش کور یک toast عمومی که علت
+ * واقعی (مثلاً «numeric field overflow» سمت دیتابیس) را پنهان می‌کند.
+ */
+function errMsg(e: unknown, fallback: string): string {
+  console.error(fallback, e);
+  if (e instanceof Error && e.message && !/^HTTP \d+$/.test(e.message)) return e.message;
+  return fallback;
+}
 
 type Tab = 'items' | 'cartable' | 'voucher' | 'quickbuy' | 'stocktake' | 'recipes' | 'sales' | 'plan';
 
@@ -49,7 +60,8 @@ export default function InventoryPage() {
     return <div className="p-6 text-center text-stone-500">دسترسی ندارید</div>;
   }
   // انباردار قیمت‌ها را نمی‌بیند و وارد نمی‌کند
-  const canSeePrices = user?.role === 'SuperAdmin';
+  // تفکیک وظایف انبار/حسابداری: انباردار (یا کاربر بدون مجوز مالی) بهای تمام‌شده/مبالغ را نمی‌بیند
+  const canSeePrices = canDo(user, 'inventory.viewCosts');
   const isWarehouse = user?.role === 'Warehouse';
   const canApprove = canDo(user, 'inventory.approve');
 
@@ -61,7 +73,7 @@ export default function InventoryPage() {
       await repos.inventory.approveVoucher(v.id, finalUnitCosts);
       showToast('برگه تأیید شد', 'success');
       await load();
-    } catch { showToast('خطا در تأیید', 'danger'); }
+    } catch (e) { showToast(errMsg(e, 'خطا در تأیید'), 'danger'); }
     finally { setBusy(null); }
   }
 
@@ -72,7 +84,7 @@ export default function InventoryPage() {
       await repos.inventory.rejectVoucher(v.id, reason);
       showToast('برگه رد شد', 'success');
       await load();
-    } catch { showToast('خطا در رد', 'danger'); }
+    } catch (e) { showToast(errMsg(e, 'خطا در رد'), 'danger'); }
     finally { setBusy(null); }
   }
 
@@ -83,7 +95,7 @@ export default function InventoryPage() {
       await repos.inventory.deleteVoucher(v.id);
       showToast('برگه حذف شد', 'success');
       await load();
-    } catch { showToast('خطا در حذف برگه', 'danger'); }
+    } catch (e) { showToast(errMsg(e, 'خطا در حذف برگه'), 'danger'); }
     finally { setBusy(null); }
   }
 
@@ -142,6 +154,46 @@ export default function InventoryPage() {
   );
 }
 
+/* ───── بخش هشدار انقضا ───── */
+function ExpiryWarningsSection() {
+  const [warnings, setWarnings] = useState<ExpiryWarning[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    createRepos(null as never).inventory.expiryWarnings()
+      .then(w => { setWarnings(w); setLoaded(true); })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  if (!loaded || warnings.length === 0) return null;
+
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 space-y-2">
+      <div className="flex items-center gap-1.5 text-[12px] font-medium text-amber-800">
+        <CalendarClock size={14} strokeWidth={1.5} />
+        نزدیک به انقضا ({warnings.length} مورد)
+      </div>
+      <div className="space-y-1.5">
+        {warnings.map((w, i) => (
+          <div key={i} className="flex items-center justify-between text-[12px]">
+            <span className="text-stone-700">{w.itemName}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-stone-500 tabular-nums text-[11px]">{w.expiryDate}</span>
+              {w.isExpired ? (
+                <span className="bg-rose-100 text-rose-700 text-[10.5px] font-medium px-2 py-0.5 rounded-full">منقضی شده</span>
+              ) : (
+                <span className="bg-amber-100 text-amber-700 text-[10.5px] font-medium px-2 py-0.5 rounded-full">
+                  {w.daysUntilExpiry === 1 ? 'فردا' : `${w.daysUntilExpiry} روز دیگر`}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ───── تب موجودی + افزودن قلم ───── */
 function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
   items: InventoryItem[]; branches: { id: string; name: string }[]; onChange: () => void;
@@ -169,6 +221,7 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
 
   return (
     <div className="space-y-3">
+      <ExpiryWarningsSection />
       <div className="flex justify-end gap-2">
         {canSeePrices && <ItemsImport onDone={onChange} showToast={showToast} />}
         <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 bg-stone-900 text-white px-3 py-1.5 rounded-lg text-[12.5px]">
@@ -181,7 +234,14 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
         <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
           <table className="w-full text-[12.5px]">
             <thead className="bg-stone-50 text-stone-500 text-[11px]">
-              <tr><th className="px-3 py-2 text-right">کد</th><th className="px-3 py-2 text-right">نام</th><th className="px-3 py-2 text-right">واحد</th><th className="px-3 py-2 text-left">موجودی</th>{canSeePrices && <th className="px-3 py-2 text-left">میانگین بها</th>}{canSeePrices && <th className="px-3 py-2 w-10"></th>}</tr>
+              <tr><th className="px-3 py-2 text-right">کد</th><th className="px-3 py-2 text-right">نام</th><th className="px-3 py-2 text-right">واحد</th><th className="px-3 py-2 text-left">
+                <span
+                  className="cursor-help border-b border-dotted border-stone-400"
+                  title="موجودی (qtyBase) صرفاً از طریق تراکنش‌های انبار محاسبه می‌شود — برای اصلاح آن باید از «انبارگردانی» یا «رسید خرید» استفاده کنید، نه ویرایش مستقیم."
+                >
+                  موجودی
+                </span>
+              </th>{canSeePrices && <th className="px-3 py-2 text-left">میانگین بها</th>}{canSeePrices && <th className="px-3 py-2 w-10"></th>}</tr>
             </thead>
             <tbody>
               {items.map(it => (
@@ -356,7 +416,7 @@ function VoucherTab({ items, branches, onDone, showToast, canSeePrices, isWareho
       });
       showToast('برگه ثبت شد (در انتظار تأیید)', 'success');
       setLines([{ itemId: '', qty: '', cost: '' }]); setNote(''); onDone();
-    } catch { showToast('خطا در ثبت برگه', 'danger'); }
+    } catch (e) { showToast(errMsg(e, 'خطا در ثبت برگه'), 'danger'); }
     finally { setSaving(false); }
   }
 
@@ -455,7 +515,7 @@ function RecipesTab({ recipes, items, branches, onDone, showToast, canSeePrices 
       ) : (
         <div className="space-y-2">
           {recipes.map(r => (
-            <RecipeCard key={r.id} recipe={r} onDelete={async () => {
+            <RecipeCard key={r.id} recipe={r} items={items} onDelete={async () => {
               if (!confirm(`رسپی «${r.name}» حذف شود؟`)) return;
               try { await createRepos(null as never).inventory.deleteRecipe(r.id!); showToast('حذف شد', 'success'); onDone(); }
               catch { showToast('خطا در حذف', 'danger'); }
@@ -565,13 +625,32 @@ function PlanTab() {
   );
 }
 
-/* ───── کارت رسپی با بهای تمام‌شده ───── */
-function RecipeCard({ recipe, onDelete, canSeePrices }: {
-  recipe: InventoryRecipe; onDelete: () => void; canSeePrices: boolean;
+/* ───── کارت رسپی با بهای تمام‌شده + ماشین‌حساب پرس + چاپ ───── */
+function RecipeCard({ recipe, items, onDelete, canSeePrices }: {
+  recipe: InventoryRecipe; items: InventoryItem[]; onDelete: () => void; canSeePrices: boolean;
 }) {
   const [costing, setCosting] = useState<RecipeCosting | null>(null);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+
+  /* ماشین‌حساب پرس: با موجودی فعلی چند پرس ممکن است؟ */
+  const portionCalc = useMemo(() => {
+    if (!recipe.lines.length || !items.length) return null;
+    const byId = new Map(items.map(i => [i.id, i]));
+    let min = Infinity;
+    let bottleneck = '';
+    for (const line of recipe.lines) {
+      const item = byId.get(line.itemId);
+      if (!item) continue;
+      const yieldPct = (line.overridePct != null ? line.overridePct : item.yieldPct) || 100;
+      const netUsable = item.qtyBase * yieldPct / 100;
+      const netPerPortion = line.qtyBase / Math.max(1, recipe.portions);
+      if (netPerPortion <= 0) continue;
+      const possible = Math.floor(netUsable / netPerPortion);
+      if (possible < min) { min = possible; bottleneck = item.name; }
+    }
+    return min === Infinity ? null : { portions: min, bottleneck };
+  }, [recipe, items]);
 
   async function loadCosting() {
     if (costing) { setOpen(o => !o); return; }
@@ -583,12 +662,70 @@ function RecipeCard({ recipe, onDelete, canSeePrices }: {
     finally { setLoading(false); }
   }
 
+  /* کارت رسپی چاپ‌پذیر برای آشپزخانه */
+  function handlePrint() {
+    const byId = new Map(items.map(i => [i.id, i]));
+    const rows = recipe.lines.map(line => {
+      const item = byId.get(line.itemId);
+      const name = item?.name ?? '—';
+      const unit = UNIT_LABELS[item?.unit ?? ''] ?? (item?.unit ?? '');
+      const perPortion = (line.qtyBase / Math.max(1, recipe.portions));
+      const perPortionStr = perPortion >= 1 ? Math.round(perPortion).toLocaleString('en-US') : perPortion.toFixed(2);
+      const totalStr = Math.round(line.qtyBase).toLocaleString('en-US');
+      return `<tr><td>${name}</td><td>${perPortionStr} ${unit}</td><td>${totalStr} ${unit}</td></tr>`;
+    }).join('');
+
+    const html = `<!DOCTYPE html><html dir="rtl" lang="fa"><head>
+<meta charset="UTF-8"><title>${recipe.name} — کارت رسپی</title>
+<style>
+  body{font-family:Tahoma,Arial,sans-serif;padding:2cm;direction:rtl;font-size:14pt;color:#111}
+  h1{font-size:20pt;border-bottom:2px solid #333;padding-bottom:.3cm;margin-bottom:.4cm}
+  .meta{color:#555;font-size:11pt;margin-bottom:.8cm}
+  table{width:100%;border-collapse:collapse;font-size:13pt}
+  th{background:#eee;padding:7px 12px;text-align:right;border:1px solid #bbb;font-weight:bold}
+  td{padding:7px 12px;border:1px solid #ddd}
+  tr:nth-child(even) td{background:#f9f9f9}
+  .footer{margin-top:1cm;font-size:10pt;color:#999;border-top:1px solid #eee;padding-top:.3cm}
+  @media print{@page{margin:1.5cm}button{display:none}}
+</style></head><body>
+<h1>${recipe.name}</h1>
+<div class="meta">هر پخت: ${recipe.portions} پرس · ${recipe.lines.length} ماده</div>
+<table>
+  <tr><th>ماده اولیه</th><th>هر پرس</th><th>کل پخت (${recipe.portions} پرس)</th></tr>
+  ${rows}
+</table>
+<div class="footer">بشارف · کارت رسپی آشپزخانه · بدون قیمت</div>
+<script>setTimeout(()=>{window.print();},250)</script>
+</body></html>`;
+
+    const w = window.open('', '_blank', 'width=750,height=820');
+    if (w) { w.document.write(html); w.document.close(); }
+  }
+
+  const marginPct = costing?.foodCostPct != null
+    ? Math.round((100 - costing.foodCostPct) * 10) / 10
+    : null;
+
   return (
     <div className="bg-white border border-stone-200 rounded-lg p-3">
-      <div className="flex justify-between items-center">
-        <span className="text-[13px] font-medium text-stone-800">{recipe.name}</span>
-        <div className="flex items-center gap-3">
-          <span className="text-[11px] text-stone-400">{recipe.portions} پرس · {recipe.lines.length} ماده</span>
+      {/* سرتیتر کارت */}
+      <div className="flex justify-between items-start gap-2">
+        <div className="min-w-0">
+          <span className="text-[13px] font-medium text-stone-800">{recipe.name}</span>
+          <span className="text-[11px] text-stone-400 mr-2">{recipe.portions} پرس · {recipe.lines.length} ماده</span>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {portionCalc !== null && (
+            <span
+              className={`text-[11px] px-1.5 py-0.5 rounded-md tabular-nums font-medium ${portionCalc.portions === 0 ? 'bg-rose-50 text-rose-600' : portionCalc.portions < recipe.portions ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}
+              title={`گلوگاه: ${portionCalc.bottleneck}`}
+            >
+              {portionCalc.portions} پرس
+            </span>
+          )}
+          <button onClick={handlePrint} className="text-stone-400 hover:text-stone-700" title="چاپ کارت رسپی آشپزخانه">
+            <Printer size={14} strokeWidth={1.5} />
+          </button>
           {canSeePrices && (
             <button onClick={loadCosting} className="text-stone-400 hover:text-stone-700" title="بهای تمام‌شده">
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Calculator size={14} strokeWidth={1.5} />}
@@ -598,12 +735,32 @@ function RecipeCard({ recipe, onDelete, canSeePrices }: {
         </div>
       </div>
 
+      {/* نمایش گلوگاه کمبود */}
+      {portionCalc !== null && portionCalc.portions === 0 && (
+        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-rose-600">
+          <AlertTriangle size={11} />
+          موجودی کافی نیست · گلوگاه: {portionCalc.bottleneck}
+        </div>
+      )}
+      {portionCalc !== null && portionCalc.portions > 0 && portionCalc.portions < recipe.portions && (
+        <div className="mt-1.5 flex items-center gap-1 text-[11px] text-amber-600">
+          <AlertTriangle size={11} />
+          کمتر از یک پخت کامل · گلوگاه: {portionCalc.bottleneck}
+        </div>
+      )}
+
+      {/* جزئیات بهای تمام‌شده */}
       {open && costing && (
         <div className="mt-3 pt-3 border-t border-stone-100 space-y-2">
-          <div className="grid grid-cols-3 gap-2 text-center">
+          {/* ۴ آمار اصلی */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
             <div className="bg-stone-50 rounded-lg p-2">
               <div className="text-[10px] text-stone-400">بهای هر پرس</div>
               <div className="text-[13px] font-medium text-stone-800 tabular-nums">{fmt(costing.costPerPortion)}</div>
+            </div>
+            <div className="bg-stone-50 rounded-lg p-2">
+              <div className="text-[10px] text-stone-400">قیمت فروش</div>
+              <div className="text-[13px] font-medium text-stone-800 tabular-nums">{costing.price > 0 ? fmt(costing.price) : '—'}</div>
             </div>
             <div className="bg-stone-50 rounded-lg p-2">
               <div className="text-[10px] text-stone-400">food cost</div>
@@ -612,19 +769,31 @@ function RecipeCard({ recipe, onDelete, canSeePrices }: {
               </div>
             </div>
             <div className="bg-stone-50 rounded-lg p-2">
-              <div className="text-[10px] text-stone-400">قیمت پیشنهادی</div>
-              <div className="text-[13px] font-medium text-stone-800 tabular-nums">{fmt(costing.suggestedPrice)}</div>
+              <div className="text-[10px] text-stone-400">حاشیه سود</div>
+              {marginPct !== null
+                ? <div className={`text-[13px] font-medium tabular-nums ${marginPct < 30 ? 'text-rose-600' : 'text-emerald-600'}`}>٪{marginPct}</div>
+                : <div className="text-[13px] text-stone-400">—</div>}
             </div>
           </div>
+
+          {/* قیمت پیشنهادی اگر با قیمت فعلی فرق دارد */}
+          {costing.price > 0 && Math.abs(costing.suggestedPrice - costing.price) > costing.price * 0.05 && (
+            <div className="text-[11px] text-stone-500 flex items-center gap-1">
+              قیمت پیشنهادی (بر اساس ٪{costing.targetFcPct} food cost):
+              <span className="font-medium text-stone-700 tabular-nums">{fmt(costing.suggestedPrice)}</span>
+            </div>
+          )}
+
           {costing.hasMissingCosts && (
             <div className="text-[11px] text-amber-600 flex items-center gap-1">
               <AlertTriangle size={12} /> بعضی مواد هنوز قیمت ندارند (با ثبت رسید خرید قیمت می‌گیرند).
             </div>
           )}
+
           <div className="space-y-1">
             {costing.lines.map((l, i) => (
               <div key={i} className="flex justify-between text-[11.5px] text-stone-600">
-                <span>{l.name} <span className="text-stone-400">({fmt(l.qtyBase)})</span></span>
+                <span>{l.name} <span className="text-stone-400">({fmt(l.qtyBase)} {l.unit})</span></span>
                 <span className="tabular-nums">{fmt(l.lineCost)}</span>
               </div>
             ))}

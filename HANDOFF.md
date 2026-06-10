@@ -2,9 +2,54 @@
 
 > این سند وضعیت **واقعی و فعلی** کد را مستند می‌کند.
 > هرجا چیزی پیاده‌سازی نشده، صریح نوشته شده.
-> تاریخ: **2026-06-10** — نسخه `9.0.0`
+> تاریخ: **2026-06-10** — نسخه `9.0.0` (به‌روز شده همین روز)
 >
 > **فایل تفصیلی‌تر:** `project-docs/handoff.md` (شامل ریزجزئیات Batch 3–4 و hotfixها).
+
+---
+
+## آخرین تغییرات — 2026-06-10: ۴ ابزار آشپزخانه (اولویت S)
+
+### چه شد
+
+**۱. کارت بهای تمام‌شده رسپی (بهبود RecipeCard)**
+- Grid آمار از ۳ ستون به ۴ ستون: بهای هر پرس | قیمت فروش | food cost% | حاشیه سود
+- **حاشیه سود = ۱۰۰ − foodCostPct** — قرمز اگر margin < 30%
+- قیمت پیشنهادی (بر اساس targetFcPct) فقط وقتی >5% با قیمت فعلی فرق دارد نشان داده می‌شود
+
+**۲. ماشین‌حساب پرس (Portion Calculator)**
+- بدون نیاز به API جدید — محاسبه client-side با `useMemo`
+- فرمول: `پرس_ممکن = (qtyBase × yieldPct/100) / (line.qtyBase / portions)`
+- badge سبز/زرد/قرمز در سرتیتر هر RecipeCard با تعداد پرس ممکن
+- گلوگاه (bottleneck ingredient) با نام در tooltip و زیر سرتیتر نشان داده می‌شود
+- `overridePct` روی خطوط رسپی لحاظ می‌شود
+
+**۳. کارت رسپی چاپ‌پذیر آشپزخانه**
+- دکمه `Printer` در سرتیتر هر RecipeCard
+- یک پنجره‌ی جدید با HTML+CSS خالص باز می‌کند و `window.print()` فراخوانی می‌کند
+- ستون‌ها: ماده اولیه | هر پرس | کل پخت (N پرس)
+- اعداد لاتین (خواناتر در آشپزخانه)، بدون قیمت، بدون مارکه مالی
+
+**۴. هشدار انقضای مواد**
+- API جدید: `GET /api/inventory/expiry` — اقلامی که `expiryDate` در ۳ روز آینده دارند
+- داده از `inv_stock_tx.expiryDate` (Jalali text) با `jalaliToDate` تبدیل می‌شود
+- UI: `ExpiryWarningsSection` در بالای تب موجودی — badge قرمز «منقضی شده» یا زرد «X روز دیگر»
+- اگر هشداری نباشد، هیچ چیزی نمایش داده نمی‌شود
+
+### فایل‌های تغییریافته / ایجادشده
+- `types/inventory.ts` — افزوده: `ExpiryWarning` interface
+- `app/api/inventory/expiry/route.ts` — **فایل جدید**
+- `lib/repos/inventory.types.ts` — افزوده: `expiryWarnings()` method
+- `lib/repos/inventory.api.ts` — پیاده‌سازی `expiryWarnings()`
+- `app/(app)/inventory/page.tsx` — `RecipeCard` (props + ماشین‌حساب + چاپ + margin)، `ExpiryWarningsSection` (جدید)، `RecipesTab` (pass items)
+
+### وضعیت build
+`npx tsc --noEmit` و `npm run build` هر دو سبز ✅
+
+### بعدی
+- موارد 🟡 باقیمانده از `inventory-audit.md`:
+  - stocktake accounting entry (مغایرت انبارگردانی در P&L ثبت نمی‌شود)
+  - account selection در خرید (انتخاب دستی صندوق به‌جای اولین حساب فعال)
 
 ---
 

@@ -165,3 +165,12 @@ export interface RecipeCosting {
   suggestedPrice: number;
   hasMissingCosts: boolean;
 }
+
+export interface ExpiryWarning {
+  itemId: string;
+  itemName: string;
+  unit: string;
+  expiryDate: string;
+  daysUntilExpiry: number;
+  isExpired: boolean;
+}

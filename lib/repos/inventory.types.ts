@@ -7,6 +7,7 @@ import type {
   NewVoucherInput,
   ProduceInput,
   RecipeCosting,
+  ExpiryWarning,
 } from '@/types';
 
 /**
@@ -53,4 +54,7 @@ export interface InventoryRepo {
     horizon?: number;
     event?: { type?: string; factorOverride?: number | null; reserved?: Record<string, number> };
   }): Promise<ForecastResult>;
+
+  // ── هشدار انقضا ──
+  expiryWarnings(): Promise<ExpiryWarning[]>;
 }

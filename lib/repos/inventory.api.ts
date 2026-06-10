@@ -7,6 +7,7 @@ import type {
   NewVoucherInput,
   ProduceInput,
   RecipeCosting,
+  ExpiryWarning,
 } from '@/types';
 import type { InventoryRepo } from './inventory.types';
 
@@ -125,5 +126,11 @@ export const inventoryRepo: InventoryRepo = {
       body: JSON.stringify(opts),
     });
     return data.forecast;
+  },
+
+  // ── هشدار انقضا ──
+  async expiryWarnings() {
+    const data = await apiFetch<{ warnings: ExpiryWarning[] }>('/api/inventory/expiry');
+    return data.warnings;
   },
 };
