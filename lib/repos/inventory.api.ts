@@ -83,10 +83,10 @@ export const inventoryRepo: InventoryRepo = {
     });
     return data.voucher;
   },
-  async approveVoucher(id, finalUnitCosts) {
+  async approveVoucher(id, finalUnitCosts, accountId?) {
     const data = await apiFetch<{ voucher: InventoryVoucher }>(
       `/api/inventory/vouchers/${id}/approve`,
-      { method: 'POST', body: JSON.stringify({ finalUnitCosts }) }
+      { method: 'POST', body: JSON.stringify({ finalUnitCosts, ...(accountId ? { accountId } : {}) }) }
     );
     return data.voucher;
   },

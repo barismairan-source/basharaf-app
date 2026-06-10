@@ -35,8 +35,8 @@ export interface InventoryRepo {
   // ── برگه‌ها (Maker-Checker) ──
   listVouchers(status?: 'pending' | 'approved' | 'rejected'): Promise<InventoryVoucher[]>;
   createVoucher(input: NewVoucherInput): Promise<InventoryVoucher>;
-  /** تأیید برگه — فقط SuperAdmin. finalUnitCosts: نگاشت itemId→قیمت‌نهایی هر واحد پایه */
-  approveVoucher(id: string, finalUnitCosts: Record<string, number>): Promise<InventoryVoucher>;
+  /** تأیید برگه — فقط SuperAdmin. finalUnitCosts: نگاشت itemId→قیمت‌نهایی هر واحد پایه. accountId: صندوق کسر (اجباری برای kind=in) */
+  approveVoucher(id: string, finalUnitCosts: Record<string, number>, accountId?: string): Promise<InventoryVoucher>;
   /** رد برگه با دلیل — فقط SuperAdmin */
   rejectVoucher(id: string, reason: string): Promise<InventoryVoucher>;
   deleteVoucher(id: string): Promise<void>;

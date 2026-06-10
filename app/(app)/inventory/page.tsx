@@ -8,7 +8,7 @@ import { canDo } from '@/lib/auth/permissions';
 import { fmt } from '@/lib/utils';
 import { JalaliDatePicker } from '@/components/ui';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
-import type { InventoryItem, InventoryVoucher, InventoryRecipe, ForecastResult, InvVoucherKind, InvUnit, RecipeCosting, ExpiryWarning } from '@/types';
+import type { InventoryItem, InventoryVoucher, InventoryRecipe, ForecastResult, InvVoucherKind, InvUnit, RecipeCosting, ExpiryWarning, Account } from '@/types';
 
 const repos = createRepos(null as never);
 
@@ -32,6 +32,8 @@ export default function InventoryPage() {
   const user = useAppStore(s => s.user);
   const branches = useAppStore(s => s.branches);
   const showToast = useAppStore(s => s.showToast);
+  const accounts = useAppStore(s => s.accounts) as Account[];
+  const loadAccounts = useAppStore(s => s.loadAccounts);
 
   const [tab, setTab] = useState<Tab>('items');
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -39,6 +41,8 @@ export default function InventoryPage() {
   const [recipes, setRecipes] = useState<InventoryRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
+  const [pendingApprove, setPendingApprove] = useState<InventoryVoucher | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,6 +59,7 @@ export default function InventoryPage() {
   }, [showToast]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadAccounts(); }, [loadAccounts]);
 
   if (user && user.role !== 'SuperAdmin' && user.role !== 'Warehouse' && user.role !== 'BranchUser') {
     return <div className="p-6 text-center text-stone-500">دسترسی ندارید</div>;
@@ -66,11 +71,31 @@ export default function InventoryPage() {
   const canApprove = canDo(user, 'inventory.approve');
 
   async function approve(v: InventoryVoucher) {
+    if (v.kind === 'in') {
+      setSelectedAccountId('');
+      setPendingApprove(v);
+      return;
+    }
     setBusy(v.id);
     try {
       const finalUnitCosts: Record<string, number> = {};
       for (const l of v.lines) finalUnitCosts[l.itemId] = l.estUnitCost ?? 0;
       await repos.inventory.approveVoucher(v.id, finalUnitCosts);
+      showToast('برگه تأیید شد', 'success');
+      await load();
+    } catch (e) { showToast(errMsg(e, 'خطا در تأیید'), 'danger'); }
+    finally { setBusy(null); }
+  }
+
+  async function confirmApprove() {
+    if (!pendingApprove || !selectedAccountId) return;
+    const v = pendingApprove;
+    setPendingApprove(null);
+    setBusy(v.id);
+    try {
+      const finalUnitCosts: Record<string, number> = {};
+      for (const l of v.lines) finalUnitCosts[l.itemId] = l.estUnitCost ?? 0;
+      await repos.inventory.approveVoucher(v.id, finalUnitCosts, selectedAccountId);
       showToast('برگه تأیید شد', 'success');
       await load();
     } catch (e) { showToast(errMsg(e, 'خطا در تأیید'), 'danger'); }
@@ -150,6 +175,37 @@ export default function InventoryPage() {
           <PlanTab />
         )}
       </div>
+
+      {/* modal انتخاب صندوق برای تأیید رسید خرید */}
+      {pendingApprove && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setPendingApprove(null)}>
+          <div className="bg-white rounded-xl shadow-xl p-5 w-80 text-right" onClick={e => e.stopPropagation()}>
+            <h3 className="text-[14px] font-medium text-stone-900 mb-1">تأیید رسید خرید</h3>
+            <p className="text-[11.5px] text-stone-500 mb-4">برگه {pendingApprove.no} — صندوقی که هزینه از آن کسر می‌شود را انتخاب کنید.</p>
+            <label className="text-[12px] text-stone-600 block mb-1">صندوق پرداخت</label>
+            <select
+              value={selectedAccountId}
+              onChange={e => setSelectedAccountId(e.target.value)}
+              className="w-full h-9 px-3 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-500 bg-white mb-4"
+            >
+              <option value="">— انتخاب کنید —</option>
+              {accounts.filter(a => a.isActive).map(a => (
+                <option key={a.id} value={a.id}>{a.name} ({fmt(a.balance)} ت)</option>
+              ))}
+            </select>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setPendingApprove(null)} className="px-3 py-1.5 text-[12px] text-stone-600 border border-stone-200 rounded-md hover:bg-stone-50">لغو</button>
+              <button
+                onClick={confirmApprove}
+                disabled={!selectedAccountId || busy === pendingApprove.id}
+                className="px-3 py-1.5 text-[12px] bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-40 flex items-center gap-1"
+              >
+                <Check size={13} />{busy === pendingApprove.id ? 'در حال تأیید...' : 'تأیید'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

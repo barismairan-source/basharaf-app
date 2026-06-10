@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
@@ -29,6 +29,7 @@ const bodySchema = z.object({
     .record(z.string(), z.number().finite('بهای نهایی نامعتبر است').min(0).max(MONEY_MAX, 'بهای نهایی بیش از حد مجاز است'))
     .optional()
     .default({}),
+  accountId: z.string().uuid('شناسه‌ی صندوق معتبر نیست').optional(),
 });
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
@@ -37,7 +38,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     if (!canDo(session, 'inventory.approve')) {
       throw new ApiError(403, 'شما اجازه‌ی تأیید برگه‌ی انبار را ندارید', 'FORBIDDEN');
     }
-    const { finalUnitCosts } = bodySchema.parse(await req.json().catch(() => ({})));
+    const { finalUnitCosts, accountId: bodyAccountId } = bodySchema.parse(await req.json().catch(() => ({})));
 
     const [current] = await db.select().from(schema.invVouchers)
       .where(eq(schema.invVouchers.id, params.id)).limit(1);
@@ -52,6 +53,38 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const now = new Date();
     const kind = current.kind as 'in' | 'out' | 'waste' | 'sale' | 'produce' | 'stocktake';
+
+    // resolve حساب برای رسید خرید — قبل از transaction
+    let purchaseAccountId: string | null = null;
+    if (kind === 'in') {
+      if (bodyAccountId) {
+        const [acc] = await db.select({ id: schema.accounts.id, isActive: schema.accounts.isActive })
+          .from(schema.accounts).where(eq(schema.accounts.id, bodyAccountId)).limit(1);
+        if (!acc || !acc.isActive) {
+          throw new ApiError(422, 'صندوق انتخاب‌شده وجود ندارد یا غیرفعال است', 'INVALID_ACCOUNT');
+        }
+        purchaseAccountId = acc.id;
+      } else {
+        // fallback: اولین حساب فعال شعبه
+        let acc: { id: string } | undefined;
+        if (current.branchId) {
+          const [a] = await db.select({ id: schema.accounts.id })
+            .from(schema.accounts)
+            .where(and(eq(schema.accounts.branchId, current.branchId), eq(schema.accounts.isActive, true)))
+            .limit(1);
+          acc = a;
+        }
+        if (!acc) {
+          const [a] = await db.select({ id: schema.accounts.id })
+            .from(schema.accounts).where(eq(schema.accounts.isActive, true)).limit(1);
+          acc = a;
+        }
+        if (!acc) {
+          throw new ApiError(422, 'برای تأیید رسید خرید باید یک صندوق فعال در سیستم وجود داشته باشد', 'NO_ACTIVE_ACCOUNT');
+        }
+        purchaseAccountId = acc.id;
+      }
+    }
 
     const finalTotal = await db.transaction(async (dbTx) => {
       // خطوط را با قیمت نهایی (در صورت وجود) آماده کن
@@ -133,6 +166,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
           total,
           session.sub,
+          purchaseAccountId,
         );
 
         // نوسان قیمت / WAC: قیمت ماده‌ی خام تغییر کرد → بهای نیمه‌آماده‌های متأثر را

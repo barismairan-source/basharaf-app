@@ -17,27 +17,12 @@ export async function postPurchaseToAccounting(
   voucher: { id: string; no: string; branchId: string | null; makerDate: string; linkedTransactionId: string | null },
   totalAmount: number,
   userId: string,
+  resolvedAccountId: string | null,
 ): Promise<string | null> {
-  // فقط مبلغ مثبت
   if (totalAmount <= 0) return null;
-  // idempotency — اگر قبلاً وصل شده
   if (voucher.linkedTransactionId) return voucher.linkedTransactionId;
 
-  // پیدا کردن یک حساب برای کسر — اولویت با حساب شعبه
-  let account: { id: string } | undefined;
-  if (voucher.branchId) {
-    const [a] = await dbTx.select().from(schema.accounts)
-      .where(and(eq(schema.accounts.branchId, voucher.branchId), eq(schema.accounts.isActive, true)))
-      .limit(1);
-    account = a;
-  }
-  if (!account) {
-    const [a] = await dbTx.select().from(schema.accounts)
-      .where(eq(schema.accounts.isActive, true)).limit(1);
-    account = a;
-  }
-  // اگر هیچ حسابی نیست، تراکنش بدون حساب می‌سازیم (روی موجودی اثر ندارد)
-  const accountId = account?.id ?? null;
+  const accountId = resolvedAccountId;
 
   let branchName = '';
   if (voucher.branchId) {
