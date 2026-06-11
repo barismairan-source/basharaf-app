@@ -127,6 +127,10 @@ export const createTransactionsSlice =
 
         if (tx.status === 'pending') {
           deps.emitPendingNotification(tx);
+        } else {
+          // تراکنش admin بلافاصله approved است — موجودی صندوق/طرف‌حساب
+          // همان لحظه روی سرور اعمال شده؛ UI را هم sync کن.
+          deps.refreshAccounts?.();
         }
 
         return tx;
@@ -299,6 +303,11 @@ export const createTransactionsSlice =
 
       try {
         await deps.repo.delete(id);
+        // اگر approved بود، حذف اتمیک سرور موجودی صندوق/طرف‌حساب را
+        // برگردانده — UI را هم sync کن.
+        if (snapshot.status === 'approved') {
+          deps.refreshAccounts?.();
+        }
         return true;
       } catch (e) {
         // Rollback — دوباره اضافه کن

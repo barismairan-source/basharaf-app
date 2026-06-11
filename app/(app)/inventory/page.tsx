@@ -5,7 +5,7 @@ import { Package, ClipboardList, AlertTriangle, Check, X, Loader2, Plus, FileTex
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
-import { fmt } from '@/lib/utils';
+import { fmt, formatNumericInputValue } from '@/lib/utils';
 import { JalaliDatePicker } from '@/components/ui';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
 import type { InventoryItem, InventoryVoucher, InventoryRecipe, ForecastResult, InvVoucherKind, InvUnit, RecipeCosting, ExpiryWarning, Account } from '@/types';
@@ -510,8 +510,8 @@ function VoucherTab({ items, branches, onDone, showToast, canSeePrices, isWareho
               <option value="">— قلم —</option>
               {items.map(it => <option key={it.id} value={it.id}>{it.name} ({UNIT_LABELS[it.unit]})</option>)}
             </select>
-            <input value={l.qty} onChange={e => { const n = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0; setLine(i, { qty: n ? n.toLocaleString('en-US') : '' }); }} dir="ltr" placeholder="مقدار (واحد پایه)" className="w-32 border border-stone-200 rounded-lg px-2 py-2 text-[12.5px]" />
-            {kind === 'in' && canSeePrices && <input value={l.cost} onChange={e => { const n = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0; setLine(i, { cost: n ? n.toLocaleString('en-US') : '' }); }} dir="ltr" placeholder="بهای واحد" className="w-28 border border-stone-200 rounded-lg px-2 py-2 text-[12.5px]" />}
+            <input value={l.qty} onChange={e => setLine(i, { qty: formatNumericInputValue(e.target) })} dir="ltr" placeholder="مقدار (واحد پایه)" className="w-32 border border-stone-200 rounded-lg px-2 py-2 text-[12.5px]" />
+            {kind === 'in' && canSeePrices && <input value={l.cost} onChange={e => setLine(i, { cost: formatNumericInputValue(e.target) })} dir="ltr" placeholder="بهای واحد" className="w-28 border border-stone-200 rounded-lg px-2 py-2 text-[12.5px]" />}
             {lines.length > 1 && <button onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))} className="text-stone-400 hover:text-rose-600 px-1"><Trash2 size={15} /></button>}
           </div>
         ))}
@@ -588,7 +588,7 @@ function RecipesTab({ recipes, items, branches, onDone, showToast, canSeePrices 
               <div><label className="text-[11.5px] text-stone-500">نام غذا</label><input value={name} onChange={e => setName(e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" placeholder="چلوکباب کوبیده" /></div>
               <div className="grid grid-cols-3 gap-3">
                 <div><label className="text-[11.5px] text-stone-500">تعداد پرس</label><input value={portions} onChange={e => setPortions(e.target.value.replace(/\D/g, ''))} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" /></div>
-                <div className="col-span-2"><label className="text-[11.5px] text-stone-500">قیمت فروش (تومان)</label><input value={price} onChange={e => { const n = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0; setPrice(n ? n.toLocaleString('en-US') : ''); }} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" /></div>
+                <div className="col-span-2"><label className="text-[11.5px] text-stone-500">قیمت فروش (تومان)</label><input value={price} onChange={e => setPrice(formatNumericInputValue(e.target))} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" /></div>
               </div>
               <div><label className="text-[11.5px] text-stone-500">شعبه</label>
                 <select value={branchId} onChange={e => setBranchId(e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1">
@@ -604,7 +604,7 @@ function RecipesTab({ recipes, items, branches, onDone, showToast, canSeePrices 
                       <option value="">— ماده —</option>
                       {items.map(it => <option key={it.id} value={it.id}>{it.name}</option>)}
                     </select>
-                    <input value={l.qty} onChange={e => { const n = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0; setLines(prev => prev.map((x, idx) => idx === i ? { ...x, qty: n ? n.toLocaleString('en-US') : '' } : x)); }} dir="ltr" placeholder="مقدار" className="w-28 border border-stone-200 rounded-lg px-2 py-2 text-[12.5px]" />
+                    <input value={l.qty} onChange={e => { const formatted = formatNumericInputValue(e.target); setLines(prev => prev.map((x, idx) => idx === i ? { ...x, qty: formatted } : x)); }} dir="ltr" placeholder="مقدار" className="w-28 border border-stone-200 rounded-lg px-2 py-2 text-[12.5px]" />
                     {lines.length > 1 && <button onClick={() => setLines(prev => prev.filter((_, idx) => idx !== i))} className="text-stone-400 hover:text-rose-600 px-1"><Trash2 size={15} /></button>}
                   </div>
                 ))}
@@ -1327,7 +1327,7 @@ function QuickBuyTab({ items, branches, onDone, showToast }: {
 
       <div>
         <label className="text-[11.5px] text-stone-500">مبلغ کل خرید (تومان، اختیاری)</label>
-        <input value={totalAmount} onChange={e => { const n = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0; setTotalAmount(n ? n.toLocaleString('en-US') : ''); }}
+        <input value={totalAmount} onChange={e => setTotalAmount(formatNumericInputValue(e.target))}
           dir="ltr" placeholder="مثلاً ۲۵۰٬۰۰۰" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
       </div>
 

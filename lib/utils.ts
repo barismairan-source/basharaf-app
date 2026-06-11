@@ -31,8 +31,17 @@ export function toFa(value: number | string): string {
  * این تابع از locale 'en-US' برای جداکننده استفاده می‌کند (کاما)
  * چون پروتوتایپ همین رفتار را داشت. اگر بعداً جداکننده فارسی
  * (٬) خواستید، اینجا تعویض می‌شود.
+ *
+ * برای اعداد منفی: ارقام فارسی از نوع bidi «AN» هستند و علامت منفی با
+ * آن‌ها ترکیب نمی‌شود؛ در متن RTL این باعث می‌شود علامت منفی سمت چپ
+ * بیفتد (مثلاً «۱۰۰-» به‌جای «-۱۰۰»). با محصور کردن «−عدد» بین
+ * Left-to-Right Isolate (U+2066) و Pop Directional Isolate (U+2069)،
+ * کل بلوک به‌عنوان یک واحد LTR مستقل از جهت متن اطراف رندر می‌شود.
  */
 export function fmt(value: number): string {
+  if (value < 0) {
+    return `⁦-${toFa(Math.abs(value).toLocaleString('en-US'))}⁩`;
+  }
   return toFa(value.toLocaleString('en-US'));
 }
 
@@ -63,4 +72,41 @@ export function formatAmountInput(input: string): string {
   const num = parseAmount(input);
   if (!num) return '';
   return fmt(num);
+}
+
+/**
+ * onChange هندلر برای input عددیِ لاتین با جداکننده هزارگان (toLocaleString('en-US')).
+ *
+ * مشکل بدون این تابع: با هر کلیدی که زده می‌شود، رشته از نو فرمت می‌شود
+ * و چون طول رشته با اضافه/حذف‌شدن کاما عوض می‌شود، مرورگر موقعیت cursor
+ * را بر اساس «اندیس کاراکتر» نگه می‌دارد نه «چندمین رقم» — در نتیجه حین
+ * تایپ، cursor به وسط عدد می‌پرد و ارقام بعدی جای اشتباه می‌نشینند.
+ *
+ * این تابع موقعیت cursor را بر اساس تعداد رقم‌های قبل از آن حفظ می‌کند.
+ */
+export function formatNumericInputValue(input: HTMLInputElement): string {
+  const raw = input.value;
+  const cursorPos = input.selectionStart ?? raw.length;
+  const digitsBeforeCursor = raw.slice(0, cursorPos).replace(/\D/g, '').length;
+
+  const n = parseInt(raw.replace(/\D/g, ''), 10) || 0;
+  const formatted = n ? n.toLocaleString('en-US') : '';
+
+  let newPos = digitsBeforeCursor === 0 ? 0 : formatted.length;
+  let digitCount = 0;
+  for (let i = 0; i < formatted.length; i++) {
+    if (formatted[i]! >= '0' && formatted[i]! <= '9') {
+      digitCount++;
+      if (digitCount === digitsBeforeCursor) {
+        newPos = i + 1;
+        break;
+      }
+    }
+  }
+
+  requestAnimationFrame(() => {
+    if (document.activeElement === input) input.setSelectionRange(newPos, newPos);
+  });
+
+  return formatted;
 }

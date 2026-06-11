@@ -150,12 +150,12 @@ export default function TransactionsPage() {
     <div className="p-4 lg:p-6 print:p-2">
       <div className="max-w-6xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex items-end justify-between gap-4 print:hidden">
+        <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
           <div>
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">تراکنش‌ها</h1>
             <div className="text-[12px] text-stone-500 mt-1">{filtered.length} تراکنش</div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button variant="primary" size="sm" icon={Plus} onClick={() => router.push('/transactions/new')}>
               ثبت تراکنش
             </Button>
@@ -183,9 +183,9 @@ export default function TransactionsPage() {
             { label: 'هزینه', value: totalExpense, color: 'text-rose-700' },
             { label: 'موجودی', value: totalIncome - totalExpense, color: totalIncome - totalExpense >= 0 ? 'text-stone-900' : 'text-rose-700' },
           ].map(({ label, value, color }) => (
-            <div key={label} className="bg-white border border-stone-200 rounded-lg px-4 py-3 print:border-gray-300">
+            <div key={label} className="bg-white border border-stone-200 rounded-lg px-4 py-3 print:border-gray-300 min-w-0">
               <div className="text-[10.5px] text-stone-500 mb-1 print:text-gray-500">{label}</div>
-              <div className={cn('text-[16px] sm:text-[18px] font-medium tabular-nums print:text-black', color)}>{fmt(value)}</div>
+              <div className={cn('text-[14px] sm:text-[18px] font-medium tabular-nums truncate print:text-black', color)}>{fmt(value)}</div>
             </div>
           ))}
         </div>
@@ -356,7 +356,7 @@ export default function TransactionsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-[13px] text-stone-800 font-medium truncate">{tx.title}</span>
+                        <span className="text-[13px] text-stone-800 font-medium truncate min-w-0">{tx.title}</span>
                         <span className={cn('text-[13px] font-medium tabular-nums flex-shrink-0', typeM.color)}>
                           {tx.type === 'expense' ? '−' : tx.type === 'income' ? '+' : '⇄'}{fmt(tx.amount)}
                         </span>

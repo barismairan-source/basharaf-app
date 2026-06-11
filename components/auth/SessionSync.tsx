@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '@/store';
 import { useRealtime } from '@/lib/realtime/useRealtime';
+import { installSessionExpiryInterceptor } from '@/lib/auth/sessionExpiry';
 
 /**
  * SessionSync — فاز ۱۴.
@@ -24,10 +25,12 @@ export function SessionSync() {
   const logout = useAppStore((s) => s.logout);
   const hasBootstrappedOnce = useRef(false);
 
-  // bootstrap یک بار در mount
+  // bootstrap یک بار در mount — قبل از آن، interceptor سراسری ۴۰۱ نصب می‌شود
+  // تا اگر session منقضی باشد، کل اپ به /login هدایت شود (نه صفحه‌ی خالی).
   useEffect(() => {
     if (hasBootstrappedOnce.current) return;
     hasBootstrappedOnce.current = true;
+    installSessionExpiryInterceptor();
     bootstrap();
   }, [bootstrap]);
 

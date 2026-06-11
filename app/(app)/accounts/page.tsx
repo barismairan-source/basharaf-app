@@ -90,16 +90,16 @@ export default function AccountsPage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 lg:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">صندوق‌ها و حساب‌ها</h1>
             <div className="text-[12px] text-stone-500 mt-1">مدیریت موجودی حساب‌های بانکی و صندوق‌های نقدی</div>
           </div>
           {isAdmin && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button variant="default" size="sm" icon={RefreshCw} loading={recalculating} onClick={handleRecalculate}>
                 بازسازی موجودی
               </Button>
@@ -113,15 +113,15 @@ export default function AccountsPage() {
         {/* Total balance card */}
         <Card>
           <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <div className="text-[11.5px] text-stone-500 mb-1">مجموع موجودی همه حساب‌ها</div>
-                <div className={cn('text-[28px] font-medium tabular-nums', totalBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
+                <div className={cn('text-[22px] sm:text-[28px] font-medium tabular-nums truncate', totalBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
                   {fmt(totalBalance)}
                 </div>
                 <div className="text-[11px] text-stone-400 mt-1">تومان</div>
               </div>
-              <Banknote size={32} strokeWidth={1} className="text-stone-300" />
+              <Banknote size={32} strokeWidth={1} className="text-stone-300 flex-shrink-0" />
             </div>
           </CardBody>
         </Card>
@@ -230,7 +230,7 @@ export default function AccountsPage() {
                       onClick={() => window.location.href = `/accounts/${account.id}`}
                       className="text-right w-full group"
                     >
-                      <div className={cn('text-[22px] font-medium tabular-nums group-hover:underline', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
+                      <div className={cn('text-[22px] font-medium tabular-nums truncate group-hover:underline', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
                         {fmt(account.balance)}
                       </div>
                       <div className="text-[10.5px] text-stone-400 mt-0.5 flex items-center gap-1">

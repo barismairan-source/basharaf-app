@@ -95,8 +95,11 @@ export const useAppStore = create<AppStore>()(
         emitPendingNotification: () => {},
         emitApprovalNotification: () => {},
         refreshAccounts: () => {
-          // refresh فوری بعد از approve — بدون setTimeout
+          // refresh فوری بعد از approve/create/delete — بدون setTimeout
+          // هم صندوق‌ها و هم طرف‌حساب‌ها (نسیه) را تازه می‌کند تا UI
+          // بعد از تغییر موجودی، stale نماند.
           storeRef?.getState().loadAccounts();
+          storeRef?.getState().loadContacts();
         },
       })(set as any, get as any, api as any),
 
