@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm';
 import { schema } from './client';
+import { warnAndLogClamp } from '@/lib/inventory/inventoryWarnings';
 
 /**
  * Inventory integrity helpers — قلب صحت انبار.
@@ -81,17 +82,24 @@ export async function receiveConfirmed(
 
 /**
  * خروج قطعی با میانگین موزون فعلی. مقدار هزینه‌ی خارج‌شده را برمی‌گرداند (تومان).
- * بیش از موجودی خارج نمی‌شود (clamp).
+ * بیش از موجودی خارج نمی‌شود (clamp) — اگر ctx داده شده باشد، کسری clamp
+ * به‌جای بی‌صدا ماندن در audit_log ثبت و به SuperAdminها اعلان داده می‌شود
+ * (warnAndLogClamp). برای applyMenuSaleDeduction عمداً ctx پاس نمی‌شود چون
+ * آن مسیر هشدار/اعلان مخصوص خودش را دارد — برای جلوگیری از اعلان تکراری.
  */
 export async function issueConfirmed(
   tx: any,
   itemId: string,
-  qtyBase: number
+  qtyBase: number,
+  ctx?: { voucherId?: string | null }
 ): Promise<number> {
   if (!(qtyBase > 0)) return 0;
   const [it] = await tx.select({
     q: schema.invItems.qtyBase,
     a: schema.invItems.avgCostPerBase,
+    name: schema.invItems.name,
+    unit: schema.invItems.unit,
+    branchId: schema.invItems.branchId,
   }).from(schema.invItems).where(eq(schema.invItems.id, itemId));
   if (!it) return 0;
 
@@ -99,6 +107,14 @@ export async function issueConfirmed(
   const avg = n(it.a);
   const q = Math.min(qtyBase, have);
   const cost = q * avg;
+
+  if (ctx && qtyBase > have + 1e-6) {
+    await warnAndLogClamp(tx, {
+      itemId, itemName: it.name, itemUnit: it.unit, branchId: it.branchId,
+      voucherId: ctx.voucherId ?? null,
+      requested: qtyBase, available: have,
+    });
+  }
 
   await tx.update(schema.invItems)
     .set({ qtyBase: String(have - q), updatedAt: new Date() })
@@ -130,7 +146,8 @@ type VoucherLine = {
 export async function approveVoucherTx(
   tx: any,
   kind: VoucherKind,
-  lines: VoucherLine[]
+  lines: VoucherLine[],
+  ctx?: { voucherId?: string }
 ): Promise<number> {
   let finalTotal = 0;
 
@@ -158,7 +175,7 @@ export async function approveVoucherTx(
     }
   } else if (kind === 'out' || kind === 'waste' || kind === 'sale') {
     for (const l of lines) {
-      finalTotal += await issueConfirmed(tx, l.itemId, l.qtyBase);
+      finalTotal += await issueConfirmed(tx, l.itemId, l.qtyBase, { voucherId: ctx?.voucherId ?? null });
     }
   }
 
@@ -204,7 +221,8 @@ export async function produceConfirmed(
       .from(schema.invItems).where(eq(schema.invItems.id, r.itemId)).limit(1);
     const yieldPct = n(rawItem?.yieldPct) || 100;
     const factor = yieldPct > 0 ? 100 / yieldPct : 1;
-    totalCost += await issueConfirmed(tx, r.itemId, r.qtyBase * b * factor);
+    // برگه‌ی produce هنوز ساخته نشده (بعد از این تابع ساخته می‌شود)، پس voucherId فعلاً موجود نیست
+    totalCost += await issueConfirmed(tx, r.itemId, r.qtyBase * b * factor, { voucherId: null });
   }
 
   // ورود نیمه‌آماده

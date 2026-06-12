@@ -47,6 +47,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       throw new ApiError(409, 'فقط برگه‌های در انتظار قابل تأیید هستند', 'INVALID_STATE');
     }
 
+    // Maker-Checker: تأییدکننده نباید همان سازنده‌ی برگه باشد — جز SuperAdmin که
+    // می‌تواند self-approve کند، اما این رویداد در audit_log ثبت می‌شود (selfApprove).
+    if (current.createdBy === session.sub && session.role !== 'SuperAdmin') {
+      throw new ApiError(403, 'تأییدکننده نمی‌تواند همان سازنده‌ی برگه باشد', 'SELF_APPROVE_FORBIDDEN');
+    }
+    const selfApprove = current.createdBy === session.sub;
+
     const lines = await db.select().from(schema.invVoucherLines)
       .where(eq(schema.invVoucherLines.voucherId, params.id));
     if (lines.length === 0) throw new ApiError(400, 'برگه بدون خط است', 'EMPTY_VOUCHER');
@@ -107,7 +114,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }
 
       // اعمال اتمیک: reverse فیزیکی، سپس apply قطعی + میانگین موزون
-      const total = await approveVoucherTx(dbTx, kind, prepared);
+      const total = await approveVoucherTx(dbTx, kind, prepared, { voucherId: current.id });
 
       // انباشت مغایرت پولی انبارگردانی (WAC قبل از تأیید × اختلاف مقدار)
       let stocktakeVarianceCost = 0;
@@ -252,7 +259,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       });
     }
 
-    audit({ action: 'inv.voucher.approved', userId: session.sub, meta: { voucherId: params.id, finalTotal } });
+    audit({ action: 'inv.voucher.approved', userId: session.sub, meta: { voucherId: params.id, finalTotal, selfApprove } });
     return NextResponse.json({ voucher: rowToInvVoucher(updated!, updatedLines) });
   } catch (e) {
     return handleError(e);

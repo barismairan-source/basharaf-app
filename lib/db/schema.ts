@@ -13,6 +13,7 @@ import {
   jsonb,
   numeric,
   uniqueIndex,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
@@ -931,6 +932,9 @@ export const invVouchers = pgTable(
 
     // اتصال اختیاری به تراکنش مالی هسته (وقتی برگه به سند مالی تبدیل شد)
     linkedTransactionId: uuid('linked_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+
+    // برگه‌ی اصلی که این برگه اصلاحی (reversal) آن است — فقط برای برگه‌های reversal مقدار دارد
+    parentVoucherId: uuid('parent_voucher_id').references((): AnyPgColumn => invVouchers.id),
 
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull().defaultNow().$onUpdate(() => new Date()),

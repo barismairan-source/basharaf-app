@@ -93,6 +93,7 @@ export function rowToInvVoucher(
     rejectedAt: row.rejectedAt?.toISOString() ?? null,
     rejectionReason: row.rejectionReason ?? null,
     linkedTransactionId: row.linkedTransactionId ?? null,
+    parentVoucherId: row.parentVoucherId ?? null,
     lines: (lines ?? []).map((l) => ({
       id: l.id,
       itemId: l.itemId,

@@ -27,6 +27,8 @@ export type AuditAction =
   | 'inv.voucher.created'
   | 'inv.autoRecost.afterPurchase'
   | 'transaction.menuSaleDeduction.warning'
+  | 'inventory_clamp_warning'
+  | 'reversal_created'
   | 'settings.factoryReset'
   | 'loyalty.earn'
   | 'loyalty.redeem'

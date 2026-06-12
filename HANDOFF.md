@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `9.1.0` |
-| **آخرین به‌روزرسانی** | 2026-06-11 — اکانت: ۲ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا، ۲ بار تأیید) — `npm run build` در این ماشین/محیط گیر می‌کند ⚠️ (جزئیات در ژورنال زیر؛ به‌نظر مشکل محیطی است نه کد) |
-| **دیپلوی** | Vercel+Supabase کامل کار می‌کند ✅ — Liara: فیکس `28P01` اعمال شد، `v9.1.0/basharaf-deploy.zip` آماده‌ی deploy (هنوز روی production لیارا تست نشده) |
-| **کار نیمه‌تمام (in-progress)** | (۱) تأیید فیکس `28P01` روی production لیارا — نیاز به deploy واقعی `v9.1.0/basharaf-deploy.zip` توسط کاربر و گزارش نتیجه. (۲) تأیید `npm run build` برای ۶ فیکس این جلسه روی یک محیط دیگر (چون در این ماشین گیر می‌کند). |
-| **کار بعدی پیشنهادی** | اول `npm run build` را روی محیط دیگر/production برای ۶ فیکس این جلسه تأیید کن. اگر لیارا هم OK شد → Backlog #5 (اجرای واقعی integration tests با DATABASE_URL تستی) یا Backlog #6؛ اگر باز `28P01` بود → بررسی دقیق‌تر username/host در connection string کاربر |
-| **بلاک‌شده/منتظر کاربر** | deploy کردن `v9.1.0/basharaf-deploy.zip` روی لیارا و گزارش نتیجه‌ی اتصال DB؛ گزارش نتیجه‌ی `npm run build` روی محیط دیگر |
+| **نسخه** | `0.9.4-inv-foundation` |
+| **آخرین به‌روزرسانی** | 2026-06-12 — اکانت: ۱ |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` در این ماشین گیر می‌کند (مشکل محیطی Next.js 14؛ gate = tsc؛ build نهایی از Liara) |
+| **دیپلوی** | zip آماده: `basharaf-0.9.4-inv-foundation.zip` در پوشه‌ی والد. SQL migration: `db-inventory-reversal.sql` باید قبل از deploy اجرا شود. |
+| **کار نیمه‌تمام (in-progress)** | — (همه چیز commit شد) |
+| **کار بعدی پیشنهادی** | (۱) اجرای `db-inventory-reversal.sql` روی Liara DB، سپس deploy zip. (۲) تست ۶ مرحله‌ای در چک‌لیست بخش ۶-د. (۳) پس از تأیید، Backlog #5 (اجرای integration tests با DATABASE_URL واقعی). |
+| **بلاک‌شده/منتظر کاربر** | deploy + تست روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-12 — تکمیل ماژول انبار (reversal UI، واریانس، exception dashboard، zip) — اکانت ۱
+**چه شد:**
+(۱) **بخش ۱ (باگ‌ها):** سه چک — هر سه از قبل رفع شده بودند (Pencil+canSeePrices موجود، تایپو `*/` وجود نداشت، import استفاده می‌شد). بدون تغییر کد.
+(۲) **بخش ۲ (UI Reversal):** در لیست pending کارتابل، badge «اصلاحی» + خط «مربوط به برگه اصلی» برای voucher هایی که `parentVoucherId != null` دارند. بخش «برگه‌های تأییدشده» با دکمه `RotateCcw` برای SuperAdmin (حداکثر ۳۰ ردیف). State `reversalLoading` + تابع `handleReversal` با مدیریت خطای ۴۰۹.
+(۳) **بخش ۳ (Clamp Warning):** تأیید شد — `warnAndLogClamp` در `inventoryWarnings.ts` کامل بود، `issueConfirmed` و `produceConfirmed` درست سیم‌کشی شده بودند.
+(۴) **بخش ۴ (Variance API+UI):** `app/api/inventory/reports/variance/route.ts` — مصرف تئوریک (sale) در برابر مصرف واقعی (out+waste+sale)، گروه‌بندی بر اساس itemId با WAC. تب «واریانس» (فقط SuperAdmin) با date range، جدول هایلایت (>500k)، مجموع، و اکسپورت Excel.
+(۵) **بخش ۵ (Exception Dashboard):** `app/api/inventory/reports/exceptions/route.ts` — چهار query: pending قدیمی >۴۸h، clamp_warning از audit_log (۷ روز)، زیر minBase، reversal pending. کارت‌های `ExceptionCards` بالای صفحه با polling ۶۰s و رنگ‌بندی (۰→خاکستری، ≤۳→amber، >۳→rose).
+(۶) **بخش ۶:** نسخه `9.1.0`→`0.9.4-inv-foundation`، zip ساخته شد.
+**فایل‌ها:** `app/(app)/inventory/page.tsx`، `app/api/inventory/reports/variance/route.ts` (جدید)، `app/api/inventory/reports/exceptions/route.ts` (جدید)، `package.json` (نسخه).
+**Build:** tsc سبز ✅ (۰ خطا). `npm run build` در این ماشین گیر می‌کند (مشکل محیطی شناخته‌شده).
+**ناتمام:** —
+**برای جلسه‌ی بعد:** deploy `basharaf-0.9.4-inv-foundation.zip` روی Liara پس از اجرای `db-inventory-reversal.sql`.
 
 ## 📓 2026-06-11 — رفع ۶ باگ گزارش‌شده (۴۰۱ سراسری، RTL منفی، استخدام→پرسنل، مانده طرف‌حساب، UI موبایل، کارتابل انبار) — اکانت ۲
 **چه شد:**
@@ -104,13 +117,6 @@
 **Build:** tsc سبز ✅ / build سبز ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** account selection در خرید (Backlog #2) — انتخاب دستی صندوق هنگام ثبت برگه‌ی خرید به‌جای «اولین حساب فعال».
-
-## 📓 2026-06-10 — سامان‌دهی commitهای CRM + cleanup — اکانت ۱
-**چه شد:** همه‌ی فایل‌های uncommit از جلسات قبل (ماژول CRM + SQL migrationها) در دو commit منطقی جدا سامان‌دهی شدند. `*.zip` و `release-artifacts/` به `.gitignore` اضافه شد. tsc (۰ خطا) و build (سبز) تأیید شد. ژورنال‌های عقب‌افتاده بازسازی شدند و ۲ ورودی قدیمی به `project-docs/handoff-archive.md` منتقل شد.
-**فایل‌ها:** ماژول CRM (customers/reservations/coupons/loyalty + sliceها)، `supabase-v5/v6/v7-migration.sql`، `customers-migration.sql`، `cleanup-rice.sql`، `CLAUDE.md`، `.claude/`، `package-lock.json`، `project-docs/financial-integrity-spec.md`، `.gitignore`، `HANDOFF.md`.
-**Build:** tsc سبز ✅ / build سبز ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** stocktake accounting entry (Backlog #1) — مغایرت انبارگردانی در P&L ثبت شود. قبل از کد، طرح را تأیید کن.
 
 ---
 

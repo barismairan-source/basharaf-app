@@ -40,6 +40,8 @@ export interface InventoryRepo {
   /** رد برگه با دلیل — فقط SuperAdmin */
   rejectVoucher(id: string, reason: string): Promise<InventoryVoucher>;
   deleteVoucher(id: string): Promise<void>;
+  /** ساخت برگه‌ی اصلاحی (reversal) برای برگه‌ی approved — فقط SuperAdmin */
+  createReversal(id: string): Promise<{ reversalId: string }>;
 
   // ── تولید نیمه‌آماده ──
   produce(input: ProduceInput): Promise<InventoryVoucher>;

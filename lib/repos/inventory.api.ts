@@ -102,6 +102,12 @@ export const inventoryRepo: InventoryRepo = {
     await apiFetch(`/api/inventory/vouchers/${id}`, { method: 'DELETE' });
   },
 
+  async createReversal(id) {
+    return apiFetch<{ reversalId: string }>(`/api/inventory/vouchers/${id}/reversal`, {
+      method: 'POST',
+    });
+  },
+
   // ── تولید ──
   async produce(input: ProduceInput) {
     const data = await apiFetch<{ voucher: InventoryVoucher }>('/api/inventory/produce', {

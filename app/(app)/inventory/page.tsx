@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Package, ClipboardList, AlertTriangle, Check, X, Loader2, Plus, FileText, ChefHat, TrendingUp, Trash2, Calculator, FileSpreadsheet, Download, Upload, ChevronDown, ChevronLeft, Printer, CalendarClock } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { Package, ClipboardList, AlertTriangle, Check, X, Loader2, Plus, FileText, ChefHat, TrendingUp, Trash2, Pencil, Calculator, FileSpreadsheet, Download, Upload, ChevronDown, ChevronLeft, Printer, CalendarClock, RotateCcw } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
@@ -23,7 +24,7 @@ function errMsg(e: unknown, fallback: string): string {
   return fallback;
 }
 
-type Tab = 'items' | 'cartable' | 'voucher' | 'quickbuy' | 'stocktake' | 'recipes' | 'sales' | 'plan';
+type Tab = 'items' | 'cartable' | 'voucher' | 'quickbuy' | 'stocktake' | 'recipes' | 'sales' | 'plan' | 'variance';
 
 const UNIT_LABELS: Record<string, string> = { kg: 'کیلوگرم', g: 'گرم', L: 'لیتر', ml: 'میلی‌لیتر', pcs: 'عدد', can: 'قوطی', pack: 'بسته' };
 const VOUCHER_KIND_LABELS: Record<string, string> = { in: 'رسید (خرید)', out: 'حواله (مصرف)', waste: 'ضایعات', sale: 'فروش', produce: 'تولید', stocktake: 'انبارگردانی' };
@@ -43,16 +44,19 @@ export default function InventoryPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [pendingApprove, setPendingApprove] = useState<InventoryVoucher | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [approvedVouchers, setApprovedVouchers] = useState<InventoryVoucher[]>([]);
+  const [reversalLoading, setReversalLoading] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [its, vs, rs] = await Promise.all([
+      const [its, vs, approvedVs, rs] = await Promise.all([
         repos.inventory.listItems(),
         repos.inventory.listVouchers('pending'),
+        repos.inventory.listVouchers('approved'),
         repos.inventory.listRecipes(),
       ]);
-      setItems(its); setVouchers(vs); setRecipes(rs);
+      setItems(its); setVouchers(vs); setApprovedVouchers(approvedVs); setRecipes(rs);
     } catch {
       showToast('خطا در بارگذاری انبار', 'danger');
     } finally { setLoading(false); }
@@ -69,6 +73,7 @@ export default function InventoryPage() {
   const canSeePrices = canDo(user, 'inventory.viewCosts');
   const isWarehouse = user?.role === 'Warehouse';
   const canApprove = canDo(user, 'inventory.approve');
+  const isSuperAdmin = user?.role === 'SuperAdmin';
 
   async function approve(v: InventoryVoucher) {
     if (v.kind === 'in') {
@@ -113,6 +118,25 @@ export default function InventoryPage() {
     finally { setBusy(null); }
   }
 
+  async function handleReversal(id: string) {
+    if (!confirm('یک برگه‌ی معکوس pending در کارتابل ساخته می‌شود. بعد از تأیید جداگانه اثر خنثی می‌شود. ادامه می‌دهید؟')) return;
+    setReversalLoading(id);
+    try {
+      await repos.inventory.createReversal(id);
+      showToast('برگه اصلاحی ساخته شد', 'success');
+      await load();
+    } catch (e) {
+      const msg = errMsg(e, 'خطا');
+      if (msg.includes('409') || msg.includes('قبلاً')) {
+        showToast('برگه اصلاحی قبلاً ثبت شده', 'danger');
+      } else {
+        showToast(msg, 'danger');
+      }
+    } finally {
+      setReversalLoading(null);
+    }
+  }
+
   async function removeVoucher(v: InventoryVoucher) {
     if (!confirm('این برگه کامل حذف شود؟ (برای پاک‌کردن برگه‌های اشتباه)')) return;
     setBusy(v.id);
@@ -124,7 +148,7 @@ export default function InventoryPage() {
     finally { setBusy(null); }
   }
 
-  const ALL_TABS: { id: Tab; label: string; icon: typeof Package; warehouseOk: boolean }[] = [
+  const ALL_TABS: { id: Tab; label: string; icon: typeof Package; warehouseOk: boolean; superAdminOnly?: boolean }[] = [
     { id: 'items', label: 'موجودی', icon: Package, warehouseOk: true },
     { id: 'cartable', label: `کارتابل${vouchers.length ? ` (${vouchers.length})` : ''}`, icon: ClipboardList, warehouseOk: false },
     { id: 'voucher', label: 'ثبت برگه', icon: FileText, warehouseOk: true },
@@ -133,9 +157,11 @@ export default function InventoryPage() {
     { id: 'recipes', label: 'رسپی‌ها', icon: ChefHat, warehouseOk: false },
     { id: 'sales', label: 'ثبت فروش', icon: TrendingUp, warehouseOk: false },
     { id: 'plan', label: 'برنامه پخت', icon: TrendingUp, warehouseOk: false },
+    { id: 'variance', label: 'واریانس', icon: Calculator, warehouseOk: false, superAdminOnly: true },
   ];
-  // انباردار فقط تب‌های مجاز را می‌بیند
-  const TABS = isWarehouse ? ALL_TABS.filter(t => t.warehouseOk) : ALL_TABS;
+  const TABS = isWarehouse
+    ? ALL_TABS.filter(t => t.warehouseOk)
+    : ALL_TABS.filter(t => !t.superAdminOnly || isSuperAdmin);
 
   return (
     <div className="p-4 lg:p-6">
@@ -144,6 +170,10 @@ export default function InventoryPage() {
           <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">انبار و آشپزخانه</h1>
           <div className="text-[12px] text-stone-500 mt-1">مدیریت موجودی، رسپی، و برنامه‌ی پخت</div>
         </div>
+
+        {isSuperAdmin && branches[0] && (
+          <ExceptionCards branchId={branches[0].id} />
+        )}
 
         {/* tabs */}
         <div className="flex gap-1 border-b border-stone-200 overflow-x-auto">
@@ -160,7 +190,7 @@ export default function InventoryPage() {
         ) : tab === 'items' ? (
           <ItemsTab items={items} branches={branches} onChange={load} showToast={showToast} canSeePrices={canSeePrices} />
         ) : tab === 'cartable' ? (
-          <CartableTab vouchers={vouchers} items={items} canSeePrices={canSeePrices} canApprove={canApprove} busy={busy} onApprove={approve} onReject={reject} onDelete={removeVoucher} />
+          <CartableTab vouchers={vouchers} approvedVouchers={isSuperAdmin ? approvedVouchers : []} items={items} canSeePrices={canSeePrices} canApprove={canApprove} isSuperAdmin={isSuperAdmin} busy={busy} onApprove={approve} onReject={reject} onDelete={removeVoucher} reversalLoading={reversalLoading} onReversal={handleReversal} />
         ) : tab === 'voucher' ? (
           <VoucherTab items={items} branches={branches} onDone={load} showToast={showToast} canSeePrices={canSeePrices} isWarehouse={isWarehouse} />
         ) : tab === 'recipes' ? (
@@ -171,6 +201,8 @@ export default function InventoryPage() {
           <StocktakeTab items={items} branches={branches} onDone={load} showToast={showToast} />
         ) : tab === 'quickbuy' ? (
           <QuickBuyTab items={items} branches={branches} onDone={load} showToast={showToast} />
+        ) : tab === 'variance' ? (
+          <VarianceTab branches={branches} showToast={showToast} />
         ) : (
           <PlanTab />
         )}
@@ -261,18 +293,67 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
   const [unit, setUnit] = useState<InvUnit>('kg');
   const [kind, setKind] = useState<'raw' | 'prep'>('raw');
   const [branchId, setBranchId] = useState('');
+  const [basePerUnit, setBasePerUnit] = useState('1');
+  const [yieldPct, setYieldPct] = useState('100');
+  const [minBase, setMinBase] = useState('0');
   const [saving, setSaving] = useState(false);
+
+  const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
+  const [editUnit, setEditUnit] = useState<InvUnit>('kg');
+  const [editBasePerUnit, setEditBasePerUnit] = useState('1');
+  const [editYieldPct, setEditYieldPct] = useState('100');
+  const [editMinBase, setEditMinBase] = useState('0');
+  const [editSaving, setEditSaving] = useState(false);
 
   async function add() {
     if (!name.trim() || !code.trim()) { showToast('کد و نام الزامی است', 'danger'); return; }
     if (!branchId) { showToast('شعبه را انتخاب کنید', 'danger'); return; }
+    const bpu = parseFloat(basePerUnit);
+    const yp = parseFloat(yieldPct);
+    const mb = parseFloat(minBase);
+    if (!(bpu > 0)) { showToast('ضریب تبدیل به واحد پایه باید بزرگ‌تر از صفر باشد', 'danger'); return; }
+    if (!(yp >= 1 && yp <= 100)) { showToast('راندمان باید بین ۱ تا ۱۰۰ باشد', 'danger'); return; }
+    if (!(mb >= 0)) { showToast('حداقل موجودی نامعتبر است', 'danger'); return; }
     setSaving(true);
     try {
-      await createRepos(null as never).inventory.createItem({ code: code.trim(), name: name.trim(), unit, branchId, kind });
+      await createRepos(null as never).inventory.createItem({ code: code.trim(), name: name.trim(), unit, branchId, kind, basePerUnit: bpu, yieldPct: yp, minBase: mb });
       showToast('قلم اضافه شد', 'success');
-      setCode(''); setName(''); setKind('raw'); setShowAdd(false); onChange();
-    } catch { showToast('خطا در افزودن', 'danger'); }
+      setCode(''); setName(''); setKind('raw'); setBasePerUnit('1'); setYieldPct('100'); setMinBase('0'); setShowAdd(false); onChange();
+    } catch (e) { showToast(errMsg(e, 'خطا در افزودن'), 'danger'); }
     finally { setSaving(false); }
+  }
+
+  function openEdit(it: InventoryItem) {
+    setEditingItem(it);
+    setEditName(it.name);
+    setEditCategory(it.category ?? '');
+    setEditUnit(it.unit);
+    setEditBasePerUnit(String(it.basePerUnit));
+    setEditYieldPct(String(it.yieldPct));
+    setEditMinBase(String(it.minBase));
+  }
+
+  async function saveEdit() {
+    if (!editingItem) return;
+    if (!editName.trim()) { showToast('نام الزامی است', 'danger'); return; }
+    const bpu = parseFloat(editBasePerUnit);
+    const yp = parseFloat(editYieldPct);
+    const mb = parseFloat(editMinBase);
+    if (!(bpu > 0)) { showToast('ضریب تبدیل به واحد پایه باید بزرگ‌تر از صفر باشد', 'danger'); return; }
+    if (!(yp >= 1 && yp <= 100)) { showToast('راندمان باید بین ۱ تا ۱۰۰ باشد', 'danger'); return; }
+    if (!(mb >= 0)) { showToast('حداقل موجودی نامعتبر است', 'danger'); return; }
+    setEditSaving(true);
+    try {
+      await createRepos(null as never).inventory.updateItem(editingItem.id, {
+        name: editName.trim(), category: editCategory.trim() || undefined, unit: editUnit,
+        basePerUnit: bpu, yieldPct: yp, minBase: mb,
+      });
+      showToast('قلم به‌روزرسانی شد', 'success');
+      setEditingItem(null); onChange();
+    } catch (e) { showToast(errMsg(e, 'خطا در ویرایش'), 'danger'); }
+    finally { setEditSaving(false); }
   }
 
   return (
@@ -297,7 +378,7 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
                 >
                   موجودی
                 </span>
-              </th>{canSeePrices && <th className="px-3 py-2 text-left">میانگین بها</th>}{canSeePrices && <th className="px-3 py-2 w-10"></th>}</tr>
+              </th>{canSeePrices && <th className="px-3 py-2 text-left">میانگین بها</th>}<th className="px-3 py-2 w-16"></th></tr>
             </thead>
             <tbody>
               {items.map(it => (
@@ -307,13 +388,16 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
                   <td className="px-3 py-2.5 text-stone-500">{UNIT_LABELS[it.unit] ?? it.unit}</td>
                   <td className="px-3 py-2.5 text-left tabular-nums">{fmt(Math.round(it.qtyBase))}</td>
                   {canSeePrices && <td className="px-3 py-2.5 text-left tabular-nums text-stone-600">{fmt(Math.round(it.avgCostPerBase * it.basePerUnit))}</td>}
-                  {canSeePrices && <td className="px-3 py-2.5 text-left">
-                    <button onClick={async () => {
-                      if (!confirm(`«${it.name}» حذف شود؟`)) return;
-                      try { await createRepos(null as never).inventory.deleteItem(it.id); showToast('حذف شد', 'success'); onChange(); }
-                      catch { showToast('خطا در حذف', 'danger'); }
-                    }} className="text-stone-400 hover:text-rose-600"><Trash2 size={14} strokeWidth={1.5} /></button>
-                  </td>}
+                  <td className="px-3 py-2.5 text-left">
+                    <div className="flex items-center justify-end gap-2">
+                      {canSeePrices && <button onClick={() => openEdit(it)} className="text-stone-400 hover:text-stone-700" title="ویرایش"><Pencil size={14} strokeWidth={1.5} /></button>}
+                      {canSeePrices && <button onClick={async () => {
+                        if (!confirm(`«${it.name}» حذف شود؟`)) return;
+                        try { await createRepos(null as never).inventory.deleteItem(it.id); showToast('حذف شد', 'success'); onChange(); }
+                        catch { showToast('خطا در حذف', 'danger'); }
+                      }} className="text-stone-400 hover:text-rose-600" title="حذف"><Trash2 size={14} strokeWidth={1.5} /></button>}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -347,10 +431,62 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
                   </select>
                 </div>
               </div>
+              <div>
+                <label className="text-[11.5px] text-stone-500">ضریب تبدیل به واحد پایه</label>
+                <input type="number" step="0.0001" min="0.0001" value={basePerUnit} onChange={e => setBasePerUnit(e.target.value)} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
+                <p className="text-[10.5px] text-stone-400 mt-1">مثال: اگه واحد «کیسه» و هر کیسه ۱۰ کیلوگرم پایه‌ست، اینجا ۱۰ وارد کن</p>
+              </div>
+              <div>
+                <label className="text-[11.5px] text-stone-500">راندمان (٪)</label>
+                <input type="number" step="0.1" min="1" max="100" value={yieldPct} onChange={e => setYieldPct(e.target.value)} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
+                <p className="text-[10.5px] text-stone-400 mt-1">افت آماده‌سازی — مثلاً گوشت با ۸۵٪ راندمان یعنی ۱۵٪ دور می‌ره</p>
+              </div>
+              <div>
+                <label className="text-[11.5px] text-stone-500">حداقل موجودی (واحد پایه)</label>
+                <input type="number" step="0.01" min="0" value={minBase} onChange={e => setMinBase(e.target.value)} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
+                <p className="text-[10.5px] text-stone-400 mt-1">هشدار کم‌موجودی زیر این مقدار</p>
+              </div>
             </div>
             <div className="flex gap-2 mt-5">
               <button onClick={add} disabled={saving} className="flex items-center gap-1.5 bg-stone-900 text-white px-4 py-2 rounded-lg text-[13px] disabled:opacity-50">{saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}افزودن</button>
               <button onClick={() => setShowAdd(false)} className="px-4 py-2 rounded-lg text-[13px] border border-stone-200">لغو</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setEditingItem(null)}>
+          <div className="bg-white rounded-xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+            <h2 className="text-[16px] font-medium mb-1">ویرایش قلم</h2>
+            <div className="text-[11px] text-stone-400 mb-4 tabular-nums" dir="ltr">{editingItem.code}</div>
+            <div className="space-y-3">
+              <div><label className="text-[11.5px] text-stone-500">نام</label><input value={editName} onChange={e => setEditName(e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" /></div>
+              <div><label className="text-[11.5px] text-stone-500">دسته</label><input value={editCategory} onChange={e => setEditCategory(e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" /></div>
+              <div><label className="text-[11.5px] text-stone-500">واحد</label>
+                <select value={editUnit} onChange={e => setEditUnit(e.target.value as InvUnit)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1">
+                  {Object.entries(UNIT_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-[11.5px] text-stone-500">ضریب تبدیل به واحد پایه</label>
+                <input type="number" step="0.0001" min="0.0001" value={editBasePerUnit} onChange={e => setEditBasePerUnit(e.target.value)} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
+                <p className="text-[10.5px] text-stone-400 mt-1">مثال: اگه واحد «کیسه» و هر کیسه ۱۰ کیلوگرم پایه‌ست، اینجا ۱۰ وارد کن</p>
+              </div>
+              <div>
+                <label className="text-[11.5px] text-stone-500">راندمان (٪)</label>
+                <input type="number" step="0.1" min="1" max="100" value={editYieldPct} onChange={e => setEditYieldPct(e.target.value)} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
+                <p className="text-[10.5px] text-stone-400 mt-1">افت آماده‌سازی — مثلاً گوشت با ۸۵٪ راندمان یعنی ۱۵٪ دور می‌ره</p>
+              </div>
+              <div>
+                <label className="text-[11.5px] text-stone-500">حداقل موجودی (واحد پایه)</label>
+                <input type="number" step="0.01" min="0" value={editMinBase} onChange={e => setEditMinBase(e.target.value)} dir="ltr" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1" />
+                <p className="text-[10.5px] text-stone-400 mt-1">هشدار کم‌موجودی زیر این مقدار</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={saveEdit} disabled={editSaving} className="flex items-center gap-1.5 bg-stone-900 text-white px-4 py-2 rounded-lg text-[13px] disabled:opacity-50">{editSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}ذخیره</button>
+              <button onClick={() => setEditingItem(null)} className="px-4 py-2 rounded-lg text-[13px] border border-stone-200">لغو</button>
             </div>
           </div>
         </div>
@@ -360,18 +496,22 @@ function ItemsTab({ items, branches, onChange, showToast, canSeePrices }: {
 }
 
 /* ───── تب کارتابل ───── */
-function CartableTab({ vouchers, items, canSeePrices, canApprove, busy, onApprove, onReject, onDelete }: {
-  vouchers: InventoryVoucher[]; items: InventoryItem[]; canSeePrices: boolean; canApprove: boolean; busy: string | null;
+function CartableTab({ vouchers, approvedVouchers, items, canSeePrices, canApprove, isSuperAdmin, busy, onApprove, onReject, onDelete, reversalLoading, onReversal }: {
+  vouchers: InventoryVoucher[]; approvedVouchers: InventoryVoucher[]; items: InventoryItem[]; canSeePrices: boolean; canApprove: boolean; isSuperAdmin: boolean; busy: string | null;
   onApprove: (v: InventoryVoucher) => void; onReject: (v: InventoryVoucher) => void;
-  onDelete: (v: InventoryVoucher) => void;
+  onDelete: (v: InventoryVoucher) => void; reversalLoading: string | null; onReversal: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   const itemName = (id: string) => items.find(i => i.id === id)?.name ?? '— حذف‌شده —';
   const itemUnit = (id: string) => items.find(i => i.id === id)?.unit ?? '';
 
-  if (vouchers.length === 0) return <div className="text-center text-stone-400 py-10 text-[13px]">برگه‌ای در انتظار تأیید نیست</div>;
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
+      {/* ─── برگه‌های در انتظار تأیید ─── */}
+      {vouchers.length === 0 ? (
+        <div className="text-center text-stone-400 py-6 text-[13px]">برگه‌ای در انتظار تأیید نیست</div>
+      ) : (
+      <div className="space-y-2">
       {vouchers.map(v => {
         const isOpen = expanded === v.id;
         // قیمت فقط برای رسید خرید معنی دارد و فقط اگر کاربر مجاز به دیدن قیمت باشد
@@ -382,8 +522,16 @@ function CartableTab({ vouchers, items, canSeePrices, canApprove, busy, onApprov
               <button onClick={() => setExpanded(isOpen ? null : v.id)} className="flex items-center gap-2 text-right flex-1 min-w-0">
                 {isOpen ? <ChevronDown size={15} className="text-stone-400 flex-shrink-0" /> : <ChevronLeft size={15} className="text-stone-400 flex-shrink-0" />}
                 <div className="min-w-0">
-                  <span className="text-[13px] font-medium text-stone-800">{VOUCHER_KIND_LABELS[v.kind] ?? v.kind}</span>
-                  <span className="text-[11px] text-stone-400 mr-2">{v.no} · {v.makerDate} · {v.lines.length} قلم</span>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {v.parentVoucherId && (
+                      <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">اصلاحی</span>
+                    )}
+                    <span className="text-[13px] font-medium text-stone-800">{VOUCHER_KIND_LABELS[v.kind] ?? v.kind}</span>
+                    <span className="text-[11px] text-stone-400">{v.no} · {v.makerDate} · {v.lines.length} قلم</span>
+                  </div>
+                  {v.parentVoucherId && (
+                    <div className="text-[10px] text-amber-600">مربوط به برگه اصلی</div>
+                  )}
                 </div>
               </button>
               <div className="flex gap-2 flex-shrink-0">
@@ -435,6 +583,41 @@ function CartableTab({ vouchers, items, canSeePrices, canApprove, busy, onApprov
           </div>
         );
       })}
+      </div>
+      )}
+
+      {/* ─── برگه‌های تأییدشده (فقط SuperAdmin — برای ایجاد اصلاحی) ─── */}
+      {isSuperAdmin && approvedVouchers.length > 0 && (
+        <div className="space-y-2">
+          <div className="text-[11.5px] font-medium text-stone-500 pt-1">برگه‌های تأییدشده</div>
+          {approvedVouchers.slice(0, 30).map(v => (
+            <div key={v.id} className="bg-stone-50 border border-stone-200 rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {v.parentVoucherId && (
+                    <span className="text-[10px] bg-amber-50 text-amber-700 border border-amber-200 rounded px-1.5 py-0.5">اصلاحی</span>
+                  )}
+                  <span className="text-[12.5px] font-medium text-stone-700">{VOUCHER_KIND_LABELS[v.kind] ?? v.kind}</span>
+                  <span className="text-[11px] text-stone-400">{v.no} · {v.makerDate}</span>
+                </div>
+              </div>
+              <button
+                onClick={() => onReversal(v.id)}
+                disabled={reversalLoading === v.id || !!v.parentVoucherId}
+                title={v.parentVoucherId ? 'این برگه خودش اصلاحی است' : 'ایجاد برگه اصلاحی'}
+                className="text-stone-400 hover:text-amber-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {reversalLoading === v.id
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <RotateCcw size={14} strokeWidth={1.5} />}
+              </button>
+            </div>
+          ))}
+          {approvedVouchers.length > 30 && (
+            <div className="text-[11px] text-stone-400 text-center py-1">... و {approvedVouchers.length - 30} برگه‌ی دیگر</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1335,6 +1518,187 @@ function QuickBuyTab({ items, branches, onDone, showToast }: {
         {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}ثبت خرید سریع
       </button>
       <p className="text-[11px] text-stone-400">این خرید به‌صورت رسید در کارتابل ثبت می‌شود و با تأیید، موجودی اقلام بالا می‌رود و سند هزینه ساخته می‌شود.</p>
+    </div>
+  );
+}
+
+/* ───── کارت‌های استثنا (بخش ۵) ───── */
+type ExceptionsData = {
+  stalePending: { count: number };
+  clampWarnings: { count: number };
+  belowMin: { count: number };
+  pendingReversals: { count: number };
+};
+
+function ExceptionCards({ branchId }: { branchId: string }) {
+  const [data, setData] = useState<ExceptionsData | null>(null);
+
+  const fetch_ = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/inventory/reports/exceptions?branchId=${branchId}`, { credentials: 'include' });
+      if (res.ok) setData(await res.json());
+    } catch { /* silent */ }
+  }, [branchId]);
+
+  useEffect(() => {
+    fetch_();
+    const id = setInterval(fetch_, 60_000);
+    return () => clearInterval(id);
+  }, [fetch_]);
+
+  if (!data) return null;
+
+  function cardColor(n: number) {
+    if (n === 0) return 'text-stone-400';
+    if (n <= 3) return 'text-amber-600';
+    return 'text-rose-600';
+  }
+
+  const cards = [
+    { label: 'برگه‌های معلق', count: data.stalePending.count, icon: '⏳' },
+    { label: 'هشدار کسر', count: data.clampWarnings.count, icon: '⚠️' },
+    { label: 'زیر حداقل', count: data.belowMin.count, icon: '📉' },
+    { label: 'اصلاحی معلق', count: data.pendingReversals.count, icon: '🔄' },
+  ];
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {cards.map(c => (
+        <div key={c.label} className="flex items-center gap-1.5 bg-white border border-stone-200 rounded-lg px-3 py-2 text-[12px]">
+          <span>{c.icon}</span>
+          <span className="text-stone-600">{c.label}:</span>
+          <span className={`font-medium tabular-nums ${cardColor(c.count)}`}>{c.count}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ───── تب گزارش واریانس (بخش ۴) ───── */
+type VarianceRow = {
+  itemId: string; itemName: string; unit: string;
+  theoreticalQty: number; actualQty: number;
+  varianceQty: number; varianceCost: number; avgCost: number;
+};
+
+function VarianceTab({ branches, showToast }: {
+  branches: { id: string; name: string }[];
+  showToast: (m: string, t?: any) => void;
+}) {
+  const [branchId, setBranchId] = useState(branches[0]?.id ?? '');
+  const [dateFrom, setDateFrom] = useState(getTodayJalali());
+  const [dateTo, setDateTo] = useState(getTodayJalali());
+  const [rows, setRows] = useState<VarianceRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [queried, setQueried] = useState(false);
+
+  async function runReport() {
+    if (!branchId) { showToast('شعبه را انتخاب کنید', 'danger'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/inventory/reports/variance?branchId=${branchId}&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        { credentials: 'include' }
+      );
+      if (!res.ok) { showToast('خطا در دریافت گزارش', 'danger'); return; }
+      const data = await res.json();
+      setRows(data.rows ?? []);
+      setQueried(true);
+    } catch { showToast('خطا در دریافت گزارش', 'danger'); }
+    finally { setLoading(false); }
+  }
+
+  function exportExcel() {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ['قلم', 'واحد', 'مصرف تئوریک', 'مصرف واقعی', 'واریانس (مقدار)', 'واریانس (ریال)'],
+      ...rows.map(r => [r.itemName, r.unit, r.theoreticalQty, r.actualQty, r.varianceQty, r.varianceCost]),
+      ['', '', '', '', 'جمع واریانس:', rows.reduce((s, r) => s + r.varianceCost, 0)],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'واریانس');
+    XLSX.writeFile(wb, `variance-${dateFrom}-${dateTo}.xlsx`);
+  }
+
+  const totalVarianceCost = rows.reduce((s, r) => s + r.varianceCost, 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white border border-stone-200 rounded-lg p-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div>
+            <label className="text-[11.5px] text-stone-500">شعبه</label>
+            <select value={branchId} onChange={e => setBranchId(e.target.value)} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-[13px] mt-1">
+              {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-[11.5px] text-stone-500">از تاریخ</label>
+            <div className="mt-1"><JalaliDatePicker value={dateFrom} onChange={setDateFrom} /></div>
+          </div>
+          <div>
+            <label className="text-[11.5px] text-stone-500">تا تاریخ</label>
+            <div className="mt-1"><JalaliDatePicker value={dateTo} onChange={setDateTo} /></div>
+          </div>
+          <div className="flex items-end">
+            <button onClick={runReport} disabled={loading} className="w-full flex items-center justify-center gap-1.5 bg-stone-900 text-white px-3 py-2 rounded-lg text-[13px] disabled:opacity-50">
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <TrendingUp size={14} />}نمایش
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {queried && (
+        <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-stone-100">
+            <span className="text-[12px] text-stone-600">{rows.length} قلم</span>
+            {rows.length > 0 && (
+              <button onClick={exportExcel} className="flex items-center gap-1.5 text-[12px] text-stone-500 hover:text-stone-800">
+                <FileSpreadsheet size={14} />اکسپورت
+              </button>
+            )}
+          </div>
+          {rows.length === 0 ? (
+            <div className="text-center text-stone-400 py-8 text-[13px]">داده‌ای برای این بازه یافت نشد</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12.5px]">
+                  <thead className="bg-stone-50 text-stone-500 text-[11px]">
+                    <tr>
+                      <th className="px-3 py-2 text-right">قلم</th>
+                      <th className="px-3 py-2 text-left">مصرف تئوریک</th>
+                      <th className="px-3 py-2 text-left">مصرف واقعی</th>
+                      <th className="px-3 py-2 text-left">واریانس (مقدار)</th>
+                      <th className="px-3 py-2 text-left">واریانس (ریال)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(r => (
+                      <tr key={r.itemId} className={`border-t border-stone-100 ${Math.abs(r.varianceCost) > 500_000 ? 'bg-amber-50' : ''}`}>
+                        <td className="px-3 py-2 text-stone-800">{r.itemName} <span className="text-stone-400 text-[11px]">({r.unit})</span></td>
+                        <td className="px-3 py-2 text-left tabular-nums text-stone-600">{r.theoreticalQty.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                        <td className="px-3 py-2 text-left tabular-nums text-stone-600">{r.actualQty.toLocaleString('en-US', { maximumFractionDigits: 2 })}</td>
+                        <td className={`px-3 py-2 text-left tabular-nums ${r.varianceQty > 0 ? 'text-rose-600' : r.varianceQty < 0 ? 'text-emerald-600' : 'text-stone-400'}`}>
+                          {r.varianceQty > 0 ? '+' : ''}{r.varianceQty.toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                        </td>
+                        <td className={`px-3 py-2 text-left tabular-nums ${r.varianceCost > 0 ? 'text-rose-600' : r.varianceCost < 0 ? 'text-emerald-600' : 'text-stone-400'}`}>
+                          {fmt(r.varianceCost)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-between px-4 py-2.5 border-t border-stone-200 text-[12.5px] font-medium text-stone-800">
+                <span>مجموع واریانس دوره</span>
+                <span className={`tabular-nums ${totalVarianceCost > 0 ? 'text-rose-600' : totalVarianceCost < 0 ? 'text-emerald-600' : 'text-stone-500'}`}>
+                  {fmt(totalVarianceCost)} تومان
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

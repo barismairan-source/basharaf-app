@@ -94,6 +94,7 @@ export interface InventoryVoucher {
   rejectedAt: string | null;
   rejectionReason: string | null;
   linkedTransactionId: string | null;
+  parentVoucherId: string | null;
   lines: InventoryVoucherLine[];
   updatedAt: string;
 }

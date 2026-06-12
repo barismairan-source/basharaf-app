@@ -146,7 +146,7 @@ export async function POST(req: Request) {
   }
 }
 
-async function createPendingNotifications(voucherId: string, title: string, branchId: string) {
+export async function createPendingNotifications(voucherId: string, title: string, branchId: string) {
   const admins = await db.select({ id: schema.users.id }).from(schema.users)
     .where(eq(schema.users.role, 'SuperAdmin'));
   if (admins.length === 0) return;
