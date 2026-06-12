@@ -1,6 +1,6 @@
 // GET /api/inventory/reports/variance?branchId=X&dateFrom=1403-01-01&dateTo=1403-01-31
 import { NextResponse } from 'next/server';
-import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
@@ -18,13 +18,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: 'پارامترهای ناقص' }, { status: 400 });
     }
 
-    const from = jalaliToDate(dateFrom);
-    const to = jalaliToDate(dateTo);
-    if (!from || !to) {
+    const fromDate = jalaliToDate(dateFrom);
+    const toDate = jalaliToDate(dateTo);
+    if (!fromDate || !toDate) {
       return NextResponse.json({ error: 'تاریخ نامعتبر' }, { status: 400 });
     }
     // to را تا پایان روز ببریم
-    to.setHours(23, 59, 59, 999);
+    toDate.setHours(23, 59, 59, 999);
+    const from = fromDate.toISOString();
+    const to = toDate.toISOString();
 
     const SALE_KINDS = ['sale'] as const;
     const ACTUAL_KINDS = ['out', 'waste', 'sale'] as const;
@@ -32,8 +34,8 @@ export async function GET(req: Request) {
     const baseWhere = and(
       eq(schema.invVouchers.branchId, branchId),
       eq(schema.invVouchers.status, 'approved'),
-      gte(schema.invVouchers.updatedAt, from),
-      lte(schema.invVouchers.updatedAt, to),
+      sql`${schema.invVouchers.updatedAt} >= ${from}`,
+      sql`${schema.invVouchers.updatedAt} <= ${to}`,
     );
 
     // مصرف تئوریک: برگه‌های sale (فروش منو با رسپی)
