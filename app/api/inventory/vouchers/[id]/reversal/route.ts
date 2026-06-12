@@ -6,7 +6,7 @@ import { ApiError, handleError } from '@/lib/api-error';
 import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
 import { audit } from '@/lib/auth/audit';
 import { getTodayJalali } from '@/lib/jalali';
-import { createPendingNotifications } from '../../route';
+import { createPendingNotifications } from '@/lib/inventory/pendingNotifications';
 
 type VoucherKind = 'in' | 'out' | 'waste' | 'sale' | 'produce' | 'stocktake';
 

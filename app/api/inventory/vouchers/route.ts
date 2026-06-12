@@ -7,6 +7,7 @@ import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
+import { createPendingNotifications } from '@/lib/inventory/pendingNotifications';
 
 /**
  * /api/inventory/vouchers
@@ -146,19 +147,3 @@ export async function POST(req: Request) {
   }
 }
 
-export async function createPendingNotifications(voucherId: string, title: string, branchId: string) {
-  const admins = await db.select({ id: schema.users.id }).from(schema.users)
-    .where(eq(schema.users.role, 'SuperAdmin'));
-  if (admins.length === 0) return;
-  await db.insert(schema.notifications).values(
-    admins.map(admin => ({
-      type: 'pending' as const,
-      title: 'برگه انبار در انتظار تأیید',
-      sub: title,
-      time: 'به‌تازگی',
-      read: false,
-      txId: null, // برگه‌ی انبار است، نه تراکنش — ستون txId به transactions اشاره دارد و نباید id برگه را بگیرد
-      userId: admin.id,
-    }))
-  );
-}
