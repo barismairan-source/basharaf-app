@@ -5,10 +5,38 @@
 است، با مدیریت LTR برای متن لاتین و اعداد. حقایق زیر را به‌عنوان ground truth
 بپذیر؛ هرگز stack دیگری فرض نکن.
 
-> **نسخه فعلی:** `0.5.1-demo`
+> **نسخه فعلی:** `0.9.5-operations`
 > **Live:** https://basharaff.vercel.app
 > **GitHub:** https://github.com/barismairan-source/basharaf-app
 > **Supabase:** https://tddxvlqpdiptzourzhql.supabase.co (eu-central-1)
+
+> ⚠️ این سند از دوران `0.5.1-demo` مانده و خیلی از ماژول‌های فعلی (انبار، منو،
+> استخدام، حقوق، مشتریان، کوپن، رزرو، بازخورد، تجهیزات/سفارش‌خرید/وظایف) را
+> پوشش نمی‌دهد. برای وضعیت لحظه‌ای و دقیق پروژه همیشه `HANDOFF.md` (پروتکل رله)
+> را مرجع اصلی بدان — این فایل فقط زمینه‌ی کلی stack/معماری اولیه را می‌دهد.
+
+---
+
+## وضعیت ماژول عملیات — تجهیزات/سفارش‌خرید/وظایف (فاز ۲–۷، نسخه 0.9.5)
+
+- **تجهیزات** (`/equipment`, `app/api/equipment/`): CRUD + سوابق نگهداری
+  (`maintenance_logs`). سایدبار: SuperAdmin/BranchUser.
+- **سفارش خرید** (`/purchase-orders`, `app/api/purchase-orders/`): CRUD،
+  گردش وضعیت draft→sent→partial/received→cancelled، دریافت کالا (با ساخت
+  برگه‌ی ورود انبار)، و پیشنهاد سفارش خودکار از روی `min_base` انبار.
+  سایدبار: SuperAdmin/BranchUser — صفحه‌ی `[id]` (و دریافت کالا) برای
+  Warehouse هم در دسترس است (بدون آیتم سایدبار جدا).
+- **وظایف روزانه** (`/tasks`, `app/api/task-templates/`, `app/api/tasks/`):
+  قالب‌های تکرارشونده (روزانه/هفتگی/ماهانه) + نمونه‌سازی idempotent
+  (`generate-today`) + تکمیل/رد/تخصیص. سایدبار: هر سه نقش
+  (SuperAdmin/BranchUser/Warehouse).
+- همه‌ی این مسیرها در `middleware.ts` → `PROTECTED_PREFIXES` محافظت می‌شوند.
+- داشبورد (`/dashboard`) سه کارت میانبر دارد: سفارش خرید باز، تجهیزات در
+  تعمیر، وظایف امروزِ ناتمام (`components/dashboard/OperationsStrip.tsx`،
+  از `/api/dashboard/overview` فیلد `operations`).
+- جدول‌ها در `lib/db/schema.ts`: `equipment`, `maintenance_logs`,
+  `purchase_orders`, `purchase_order_items`, `task_templates`,
+  `task_instances` — migration: `db-operations-migration.sql`.
 
 ---
 
@@ -158,6 +186,9 @@ git add . && git commit -m "..." && git push origin main
 **نکته build:** warning های "Dynamic server usage cookies" طبیعی‌اند، error نیستند.
 API routes باید `ƒ (dynamic)` باشند.
 
+**روال هر تغییر کد (طبق CLAUDE.md):** `npx tsc --noEmit` (۰ خطا) → `npm run build`
+(سبز) → ژورنال HANDOFF.md → commit/push. هیچ commit‌ای بدون این دو مرحله انجام نشود.
+
 **نکته Iran:** نصب npm با `--registry https://registry.npmmirror.com`.
 
 ---
@@ -165,7 +196,8 @@ API routes باید `ƒ (dynamic)` باشند.
 ## Migration ها (idempotent، در Supabase SQL Editor)
 
 به ترتیب: `supabase-seed.sql` → `supabase-v2-migration.sql` (accounts) →
-`supabase-v3-migration.sql` (VAT+contacts) → `supabase-v4-menu-migration.sql` (menu).
+`supabase-v3-migration.sql` (VAT+contacts) → `supabase-v4-menu-migration.sql` (menu) →
+`db-operations-migration.sql` (تجهیزات/سفارش‌خرید/وظایف روزانه — فاز ۲–۶، نسخه 0.9.5).
 هنگام prompt RLS همیشه "Run without RLS" (سیستم JWT خودش دارد).
 
 ---

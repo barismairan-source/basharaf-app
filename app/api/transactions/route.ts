@@ -5,7 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
-import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
+import { createExpenseTx, notifyPendingTransaction } from '@/lib/db/createExpenseTx';
 
 const createBodySchema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
@@ -72,74 +72,37 @@ export async function POST(req: Request) {
       .where(eq(schema.branches.id, input.branchId)).limit(1);
     if (!branch) throw new ApiError(400, 'شعبه انتخاب‌شده پیدا نشد', 'BRANCH_NOT_FOUND');
 
-    const isAdmin = session.role === 'SuperAdmin';
-    const now = new Date();
-
     // ── ثبت تراکنش در DB transaction (با balance اگر admin) ──
-    const inserted = await db.transaction(async (dbTx) => {
-      const [row] = await dbTx.insert(schema.transactions).values({
-        type: input.type,
-        title: input.title,
-        categoryId: input.categoryId || undefined,
-        categoryName,
-        amount: input.amount,
-        payee: input.payee,
-        branchId: input.branchId,
-        branchName: branch.name,
-        method: input.method,
-        receipt: input.receipt || '—',
-        date: input.date,
-        note: input.note ?? '',
-        hasReceipt: input.hasReceipt ?? false,
-        status: isAdmin ? 'approved' : 'pending',
-        createdBy: session.sub,
-        approvedBy: isAdmin ? session.sub : null,
-        approvedAt: isAdmin ? now : null,
-        accountId: input.accountId ?? null,
-        destinationAccountId: input.destinationAccountId ?? null,
-        contactId: input.contactId ?? null,
-        vatAmount: input.vatAmount ?? 0,
-        isCredit: input.isCredit ?? false,
-      }).returning();
-
-      if (!row) throw new ApiError(500, 'خطا در ثبت تراکنش', 'INSERT_FAILED');
-
-      // اگر admin (approved فوری) و account دارد، balance را اعمال کن
-      if (isAdmin && row.accountId) {
-        await applyBalance(dbTx, row);
-      }
-      // اگر نسیه است، balance طرف‌حساب را آپدیت کن
-      if (isAdmin && row.contactId && row.isCredit) {
-        await applyContactBalance(dbTx, row);
-      }
-
-      return row;
-    });
+    const inserted = await db.transaction(async (dbTx) => createExpenseTx(dbTx, {
+      type: input.type,
+      title: input.title,
+      categoryId: input.categoryId || null,
+      categoryName,
+      amount: input.amount,
+      payee: input.payee,
+      branchId: input.branchId,
+      branchName: branch.name,
+      method: input.method,
+      receipt: input.receipt || '—',
+      date: input.date,
+      note: input.note ?? '',
+      hasReceipt: input.hasReceipt ?? false,
+      accountId: input.accountId ?? null,
+      destinationAccountId: input.destinationAccountId ?? null,
+      contactId: input.contactId ?? null,
+      vatAmount: input.vatAmount ?? 0,
+      isCredit: input.isCredit ?? false,
+      createdBy: session.sub,
+      role: session.role,
+    }));
 
     // اعلان برای admin ها اگر pending
     if (inserted.status === 'pending') {
-      await createPendingNotifications(inserted.id, inserted.title, branch.name);
+      await notifyPendingTransaction(inserted.id, inserted.title, branch.name);
     }
 
     return NextResponse.json({ transaction: rowToTransaction(inserted) }, { status: 201 });
   } catch (e) {
     return handleError(e);
   }
-}
-
-async function createPendingNotifications(txId: string, title: string, branchName: string) {
-  const admins = await db.select({ id: schema.users.id }).from(schema.users)
-    .where(eq(schema.users.role, 'SuperAdmin'));
-  if (admins.length === 0) return;
-  await db.insert(schema.notifications).values(
-    admins.map(admin => ({
-      type: 'pending' as const,
-      title: 'تراکنش در انتظار بررسی',
-      sub: `${title} — ${branchName}`,
-      time: 'به‌تازگی',
-      read: false,
-      txId,
-      userId: admin.id,
-    }))
-  );
 }

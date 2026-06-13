@@ -11,6 +11,7 @@ import {
   RecentList,
   DashboardSkeleton,
   UnifiedOverview,
+  OperationsStrip,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import {
@@ -125,6 +126,9 @@ export default function DashboardPage() {
 
         {/* ─── داشبورد یکپارچه: انبار + فروش/مالی + پرسنل/حقوق در یک نگاه ─── */}
         <UnifiedOverview />
+
+        {/* ─── میانبر عملیات: PO باز / تجهیزات در تعمیر / وظایف امروزِ ناتمام ─── */}
+        <OperationsStrip />
 
         {/* ─── KPI grid ─── */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

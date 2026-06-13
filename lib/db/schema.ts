@@ -1190,3 +1190,174 @@ export type CouponRedemption = typeof couponRedemptions.$inferSelect;
 export type RestaurantTable = typeof restaurantTables.$inferSelect;
 export type Reservation = typeof reservations.$inferSelect;
 export type Feedback = typeof feedback.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول عملیات — Operations: سفارش خرید، تجهیزات/نگهداری، وظایف
+// تطبیق سه‌ضلعی: purchase_orders <-> inv_vouchers (GRN) <-> transactions (پرداخت)
+// پول bigint تومان. تاریخ کاربری شمسی text.
+// ════════════════════════════════════════════════════════════════
+
+// ─── Operations Enums ────────────────────────────────────────────
+export const poStatusEnum = pgEnum('po_status', [
+  'draft', 'sent', 'partial', 'received', 'cancelled',
+]);
+export const equipmentStatusEnum = pgEnum('equipment_status', [
+  'active', 'maintenance', 'retired',
+]);
+export const maintTypeEnum = pgEnum('maint_type', [
+  'preventive', 'corrective', 'inspection',
+]);
+export const taskStatusEnum = pgEnum('task_status', [
+  'pending', 'done', 'skipped',
+]);
+
+// ─── purchase_orders — سفارش خرید ─────────────────────────────────
+// تأمین‌کننده = contacts با type='supplier'. تطبیق سه‌ضلعی با
+// ref_inv_voucher_id (برگه‌ی in/GRN) و ref_transaction_id (پرداخت).
+export const purchaseOrders = pgTable(
+  'purchase_orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    no: text('no').notNull(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    supplierId: uuid('supplier_id').references(() => contacts.id, { onDelete: 'set null' }),
+    status: poStatusEnum('status').notNull().default('draft'),
+    expectedDate: text('expected_date'), // Jalali string
+    note: text('note').notNull().default(''),
+    estTotal: bigint('est_total', { mode: 'number' }).notNull().default(0),
+    finalTotal: bigint('final_total', { mode: 'number' }),
+    refTransactionId: uuid('ref_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    refInvVoucherId: uuid('ref_inv_voucher_id').references(() => invVouchers.id, { onDelete: 'set null' }),
+    receivedBy: uuid('received_by').references(() => users.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchNoUniq: uniqueIndex('po_branch_no_uidx').on(t.branchId, t.no),
+    branchIdx: index('po_branch_idx').on(t.branchId),
+    supplierIdx: index('po_supplier_idx').on(t.supplierId),
+    statusIdx: index('po_status_idx').on(t.status),
+  })
+);
+
+// ─── purchase_order_items — اقلام سفارش خرید ──────────────────────
+export const purchaseOrderItems = pgTable(
+  'purchase_order_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id').notNull().references(() => purchaseOrders.id, { onDelete: 'cascade' }),
+    inventoryItemId: uuid('inventory_item_id').references(() => invItems.id, { onDelete: 'set null' }),
+    description: text('description').notNull().default(''),
+    qty: numeric('qty', { precision: 16, scale: 4 }).notNull().default('0'),
+    unitCost: bigint('unit_cost', { mode: 'number' }).notNull().default(0),
+    totalCost: bigint('total_cost', { mode: 'number' }).notNull().default(0),
+  },
+  (t) => ({
+    orderIdx: index('poi_order_idx').on(t.orderId),
+    itemIdx: index('poi_item_idx').on(t.inventoryItemId),
+  })
+);
+
+// ─── equipment — تجهیزات ───────────────────────────────────────────
+export const equipment = pgTable(
+  'equipment',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    code: text('code').notNull(),
+    name: text('name').notNull(),
+    category: text('category').notNull().default('general'),
+    status: equipmentStatusEnum('status').notNull().default('active'),
+    purchaseDate: text('purchase_date'), // Jalali string
+    purchaseCost: bigint('purchase_cost', { mode: 'number' }).notNull().default(0),
+    warrantyExpiry: text('warranty_expiry'), // Jalali string
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchCodeUniq: uniqueIndex('equipment_branch_code_uidx').on(t.branchId, t.code),
+    branchIdx: index('equipment_branch_idx').on(t.branchId),
+    statusIdx: index('equipment_status_idx').on(t.status),
+  })
+);
+
+// ─── maintenance_logs — سوابق نگهداری/تعمیر ───────────────────────
+export const maintenanceLogs = pgTable(
+  'maintenance_logs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    equipmentId: uuid('equipment_id').notNull().references(() => equipment.id, { onDelete: 'cascade' }),
+    type: maintTypeEnum('type').notNull().default('preventive'),
+    date: text('date').notNull(), // Jalali string
+    cost: bigint('cost', { mode: 'number' }).notNull().default(0),
+    vendor: text('vendor'),
+    note: text('note').notNull().default(''),
+    refTransactionId: uuid('ref_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    equipmentIdx: index('mlog_equipment_idx').on(t.equipmentId),
+    dateIdx: index('mlog_date_idx').on(t.date),
+  })
+);
+
+// ─── task_templates — قالب وظایف روزانه/دوره‌ای ───────────────────
+// branchId خالی یعنی برای همه شعب.
+export const taskTemplates = pgTable(
+  'task_templates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+    title: text('title').notNull(),
+    category: text('category').notNull().default('ops'),
+    assignedRole: text('assigned_role').notNull().default('BranchUser'),
+    frequency: text('frequency').notNull().default('daily'),
+    estimatedMinutes: integer('estimated_minutes').notNull().default(0),
+    checklistJson: jsonb('checklist_json'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchIdx: index('tmpl_branch_idx').on(t.branchId),
+    activeIdx: index('tmpl_active_idx').on(t.isActive),
+  })
+);
+
+// ─── task_instances — نمونه‌های اجرای وظیفه (هر روز/دوره) ─────────
+export const taskInstances = pgTable(
+  'task_instances',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    templateId: uuid('template_id').references(() => taskTemplates.id, { onDelete: 'set null' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    assignedUserId: uuid('assigned_user_id').references(() => users.id, { onDelete: 'set null' }),
+    dueDate: text('due_date').notNull(), // Jalali string
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+    status: taskStatusEnum('status').notNull().default('pending'),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchIdx: index('tinst_branch_idx').on(t.branchId),
+    templateIdx: index('tinst_template_idx').on(t.templateId),
+    statusIdx: index('tinst_status_idx').on(t.status),
+    dueIdx: index('tinst_due_idx').on(t.dueDate),
+  })
+);
+
+// ─── Types ───────────────────────────────────────────────────────
+export type PurchaseOrder = typeof purchaseOrders.$inferSelect;
+export type PurchaseOrderItem = typeof purchaseOrderItems.$inferSelect;
+export type Equipment = typeof equipment.$inferSelect;
+export type MaintenanceLog = typeof maintenanceLogs.$inferSelect;
+export type TaskTemplate = typeof taskTemplates.$inferSelect;
+export type TaskInstance = typeof taskInstances.$inferSelect;

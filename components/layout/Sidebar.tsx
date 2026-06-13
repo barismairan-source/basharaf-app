@@ -7,7 +7,8 @@ import {
   LayoutDashboard, Receipt, BarChart3,
   Landmark, Users, UtensilsCrossed, ScrollText, Briefcase, Calculator,
   Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
-  CalendarClock, ChevronLeft, ChevronRight, LogOut,
+  CalendarClock, ChevronLeft, ChevronRight, LogOut, Wrench, ShoppingCart,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
@@ -44,6 +45,9 @@ const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     items: [
       { href: '/inventory', label: 'انبار و آشپزخانه', icon: Package,       roles: ['SuperAdmin', 'Warehouse'] },
       { href: '/menu',      label: 'مدیریت منو',        icon: UtensilsCrossed, roles: ['SuperAdmin'] },
+      { href: '/equipment', label: 'تجهیزات',          icon: Wrench,        roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
+      { href: '/purchase-orders', label: 'سفارش خرید', icon: ShoppingCart,  roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
+      { href: '/tasks', label: 'وظایف روزانه',         icon: ClipboardList, roles: ['SuperAdmin', 'BranchUser', 'Warehouse'] },
     ],
   },
   {

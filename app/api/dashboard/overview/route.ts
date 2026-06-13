@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { eq, and, lte, sql, desc, gt } from 'drizzle-orm';
+import { eq, and, lte, sql, desc, gt, inArray } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { canAccessSection } from '@/lib/auth/permissions';
 import { handleError } from '@/lib/api-error';
+import { getTodayJalali } from '@/lib/jalali';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,6 +92,27 @@ export async function GET(req: Request) {
       .orderBy(desc(schema.payrollRuns.createdAt))
       .limit(1) : [null as any];
 
+    // ── ۴) عملیات: سفارش خرید باز / تجهیزات در تعمیر / وظایف امروزِ ناتمام ──
+    const branchPoFilter = branchId ? eq(schema.purchaseOrders.branchId, branchId) : undefined;
+    const branchEquipFilter = branchId ? eq(schema.equipment.branchId, branchId) : undefined;
+    const branchTaskFilter = branchId ? eq(schema.taskInstances.branchId, branchId) : undefined;
+
+    const [openPoRow] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.purchaseOrders)
+      .where(and(branchPoFilter, inArray(schema.purchaseOrders.status, ['draft', 'sent', 'partial'])));
+
+    const [equipRepairRow] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.equipment)
+      .where(and(branchEquipFilter, eq(schema.equipment.status, 'maintenance')));
+
+    const [pendingTasksRow] = await db.select({ count: sql<number>`count(*)::int` })
+      .from(schema.taskInstances)
+      .where(and(
+        branchTaskFilter,
+        eq(schema.taskInstances.dueDate, getTodayJalali()),
+        eq(schema.taskInstances.status, 'pending'),
+      ));
+
     return NextResponse.json({
       branchId,
       inventory: {
@@ -116,6 +138,11 @@ export async function GET(req: Request) {
           status: latestRun.status,
           branchName: latestRun.branchName,
         } : null,
+      },
+      operations: {
+        openPoCount: openPoRow?.count ?? 0,
+        equipmentInRepairCount: equipRepairRow?.count ?? 0,
+        todayIncompleteTasks: pendingTasksRow?.count ?? 0,
       },
     });
   } catch (e) {

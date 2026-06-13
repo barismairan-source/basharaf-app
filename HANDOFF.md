@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.4-inv-foundation` |
-| **آخرین به‌روزرسانی** | 2026-06-12 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` در این ماشین گیر می‌کند (مشکل محیطی Next.js 14؛ gate = tsc؛ build نهایی از Liara) |
-| **دیپلوی** | zip آماده: `basharaf-0.9.4-inv-foundation.zip` در پوشه‌ی والد. SQL migration: `db-inventory-reversal.sql` باید قبل از deploy اجرا شود. |
-| **کار نیمه‌تمام (in-progress)** | — (همه چیز commit شد) |
-| **کار بعدی پیشنهادی** | (۱) اجرای `db-inventory-reversal.sql` روی Liara DB، سپس deploy zip. (۲) تست ۶ مرحله‌ای در چک‌لیست بخش ۶-د. (۳) پس از تأیید، Backlog #5 (اجرای integration tests با DATABASE_URL واقعی). |
-| **بلاک‌شده/منتظر کاربر** | deploy + تست روی Liara |
+| **نسخه** | `0.9.5-operations` |
+| **آخرین به‌روزرسانی** | 2026-06-13 — اکانت: ۲ |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
+| **دیپلوی** | zip آماده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) — هنوز deploy/تست نشده. zip قبلی `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql` هم هنوز روی Liara اجرا/دیپلوی نشده‌اند (تأیید نشد). |
+| **کار نیمه‌تمام (in-progress)** | کاربر تست فاز۶/۷ را تأیید کرد ✅ — commit فاز۲–۸ همین حالا انجام شد. باقی‌مانده: اجرای `db-operations-migration.sql` (+`db-inventory-reversal.sql`) روی DB **قبل از push**، سپس push + دیپلوی zip. |
+| **کار بعدی پیشنهادی** | (۱) کاربر/اکانت بعدی: اطمینان از اجرای `db-inventory-reversal.sql` + `db-operations-migration.sql` در Supabase SQL Editor (Run without RLS). (۲) سپس `git push`. (۳) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara. |
+| **بلاک‌شده/منتظر کاربر** | اجرای ۲ migration روی DB قبل از push (تا `/api/dashboard/overview` در production خطا ندهد) |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,26 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-13 — ماژول عملیات: تجهیزات/سفارش‌خرید/وظایف روزانه + RBAC/سایدبار/داشبورد (فاز ۲–۷) — اکانت ۲
+**چه شد:**
+(۱) **فاز ۲–۴ (پیش از این ورودی، در همین زنجیره‌ی جلسات):** ماژول «تجهیزات» (CRUD + سوابق نگهداری `maintenance_logs`) و ماژول «سفارش خرید» (CRUD، گردش وضعیت draft→sent→partial/received→cancelled، دریافت کالا با ساخت برگه‌ی ورود انبار) ساخته شدند. جدول‌های جدید در `db-operations-migration.sql`: `equipment`, `maintenance_logs`, `purchase_orders`, `purchase_order_items`.
+(۲) **فاز ۵ (پیش از این ورودی):** پیشنهاد سفارش خودکار از روی `min_base` انبار (`/api/purchase-orders/suggestions`) — کامل بود، در این جلسه نیاز به rework نداشت.
+(۳) **فاز ۶ (وظایف روزانه):** جدول‌های `task_templates`/`task_instances` + `store/slices/tasksSlice.ts` (loadTaskTemplates, createTaskTemplate, updateTaskTemplate, loadTasks, generateTodayTasks idempotent, updateTaskInstance) + صفحه‌ی `/tasks` (فیلتر شعبه/تاریخ/مسئول + «کارهای من»، ساخت وظایف امروز، تکمیل/رد/بازگشت/تخصیص، مدیریت قالب‌ها برای ادمین). انباردار هم به `/tasks` دسترسی دارد (وظایف انبار مثل شماری روزانه به او تخصیص می‌یابد).
+(۴) **فاز ۷ (RBAC + سایدبار + داشبورد):** `/purchase-orders`, `/equipment`, `/tasks` به `PROTECTED_PREFIXES` در `middleware.ts` اضافه شد. سایدبار: «تجهیزات»/«سفارش خرید» → SuperAdmin+BranchUser، «وظایف روزانه» → هر سه نقش. صفحه‌ی `[id]`/دریافت کالای سفارش‌خرید از قبل برای Warehouse باز بود (بدون آیتم سایدبار جدا — انباردار راه ورود مستقیم به یک PO خاص از داخل اپ ندارد، یادداشت در Backlog). داشبورد: کامپوننت جدید `OperationsStrip` (۳ کارت کلیک‌پذیر: سفارش خرید باز / تجهیزات در تعمیر / وظایف امروزِ ناتمام) از فیلد جدید `operations` در `/api/dashboard/overview`. نسخه `package.json` → `0.9.5-operations`. `SKILL.md` به‌روزرسانی شد (بخش وضعیت ماژول عملیات + migration جدید + یادآوری روال build/commit طبق CLAUDE.md).
+(۵) **فاز ۸ (مستندسازی کانال فروش — فقط مستند):** سند تصمیم `project-docs/decision-channel-column.md` ساخته شد — افزودن ستون `channel` (text, nullable) به `transactions`، چرایی (نه `sale_meta`، نه pgEnum)، مقادیر پیشنهادی (`dine_in`/`takeaway`/`delivery_own`/`delivery_app`)، اثر روی کد در فاز پیاده‌سازی آینده، و ۵ سوال باز برای کاربر. **هیچ کد/migration/schema تغییر نکرد** — طبق بریف.
+**فایل‌ها (خلاصه):** `app/(app)/equipment/**` (جدید)، `app/(app)/purchase-orders/**` (جدید)، `app/(app)/tasks/page.tsx` (جدید)، `app/api/equipment/**`, `app/api/maintenance/**`, `app/api/purchase-orders/**`, `app/api/task-templates/**`, `app/api/tasks/**` (همه جدید)، `components/dashboard/OperationsStrip.tsx` (جدید) + `components/dashboard/index.ts`، `components/layout/Sidebar.tsx`، `middleware.ts`، `app/(app)/dashboard/page.tsx`، `app/api/dashboard/overview/route.ts`، `store/index.ts` + `store/slices/operationsSlice.ts` (جدید) + `store/slices/tasksSlice.ts` (جدید)، `lib/db/schema.ts`، `lib/db/createExpenseTx.ts` (جدید)، `lib/db/operations.serializers.ts` (جدید)، `types/operations.ts` (جدید) + `types/index.ts`، `lib/auth/audit.ts`، `app/api/transactions/route.ts`، `app/(app)/inventory/page.tsx`، `db-operations-migration.sql` (جدید — equipment/maintenance_logs/purchase_orders/purchase_order_items/task_templates/task_instances + enumها)، `package.json`، `SKILL.md`، `project-docs/decision-channel-column.md` (جدید).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (همه‌ی روت‌های جدید `/tasks`, `/equipment(+/[id])`, `/purchase-orders(+/[id])`, `/api/tasks*`, `/api/task-templates*`, `/api/equipment*`, `/api/purchase-orders*` ساخته شدند). فاز۸ فقط `.md` است — بدون اثر بر build.
+**ناتمام:**
+- کاربر سناریوهای فاز۶/۷ را تست کرد و تأیید کرد ("تست کردم کار میکنه") → این commit انجام شد.
+- ⚠️ **مهم — قبل از `git push`:** `db-operations-migration.sql` (+`db-inventory-reversal.sql` که از قبل هم مانده) باید روی همان DB که Vercel/production به آن وصل است اجرا شود. چون `/api/dashboard/overview` (که `UnifiedOverview` + `OperationsStrip` هر دو از آن می‌خوانند، و در `/dashboard` برای **همه‌ی کاربران** لود می‌شود) حالا جدول‌های `equipment`, `purchase_orders`, `task_instances` را هم query می‌کند — اگر این جدول‌ها در production نباشند، کل `/dashboard` ممکن است خطا بدهد. **push نکن تا این migration تأیید نشده باشد.**
+- باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» روی production لیارا: فیکس toast واقعی (نمایش `equipmentError`/`poError` به‌جای پیام عمومی) انجام شد، کاربر هنوز retest نکرده.
+**برای جلسه‌ی بعد:**
+۱. مطمئن شو `db-operations-migration.sql` و `db-inventory-reversal.sql` در Supabase SQL Editor روی DB متصل به production اجرا شده‌اند (idempotent، "Run without RLS").
+۲. سپس `git push`.
+۳. دیپلوی `basharaf-tasks-ops-liara.zip` (≈۱.۱MB، شامل migration) روی Liara.
+۴. retest باگ تجهیزات/سفارش‌خرید روی production با zip جدید.
+۵. وقتی کاربر آماده بود: پاسخ به ۵ سوال باز `project-docs/decision-channel-column.md` و شروع پیاده‌سازی ستون `channel`.
 
 ## 📓 2026-06-12 — تکمیل ماژول انبار (reversal UI، واریانس، exception dashboard، zip) — اکانت ۱
 **چه شد:**
@@ -104,19 +124,7 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** Backlog #5 — تست integration برای balance guardها.
 
-## 📓 2026-06-10 — account selection در تأیید رسید خرید (Backlog #2) — اکانت ۱
-**چه شد:** `postPurchaseToAccounting` جستجوی داخلی حساب را حذف کرد و `resolvedAccountId` را به‌عنوان آرگومان صریح دریافت می‌کند. approve route: `accountId` (optional uuid) به `bodySchema` اضافه شد؛ priority: body.accountId (validate) → first active account for branch → 422 `NO_ACTIVE_ACCOUNT`. UI: تأیید رسید (kind='in') modal انتخاب صندوق نشان می‌دهد (accounts از store، موجودی نمایشی)؛ سایر انواع بدون تغییر. `tsconfig.json`: `release-artifacts/` و `graphify-out/` از کامپایل خارج شدند.
-**فایل‌ها:** `lib/inventory/postToAccounting.ts`، `app/api/inventory/vouchers/[id]/approve/route.ts`، `lib/repos/inventory.types.ts`، `lib/repos/inventory.api.ts`، `app/(app)/inventory/page.tsx`، `tsconfig.json`.
-**Build:** tsc سبز ✅ / build سبز ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** Backlog #3 (حذف `/api/_diag` اگر هنوز هست) یا Backlog #5 (تست integration برای balance guardها).
-
-## 📓 2026-06-10 — stocktake accounting entry (Backlog #1) — اکانت ۱
-**چه شد:** تابع `postStocktakeToAccounting` به `lib/inventory/postToAccounting.ts` اضافه شد. در approve route، قبل از loop متغیر `stocktakeVarianceCost` تعریف شد؛ داخل loop به‌ازای هر خط `diff * pre.a` (WAC قبل از تأیید) انباشته می‌شود. بعد از loop، اگر مغایرت ≠ ۰، یک تراکنش با `accountId: null` ساخته می‌شود: کسری → expense «هزینه مغایرت انبارگردانی - فیش شماره X»، مازاد → income «درآمد تعدیل انبارگردانی - فیش شماره X». اتمیک با همان db.transaction؛ idempotent با linkedTransactionId؛ برگه با txId وصل می‌شود.
-**فایل‌ها:** `lib/inventory/postToAccounting.ts` (+`postStocktakeToAccounting`)، `app/api/inventory/vouchers/[id]/approve/route.ts` (+import، +variance accumulator، +accounting call).
-**Build:** tsc سبز ✅ / build سبز ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** account selection در خرید (Backlog #2) — انتخاب دستی صندوق هنگام ثبت برگه‌ی خرید به‌جای «اولین حساب فعال».
+> ⬇️ ورودی‌های قدیمی‌تر (account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
 
 ---
 
@@ -127,11 +135,15 @@
 2. ~~**account selection در خرید**~~ — ✅ انجام شد (2026-06-10، commit 1a4c9f5).
 3. ~~**چک `/api/_diag`**~~ — ✅ آدیت شد (2026-06-10): endpoint وجود ندارد، هیچ credential-ای در HTTP response فاش نمی‌شود.
 4. ~~**Liara `28P01`**~~ — کد فیکس شد ✅ (2026-06-10، `lib/db/client.ts` +`parseDatabaseUrl`، `v9.1.0/basharaf-deploy.zip` آماده)؛ منتظر deploy واقعی کاربر روی لیارا برای تأیید نهایی.
+14. **دیپلوی ماژول عملیات (فاز۲–۷، نسخه `0.9.5-operations`)** — کد + tsc + build همه آماده/سبز روی دیسک ولی commit نشده. منتظر تست کاربر برای سناریوهای فاز۶/۷، سپس اجرای `db-operations-migration.sql` (+`db-inventory-reversal.sql` که از قبل هم اجرا نشده) روی DB → commit/push یکجا → دیپلوی `basharaf-tasks-ops-liara.zip`.
+15. **retest باگ «خطا در ثبت تجهیزات/سفارش خرید»** روی production لیارا — فیکس toast انجام شد (نمایش خطای واقعی به‌جای پیام عمومی)، کاربر هنوز تأیید نکرده. zip جدید `basharaf-tasks-ops-liara.zip` شامل همین فیکس هم هست.
 
 ### 🟡 متوسط
 5. ~~**تست integration برای balance guardها**~~ — کد نوشته شد ✅ (2026-06-10، سه سناریوی A/B/C در `tests/integration/`، tsc/build سبز)؛ اجرای واقعی روی DB غیر-production هنوز انجام نشده — منتظر DATABASE_URL تستی از کاربر.
 6. موارد 🟡 باقی‌مانده‌ی `project-docs/domain-audit.md`.
 7. Seed منو روی دیتابیس تازه خالی است (۳۱ آیتم فقط در `supabase-v4-menu-migration.sql` آرشیوی).
+16. **انباردار بدون نقطه‌ورود مستقیم به یک سفارش‌خرید خاص** (فاز۷) — صفحه‌ی `/purchase-orders/[id]` از قبل برای Warehouse منطق receive دارد، ولی هیچ UI فعلی لینکی به یک PO خاص برای انباردار نمی‌دهد. شاید نیاز به لیست «سفارش‌های منتظر دریافت شعبه‌ی من» در `/tasks` یا بخش جدید.
+17. ~~**فاز۸ (مستندسازی)**~~ — ✅ انجام شد (2026-06-13): سند تصمیم `project-docs/decision-channel-column.md` (ستون `channel` روی `transactions`، فقط مستند). پیاده‌سازی واقعی منتظر پاسخ کاربر به ۵ سوال باز آن سند است.
 
 ### 🔵 ساختاری/بلندمدت
 8. GL دوطرفه‌ی کامل — `journal_vouchers` فقط برای حقوق؛ هسته single-entry.
@@ -181,6 +193,7 @@
 **انبار (۷):** `inv_items` (raw/prep، موجودی دولایه + WAC), `inv_recipes`, `inv_recipe_lines`, `inv_vouchers` (in/out/waste/sale/produce/stocktake), `inv_voucher_lines` (+`expiryDate`), `inv_stock_tx` (append-only), `inv_daily_sales`.
 **استخدام (۱):** `job_applications`.
 **مشتریان/وفاداری/رزرو (۷):** `customers`, `loyalty_entries` (اتمیک با SQL مستقیم), `coupons`, `coupon_redemptions` (race-safe با unique), `feedback`, `tables` (export: `restaurantTables`), `reservations` (state machine: pending→confirmed→seated→…).
+**عملیات (۶، فاز۲–۶، migration: `db-operations-migration.sql`):** `equipment`, `maintenance_logs`, `purchase_orders`, `purchase_order_items`, `task_templates`, `task_instances`.
 
 ## ۳. احراز هویت و مجوزها
 - نقش‌ها: `SuperAdmin` (همه‌چیز) / `BranchUser` (شعبه‌ی خودش) / `Warehouse` (انبار شعبه‌ی خودش).
@@ -208,16 +221,17 @@
 **حقوق:** `employees` · `payroll/events` · `payroll/runs` (+calculate/approve/post).
 **استخدام:** `recruitment` (+questions, upload).
 **CRM:** `customers` · `coupons` (+validate) · `feedback` (+summary) · `tables` · `reservations`.
+**عملیات (فاز۲–۶):** `/api/equipment` (+`[id]`) · `/api/maintenance` · `/api/purchase-orders` (+`[id]`, `[id]/receive`, `suggestions`) · `/api/task-templates` (+`[id]`) · `/api/tasks` (+`[id]`, `generate-today`).
 
 ## ۶. صفحات UI — `app/(app)/`
-`/dashboard` · `/transactions(+/new)` · `/accounts(+/[id])` · `/contacts` · `/reports` · `/employees` · `/payroll` · `/inventory` · `/menu` · `/recruitment` · `/customers` · `/reservations` · `/coupons` · `/logs` · `/settings`.
+`/dashboard` · `/transactions(+/new)` · `/accounts(+/[id])` · `/contacts` · `/reports` · `/employees` · `/payroll` · `/inventory` · `/menu` · `/recruitment` · `/customers` · `/reservations` · `/coupons` · `/logs` · `/settings` · `/equipment(+/[id])` · `/purchase-orders(+/[id])` · `/tasks`.
 **خارج از app:** `/m` (منوی عمومی)، `/apply` (استخدام عمومی)، `/login`, `/signup`, `/forgot`.
 
-## ۷. Zustand — ۱۸ slice
-auth, transactions, users, refs, accounts, contacts, menu, notifications, appSettings, preferences (تنها persist‌شونده), ui, employees, payroll, recruitment, customers, coupons, reservations, feedback.
+## ۷. Zustand — ۲۰ slice
+auth, transactions, users, refs, accounts, contacts, menu, notifications, appSettings, preferences (تنها persist‌شونده), ui, employees, payroll, recruitment, customers, coupons, reservations, feedback, operations (تجهیزات+PO), tasks (وظایف روزانه).
 
 ## ۸. Migrationها (idempotent)
-`db-setup.sql` (هسته ۱۳ جدول) · `db-seed.sql` (۳ شعبه، ۴ کاربر، ۹ دسته، ۳ صندوق) · `db-inventory-migration.sql` · `db-payroll-migration.sql` · `db-stage-payroll-full.sql` · `customers-migration.sql` · `supabase-v5-menu-sale-deduction-migration.sql` (sale_meta) · `supabase-v6-waste-expiry-migration.sql` (expiry_date) · `supabase-v7-bigint-migration.sql` (numeric 24,6) · `db-role-to-text.sql` · `fix-categories.sql` · `supabase-logs-migration.sql`.
+`db-setup.sql` (هسته ۱۳ جدول) · `db-seed.sql` (۳ شعبه، ۴ کاربر، ۹ دسته، ۳ صندوق) · `db-inventory-migration.sql` · `db-payroll-migration.sql` · `db-stage-payroll-full.sql` · `customers-migration.sql` · `supabase-v5-menu-sale-deduction-migration.sql` (sale_meta) · `supabase-v6-waste-expiry-migration.sql` (expiry_date) · `supabase-v7-bigint-migration.sql` (numeric 24,6) · `db-role-to-text.sql` · `fix-categories.sql` · `supabase-logs-migration.sql` · `db-inventory-reversal.sql` · `db-operations-migration.sql` (equipment/maintenance_logs/purchase_orders/purchase_order_items/task_templates/task_instances — هنوز روی DB اجرا نشده).
 آرشیو: `migrations-archive/`. ⚠️ به آیتم «برای تأیید» در Backlog نگاه کن (فایل‌های recruitment/permissions/warehouse-role در این لیست نیستند).
 
 ## ۹. قابلیت‌های تأییدشده

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import { Package, ClipboardList, AlertTriangle, Check, X, Loader2, Plus, FileText, ChefHat, TrendingUp, Trash2, Pencil, Calculator, FileSpreadsheet, Download, Upload, ChevronDown, ChevronLeft, Printer, CalendarClock, RotateCcw } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
@@ -1531,6 +1532,7 @@ type ExceptionsData = {
 };
 
 function ExceptionCards({ branchId }: { branchId: string }) {
+  const router = useRouter();
   const [data, setData] = useState<ExceptionsData | null>(null);
 
   const fetch_ = useCallback(async () => {
@@ -1563,13 +1565,21 @@ function ExceptionCards({ branchId }: { branchId: string }) {
 
   return (
     <div className="flex gap-2 flex-wrap">
-      {cards.map(c => (
-        <div key={c.label} className="flex items-center gap-1.5 bg-white border border-stone-200 rounded-lg px-3 py-2 text-[12px]">
-          <span>{c.icon}</span>
-          <span className="text-stone-600">{c.label}:</span>
-          <span className={`font-medium tabular-nums ${cardColor(c.count)}`}>{c.count}</span>
-        </div>
-      ))}
+      {cards.map(c => {
+        const clickable = c.label === 'زیر حداقل' && c.count > 0;
+        return (
+          <div
+            key={c.label}
+            onClick={clickable ? () => router.push(`/purchase-orders?suggestBranch=${branchId}`) : undefined}
+            className={`flex items-center gap-1.5 bg-white border border-stone-200 rounded-lg px-3 py-2 text-[12px] ${clickable ? 'cursor-pointer hover:border-stone-300' : ''}`}
+            title={clickable ? 'پیشنهاد سفارش خرید برای این اقلام' : undefined}
+          >
+            <span>{c.icon}</span>
+            <span className="text-stone-600">{c.label}:</span>
+            <span className={`font-medium tabular-nums ${cardColor(c.count)}`}>{c.count}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }

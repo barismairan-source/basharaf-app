@@ -23,3 +23,4 @@ export type {
 } from './customer';
 export * from './payroll';
 export * from './inventory';
+export * from './operations';

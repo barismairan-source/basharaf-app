@@ -49,7 +49,7 @@ async function fetchFreshAccess(
 
 const SESSION_COOKIE = 'basharaf-session';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/logs', '/employees', '/payroll', '/inventory', '/recruitment', '/customers', '/reservations', '/coupons'];
+const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/logs', '/employees', '/payroll', '/inventory', '/recruitment', '/customers', '/reservations', '/coupons', '/purchase-orders', '/equipment', '/tasks'];
 const AUTH_ROUTES = ['/login', '/signup', '/forgot'];
 
 export async function middleware(request: NextRequest) {

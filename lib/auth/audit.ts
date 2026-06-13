@@ -32,7 +32,21 @@ export type AuditAction =
   | 'settings.factoryReset'
   | 'loyalty.earn'
   | 'loyalty.redeem'
-  | 'loyalty.adjust';
+  | 'loyalty.adjust'
+  | 'equipment.created'
+  | 'equipment.updated'
+  | 'equipment.deleted'
+  | 'maintenance.created'
+  | 'po.created'
+  | 'po.updated'
+  | 'po.received'
+  | 'po.receiveDiscrepancy'
+  | 'taskTemplate.created'
+  | 'taskTemplate.updated'
+  | 'task.generated'
+  | 'task.completed'
+  | 'task.skipped'
+  | 'task.assigned';
 
 export async function audit(params: {
   action: AuditAction;
