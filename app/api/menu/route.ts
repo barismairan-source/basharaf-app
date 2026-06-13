@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { asc } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { handleError } from '@/lib/api-error';
-import { rowToMenuItem, rowToMenuCategory } from '@/lib/db/menuSerializers';
+import { rowToMenuItem, rowToMenuCategory, rowToMenuSettings } from '@/lib/db/menuSerializers';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,10 +32,11 @@ export async function GET() {
     }));
 
     const s = settingsRows[0];
-    const settings = s ? {
-      faFont: s.faFont, phone: s.phone, addressFa: s.addressFa,
-      addressEn: s.addressEn, instagram: s.instagram,
-    } : { faFont: 'IRANMarker', phone: '', addressFa: '', addressEn: '', instagram: '' };
+    const settings = s ? rowToMenuSettings(s) : {
+      faFont: 'IRANMarker', phone: '', addressFa: '', addressEn: '', instagram: '',
+      showPriceHall: true, showPriceTakeaway: true, takeawaySlug: 'birun',
+      hallTitle: null, takeawayTitle: null, hallNote: null, takeawayNote: null,
+    };
 
     return NextResponse.json({ sections, settings });
   } catch (e) {

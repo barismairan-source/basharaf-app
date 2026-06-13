@@ -14,7 +14,10 @@ export interface MenuItem {
   titleFa: string;
   descriptionEn: string;
   descriptionFa: string;
-  price: number;
+  price: number | null;
+  priceTakeaway: number | null;
+  inHall: boolean;
+  inTakeaway: boolean;
   isAvailable: boolean;
   sortOrder: number;
 }
@@ -29,4 +32,11 @@ export interface MenuSettings {
   addressFa: string;
   addressEn: string;
   instagram: string;
+  showPriceHall: boolean;
+  showPriceTakeaway: boolean;
+  takeawaySlug: string;
+  hallTitle: string | null;
+  takeawayTitle: string | null;
+  hallNote: string | null;
+  takeawayNote: string | null;
 }

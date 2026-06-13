@@ -14,7 +14,10 @@ const createSchema = z.object({
   titleFa: z.string().min(1).max(160),
   descriptionEn: z.string().max(500).optional().default(''),
   descriptionFa: z.string().max(500).optional().default(''),
-  price: z.number().min(0).max(999_999_999),
+  price: z.number().min(0).max(999_999_999).nullable().optional(),
+  priceTakeaway: z.number().min(0).max(999_999_999).nullable().optional(),
+  inHall: z.boolean().optional().default(true),
+  inTakeaway: z.boolean().optional().default(false),
   isAvailable: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
 });

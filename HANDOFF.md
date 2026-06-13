@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.5-operations` |
+| **نسخه** | `0.9.6-menu-channel` |
 | **آخرین به‌روزرسانی** | 2026-06-13 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
 | **دیپلوی** | zip آماده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) — هنوز deploy/تست نشده. zip قبلی `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql` هم هنوز روی Liara اجرا/دیپلوی نشده‌اند (تأیید نشد). |
-| **کار نیمه‌تمام (in-progress)** | — (commit `f531dcf` + push انجام شد؛ کاربر تأیید کرد migration `db-operations-migration.sql` قبلاً روی DB اجرا شده) |
-| **کار بعدی پیشنهادی** | (۱) Vercel به‌صورت خودکار از `f531dcf` دیپلوی می‌کند (~۲-۳ دقیقه) — بعد از آن `/dashboard` (کارت‌های جدید عملیات) را روی production چک کن. (۲) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (اگر Liara هم استفاده می‌شود). (۳) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» روی production با کد جدید. (۴) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **کار نیمه‌تمام (in-progress)** | فاز۱ کانال منو (سالن/بیرون‌بر) commit محلی شد؛ منتظر تأیید کاربر که `db-menu-channel-migration.sql` روی DB اجرا شده تا `git push` انجام شود. |
+| **کار بعدی پیشنهادی** | (۱) بعد از تأیید migration → `git push` + چک `/menu` و `/m` روی production. (۲) فاز۲ — نمایش `/m` بر اساس کانال سالن/بیرون‌بر (`show_price_hall/takeaway`, `takeaway_slug`, عنوان/یادداشت هر کانال، `item.inHall/inTakeaway/priceTakeaway`). (۳) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۴) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۵) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
+| **بلاک‌شده/منتظر کاربر** | تأیید اجرای `db-menu-channel-migration.sql` روی DB → بعد `git push origin main`. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,24 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-13 — منو: کانال سالن/بیرون‌بر (فاز۱ — داده + پنل ادمین) — اکانت ۲
+**چه شد:**
+(۱) Migration جدید `db-menu-channel-migration.sql` (idempotent): `menu_items` +`in_hall`(bool, default true) +`in_takeaway`(bool, default false) +`price_takeaway`(bigint nullable) و `price` می‌شود nullable؛ `menu_settings` +`show_price_hall`/`show_price_takeaway`(bool, default true) +`takeaway_slug`(text, default `'birun'`) +`hall_title`/`takeaway_title`/`hall_note`/`takeaway_note`(text nullable).
+(۲) `lib/db/schema.ts` و `types/menu.ts` با ستون‌های جدید هماهنگ شدند (`price`/`priceTakeaway` قابل null).
+(۳) `lib/db/menuSerializers.ts`: `rowToMenuItem` به‌روز شد + سریالایزر جدید `rowToMenuSettings` (در `/api/menu` و `/api/menu/settings` مشترک استفاده می‌شود).
+(۴) API: zod schemaهای آیتم (`POST`/`PATCH`) فیلدهای `inHall`/`inTakeaway`/`priceTakeaway` + `price` nullable را می‌پذیرند. `PATCH /api/menu/settings` فیلدهای کانال جدید را می‌پذیرد + اعتبارسنجی `takeawaySlug` (regex `^[a-z0-9-]+$`) + چک یکتایی در برابر `menu_categories.slug` (۴۰۹ `SLUG_CONFLICT` در صورت تداخل).
+(۵) پنل `/menu`: تب «آیتم‌ها» — فرم افزودن/ویرایش (ردیف ویرایش درون‌خطی با آیکن `Edit3`/`X`) با دو سوییچ «نمایش در سالن/بیرون‌بر»، دو فیلد قیمت اختیاری با `formatNumericInputValue` (راهنما: «خالی = بدون قیمت» برای سالن، «خالی = همون قیمت سالن» برای بیرون‌بر)، و دو Chip «سالن»/«بیرون» در لیست. تب «تنظیمات» — کارت جدید «کانال‌های سالن و بیرون‌بر»: دو سوییچ نمایش قیمت، فیلد `takeaway_slug` با پیش‌نمایش زنده‌ی `/m/{slug}` + خطای اعتبارسنجی، و عنوان/یادداشت اختیاری برای هر کانال.
+(۶) `/m`: فقط یک خط تغییر کرد — `formatPrice(item.price ?? 0)` در `MenuItem.tsx` برای سازگاری با نوع nullable جدید؛ رفتار فعلی برای آیتم‌های موجود (همه قیمت دارند) کاملاً بدون تغییر. این فاز فقط داده + پنل ادمین است؛ نمایش عمومی `/m` بر اساس کانال = فاز۲ (طبق بریف).
+نسخه `package.json` → `0.9.6-menu-channel`.
+**فایل‌ها:** `db-menu-channel-migration.sql` (جدید)، `lib/db/schema.ts`، `types/menu.ts`، `lib/db/menuSerializers.ts`، `app/api/menu/items/route.ts`، `app/api/menu/items/[id]/route.ts`، `app/api/menu/settings/route.ts`، `app/api/menu/route.ts`، `components/menu/MenuItem.tsx`، `app/(app)/menu/page.tsx`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (`/menu` 15.2 kB، `/m` 2.96 kB، همه‌ی روت‌ها ساخته شدند).
+**ناتمام:** فاز۲ — اعمال `show_price_hall`/`show_price_takeaway`/`takeaway_slug`/عنوان‌ها/یادداشت‌های هر کانال و `item.inHall/inTakeaway/priceTakeaway` در صفحه‌ی عمومی `/m` (و احتمالاً مسیر `/m/[slug]` برای بیرون‌بر) — انجام نشده، طبق بریف.
+**Commit/Push:** ⚠️ `/api/menu` (عمومی، بدون auth، مصرف‌شده توسط `/m` برای همه‌ی بازدیدکنندگان + پنل `/menu`) حالا ستون‌های جدید را از `menu_items`/`menu_settings` می‌خواند — اگر `db-menu-channel-migration.sql` روی DB اجرا نشده باشد، بعد از دیپلوی این کد `/api/menu` (و در نتیجه `/m`) برای همه‌ی مشتری‌ها خطا می‌دهد. قبل از push از کاربر پرسیده شد؛ کاربر گفت **الان روی pgAdmin اجرا می‌کنم و بعد بگو push کن** — یعنی commit محلی انجام شد ولی `git push` منتظر تأیید کاربر است.
+**برای جلسه‌ی بعد:**
+۱. اگر کاربر تأیید کرد migration اجرا شده → `git push origin main`، بعد `/menu` و `/m` روی production چک شوند (انتظار: هیچ خطایی، چون فیلدهای جدید مقدار پیش‌فرض دارند).
+۲. فاز۲ — نمایش `/m` بر اساس کانال (سالن/بیرون‌بر) با استفاده از `show_price_hall`/`show_price_takeaway`/`hall_title`/`takeaway_title`/`hall_note`/`takeaway_note`/`item.inHall`/`item.inTakeaway`/`item.priceTakeaway`، و احتمالاً مسیر جدید `/m/{takeawaySlug}`.
+۳. سایر آیتم‌های Backlog (#14 دیپلوی ماژول عملیات روی Liara، #15 retest باگ تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions).
 
 ## 📓 2026-06-13 — ماژول عملیات: تجهیزات/سفارش‌خرید/وظایف روزانه + RBAC/سایدبار/داشبورد (فاز ۲–۷) — اکانت ۲
 **چه شد:**

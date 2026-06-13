@@ -3,9 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip, Switch } from '@/components/ui';
 import { useAppStore } from '@/store';
-import { fmt, cn } from '@/lib/utils';
+import { fmt, cn, formatNumericInputValue } from '@/lib/utils';
 import { FA_FONTS } from '@/lib/menu/fonts';
 import type { MenuItem } from '@/types';
 
@@ -83,18 +83,103 @@ export default function MenuAdminPage() {
 }
 
 // ─── Items Tab ───────────────────────────────────────────────────
+interface ItemFormState {
+  categoryId: string;
+  titleFa: string;
+  titleEn: string;
+  descriptionFa: string;
+  descriptionEn: string;
+  price: string;
+  priceTakeaway: string;
+  inHall: boolean;
+  inTakeaway: boolean;
+}
+
+const EMPTY_ITEM_FORM: ItemFormState = {
+  categoryId: '', titleFa: '', titleEn: '', descriptionFa: '', descriptionEn: '',
+  price: '', priceTakeaway: '', inHall: true, inTakeaway: false,
+};
+
+function itemToForm(item: MenuItem): ItemFormState {
+  return {
+    categoryId: item.categoryId,
+    titleFa: item.titleFa,
+    titleEn: item.titleEn,
+    descriptionFa: item.descriptionFa,
+    descriptionEn: item.descriptionEn,
+    price: item.price === null ? '' : item.price.toLocaleString('en-US'),
+    priceTakeaway: item.priceTakeaway === null ? '' : item.priceTakeaway.toLocaleString('en-US'),
+    inHall: item.inHall,
+    inTakeaway: item.inTakeaway,
+  };
+}
+
+function parsePriceInput(value: string): number | null {
+  const digits = value.replace(/\D/g, '');
+  return digits ? parseInt(digits, 10) : null;
+}
+
+function ItemFormFields({ form, setForm, sections }: {
+  form: ItemFormState;
+  setForm: React.Dispatch<React.SetStateAction<ItemFormState>>;
+  sections: any;
+}) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <Field label="دسته">
+        <Select value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>
+          <option value="">— انتخاب دسته —</option>
+          {sections.map((s: any) => <option key={s.id} value={s.id}>{s.labelFa}</option>)}
+        </Select>
+      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center justify-between rounded-md border border-stone-200 px-3 h-10">
+          <span className="text-[12px] text-stone-600">نمایش در سالن</span>
+          <Switch checked={form.inHall} onCheckedChange={v => setForm({ ...form, inHall: v })} aria-label="نمایش در سالن" />
+        </div>
+        <div className="flex items-center justify-between rounded-md border border-stone-200 px-3 h-10">
+          <span className="text-[12px] text-stone-600">نمایش در بیرون‌بر</span>
+          <Switch checked={form.inTakeaway} onCheckedChange={v => setForm({ ...form, inTakeaway: v })} aria-label="نمایش در بیرون‌بر" />
+        </div>
+      </div>
+      <Field label="عنوان فارسی">
+        <Input value={form.titleFa} onChange={e => setForm({ ...form, titleFa: e.target.value })} />
+      </Field>
+      <Field label="عنوان انگلیسی">
+        <Input dir="ltr" value={form.titleEn} onChange={e => setForm({ ...form, titleEn: e.target.value })} />
+      </Field>
+      <Field label="توضیح فارسی">
+        <Input value={form.descriptionFa} onChange={e => setForm({ ...form, descriptionFa: e.target.value })} />
+      </Field>
+      <Field label="توضیح انگلیسی">
+        <Input dir="ltr" value={form.descriptionEn} onChange={e => setForm({ ...form, descriptionEn: e.target.value })} />
+      </Field>
+      <Field label="قیمت سالن (تومان)" hint="خالی = بدون قیمت">
+        <Input type="text" inputMode="numeric" dir="ltr" value={form.price}
+          onChange={e => setForm({ ...form, price: formatNumericInputValue(e.target) })} />
+      </Field>
+      <Field label="قیمت بیرون‌بر (تومان)" hint="خالی = همون قیمت سالن">
+        <Input type="text" inputMode="numeric" dir="ltr" value={form.priceTakeaway}
+          onChange={e => setForm({ ...form, priceTakeaway: formatNumericInputValue(e.target) })} />
+      </Field>
+    </div>
+  );
+}
+
 function ItemsTab({ sections, allItems, onCreate, onUpdate, onDelete, showToast }: any) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ categoryId: '', titleFa: '', titleEn: '', descriptionFa: '', descriptionEn: '', price: '' });
+  const [form, setForm] = useState<ItemFormState>(EMPTY_ITEM_FORM);
 
   async function handleAdd() {
     if (!form.categoryId || !form.titleFa.trim()) { showToast('دسته و عنوان فارسی الزامی است', 'danger'); return; }
     const ok = await onCreate({
       categoryId: form.categoryId, titleFa: form.titleFa.trim(), titleEn: form.titleEn.trim() || form.titleFa.trim(),
       descriptionFa: form.descriptionFa.trim(), descriptionEn: form.descriptionEn.trim(),
-      price: Number(form.price) || 0, isAvailable: true, sortOrder: 0,
+      price: parsePriceInput(form.price), priceTakeaway: parsePriceInput(form.priceTakeaway),
+      inHall: form.inHall, inTakeaway: form.inTakeaway,
+      isAvailable: true, sortOrder: 0,
     });
-    if (ok) { showToast('آیتم اضافه شد', 'success'); setShowForm(false); setForm({ categoryId: '', titleFa: '', titleEn: '', descriptionFa: '', descriptionEn: '', price: '' }); }
+    if (ok) { showToast('آیتم اضافه شد', 'success'); setShowForm(false); setForm(EMPTY_ITEM_FORM); }
     else showToast('خطا', 'danger');
   }
 
@@ -108,29 +193,7 @@ function ItemsTab({ sections, allItems, onCreate, onUpdate, onDelete, showToast 
         <Card>
           <CardHeader title="افزودن آیتم" />
           <CardBody className="space-y-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="دسته">
-                <Select value={form.categoryId} onChange={e => setForm({ ...form, categoryId: e.target.value })}>
-                  <option value="">— انتخاب دسته —</option>
-                  {sections.map((s: any) => <option key={s.id} value={s.id}>{s.labelFa}</option>)}
-                </Select>
-              </Field>
-              <Field label="قیمت (تومان)">
-                <Input type="text" inputMode="numeric" dir="ltr" value={form.price} onChange={e => setForm({ ...form, price: e.target.value.replace(/\D/g, '') })} />
-              </Field>
-              <Field label="عنوان فارسی">
-                <Input value={form.titleFa} onChange={e => setForm({ ...form, titleFa: e.target.value })} />
-              </Field>
-              <Field label="عنوان انگلیسی">
-                <Input dir="ltr" value={form.titleEn} onChange={e => setForm({ ...form, titleEn: e.target.value })} />
-              </Field>
-              <Field label="توضیح فارسی">
-                <Input value={form.descriptionFa} onChange={e => setForm({ ...form, descriptionFa: e.target.value })} />
-              </Field>
-              <Field label="توضیح انگلیسی">
-                <Input dir="ltr" value={form.descriptionEn} onChange={e => setForm({ ...form, descriptionEn: e.target.value })} />
-              </Field>
-            </div>
+            <ItemFormFields form={form} setForm={setForm} sections={sections} />
             <div className="flex gap-2 justify-end">
               <Button variant="default" size="sm" onClick={() => setShowForm(false)}>لغو</Button>
               <Button variant="primary" size="sm" icon={Plus} onClick={handleAdd}>افزودن</Button>
@@ -156,7 +219,7 @@ function ItemsTab({ sections, allItems, onCreate, onUpdate, onDelete, showToast 
               </thead>
               <tbody>
                 {allItems.map((item: any) => (
-                  <ItemRow key={item.id} item={item} onUpdate={onUpdate} onDelete={onDelete} showToast={showToast} />
+                  <ItemRow key={item.id} item={item} sections={sections} onUpdate={onUpdate} onDelete={onDelete} showToast={showToast} />
                 ))}
               </tbody>
             </table>
@@ -167,15 +230,60 @@ function ItemsTab({ sections, allItems, onCreate, onUpdate, onDelete, showToast 
   );
 }
 
-function ItemRow({ item, onUpdate, onDelete, showToast }: { item: MenuItem & { sectionLabel: string }; onUpdate: any; onDelete: any; showToast: any }) {
+function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
+  item: MenuItem & { sectionLabel: string };
+  sections: any;
+  onUpdate: any; onDelete: any; showToast: any;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState<ItemFormState>(() => itemToForm(item));
+  const [saving, setSaving] = useState(false);
+
+  function startEdit() {
+    setForm(itemToForm(item));
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    if (!form.categoryId || !form.titleFa.trim()) { showToast('دسته و عنوان فارسی الزامی است', 'danger'); return; }
+    setSaving(true);
+    const ok = await onUpdate(item.id, {
+      categoryId: form.categoryId, titleFa: form.titleFa.trim(), titleEn: form.titleEn.trim() || form.titleFa.trim(),
+      descriptionFa: form.descriptionFa.trim(), descriptionEn: form.descriptionEn.trim(),
+      price: parsePriceInput(form.price), priceTakeaway: parsePriceInput(form.priceTakeaway),
+      inHall: form.inHall, inTakeaway: form.inTakeaway,
+    });
+    setSaving(false);
+    if (ok) { showToast('ذخیره شد', 'success'); setEditing(false); }
+    else showToast('خطا', 'danger');
+  }
+
+  if (editing) {
+    return (
+      <tr className="border-b border-stone-50 last:border-b-0">
+        <td colSpan={5} className="p-4 bg-stone-50/50">
+          <ItemFormFields form={form} setForm={setForm} sections={sections} />
+          <div className="flex gap-2 justify-end mt-3">
+            <Button variant="default" size="sm" icon={X} onClick={() => setEditing(false)}>لغو</Button>
+            <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSave}>ذخیره</Button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
   return (
     <tr className={cn('border-b border-stone-50 last:border-b-0', !item.isAvailable && 'opacity-50')}>
       <td className="px-5 py-3">
         <div className="text-[12.5px] text-stone-800">{item.titleFa}</div>
         <div className="text-[10.5px] text-stone-400" dir="ltr">{item.titleEn}</div>
+        <div className="flex gap-1 mt-1">
+          <Chip tone={item.inHall ? 'green' : 'neutral'}>سالن</Chip>
+          <Chip tone={item.inTakeaway ? 'green' : 'neutral'}>بیرون</Chip>
+        </div>
       </td>
       <td className="px-3 py-3 text-center"><span className="text-[11px] text-stone-500">{item.sectionLabel}</span></td>
-      <td className="px-3 py-3 text-end"><span className="text-[12px] text-stone-700 tabular-nums">{fmt(item.price)}</span></td>
+      <td className="px-3 py-3 text-end"><span className="text-[12px] text-stone-700 tabular-nums">{item.price === null ? '—' : fmt(item.price)}</span></td>
       <td className="px-2 py-3 text-center">
         <button onClick={async () => { await onUpdate(item.id, { isAvailable: !item.isAvailable }); }}
           className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-stone-100">
@@ -183,10 +291,16 @@ function ItemRow({ item, onUpdate, onDelete, showToast }: { item: MenuItem & { s
         </button>
       </td>
       <td className="px-3 py-3 text-center">
-        <button onClick={async () => { if (await onDelete(item.id)) showToast('حذف شد', 'success'); }}
-          className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600">
-          <Trash2 size={13} strokeWidth={1.5} />
-        </button>
+        <div className="flex items-center justify-center gap-1">
+          <button onClick={startEdit}
+            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700">
+            <Edit3 size={13} strokeWidth={1.5} />
+          </button>
+          <button onClick={async () => { if (await onDelete(item.id)) showToast('حذف شد', 'success'); }}
+            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600">
+            <Trash2 size={13} strokeWidth={1.5} />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -261,38 +375,87 @@ function CategoriesTab({ sections, onCreate, onDelete, showToast }: any) {
 }
 
 // ─── Settings Tab ────────────────────────────────────────────────
+const SLUG_RE = /^[a-z0-9-]+$/;
+
 function SettingsTab({ settings, onUpdate, showToast }: any) {
   const [form, setForm] = useState({
     faFont: settings.faFont, phone: settings.phone, addressFa: settings.addressFa,
     addressEn: settings.addressEn, instagram: settings.instagram,
+    showPriceHall: settings.showPriceHall, showPriceTakeaway: settings.showPriceTakeaway,
+    takeawaySlug: settings.takeawaySlug,
+    hallTitle: settings.hallTitle ?? '', takeawayTitle: settings.takeawayTitle ?? '',
+    hallNote: settings.hallNote ?? '', takeawayNote: settings.takeawayNote ?? '',
   });
   const [saving, setSaving] = useState(false);
+  const [slugError, setSlugError] = useState<string | null>(null);
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => { setOrigin(window.location.origin); }, []);
 
   async function handleSave() {
+    const slug = form.takeawaySlug.trim().toLowerCase();
+    if (!SLUG_RE.test(slug)) { setSlugError('فقط حروف کوچک انگلیسی، عدد و خط تیره'); return; }
+    setSlugError(null);
     setSaving(true);
-    const ok = await onUpdate(form);
+    const ok = await onUpdate({
+      ...form, takeawaySlug: slug,
+      hallTitle: form.hallTitle.trim() || null, takeawayTitle: form.takeawayTitle.trim() || null,
+      hallNote: form.hallNote.trim() || null, takeawayNote: form.takeawayNote.trim() || null,
+    });
     setSaving(false);
-    showToast(ok ? 'تنظیمات ذخیره شد' : 'خطا', ok ? 'success' : 'danger');
+    if (ok) showToast('تنظیمات ذخیره شد', 'success');
+    else { setSlugError('این لینک تکراری یا نامعتبر است'); showToast('خطا — شاید لینک بیرون‌بر تکراری است', 'danger'); }
   }
 
   return (
-    <Card>
-      <CardHeader title="تنظیمات منو" />
-      <CardBody className="space-y-4">
-        <Field label="فونت فارسی منو">
-          <Select value={form.faFont} onChange={e => setForm({ ...form, faFont: e.target.value })}>
-            {FA_FONTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-          </Select>
-        </Field>
-        <Field label="تلفن"><Input dir="ltr" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></Field>
-        <Field label="آدرس فارسی"><Textarea rows={2} value={form.addressFa} onChange={e => setForm({ ...form, addressFa: e.target.value })} /></Field>
-        <Field label="آدرس انگلیسی"><Textarea rows={2} dir="ltr" value={form.addressEn} onChange={e => setForm({ ...form, addressEn: e.target.value })} /></Field>
-        <Field label="اینستاگرام (بدون @)"><Input dir="ltr" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
-        <div className="flex justify-end">
-          <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSave}>ذخیره</Button>
-        </div>
-      </CardBody>
-    </Card>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader title="تنظیمات منو" />
+        <CardBody className="space-y-4">
+          <Field label="فونت فارسی منو">
+            <Select value={form.faFont} onChange={e => setForm({ ...form, faFont: e.target.value })}>
+              {FA_FONTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+            </Select>
+          </Field>
+          <Field label="تلفن"><Input dir="ltr" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></Field>
+          <Field label="آدرس فارسی"><Textarea rows={2} value={form.addressFa} onChange={e => setForm({ ...form, addressFa: e.target.value })} /></Field>
+          <Field label="آدرس انگلیسی"><Textarea rows={2} dir="ltr" value={form.addressEn} onChange={e => setForm({ ...form, addressEn: e.target.value })} /></Field>
+          <Field label="اینستاگرام (بدون @)"><Input dir="ltr" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="کانال‌های سالن و بیرون‌بر" sub="نمایش قیمت و عنوان/توضیح هر کانال در منوی عمومی" />
+        <CardBody className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-center justify-between rounded-md border border-stone-200 px-3 h-10">
+              <span className="text-[12px] text-stone-600">نمایش قیمت در منوی سالن</span>
+              <Switch checked={form.showPriceHall} onCheckedChange={v => setForm({ ...form, showPriceHall: v })} aria-label="نمایش قیمت در منوی سالن" />
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-stone-200 px-3 h-10">
+              <span className="text-[12px] text-stone-600">نمایش قیمت در منوی بیرون‌بر</span>
+              <Switch checked={form.showPriceTakeaway} onCheckedChange={v => setForm({ ...form, showPriceTakeaway: v })} aria-label="نمایش قیمت در منوی بیرون‌بر" />
+            </div>
+          </div>
+
+          <Field label="لینک منوی بیرون‌بر" error={slugError ?? undefined} helper={origin ? `پیش‌نمایش: ${origin}/m/${form.takeawaySlug || '...'}` : `پیش‌نمایش: /m/${form.takeawaySlug || '...'}`}>
+            <Input dir="ltr" placeholder="birun" value={form.takeawaySlug}
+              onChange={e => setForm({ ...form, takeawaySlug: e.target.value.toLowerCase() })} />
+          </Field>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="عنوان منوی سالن (اختیاری)"><Input value={form.hallTitle} onChange={e => setForm({ ...form, hallTitle: e.target.value })} /></Field>
+            <Field label="عنوان منوی بیرون‌بر (اختیاری)"><Input value={form.takeawayTitle} onChange={e => setForm({ ...form, takeawayTitle: e.target.value })} /></Field>
+            <Field label="متن پایین منوی سالن (اختیاری)"><Textarea rows={2} value={form.hallNote} onChange={e => setForm({ ...form, hallNote: e.target.value })} /></Field>
+            <Field label="متن پایین منوی بیرون‌بر (اختیاری)"><Textarea rows={2} value={form.takeawayNote} onChange={e => setForm({ ...form, takeawayNote: e.target.value })} /></Field>
+          </div>
+        </CardBody>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSave}>ذخیره</Button>
+      </div>
+    </div>
   );
 }
 
