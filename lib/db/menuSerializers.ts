@@ -43,3 +43,33 @@ export function rowToMenuSettings(row: typeof schema.menuSettings.$inferSelect) 
     takeawayNote: row.takeawayNote,
   };
 }
+
+export type MenuChannel = 'hall' | 'takeaway';
+
+/**
+ * تبدیل دسته‌ها/آیتم‌های خام به ساختار منوی عمومی یک کانال:
+ * فقط آیتم‌های مجاز آن کانال، قیمت resolve‌شده (با لحاظ سوییچ نمایش قیمت)،
+ * و دسته‌های بدون آیتم در آن کانال حذف می‌شوند.
+ */
+export function buildPublicMenuSections(
+  categories: (typeof schema.menuCategories.$inferSelect)[],
+  items: (typeof schema.menuItems.$inferSelect)[],
+  channel: MenuChannel,
+  settings: ReturnType<typeof rowToMenuSettings>,
+) {
+  const showPrice = channel === 'takeaway' ? settings.showPriceTakeaway : settings.showPriceHall;
+  const buckets = new Map<string, ReturnType<typeof rowToMenuItem>[]>();
+
+  for (const row of items) {
+    const item = rowToMenuItem(row);
+    if (channel === 'takeaway' ? !item.inTakeaway : !item.inHall) continue;
+    const rawPrice = channel === 'takeaway' ? (item.priceTakeaway ?? item.price) : item.price;
+    const list = buckets.get(item.categoryId) ?? [];
+    list.push({ ...item, price: showPrice ? rawPrice : null });
+    buckets.set(item.categoryId, list);
+  }
+
+  return categories
+    .map(cat => ({ ...rowToMenuCategory(cat), items: buckets.get(cat.id) ?? [] }))
+    .filter(section => section.items.length > 0);
+}

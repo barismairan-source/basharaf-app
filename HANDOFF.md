@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.6-menu-channel` |
+| **نسخه** | `0.9.7-menu-channel-public` |
 | **آخرین به‌روزرسانی** | 2026-06-13 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
 | **دیپلوی** | zip آماده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) — هنوز deploy/تست نشده. zip قبلی `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql` هم هنوز روی Liara اجرا/دیپلوی نشده‌اند (تأیید نشد). |
-| **کار نیمه‌تمام (in-progress)** | فاز۱ کانال منو (سالن/بیرون‌بر) commit محلی شد؛ منتظر تأیید کاربر که `db-menu-channel-migration.sql` روی DB اجرا شده تا `git push` انجام شود. |
-| **کار بعدی پیشنهادی** | (۱) بعد از تأیید migration → `git push` + چک `/menu` و `/m` روی production. (۲) فاز۲ — نمایش `/m` بر اساس کانال سالن/بیرون‌بر (`show_price_hall/takeaway`, `takeaway_slug`, عنوان/یادداشت هر کانال، `item.inHall/inTakeaway/priceTakeaway`). (۳) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۴) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۵) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
-| **بلاک‌شده/منتظر کاربر** | تأیید اجرای `db-menu-channel-migration.sql` روی DB → بعد `git push origin main`. |
+| **کار نیمه‌تمام (in-progress)** | فاز۱+فاز۲ کانال منو (سالن/بیرون‌بر) — ۲ commit محلی؛ منتظر تأیید کاربر که `db-menu-channel-migration.sql` روی DB اجرا شده تا `git push` انجام شود. |
+| **کار بعدی پیشنهادی** | (۱) بعد از تأیید migration → `git push` (هر دو فاز با هم) + چک `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production. (۲) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۳) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۴) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
+| **بلاک‌شده/منتظر کاربر** | تأیید اجرای `db-menu-channel-migration.sql` روی DB → بعد `git push origin main` (شامل فاز۱+فاز۲). |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,23 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-13 — منو: کانال سالن/بیرون‌بر (فاز۲ — صفحه‌ی عمومی بیرون‌بر + QR دوم) — اکانت ۲
+**چه شد:**
+(۱) `lib/db/menuSerializers.ts`: تابع جدید `buildPublicMenuSections(categories, items, channel, settings)` — برای یک کانال (`hall`/`takeaway`) فقط آیتم‌های `inHall`/`inTakeaway`=true را نگه می‌دارد، قیمت را resolve می‌کند (سالن: `price`؛ بیرون‌بر: `priceTakeaway ?? price`)، اگر سوییچ نمایش قیمت آن کانال خاموش باشد `price` را `null` می‌کند، و دسته‌های بدون آیتم در آن کانال را حذف می‌کند.
+(۲) `/api/menu`: پارامتر `?channel=hall|takeaway` اضافه شد. **بدون پارامتر = دقیقاً همان رفتار قبلی** (داده‌ی خام کامل برای پنل ادمین — بدون تغییر، چون `loadMenu()` به `price`/`priceTakeaway`/`inHall`/`inTakeaway` خام برای فرم ویرایش نیاز دارد). با `channel`، خروجی از `buildPublicMenuSections` می‌آید.
+(۳) کامپوننت مشترک جدید `components/menu/PublicMenu.tsx` — دقیقاً همان دیزاین/فونت/RTL/سوییچ زبان `/m` قبلی (LanguageToggle/MenuSection/menu.css)، با پراپ `channel`. تیتر بالای صفحه: سالن از `hallTitle`/`hallNote` (پیش‌فرض `null` → چیزی نشان نمی‌دهد، یعنی `/m` فعلی دقیقاً بدون تغییر ظاهری)؛ بیرون‌بر از `takeawayTitle`/`takeawayNote` (پیش‌فرض «منوی بیرون‌بر» + یک جمله‌ی توضیح).
+(۴) `app/m/page.tsx` به یک wrapper نازک بازنویسی شد: `<PublicMenu channel="hall" />` (همان دیزاین قبلی، حالا با `/api/menu?channel=hall`). مسیر جدید `app/m/[slug]/page.tsx` (dynamic) → `<PublicMenu channel="takeaway" />`؛ `layout.tsx`/`menu.css`/`LanguageProvider` موجود `app/m/` به‌صورت خودکار به آن هم اعمال می‌شود. **توجه:** خود رشته‌ی `slug` چک نمی‌شود — هر مسیر زیر `/m/*` همان منوی بیرون‌بر را نشان می‌دهد؛ لینک «رسمی» همان `takeaway_slug` تنظیمات است که در تب QR/پیش‌نمایش تنظیمات استفاده می‌شود (طبق بریف: بدون auth، فقط نمایشی، نه سفارش‌گیری).
+(۵) `components/menu/MenuItem.tsx`: وقتی `item.price === null` (چه آیتم اصلاً قیمت ندارد، چه سوییچ نمایش قیمت آن کانال خاموش است)، نه خط قیمت و نه خط‌چین کنارش رندر می‌شود — فقط عنوان/توضیح، بدون خط خالی.
+(۶) تب «کد QR» پنل `/menu`: حالا دو کارت کنار هم — «سالن» (`/m`) و «بیرون‌بر» (`/m/{takeawaySlug}`)، هرکدام QR + کپی لینک + دانلود PNG مستقل (کامپوننت مشترک `QrCard`). لینک بیرون‌بر همیشه از `settings.takeawaySlug` فعلی ساخته می‌شود — با تغییر آن در تب تنظیمات، QR بیرون‌بر هم آپدیت می‌شود.
+نسخه `package.json` → `0.9.7-menu-channel-public`.
+**فایل‌ها:** `lib/db/menuSerializers.ts`، `app/api/menu/route.ts`، `components/menu/PublicMenu.tsx` (جدید)، `app/m/page.tsx`، `app/m/[slug]/page.tsx` (جدید)، `components/menu/MenuItem.tsx`، `app/(app)/menu/page.tsx` (تب QR)، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (`/m` 3.17 kB، `/m/[slug]` 3.16 kB — جدید، dynamic؛ `/menu` 15.2 kB).
+**ناتمام:** —
+**Commit/Push:** هنوز push نشده — همان دلیل فاز۱: `/api/menu` (با هر دو حالت — بدون پارامتر و `?channel=...`) به ستون‌های جدید `menu_items`/`menu_settings` نیاز دارد که فقط بعد از اجرای `db-menu-channel-migration.sql` روی DB موجودند.
+**برای جلسه‌ی بعد:**
+۱. بعد از تأیید کاربر که migration اجرا شده → `git push origin main` (شامل فاز۱+فاز۲، ۲ کامیت محلی)، سپس روی production چک شود: `/m` (سالن، باید دقیقاً مثل قبل باشد)، `/m/{takeawaySlug}` (بیرون‌بر — فقط آیتم‌های `inTakeaway=true`)، و تب QR پنل (هر دو کد).
+۲. سایر آیتم‌های Backlog (#14 دیپلوی ماژول عملیات روی Liara، #15 retest باگ تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions).
 
 ## 📓 2026-06-13 — منو: کانال سالن/بیرون‌بر (فاز۱ — داده + پنل ادمین) — اکانت ۲
 **چه شد:**
@@ -132,14 +149,7 @@
 **ناتمام:** اجرا/تأیید این تست‌ها روی یک دیتابیس واقعی غیر-production — منتظر تصمیم کاربر برای محیط تست.
 **برای جلسه‌ی بعد:** اگر DATABASE_URL تست آماده شد → `npm run build && npm run test:integration` و گزارش نتیجه. وگرنه Backlog #4 (Liara `28P01`).
 
-## 📓 2026-06-10 — آدیت امنیتی Backlog #3 (_diag) — اکانت ۱
-**چه شد:** اسکن کامل `app/api/` برای endpoint تشخیصی یا افشای credential. نتیجه: `/api/_diag` هرگز در این کدبیس وجود نداشته. تمام استفاده‌های `process.env` فقط در `lib/` و برای پیکربندی داخلی است — هیچ‌کدام در پاسخ HTTP بازگردانده نمی‌شوند. یک string literal در پیام خطای آپلود نام متغیر محیطی را ذکر می‌کند ولی مقدار را فاش نمی‌کند (مشکل نیست). هیچ کدی تغییر نکرد.
-**فایل‌ها:** — (فقط آدیت، بدون تغییر کد)
-**Build:** tsc سبز ✅ (بدون تغییر)
-**ناتمام:** —
-**برای جلسه‌ی بعد:** Backlog #5 — تست integration برای balance guardها.
-
-> ⬇️ ورودی‌های قدیمی‌تر (account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
+> ⬇️ ورودی‌های قدیمی‌تر (آدیت امنیتی Backlog #3، account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
 
 ---
 

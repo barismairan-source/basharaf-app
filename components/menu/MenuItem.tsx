@@ -18,10 +18,14 @@ export function MenuItem({ item }: { item: MenuItemType }) {
           <span className={sold ? 'line-through decoration-1' : undefined}>{title}</span>
           {sold && <span className="ms-2 align-middle text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{unavailableLabel}</span>}
         </h3>
-        <span aria-hidden className="hidden flex-1 translate-y-[-3px] border-b border-dotted border-border sm:block" />
-        <span className={['tabular-nums text-lg text-foreground', sold ? 'line-through decoration-1' : undefined].filter(Boolean).join(' ')}>
-          {formatPrice(item.price ?? 0)}
-        </span>
+        {item.price !== null && (
+          <>
+            <span aria-hidden className="hidden flex-1 translate-y-[-3px] border-b border-dotted border-border sm:block" />
+            <span className={['tabular-nums text-lg text-foreground', sold ? 'line-through decoration-1' : undefined].filter(Boolean).join(' ')}>
+              {formatPrice(item.price)}
+            </span>
+          </>
+        )}
       </div>
       {description && <p className="mt-1.5 max-w-[55ch] text-sm leading-relaxed text-muted-foreground">{description}</p>}
     </li>

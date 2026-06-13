@@ -7,7 +7,7 @@ import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Emp
 import { useAppStore } from '@/store';
 import { fmt, cn, formatNumericInputValue } from '@/lib/utils';
 import { FA_FONTS } from '@/lib/menu/fonts';
-import type { MenuItem } from '@/types';
+import type { MenuItem, MenuSettings } from '@/types';
 
 type Tab = 'items' | 'categories' | 'settings' | 'qr';
 
@@ -76,7 +76,7 @@ export default function MenuAdminPage() {
         {tab === 'settings' && settings && (
           <SettingsTab settings={settings} onUpdate={updateSettings} showToast={showToast} />
         )}
-        {tab === 'qr' && <QrTab showToast={showToast} />}
+        {tab === 'qr' && <QrTab settings={settings} showToast={showToast} />}
       </div>
     </div>
   );
@@ -460,26 +460,55 @@ function SettingsTab({ settings, onUpdate, showToast }: any) {
 }
 
 // ─── QR Tab ──────────────────────────────────────────────────────
-function QrTab({ showToast }: { showToast: any }) {
+function QrTab({ settings, showToast }: { settings: MenuSettings | null; showToast: any }) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <QrCard
+          title="کد QR — سالن"
+          sub="منوی سالن"
+          path="/m"
+          filename="basharaf-menu-hall-qr.png"
+          showToast={showToast}
+        />
+        <QrCard
+          title="کد QR — بیرون‌بر"
+          sub="منوی بیرون‌بر"
+          path={`/m/${settings?.takeawaySlug || 'birun'}`}
+          filename="basharaf-menu-takeaway-qr.png"
+          showToast={showToast}
+        />
+      </div>
+      <p className="text-[11px] text-stone-400 leading-6 text-center">
+        این کدها به صفحه‌های منوی عمومی وصل‌اند. هر تغییری در منو یا تنظیمات فوری در آن‌ها دیده می‌شود —
+        با تغییر «لینک منوی بیرون‌بر» در تب تنظیمات، QR بیرون‌بر هم به‌روز می‌شود.
+      </p>
+    </div>
+  );
+}
+
+function QrCard({ title, sub, path, filename, showToast }: {
+  title: string; sub: string; path: string; filename: string; showToast: any;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [url, setUrl] = useState('');
 
   useEffect(() => {
-    const menuUrl = `${window.location.origin}/m`;
-    setUrl(menuUrl);
+    const fullUrl = `${window.location.origin}${path}`;
+    setUrl(fullUrl);
     if (canvasRef.current) {
-      QRCode.toCanvas(canvasRef.current, menuUrl, {
-        width: 280,
+      QRCode.toCanvas(canvasRef.current, fullUrl, {
+        width: 220,
         margin: 2,
         color: { dark: '#1c1917', light: '#ffffff' },
       }).catch(() => {});
     }
-  }, []);
+  }, [path]);
 
   function handleDownload() {
     if (!canvasRef.current) return;
     const link = document.createElement('a');
-    link.download = 'basharaf-menu-qr.png';
+    link.download = filename;
     link.href = canvasRef.current.toDataURL('image/png');
     link.click();
     showToast('کد QR دانلود شد', 'success');
@@ -491,15 +520,15 @@ function QrTab({ showToast }: { showToast: any }) {
 
   return (
     <Card>
-      <CardHeader title="کد QR منو" sub="چاپ کنید و روی میز بگذارید — مشتری اسکن می‌کند" />
-      <CardBody className="flex flex-col items-center gap-5 py-8">
-        <div className="rounded-xl border border-stone-200 p-4 bg-white">
+      <CardHeader title={title} sub={sub} />
+      <CardBody className="flex flex-col items-center gap-4 py-6">
+        <div className="rounded-xl border border-stone-200 p-3 bg-white">
           <canvas ref={canvasRef} />
         </div>
 
-        <div className="w-full max-w-sm space-y-3">
+        <div className="w-full space-y-2.5">
           <div className="flex items-center gap-2 p-2.5 rounded-md bg-stone-50 border border-stone-200">
-            <span className="flex-1 text-[12px] text-stone-600 truncate" dir="ltr">{url}</span>
+            <span className="flex-1 text-[11px] text-stone-600 truncate" dir="ltr">{url}</span>
             <button onClick={handleCopyUrl} className="text-[11px] text-stone-500 hover:text-stone-900 px-2 py-1 rounded hover:bg-stone-100">
               کپی
             </button>
@@ -507,12 +536,8 @@ function QrTab({ showToast }: { showToast: any }) {
 
           <div className="grid grid-cols-2 gap-2">
             <Button variant="primary" size="sm" icon={QrCode} onClick={handleDownload}>دانلود PNG</Button>
-            <Button variant="default" size="sm" icon={ExternalLink} onClick={() => window.open(url, '_blank')}>مشاهده منو</Button>
+            <Button variant="default" size="sm" icon={ExternalLink} onClick={() => window.open(url, '_blank')}>مشاهده</Button>
           </div>
-
-          <p className="text-[11px] text-stone-400 leading-6 text-center pt-2">
-            این کد به صفحه منوی عمومی وصل است. هر تغییری در منو فوری در آن دیده می‌شود — نیازی به ساخت دوباره QR نیست.
-          </p>
         </div>
       </CardBody>
     </Card>
