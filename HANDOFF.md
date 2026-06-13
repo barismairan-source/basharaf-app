@@ -14,9 +14,9 @@
 | **آخرین به‌روزرسانی** | 2026-06-13 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
 | **دیپلوی** | zip آماده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) — هنوز deploy/تست نشده. zip قبلی `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql` هم هنوز روی Liara اجرا/دیپلوی نشده‌اند (تأیید نشد). |
-| **کار نیمه‌تمام (in-progress)** | کاربر تست فاز۶/۷ را تأیید کرد ✅ — commit فاز۲–۸ همین حالا انجام شد. باقی‌مانده: اجرای `db-operations-migration.sql` (+`db-inventory-reversal.sql`) روی DB **قبل از push**، سپس push + دیپلوی zip. |
-| **کار بعدی پیشنهادی** | (۱) کاربر/اکانت بعدی: اطمینان از اجرای `db-inventory-reversal.sql` + `db-operations-migration.sql` در Supabase SQL Editor (Run without RLS). (۲) سپس `git push`. (۳) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara. |
-| **بلاک‌شده/منتظر کاربر** | اجرای ۲ migration روی DB قبل از push (تا `/api/dashboard/overview` در production خطا ندهد) |
+| **کار نیمه‌تمام (in-progress)** | — (commit `f531dcf` + push انجام شد؛ کاربر تأیید کرد migration `db-operations-migration.sql` قبلاً روی DB اجرا شده) |
+| **کار بعدی پیشنهادی** | (۱) Vercel به‌صورت خودکار از `f531dcf` دیپلوی می‌کند (~۲-۳ دقیقه) — بعد از آن `/dashboard` (کارت‌های جدید عملیات) را روی production چک کن. (۲) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (اگر Liara هم استفاده می‌شود). (۳) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» روی production با کد جدید. (۴) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -59,16 +59,13 @@
 (۵) **فاز ۸ (مستندسازی کانال فروش — فقط مستند):** سند تصمیم `project-docs/decision-channel-column.md` ساخته شد — افزودن ستون `channel` (text, nullable) به `transactions`، چرایی (نه `sale_meta`، نه pgEnum)، مقادیر پیشنهادی (`dine_in`/`takeaway`/`delivery_own`/`delivery_app`)، اثر روی کد در فاز پیاده‌سازی آینده، و ۵ سوال باز برای کاربر. **هیچ کد/migration/schema تغییر نکرد** — طبق بریف.
 **فایل‌ها (خلاصه):** `app/(app)/equipment/**` (جدید)، `app/(app)/purchase-orders/**` (جدید)، `app/(app)/tasks/page.tsx` (جدید)، `app/api/equipment/**`, `app/api/maintenance/**`, `app/api/purchase-orders/**`, `app/api/task-templates/**`, `app/api/tasks/**` (همه جدید)، `components/dashboard/OperationsStrip.tsx` (جدید) + `components/dashboard/index.ts`، `components/layout/Sidebar.tsx`، `middleware.ts`، `app/(app)/dashboard/page.tsx`، `app/api/dashboard/overview/route.ts`، `store/index.ts` + `store/slices/operationsSlice.ts` (جدید) + `store/slices/tasksSlice.ts` (جدید)، `lib/db/schema.ts`، `lib/db/createExpenseTx.ts` (جدید)، `lib/db/operations.serializers.ts` (جدید)، `types/operations.ts` (جدید) + `types/index.ts`، `lib/auth/audit.ts`، `app/api/transactions/route.ts`، `app/(app)/inventory/page.tsx`، `db-operations-migration.sql` (جدید — equipment/maintenance_logs/purchase_orders/purchase_order_items/task_templates/task_instances + enumها)، `package.json`، `SKILL.md`، `project-docs/decision-channel-column.md` (جدید).
 **Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (همه‌ی روت‌های جدید `/tasks`, `/equipment(+/[id])`, `/purchase-orders(+/[id])`, `/api/tasks*`, `/api/task-templates*`, `/api/equipment*`, `/api/purchase-orders*` ساخته شدند). فاز۸ فقط `.md` است — بدون اثر بر build.
-**ناتمام:**
-- کاربر سناریوهای فاز۶/۷ را تست کرد و تأیید کرد ("تست کردم کار میکنه") → این commit انجام شد.
-- ⚠️ **مهم — قبل از `git push`:** `db-operations-migration.sql` (+`db-inventory-reversal.sql` که از قبل هم مانده) باید روی همان DB که Vercel/production به آن وصل است اجرا شود. چون `/api/dashboard/overview` (که `UnifiedOverview` + `OperationsStrip` هر دو از آن می‌خوانند، و در `/dashboard` برای **همه‌ی کاربران** لود می‌شود) حالا جدول‌های `equipment`, `purchase_orders`, `task_instances` را هم query می‌کند — اگر این جدول‌ها در production نباشند، کل `/dashboard` ممکن است خطا بدهد. **push نکن تا این migration تأیید نشده باشد.**
-- باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» روی production لیارا: فیکس toast واقعی (نمایش `equipmentError`/`poError` به‌جای پیام عمومی) انجام شد، کاربر هنوز retest نکرده.
+**ناتمام:** —
+**Commit/Push:** کاربر سناریوهای فاز۶/۷ را تست کرد و تأیید کرد ("تست کردم کار میکنه"). قبل از push از کاربر پرسیده شد که آیا `db-operations-migration.sql` روی DB اجرا شده (چون `/api/dashboard/overview` که در `/dashboard` برای **همه‌ی کاربران** لود می‌شود حالا جدول‌های `equipment`/`purchase_orders`/`task_instances` را هم query می‌کند) — کاربر تأیید کرد **قبلاً اجرا کرده**. commit شد: `f531dcf` ("feat: v0.9.5-operations — equipment, purchase orders, daily tasks (phases 2-8)"، ۴۰ فایل) و `git push origin main` با موفقیت انجام شد (`d0e871c..f531dcf`).
 **برای جلسه‌ی بعد:**
-۱. مطمئن شو `db-operations-migration.sql` و `db-inventory-reversal.sql` در Supabase SQL Editor روی DB متصل به production اجرا شده‌اند (idempotent، "Run without RLS").
-۲. سپس `git push`.
-۳. دیپلوی `basharaf-tasks-ops-liara.zip` (≈۱.۱MB، شامل migration) روی Liara.
-۴. retest باگ تجهیزات/سفارش‌خرید روی production با zip جدید.
-۵. وقتی کاربر آماده بود: پاسخ به ۵ سوال باز `project-docs/decision-channel-column.md` و شروع پیاده‌سازی ستون `channel`.
+۱. بعد از دیپلوی خودکار Vercel (~۲-۳ دقیقه)، `/dashboard` روی production را چک کن (کارت‌های جدید عملیات نباید خطا بدهند — چون migration قبلاً اجرا شده، انتظار می‌رود سالم باشد).
+۲. اگر Liara هم به‌عنوان هاست جداگانه استفاده می‌شود، `basharaf-tasks-ops-liara.zip` (≈۱.۱MB، شامل migration) را روی آن دیپلوی کن.
+۳. retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» روی production با کد جدید.
+۴. وقتی کاربر آماده بود: پاسخ به ۵ سوال باز `project-docs/decision-channel-column.md` و شروع پیاده‌سازی ستون `channel` (فاز۹).
 
 ## 📓 2026-06-12 — تکمیل ماژول انبار (reversal UI، واریانس، exception dashboard، zip) — اکانت ۱
 **چه شد:**
