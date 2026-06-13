@@ -11,12 +11,12 @@
 | | |
 |---|---|
 | **نسخه** | `0.9.7-menu-channel-public` |
-| **آخرین به‌روزرسانی** | 2026-06-13 — اکانت: ۲ |
+| **آخرین به‌روزرسانی** | 2026-06-14 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | zip آماده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) — هنوز deploy/تست نشده. zip قبلی `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql` هم هنوز روی Liara اجرا/دیپلوی نشده‌اند (تأیید نشد). |
-| **کار نیمه‌تمام (in-progress)** | فاز۱+فاز۲ کانال منو (سالن/بیرون‌بر) — ۲ commit محلی؛ منتظر تأیید کاربر که `db-menu-channel-migration.sql` روی DB اجرا شده تا `git push` انجام شود. |
-| **کار بعدی پیشنهادی** | (۱) بعد از تأیید migration → `git push` (هر دو فاز با هم) + چک `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production. (۲) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۳) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۴) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
-| **بلاک‌شده/منتظر کاربر** | تأیید اجرای `db-menu-channel-migration.sql` روی DB → بعد `git push origin main` (شامل فاز۱+فاز۲). |
+| **دیپلوی** | ✅ `v0.9.7-menu-channel-public/basharaf-deploy.zip` + `v0.9.7-menu-channel-public/db-menu-channel-migration.sql` آماده‌ی دیپلوی (فاز۱+فاز۲ کانال منو سالن/بیرون‌بر؛ migration قبلاً روی DB اجرا شده، `git push origin main` انجام شد — `fdea0a3..fa50941`). zipهای قبلی هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`)، و `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql`. |
+| **کار نیمه‌تمام (in-progress)** | — (push فاز۱+فاز۲ کانال منو انجام شد؛ بعد از دیپلوی خودکار باید `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production چک شوند). |
+| **کار بعدی پیشنهادی** | (۱) بعد از دیپلوی خودکار → چک `/m` (سالن)، `/m/{takeawaySlug}` (بیرون‌بر) و تب QR پنل `/menu` روی production. (۲) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۳) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۴) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-14 — push فاز۱+فاز۲ کانال منو + پکیج نسخه‌ی `v0.9.7-menu-channel-public` — اکانت ۲
+**چه شد:** کاربر تأیید کرد `db-menu-channel-migration.sql` روی DB production اجرا شده. `git push origin main` انجام شد (دو کامیت محلی فاز۱ `ebdf822` + فاز۲ `fa50941` → `fdea0a3..fa50941`). طبق قرارداد انتشار نسخه‌دار، پوشه‌ی `v0.9.7-menu-channel-public/` ساخته شد: `basharaf-deploy.zip` (خروجی `git archive HEAD`؛ بدون node_modules/.next/.git، چون gitignore هستند) + کپی `db-menu-channel-migration.sql` برای آرشیو (این migration از قبل روی DB اجرا شده — کپی فقط برای کامل‌بودن باندل دیپلوی است).
+**فایل‌ها:** `v0.9.7-menu-channel-public/basharaf-deploy.zip` (gitignored، untracked)، `v0.9.7-menu-channel-public/db-menu-channel-migration.sql` (جدید، tracked)، `HANDOFF.md`.
+**Build:** بدون تغییر کد در این جلسه — tsc/build قبلاً در همین commitها سبز تأیید شده بود (فاز۲).
+**ناتمام:** —
+**برای جلسه‌ی بعد:** بعد از دیپلوی خودکار (production)، `/m` (سالن)، `/m/{takeawaySlug}` (بیرون‌بر)، و تب QR پنل `/menu` چک شوند. سپس سایر آیتم‌های Backlog (#14 دیپلوی عملیات روی Liara، #15 retest تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions).
 
 ## 📓 2026-06-13 — منو: کانال سالن/بیرون‌بر (فاز۲ — صفحه‌ی عمومی بیرون‌بر + QR دوم) — اکانت ۲
 **چه شد:**
@@ -149,7 +156,7 @@
 **ناتمام:** اجرا/تأیید این تست‌ها روی یک دیتابیس واقعی غیر-production — منتظر تصمیم کاربر برای محیط تست.
 **برای جلسه‌ی بعد:** اگر DATABASE_URL تست آماده شد → `npm run build && npm run test:integration` و گزارش نتیجه. وگرنه Backlog #4 (Liara `28P01`).
 
-> ⬇️ ورودی‌های قدیمی‌تر (آدیت امنیتی Backlog #3، account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
+> ⬇️ ورودی‌های قدیمی‌تر (integration tests Backlog #5، آدیت امنیتی Backlog #3، account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
 
 ---
 
