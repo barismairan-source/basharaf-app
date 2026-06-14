@@ -1,4 +1,4 @@
-import type { OrdSettings, OrdSettingsPatch, OrdZone, NewOrdZoneInput, OrdZonePatch } from '@/types';
+import type { BoardOrder, OrdSettings, OrdSettingsPatch, OrdZone, NewOrdZoneInput, OrdZonePatch, OrderStatus } from '@/types';
 import type { OrderingRepo } from './ordering.types';
 import { apiFetch } from './api';
 
@@ -40,5 +40,18 @@ export const orderingRepo: OrderingRepo = {
   },
   async deleteZone(id: string) {
     await apiFetch(`/api/orders/zones/${id}`, { method: 'DELETE' });
+  },
+
+  async listOrders(branchId?: string) {
+    const qs = branchId ? `?branchId=${branchId}` : '';
+    const data = await apiFetch<{ orders: BoardOrder[] }>(`/api/orders${qs}`);
+    return data.orders;
+  },
+  async updateOrderStatus(id: string, status: OrderStatus) {
+    const data = await apiFetch<{ order: BoardOrder }>(`/api/orders/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return data.order;
   },
 };

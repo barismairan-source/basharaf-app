@@ -1,11 +1,11 @@
-import type { OrdSettings, OrdSettingsPatch, OrdZone, NewOrdZoneInput, OrdZonePatch } from '@/types';
+import type { BoardOrder, OrdSettings, OrdSettingsPatch, OrdZone, NewOrdZoneInput, OrdZonePatch, OrderStatus } from '@/types';
 
 /**
  * ─────────────────────────────────────────────────────────────────
  * Ordering repository interface — هم‌سبک InventoryRepo.
  *
- * فقط تنظیمات سفارش بیرون‌بر + محدوده‌های ارسال (فاز داده/تنظیمات،
- * بدون UI مشتری). منطق DB در app/api/orders زندگی می‌کند.
+ * تنظیمات سفارش بیرون‌بر + محدوده‌های ارسال + تخته‌ی عملیاتی پرسنل
+ * (/orders). منطق DB در app/api/orders زندگی می‌کند.
  * ───────────────────────────────────────────────────────────────── */
 
 export interface OrderingRepo {
@@ -16,4 +16,7 @@ export interface OrderingRepo {
   createZone(input: NewOrdZoneInput): Promise<OrdZone>;
   updateZone(id: string, patch: OrdZonePatch): Promise<OrdZone>;
   deleteZone(id: string): Promise<void>;
+
+  listOrders(branchId?: string): Promise<BoardOrder[]>;
+  updateOrderStatus(id: string, status: OrderStatus): Promise<BoardOrder>;
 }

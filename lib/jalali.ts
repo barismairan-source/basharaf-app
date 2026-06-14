@@ -80,3 +80,23 @@ export function dateToJalali(date: Date): string {
     return getTodayJalali();
   }
 }
+
+/**
+ * ساعت:دقیقه به‌وقت تهران با ارقام فارسی — برای نمایش زمان ثبت سفارش روی کارت.
+ * `formatTehranTime('2026-06-12T10:05:00Z')` → '۱۳:۳۵'
+ */
+export function formatTehranTime(iso: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Tehran',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date(iso));
+    const hh = parts.find((p) => p.type === 'hour')?.value ?? '00';
+    const mm = parts.find((p) => p.type === 'minute')?.value ?? '00';
+    return toFa(`${hh}:${mm}`);
+  } catch {
+    return '—';
+  }
+}

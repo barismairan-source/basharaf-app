@@ -148,3 +148,51 @@ export interface PublicOrder {
   createdAt: string;
   lines: PublicOrderLine[];
 }
+
+// ─── سفارش بیرون‌بر — پنل عملیاتی پرسنل /orders (state machine + Realtime) ──
+
+export type OrderStatus =
+  | 'received'
+  | 'confirmed'
+  | 'preparing'
+  | 'ready'
+  | 'out_for_delivery'
+  | 'delivered'
+  | 'completed'
+  | 'cancelled'
+  | 'rejected';
+
+export interface BoardOrderLine {
+  itemName: string;
+  unitPrice: number;
+  qty: number;
+  lineTotal: number;
+}
+
+export interface BoardOrder {
+  id: string;
+  branchId: string;
+  branchName: string;
+  orderNo: string;
+  status: OrderStatus;
+  serviceType: 'delivery' | 'pickup';
+  customerName: string;
+  customerPhone: string;
+  address: string | null;
+  zoneName: string | null;
+  pickupTime: string | null;
+  subtotal: number;
+  deliveryFee: number;
+  discount: number;
+  total: number;
+  payMethod: string;
+  payStatus: string;
+  jalaliDate: string;
+  note: string | null;
+  createdAt: string;
+  lines: BoardOrderLine[];
+}
+
+export interface OrderStatusPatchInput {
+  status: OrderStatus;
+}

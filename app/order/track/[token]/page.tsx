@@ -3,20 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Button, Card, CardBody, Chip, Empty, type ChipProps } from '@/components/ui';
+import { Button, Card, CardBody, Chip, Empty } from '@/components/ui';
 import { fmt, toFa } from '@/lib/utils';
 import { publicOrderRepo } from '@/lib/repos/publicOrder.api';
-import type { PublicOrder } from '@/types';
-
-const STATUS_LABELS: Record<string, { label: string; tone: ChipProps['tone'] }> = {
-  received: { label: 'سفارش ثبت شد', tone: 'green' },
-  preparing: { label: 'در حال آماده‌سازی', tone: 'amber' },
-  ready: { label: 'آماده‌ی ارسال/دریافت', tone: 'amber' },
-  delivering: { label: 'در حال ارسال', tone: 'amber' },
-  delivered: { label: 'تحویل شد', tone: 'green' },
-  done: { label: 'انجام شد', tone: 'green' },
-  cancelled: { label: 'لغو شد', tone: 'red' },
-};
+import { ORDER_STATUS_LABELS, ORDER_STATUS_TONES } from '@/lib/ordering/orderStatus';
+import type { OrderStatus, PublicOrder } from '@/types';
 
 export default function OrderTrackPage() {
   const params = useParams<{ token: string }>();
@@ -66,7 +57,10 @@ export default function OrderTrackPage() {
     );
   }
 
-  const status = STATUS_LABELS[order.status] ?? { label: order.status, tone: 'neutral' as const };
+  const knownLabel = ORDER_STATUS_LABELS[order.status as OrderStatus];
+  const status = knownLabel
+    ? { label: knownLabel, tone: ORDER_STATUS_TONES[order.status as OrderStatus] }
+    : { label: order.status, tone: 'neutral' as const };
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-20 pt-6 sm:px-6">

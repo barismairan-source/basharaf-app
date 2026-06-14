@@ -1,4 +1,5 @@
 import { schema } from './client';
+import type { BoardOrder, OrderStatus } from '@/types';
 
 type OrdSettingsRow = typeof schema.ordSettings.$inferSelect;
 type OrdZoneRow = typeof schema.ordZones.$inferSelect;
@@ -55,6 +56,46 @@ export function rowToPublicOrder(order: OrderRow, lines: OrderLineRow[], zoneNam
     trackToken: order.trackToken,
     status: order.status,
     serviceType: order.serviceType,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    address: order.address,
+    zoneName,
+    pickupTime: order.pickupTime,
+    subtotal: toNum(order.subtotal),
+    deliveryFee: toNum(order.deliveryFee),
+    discount: toNum(order.discount),
+    total: toNum(order.total),
+    payMethod: order.payMethod,
+    payStatus: order.payStatus,
+    jalaliDate: order.jalaliDate,
+    note: order.note,
+    createdAt: order.createdAt.toISOString(),
+    lines: lines.map((l) => ({
+      itemName: l.itemName,
+      unitPrice: toNum(l.unitPrice),
+      qty: l.qty,
+      lineTotal: toNum(l.lineTotal),
+    })),
+  };
+}
+
+/**
+ * سفارش برای تخته‌ی عملیاتی پرسنل /orders — order + order_lines + نام شعبه
+ * + نام محدوده‌ی ارسال.
+ */
+export function rowToBoardOrder(
+  order: OrderRow,
+  lines: OrderLineRow[],
+  branchName: string,
+  zoneName: string | null
+): BoardOrder {
+  return {
+    id: order.id,
+    branchId: order.branchId,
+    branchName,
+    orderNo: order.orderNo,
+    status: order.status as OrderStatus,
+    serviceType: order.serviceType as 'delivery' | 'pickup',
     customerName: order.customerName,
     customerPhone: order.customerPhone,
     address: order.address,

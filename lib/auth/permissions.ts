@@ -21,6 +21,7 @@ export type SectionKey =
   | 'payroll'
   | 'inventory'
   | 'menu'
+  | 'orders'
   | 'recruitment'
   | 'logs'
   | 'settings';
@@ -43,6 +44,7 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   { key: 'payroll',      label: 'حقوق و دستمزد',     defaultRoles: ['SuperAdmin'] },
   { key: 'inventory',    label: 'انبار و آشپزخانه',  defaultRoles: ['SuperAdmin', 'Warehouse'] },
   { key: 'menu',         label: 'مدیریت منو',        defaultRoles: ['SuperAdmin'] },
+  { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'recruitment',  label: 'استخدام',           defaultRoles: ['SuperAdmin'] },
   { key: 'logs',         label: 'لاگ سیستم',         defaultRoles: ['SuperAdmin'] },
   { key: 'settings',     label: 'تنظیمات',           defaultRoles: ['SuperAdmin', 'BranchUser'] },
@@ -118,6 +120,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (pathname.startsWith('/payroll')) return 'payroll';
   if (pathname.startsWith('/inventory')) return 'inventory';
   if (pathname.startsWith('/menu')) return 'menu';
+  if (pathname.startsWith('/orders')) return 'orders';
   if (pathname.startsWith('/recruitment')) return 'recruitment';
   if (pathname.startsWith('/logs')) return 'logs';
   if (pathname.startsWith('/settings')) return 'settings';
