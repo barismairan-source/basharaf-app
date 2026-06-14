@@ -1,5 +1,20 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-12 — تکمیل ماژول انبار (reversal UI، واریانس، exception dashboard، zip) — اکانت ۱
+**چه شد:**
+(۱) **بخش ۱ (باگ‌ها):** سه چک — هر سه از قبل رفع شده بودند (Pencil+canSeePrices موجود، تایپو `*/` وجود نداشت، import استفاده می‌شد). بدون تغییر کد.
+(۲) **بخش ۲ (UI Reversal):** در لیست pending کارتابل، badge «اصلاحی» + خط «مربوط به برگه اصلی» برای voucher هایی که `parentVoucherId != null` دارند. بخش «برگه‌های تأییدشده» با دکمه `RotateCcw` برای SuperAdmin (حداکثر ۳۰ ردیف). State `reversalLoading` + تابع `handleReversal` با مدیریت خطای ۴۰۹.
+(۳) **بخش ۳ (Clamp Warning):** تأیید شد — `warnAndLogClamp` در `inventoryWarnings.ts` کامل بود، `issueConfirmed` و `produceConfirmed` درست سیم‌کشی شده بودند.
+(۴) **بخش ۴ (Variance API+UI):** `app/api/inventory/reports/variance/route.ts` — مصرف تئوریک (sale) در برابر مصرف واقعی (out+waste+sale)، گروه‌بندی بر اساس itemId با WAC. تب «واریانس» (فقط SuperAdmin) با date range، جدول هایلایت (>500k)، مجموع، و اکسپورت Excel.
+(۵) **بخش ۵ (Exception Dashboard):** `app/api/inventory/reports/exceptions/route.ts` — چهار query: pending قدیمی >۴۸h، clamp_warning از audit_log (۷ روز)، زیر minBase، reversal pending. کارت‌های `ExceptionCards` بالای صفحه با polling ۶۰s و رنگ‌بندی (۰→خاکستری، ≤۳→amber، >۳→rose).
+(۶) **بخش ۶:** نسخه `9.1.0`→`0.9.4-inv-foundation`، zip ساخته شد.
+**فایل‌ها:** `app/(app)/inventory/page.tsx`، `app/api/inventory/reports/variance/route.ts` (جدید)، `app/api/inventory/reports/exceptions/route.ts` (جدید)، `package.json` (نسخه).
+**Build:** tsc سبز ✅ (۰ خطا). `npm run build` در این ماشین گیر می‌کند (مشکل محیطی شناخته‌شده).
+**ناتمام:** —
+**برای جلسه‌ی بعد:** deploy `basharaf-0.9.4-inv-foundation.zip` روی Liara پس از اجرای `db-inventory-reversal.sql`.
+
+---
+
 ## 📓 2026-06-11 — رفع ۶ باگ گزارش‌شده (۴۰۱ سراسری، RTL منفی، استخدام→پرسنل، مانده طرف‌حساب، UI موبایل، کارتابل انبار) — اکانت ۲
 **چه شد:**
 (۱) **۴۰۱ سراسری:** وقتی session منقضی می‌شد، هر slice جدا خطا را catch می‌کرد (معمولاً آرایه خالی) → کاربر صفحه‌ی خالی/صفر می‌دید بدون اطلاع از نیاز به ورود مجدد. فایل جدید `lib/auth/sessionExpiry.ts`: `window.fetch` یک‌بار patch می‌شود؛ هر ۴۰۱ از `/api/*` (به‌جز تلاش لاگین و مسیرهای عمومی `/login,/signup,/forgot,/apply,/m`) → `user=null` + ریدایرکت به `/login`. در `SessionSync.tsx` پیش از `bootstrap()` نصب می‌شود.

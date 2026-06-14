@@ -10,10 +10,10 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.7-menu-channel-public` |
+| **نسخه** | `0.9.8-order-public` |
 | **آخرین به‌روزرسانی** | 2026-06-14 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | ✅ `v0.9.7-menu-channel-public/basharaf-deploy.zip` + `v0.9.7-menu-channel-public/db-menu-channel-migration.sql` آماده‌ی دیپلوی (فاز۱+فاز۲ کانال منو سالن/بیرون‌بر؛ migration قبلاً روی DB اجرا شده، `git push origin main` انجام شد — `fdea0a3..fa50941`). zipهای قبلی هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`)، و `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql`. |
+| **دیپلوی** | 🆕 `v0.9.8-order-public/basharaf-deploy.zip` + `v0.9.8-order-public/db-ordering-migration.sql` آماده‌ی دیپلوی (ماژول سفارش بیرون‌بر — باکس۰+۱؛ **migration هنوز روی DB اجرا نشده**، باید قبل از دیپلوی/استفاده اجرا شود). ✅ `v0.9.7-menu-channel-public/basharaf-deploy.zip` (فاز۱+فاز۲ کانال منو؛ migration قبلاً روی DB اجرا شده، push شد — `fdea0a3..fa50941`). zipهای قبلی هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`)، و `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql`. |
 | **کار نیمه‌تمام (in-progress)** | ⚠️ ماژول سفارش بیرون‌بر — باکس ۰ (جدول‌ها+تنظیمات+محدوده‌های ارسال) و باکس ۱ (صفحه‌ی عمومی `/order`: مرور منو+سبد، بدون auth) کامل شدند، ولی `db-ordering-migration.sql` هنوز روی DB اجرا نشده — تا قبل از اجرا هم `/orders/settings` هم `/order` خطا می‌دهند. `/order/checkout` فقط placeholder است (ثبت سفارش واقعی هنوز نه). همچنین بعد از دیپلوی خودکار کانال منو باید `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production چک شوند. |
 | **کار بعدی پیشنهادی** | (۱) کاربر `db-ordering-migration.sql` را در pgAdmin اجرا کند، سپس `/orders/settings` و `/order` تست شوند (`/order`: شعبه باز/بسته، حداقل سفارش، دسته‌های بدون آیتم بیرون‌بر مخفی). (۲) باکس بعدی سرویس سفارش: ثبت سفارش واقعی در `/order/checkout` (محدوده‌ی ارسال از `ord_zones`، روش پرداخت، رکورد `orders`+`order_lines`) + پیگیری با `track_token` + پنل مدیریت سفارش‌ها. (۳) بعد از دیپلوی خودکار کانال منو → چک `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production. (۴) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۵) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). |
 | **بلاک‌شده/منتظر کاربر** | ⚠️ اجرای `db-ordering-migration.sql` روی pgAdmin قبل از استفاده‌ی `/orders/settings` و `/order`. |
@@ -49,6 +49,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-14 — پکیج دیپلوی نسخه‌ی `v0.9.8-order-public` (ماژول سفارش بیرون‌بر: باکس ۰+۱) — اکانت ۲
+**چه شد:** طبق قرارداد انتشار نسخه‌دار، برای کل کار ماژول سفارش بیرون‌بر تا اینجا (باکس ۰: جدول‌ها+تنظیمات+محدوده‌های ارسال، باکس ۱: صفحه‌ی عمومی `/order`) یک نسخه‌ی جدید ساخته شد: `package.json` از `0.9.7-menu-channel-public` به `0.9.8-order-public` ارتقا یافت. پوشه‌ی `v0.9.8-order-public/` ساخته شد شامل `basharaf-deploy.zip` (خروجی `git archive HEAD`، gitignored — فقط روی این دیسک) + کپی `db-ordering-migration.sql` (هنوز روی DB production اجرا نشده — این migration **باید قبل از استفاده از کد جدید روی DB اجرا شود**، هم برای `/orders/settings` هم `/order`).
+**فایل‌ها:** `package.json` (نسخه)، `v0.9.8-order-public/db-ordering-migration.sql` (جدید، tracked)، `v0.9.8-order-public/basharaf-deploy.zip` (جدید، gitignored/untracked)، `HANDOFF.md`.
+**Build:** بدون تغییر کد منطقی در این جلسه — tsc/build قبلاً در `c6e42ed` سبز تأیید شده بود.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** کاربر `v0.9.8-order-public/db-ordering-migration.sql` را روی pgAdmin اجرا کند، سپس `v0.9.8-order-public/basharaf-deploy.zip` را روی Liara دیپلوی کند و `/orders/settings` و `/order` را تست کند. بعد از آن سراغ سایر آیتم‌های بخش ۰ (پرداخت/checkout واقعی، Backlog #14/#15، چک کانال منو روی production).
 
 ## 📓 2026-06-14 — صفحه‌ی عمومی سفارش /order: مرور منو + سبد (باکس ۱) — اکانت ۲
 **چه شد:** صفحه‌ی عمومی `/order` (بدون auth، خارج از middleware محافظت‌شده) ساخته شد — مرحله‌ی «مرور منو + سبد»، هنوز بدون ثبت سفارش/پرداخت. هلپر فقط‌خواندنی جدید `lib/ordering/publicMenu.ts` → `getPublicOrderMenu()`: شعبه = اولین شعبه (`branches[0]` به ترتیب `createdAt`)، تنظیمات از `ord_settings` (اگر ردیف نبود → fallback به مقادیر پیش‌فرض schema، **بدون insert**)، کاتالوگ از `menu_items` با `in_takeaway=true AND is_available=true` + `COALESCE(price_takeaway, price)`، دسته‌بندی از `menu_categories` با حذف دسته‌های بدون آیتم بیرون‌بر. تابع `isWithinOpenHours()` وضعیت باز/بسته‌ی لحظه‌ای را با ساعت تهران (`Asia/Tehran`) محاسبه می‌کند (شامل بازه‌ی گذرنده از نیمه‌شب). API عمومی جدید `GET /api/public/order/menu` (بدون auth، `force-dynamic`) فقط همین داده را برمی‌گرداند — هیچ فیلد پنل/قیمت خام/admin leak ندارد. صفحه‌ی `/order` (client component، دیزاین `components/ui` + پالت stone + Vazirmatn از layout ریشه، هم‌خانواده‌ی `/m`): هدر نام شعبه + Chip باز/بسته + ساعت کاری + حداقل سفارش؛ اگر بسته یا خارج ساعت → بنر قرمز هشدار + قفل دکمه‌های افزایش/کاهش تعداد؛ بخش‌های منو با شمارشگر تعداد per-item؛ سبد در state کلاینت با persist در `localStorage` (`basharaf-order-cart`)، نوار پایین چسبان با تعداد قلم/subtotal/کمبود تا حداقل سفارش/دکمه «ادامه» (غیرفعال تا شعبه باز باشد، سبد خالی نباشد، و حداقل سفارش برسد) → `/order/checkout`. صفحه‌ی placeholder جدید `/order/checkout`.
@@ -123,22 +130,9 @@
 ۳. retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» روی production با کد جدید.
 ۴. وقتی کاربر آماده بود: پاسخ به ۵ سوال باز `project-docs/decision-channel-column.md` و شروع پیاده‌سازی ستون `channel` (فاز۹).
 
-## 📓 2026-06-12 — تکمیل ماژول انبار (reversal UI، واریانس، exception dashboard، zip) — اکانت ۱
-**چه شد:**
-(۱) **بخش ۱ (باگ‌ها):** سه چک — هر سه از قبل رفع شده بودند (Pencil+canSeePrices موجود، تایپو `*/` وجود نداشت، import استفاده می‌شد). بدون تغییر کد.
-(۲) **بخش ۲ (UI Reversal):** در لیست pending کارتابل، badge «اصلاحی» + خط «مربوط به برگه اصلی» برای voucher هایی که `parentVoucherId != null` دارند. بخش «برگه‌های تأییدشده» با دکمه `RotateCcw` برای SuperAdmin (حداکثر ۳۰ ردیف). State `reversalLoading` + تابع `handleReversal` با مدیریت خطای ۴۰۹.
-(۳) **بخش ۳ (Clamp Warning):** تأیید شد — `warnAndLogClamp` در `inventoryWarnings.ts` کامل بود، `issueConfirmed` و `produceConfirmed` درست سیم‌کشی شده بودند.
-(۴) **بخش ۴ (Variance API+UI):** `app/api/inventory/reports/variance/route.ts` — مصرف تئوریک (sale) در برابر مصرف واقعی (out+waste+sale)، گروه‌بندی بر اساس itemId با WAC. تب «واریانس» (فقط SuperAdmin) با date range، جدول هایلایت (>500k)، مجموع، و اکسپورت Excel.
-(۵) **بخش ۵ (Exception Dashboard):** `app/api/inventory/reports/exceptions/route.ts` — چهار query: pending قدیمی >۴۸h، clamp_warning از audit_log (۷ روز)، زیر minBase، reversal pending. کارت‌های `ExceptionCards` بالای صفحه با polling ۶۰s و رنگ‌بندی (۰→خاکستری، ≤۳→amber، >۳→rose).
-(۶) **بخش ۶:** نسخه `9.1.0`→`0.9.4-inv-foundation`، zip ساخته شد.
-**فایل‌ها:** `app/(app)/inventory/page.tsx`، `app/api/inventory/reports/variance/route.ts` (جدید)، `app/api/inventory/reports/exceptions/route.ts` (جدید)، `package.json` (نسخه).
-**Build:** tsc سبز ✅ (۰ خطا). `npm run build` در این ماشین گیر می‌کند (مشکل محیطی شناخته‌شده).
-**ناتمام:** —
-**برای جلسه‌ی بعد:** deploy `basharaf-0.9.4-inv-foundation.zip` روی Liara پس از اجرای `db-inventory-reversal.sql`.
-
 ---
 
-> ⬇️ ورودی‌های قدیمی‌تر (رفع ۶ باگ گزارش‌شده ۲۰۲۶-۰۶-۱۱، integration tests Backlog #5، آدیت امنیتی Backlog #3، account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
+> ⬇️ ورودی‌های قدیمی‌تر (تکمیل ماژول انبار ۲۰۲۶-۰۶-۱۲، رفع ۶ باگ گزارش‌شده ۲۰۲۶-۰۶-۱۱، integration tests Backlog #5، آدیت امنیتی Backlog #3، account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
 
 ---
 
