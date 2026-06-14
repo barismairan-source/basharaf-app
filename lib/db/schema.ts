@@ -1371,3 +1371,128 @@ export type Equipment = typeof equipment.$inferSelect;
 export type MaintenanceLog = typeof maintenanceLogs.$inferSelect;
 export type TaskTemplate = typeof taskTemplates.$inferSelect;
 export type TaskInstance = typeof taskInstances.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول سفارش بیرون‌بر — Ordering: ارسال + پیکاپ، نقدی + آنلاین، guest checkout
+// کاتالوگ = کانال بیرونِ منوی موجود (menu_items با in_takeaway=true).
+// طبق قرارداد پروژه: بدون pgEnum — service_type/pay_method/pay_status به‌صورت
+// text با CHECK constraint در migration. status بدون CHECK (state machine
+// در لایه‌ی اپ؛ order_events تاریخچه‌ی تغییر وضعیت را نگه می‌دارد).
+// پول bigint تومان. تاریخ کاربری شمسی text.
+// ════════════════════════════════════════════════════════════════
+
+// ─── ord_settings — تنظیمات سفارش بیرون‌بر هر شعبه (یک ردیف به ازای هر شعبه) ───
+export const ordSettings = pgTable(
+  'ord_settings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    isOpen: boolean('is_open').notNull().default(true),
+    openTime: text('open_time').notNull().default('09:00'),
+    closeTime: text('close_time').notNull().default('23:00'),
+    deliveryEnabled: boolean('delivery_enabled').notNull().default(true),
+    pickupEnabled: boolean('pickup_enabled').notNull().default(true),
+    payCash: boolean('pay_cash').notNull().default(true),
+    payOnline: boolean('pay_online').notNull().default(false),
+    minOrder: bigint('min_order', { mode: 'number' }).notNull().default(0),
+    prepBufferMin: integer('prep_buffer_min').notNull().default(30),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchUidx: uniqueIndex('ord_settings_branch_uidx').on(t.branchId),
+  })
+);
+
+// ─── ord_zones — محدوده‌های ارسال نام‌دار + هزینه ──────────────────
+export const ordZones = pgTable(
+  'ord_zones',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    deliveryFee: bigint('delivery_fee', { mode: 'number' }).notNull(),
+    minOrder: bigint('min_order', { mode: 'number' }).notNull().default(0),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchIdx: index('ord_zones_branch_idx').on(t.branchId),
+  })
+);
+
+// ─── orders — سفارش بیرون‌بر (ارسال/پیکاپ، نقدی/آنلاین، guest checkout) ───
+export const orders = pgTable(
+  'orders',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    orderNo: text('order_no').notNull(),
+    trackToken: text('track_token').notNull(),
+    serviceType: text('service_type').notNull(), // delivery | pickup — CHECK در migration
+    status: text('status').notNull().default('received'), // received|... (بدون CHECK — order_events تاریخچه را نگه می‌دارد)
+    customerName: text('customer_name').notNull(),
+    customerPhone: text('customer_phone').notNull(),
+    address: text('address'),
+    zoneId: uuid('zone_id').references(() => ordZones.id, { onDelete: 'set null' }),
+    subtotal: bigint('subtotal', { mode: 'number' }).notNull(),
+    deliveryFee: bigint('delivery_fee', { mode: 'number' }).notNull().default(0),
+    discount: bigint('discount', { mode: 'number' }).notNull().default(0),
+    total: bigint('total', { mode: 'number' }).notNull(),
+    payMethod: text('pay_method').notNull(), // cash | online — CHECK در migration
+    payStatus: text('pay_status').notNull().default('unpaid'), // unpaid|paid|failed|refunded — CHECK در migration
+    payRef: text('pay_ref'),
+    jalaliDate: text('jalali_date').notNull(),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    orderNoUidx: uniqueIndex('orders_order_no_uidx').on(t.orderNo),
+    trackTokenUidx: uniqueIndex('orders_track_token_uidx').on(t.trackToken),
+    branchStatusIdx: index('orders_branch_status_idx').on(t.branchId, t.status),
+  })
+);
+
+// ─── order_lines — اقلام سفارش (snapshot از menu_items هنگام ثبت) ─
+export const orderLines = pgTable(
+  'order_lines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+    itemName: text('item_name').notNull(),
+    unitPrice: bigint('unit_price', { mode: 'number' }).notNull(),
+    qty: integer('qty').notNull(),
+    lineTotal: bigint('line_total', { mode: 'number' }).notNull(),
+  },
+  (t) => ({
+    orderIdx: index('order_lines_order_idx').on(t.orderId),
+  })
+);
+
+// ─── order_events — تاریخچه‌ی تغییر وضعیت سفارش ────────────────────
+export const orderEvents = pgTable(
+  'order_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orderId: uuid('order_id').notNull().references(() => orders.id, { onDelete: 'cascade' }),
+    fromStatus: text('from_status'),
+    toStatus: text('to_status').notNull(),
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    orderIdx: index('order_events_order_idx').on(t.orderId),
+  })
+);
+
+// ─── Types ───
+export type OrdSettings = typeof ordSettings.$inferSelect;
+export type OrdZone = typeof ordZones.$inferSelect;
+export type Order = typeof orders.$inferSelect;
+export type OrderLine = typeof orderLines.$inferSelect;
+export type OrderEvent = typeof orderEvents.$inferSelect;

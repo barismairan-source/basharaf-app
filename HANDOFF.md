@@ -14,9 +14,9 @@
 | **آخرین به‌روزرسانی** | 2026-06-14 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
 | **دیپلوی** | ✅ `v0.9.7-menu-channel-public/basharaf-deploy.zip` + `v0.9.7-menu-channel-public/db-menu-channel-migration.sql` آماده‌ی دیپلوی (فاز۱+فاز۲ کانال منو سالن/بیرون‌بر؛ migration قبلاً روی DB اجرا شده، `git push origin main` انجام شد — `fdea0a3..fa50941`). zipهای قبلی هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`)، و `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql`. |
-| **کار نیمه‌تمام (in-progress)** | — (push فاز۱+فاز۲ کانال منو انجام شد؛ بعد از دیپلوی خودکار باید `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production چک شوند). |
-| **کار بعدی پیشنهادی** | (۱) بعد از دیپلوی خودکار → چک `/m` (سالن)، `/m/{takeawaySlug}` (بیرون‌بر) و تب QR پنل `/menu` روی production. (۲) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۳) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۴) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **کار نیمه‌تمام (in-progress)** | ⚠️ ماژول سفارش بیرون‌بر (باکس ۰ — جدول‌ها + تنظیمات + محدوده‌های ارسال) کامل شد ولی `db-ordering-migration.sql` هنوز روی DB اجرا نشده — تا قبل از اجرا `/orders/settings` خطا می‌دهد. همچنین بعد از دیپلوی خودکار کانال منو باید `/m`، `/m/{takeawaySlug}` و تب QR پنل `/menu` روی production چک شوند. |
+| **کار بعدی پیشنهادی** | (۱) کاربر `db-ordering-migration.sql` را در pgAdmin اجرا کند، سپس `/orders/settings` تست شود (لود/ذخیره‌ی تنظیمات + CRUD محدوده‌های ارسال). (۲) بعد از دیپلوی خودکار → چک `/m` (سالن)، `/m/{takeawaySlug}` (بیرون‌بر) و تب QR پنل `/menu` روی production. (۳) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۴) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). (۵) وقتی کاربر آماده بود: فاز۹ — پاسخ به سوالات `project-docs/decision-channel-column.md`. |
+| **بلاک‌شده/منتظر کاربر** | ⚠️ اجرای `db-ordering-migration.sql` روی pgAdmin قبل از استفاده‌ی `/orders/settings`. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-14 — ماژول سفارش بیرون‌بر: زیرساخت داده + تنظیمات (باکس ۰) — اکانت ۲
+**چه شد:** پایه‌ی ماژول سفارش بیرون‌بر (ارسال+پیکاپ، نقدی+آنلاین، guest checkout) ساخته شد — فقط داده+تنظیمات، بدون UI مشتری. ۵ جدول جدید بدون pgEnum (طبق قرارداد، text+CHECK): `ord_settings` (تنظیمات هر شعبه: باز/بسته، ساعت، ارسال/پیکاپ، روش پرداخت، حداقل سفارش، بافر آماده‌سازی)، `ord_zones` (محدوده‌های ارسال + هزینه)، `orders`، `order_lines`، `order_events` (با CHECK روی service_type/pay_method/pay_status). Migration idempotent `db-ordering-migration.sql` ساخته شد (هنوز روی DB اجرا نشده). repo به الگوی موجود (`lib/repos/ordering.types.ts` + `.api.ts`) + هلپرهای `lib/ordering/settings.ts` + `zones.ts` (شامل ایجاد خودکار ردیف تنظیمات پیش‌فرض با onConflictDoNothing). ۳ روت API (`/api/orders/settings`، `/api/orders/zones`، `/api/orders/zones/[id]`) با RBAC (SuperAdmin همه، BranchUser فقط شعبه‌ی خود). صفحه‌ی جدید `/orders/settings` (فرم تنظیمات شعبه + CRUD محدوده‌های ارسال با فرمت اعداد فارسی) — بدون آیتم سایدبار جدید (طبق دستور).
+**فایل‌ها:** `lib/db/schema.ts` (+۵ جدول)، `db-ordering-migration.sql` (جدید)، `lib/db/ordering.serializers.ts` (جدید)، `types/ordering.ts` (جدید) + `types/index.ts`، `lib/repos/ordering.types.ts` + `lib/repos/ordering.api.ts` (جدید)، `lib/ordering/settings.ts` + `lib/ordering/zones.ts` (جدید)، `app/api/orders/settings/route.ts` + `app/api/orders/zones/route.ts` + `app/api/orders/zones/[id]/route.ts` (جدید)، `app/(app)/orders/settings/page.tsx` (جدید).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (روت‌های جدید ساخته شدند: `/api/orders/settings`، `/api/orders/zones`، `/api/orders/zones/[id]`، `/orders/settings` — 4.54 kB).
+**ناتمام:** ⚠️ `db-ordering-migration.sql` هنوز روی DB production اجرا نشده — تا قبل از اجرا `/orders/settings` با خطای «جدول وجود ندارد» مواجه می‌شود (چون `getOrdSettings` در اولین فراخوانی سعی می‌کند ردیف پیش‌فرض را در `ord_settings` بسازد). UI مشتری (سفارش‌گیری واقعی) هنوز ساخته نشده — این فقط زیرساخت + تنظیمات است.
+**برای جلسه‌ی بعد:** ۱) کاربر `db-ordering-migration.sql` را روی pgAdmin اجرا کند، سپس `/orders/settings` تست شود (لود/ذخیره‌ی تنظیمات + CRUD محدوده‌های ارسال). ۲) سپس باکس‌های بعدی سرویس سفارش (کاتالوگ/UI بیرون‌بر، ثبت سفارش، پیگیری با track_token، پنل مدیریت سفارش‌ها). ۳) سایر آیتم‌های Backlog (#14 دیپلوی عملیات روی Liara، #15 retest تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions).
 
 ## 📓 2026-06-14 — push فاز۱+فاز۲ کانال منو + پکیج نسخه‌ی `v0.9.7-menu-channel-public` — اکانت ۲
 **چه شد:** کاربر تأیید کرد `db-menu-channel-migration.sql` روی DB production اجرا شده. `git push origin main` انجام شد (دو کامیت محلی فاز۱ `ebdf822` + فاز۲ `fa50941` → `fdea0a3..fa50941`). طبق قرارداد انتشار نسخه‌دار، پوشه‌ی `v0.9.7-menu-channel-public/` ساخته شد: `basharaf-deploy.zip` (خروجی `git archive HEAD`؛ بدون node_modules/.next/.git، چون gitignore هستند) + کپی `db-menu-channel-migration.sql` برای آرشیو (این migration از قبل روی DB اجرا شده — کپی فقط برای کامل‌بودن باندل دیپلوی است).
@@ -140,21 +147,6 @@
 **برای جلسه‌ی بعد:** اول `npm run build` را برای commit فعلی روی محیط دیگری امتحان کن. اگر سبز بود، خیال همه راحت است و می‌توان به Backlog ادامه داد. اگر همان‌جا هم گیر کرد، شک به یک پکیج/نسخه‌ی Node خاص برو (`rm -rf .next node_modules/.cache && npm run build`، یا `next build --debug`). جدا از این، deploy `v9.1.0/basharaf-deploy.zip` روی لیارا هنوز توسط کاربر تست نشده.
 
 ---
-
-## 📓 2026-06-10 — رفع 28P01 لیارا + قرارداد انتشار نسخه‌دار (Backlog #4) — اکانت ۱
-**چه شد:** ریشه‌ی خطای `28P01` لیارا پیدا شد: پارسر داخلی `postgres-js` برای جدا کردن host از userinfo از **اولین** `@` در connection string استفاده می‌کند نه آخرین؛ اگر پسورد auto-generated پنل لیارا شامل کاراکترهای خاص (`@ # % &`) باشد و percent-encode نشده باشد، host/user/pass اشتباه پارس می‌شوند → `28P01` حتی با پسورد درست در پنل. در `lib/db/client.ts` تابع `parseDatabaseUrl` اضافه شد: با یک regex حریصانه آخرین `@` قبل از host را پیدا می‌کند، user/pass/host/port/db را جدا می‌کند و به‌صورت آبجکت (نه رشته) به `postgres()` می‌دهد — این مسیر اصلاً وارد پارسر باگ‌دار نمی‌شود. پسورد چه percent-encode شده چه raw درست خوانده می‌شود (دستی با ۶ نمونه‌ی ادج‌کیس شامل `@ # / %` تست شد). منطق auto-detect SSL/`DATABASE_SSL` و رفتار Vercel+Supabase دست‌نخورده ماند. مستندسازی در `DEPLOY-LIARA.md` (بخش عیب‌یابی) اضافه شد.
-همچنین **قرارداد انتشار نسخه‌دار** جدید برقرار شد: هر release یک پوشه‌ی `vX.Y.Z/` در ریشه (مطابق `package.json.version`) شامل `basharaf-deploy.zip` (خروجی `git archive HEAD` — بدون node_modules/.next/.git) به‌علاوه‌ی فایل(های) migration جدید یا `NO_SQL_MIGRATION_REQUIRED.txt`. `package.json` از `9.0.0` به `9.1.0` ارتقا یافت تا با این قرارداد هم‌راستا شود.
-**فایل‌ها:** `lib/db/client.ts` (+`parseDatabaseUrl`)، `DEPLOY-LIARA.md` (+بخش عیب‌یابی `28P01`)، `package.json` (نسخه `9.1.0`)، `v9.1.0/basharaf-deploy.zip` + `v9.1.0/NO_SQL_MIGRATION_REQUIRED.txt` (جدید، خارج از کنترل git به‌جز فایل marker).
-**Build:** tsc سبز ✅ (۰ خطا) / build سبز ✅
-**ناتمام:** فیکس روی production لیارا تست نشده — نیاز به deploy واقعی توسط کاربر و گزارش نتیجه.
-**برای جلسه‌ی بعد:** کاربر `v9.1.0/basharaf-deploy.zip` را روی لیارا deploy کند. اگر اتصال DB موفق شد → Backlog #5 (اجرای واقعی integration tests) یا Backlog #6. اگر باز هم `28P01` بود → username/host دقیق connection string کاربر را بررسی کن (نه فقط فرمت پسورد).
-
-## 📓 2026-06-10 — integration tests برای balance guardها (Backlog #5) — اکانت ۱
-**چه شد:** سه سناریوی Backlog #5 با Node.js test runner داخلی (`node --test` از طریق `tsx` — صفر وابستگی جدید) پیاده شد: (A) DELETE اتمیک یک تراکنش approved → reverse کامل صندوق، مانده‌ی طرف‌حساب، موجودی انبار (`qtyBase`) و حذف سند COGS + ثبت ردیف معکوس `inv_stock_tx`؛ (B) PATCH فیلد مالی روی approved → 422 `FINANCIAL_FIELDS_IMMUTABLE_AFTER_APPROVAL` (شامل تست «فقط حضور کلید کافی است، حتی با همان مقدار»)؛ (C) PATCH فیلد غیرمالی (note/receipt/categoryId) روی approved → ۲۰۰، بدون اثر بر amount/balance. تست‌ها یک نمونه‌ی واقعی `next start` بالا می‌آورند، با لاگین واقعی کوکی session می‌گیرند و روی fixtureهای ایزوله با پیشوند `__INTEGRATION_TEST__` کار می‌کنند که در پایان کامل پاک می‌شوند. به دستور کاربر: روی production اجرا نشد، schema دست‌نخورد، هیچ SQL جدیدی لازم نشد. کل suite اگر `DATABASE_URL` ست نباشد با پیام فارسی skip می‌شود (تأیید شد: `npm run test:integration` بدون DB → exit 0، صفر تست اجراشده).
-**فایل‌ها:** `tests/integration/transactions.test.ts`، `tests/integration/helpers/env.ts`، `tests/integration/helpers/server.ts`، `tests/integration/helpers/fixtures.ts`، `tests/integration/helpers/api.ts`، `package.json` (+اسکریپت `test:integration`).
-**Build:** tsc سبز ✅ (۰ خطا) / build سبز ✅. اجرای واقعی تست‌ها روی DB واقعی هنوز تأیید نشده.
-**ناتمام:** اجرا/تأیید این تست‌ها روی یک دیتابیس واقعی غیر-production — منتظر تصمیم کاربر برای محیط تست.
-**برای جلسه‌ی بعد:** اگر DATABASE_URL تست آماده شد → `npm run build && npm run test:integration` و گزارش نتیجه. وگرنه Backlog #4 (Liara `28P01`).
 
 > ⬇️ ورودی‌های قدیمی‌تر (integration tests Backlog #5، آدیت امنیتی Backlog #3، account selection، stocktake accounting) به `project-docs/handoff-archive.md` منتقل شدند.
 
