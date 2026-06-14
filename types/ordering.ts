@@ -53,3 +53,41 @@ export interface OrdZonePatch {
   minOrder?: number;
   isActive?: boolean;
 }
+
+// ─── سفارش بیرون‌بر — صفحه‌ی عمومی /order (بدون auth) ───────────────
+
+export interface PublicOrderItem {
+  id: string;
+  titleFa: string;
+  titleEn: string;
+  descriptionFa: string;
+  descriptionEn: string;
+  price: number;
+}
+
+export interface PublicOrderSection {
+  id: string;
+  slug: string;
+  labelFa: string;
+  labelEn: string;
+  items: PublicOrderItem[];
+}
+
+export interface PublicOrderSettings {
+  isOpen: boolean;
+  /** isOpen=true و الان داخل بازه‌ی [openTime, closeTime) به‌وقت تهران */
+  isOpenNow: boolean;
+  openTime: string;
+  closeTime: string;
+  deliveryEnabled: boolean;
+  pickupEnabled: boolean;
+  payCash: boolean;
+  payOnline: boolean;
+  minOrder: number;
+}
+
+export interface PublicOrderMenu {
+  branch: { id: string; name: string };
+  settings: PublicOrderSettings;
+  sections: PublicOrderSection[];
+}
