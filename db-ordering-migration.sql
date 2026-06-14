@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS orders (
   pay_method     text        NOT NULL CHECK (pay_method IN ('cash', 'online')),
   pay_status     text        NOT NULL DEFAULT 'unpaid' CHECK (pay_status IN ('unpaid', 'paid', 'failed', 'refunded')),
   pay_ref        text,
+  pickup_time    text,
+  client_token   text,
   jalali_date    text        NOT NULL,
   note           text,
   created_at     timestamptz NOT NULL DEFAULT NOW(),
@@ -73,6 +75,7 @@ CREATE TABLE IF NOT EXISTS orders (
 
 CREATE UNIQUE INDEX IF NOT EXISTS orders_order_no_uidx     ON orders (order_no);
 CREATE UNIQUE INDEX IF NOT EXISTS orders_track_token_uidx  ON orders (track_token);
+CREATE UNIQUE INDEX IF NOT EXISTS orders_client_token_uidx ON orders (client_token);
 CREATE        INDEX IF NOT EXISTS orders_branch_status_idx ON orders (branch_id, status);
 
 -- ===== order_lines =====

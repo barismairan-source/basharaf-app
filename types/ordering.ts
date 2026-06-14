@@ -86,8 +86,65 @@ export interface PublicOrderSettings {
   minOrder: number;
 }
 
+export interface PublicOrderZone {
+  id: string;
+  name: string;
+  deliveryFee: number;
+  minOrder: number;
+}
+
 export interface PublicOrderMenu {
   branch: { id: string; name: string };
   settings: PublicOrderSettings;
   sections: PublicOrderSection[];
+  zones: PublicOrderZone[];
+}
+
+// ─── سفارش بیرون‌بر — ثبت سفارش از /order/checkout (نقدی، idempotent) ────
+
+export interface CreateOrderItemInput {
+  id: string;
+  qty: number;
+}
+
+export interface CreateOrderInput {
+  clientToken: string;
+  serviceType: 'delivery' | 'pickup';
+  customerName: string;
+  customerPhone: string;
+  address?: string;
+  zoneId?: string;
+  pickupTime?: string;
+  note?: string;
+  items: CreateOrderItemInput[];
+}
+
+export interface PublicOrderLine {
+  itemName: string;
+  unitPrice: number;
+  qty: number;
+  lineTotal: number;
+}
+
+export interface PublicOrder {
+  id: string;
+  orderNo: string;
+  trackToken: string;
+  status: string;
+  serviceType: string;
+  customerName: string;
+  customerPhone: string;
+  address: string | null;
+  zoneName: string | null;
+  pickupTime: string | null;
+  subtotal: number;
+  deliveryFee: number;
+  discount: number;
+  total: number;
+  payMethod: string;
+  payStatus: string;
+  jalaliDate: string;
+  note: string | null;
+  createdAt: string;
+  lines: PublicOrderLine[];
 }

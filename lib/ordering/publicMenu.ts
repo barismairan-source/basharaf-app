@@ -1,6 +1,8 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
-import type { PublicOrderItem, PublicOrderMenu, PublicOrderSection, PublicOrderSettings } from '@/types';
+import type { PublicOrderItem, PublicOrderMenu, PublicOrderSection, PublicOrderSettings, PublicOrderZone } from '@/types';
+
+type BranchRow = typeof schema.branches.$inferSelect;
 
 /**
  * مقادیر پیش‌فرض ord_settings — مطابق default ستون‌ها در db-ordering-migration.sql.
@@ -52,24 +54,38 @@ export function isWithinOpenHours(openTime: string, closeTime: string, now: Date
 }
 
 /**
- * منوی عمومی سفارش بیرون‌بر برای صفحه‌ی /order.
+ * شعبه‌ی پیش‌فرض برای سرویس‌های عمومی سفارش بیرون‌بر — اولین شعبه
+ * (مطابق قرارداد branches[0] در پنل ادمین، بر اساس createdAt).
+ * اگر هیچ شعبه‌ای وجود نداشته باشد null برمی‌گردد.
+ */
+export async function getDefaultBranch(): Promise<BranchRow | null> {
+  const [branch] = await db.select().from(schema.branches)
+    .orderBy(asc(schema.branches.createdAt)).limit(1);
+  return branch ?? null;
+}
+
+/**
+ * منوی عمومی سفارش بیرون‌بر برای صفحه‌ی /order و /order/checkout.
  * شعبه = اولین شعبه (مطابق قرارداد branches[0] در پنل ادمین).
  * کاتالوگ = menu_items با in_takeaway=true و isAvailable=true،
  * قیمت = COALESCE(price_takeaway, price).
+ * محدوده‌های ارسال = ord_zones فعال شعبه (برای انتخاب در checkout).
  * اگر هیچ شعبه‌ای وجود نداشته باشد null برمی‌گردد.
  */
 export async function getPublicOrderMenu(): Promise<PublicOrderMenu | null> {
-  const [branch] = await db.select().from(schema.branches)
-    .orderBy(asc(schema.branches.createdAt)).limit(1);
+  const branch = await getDefaultBranch();
   if (!branch) return null;
 
-  const [settingsRows, categories, items] = await Promise.all([
+  const [settingsRows, categories, items, zoneRows] = await Promise.all([
     db.select().from(schema.ordSettings)
       .where(eq(schema.ordSettings.branchId, branch.id)).limit(1),
     db.select().from(schema.menuCategories).orderBy(asc(schema.menuCategories.sortOrder)),
     db.select().from(schema.menuItems)
       .where(and(eq(schema.menuItems.inTakeaway, true), eq(schema.menuItems.isAvailable, true)))
       .orderBy(asc(schema.menuItems.sortOrder)),
+    db.select().from(schema.ordZones)
+      .where(and(eq(schema.ordZones.branchId, branch.id), eq(schema.ordZones.isActive, true)))
+      .orderBy(asc(schema.ordZones.name)),
   ]);
 
   const s = settingsRows[0];
@@ -115,9 +131,17 @@ export async function getPublicOrderMenu(): Promise<PublicOrderMenu | null> {
     }))
     .filter((section) => section.items.length > 0);
 
+  const zones: PublicOrderZone[] = zoneRows.map((z) => ({
+    id: z.id,
+    name: z.name,
+    deliveryFee: Number(z.deliveryFee),
+    minOrder: Number(z.minOrder),
+  }));
+
   return {
     branch: { id: branch.id, name: branch.name },
     settings,
     sections,
+    zones,
   };
 }

@@ -1,5 +1,7 @@
-import type { PublicOrderMenu } from '@/types';
+import type { CreateOrderInput, PublicOrder, PublicOrderMenu } from '@/types';
 
 export interface PublicOrderRepo {
   getMenu(): Promise<PublicOrderMenu>;
+  createOrder(input: CreateOrderInput): Promise<PublicOrder>;
+  getOrderByToken(token: string): Promise<PublicOrder>;
 }

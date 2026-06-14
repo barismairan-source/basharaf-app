@@ -2,6 +2,8 @@ import { schema } from './client';
 
 type OrdSettingsRow = typeof schema.ordSettings.$inferSelect;
 type OrdZoneRow = typeof schema.ordZones.$inferSelect;
+type OrderRow = typeof schema.orders.$inferSelect;
+type OrderLineRow = typeof schema.orderLines.$inferSelect;
 
 /**
  * BigInt → Number conversion (مطابق lib/db/operations.serializers.ts).
@@ -39,5 +41,39 @@ export function rowToOrdZone(row: OrdZoneRow) {
     isActive: row.isActive,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/**
+ * سفارش عمومی (پاسخ ثبت سفارش + صفحه‌ی رهگیری) — order + order_lines (snapshot)
+ * + نام محدوده‌ی ارسال (در صورت وجود zone_id).
+ */
+export function rowToPublicOrder(order: OrderRow, lines: OrderLineRow[], zoneName: string | null) {
+  return {
+    id: order.id,
+    orderNo: order.orderNo,
+    trackToken: order.trackToken,
+    status: order.status,
+    serviceType: order.serviceType,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    address: order.address,
+    zoneName,
+    pickupTime: order.pickupTime,
+    subtotal: toNum(order.subtotal),
+    deliveryFee: toNum(order.deliveryFee),
+    discount: toNum(order.discount),
+    total: toNum(order.total),
+    payMethod: order.payMethod,
+    payStatus: order.payStatus,
+    jalaliDate: order.jalaliDate,
+    note: order.note,
+    createdAt: order.createdAt.toISOString(),
+    lines: lines.map((l) => ({
+      itemName: l.itemName,
+      unitPrice: toNum(l.unitPrice),
+      qty: l.qty,
+      lineTotal: toNum(l.lineTotal),
+    })),
   };
 }

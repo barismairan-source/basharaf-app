@@ -1445,6 +1445,8 @@ export const orders = pgTable(
     payMethod: text('pay_method').notNull(), // cash | online — CHECK در migration
     payStatus: text('pay_status').notNull().default('unpaid'), // unpaid|paid|failed|refunded — CHECK در migration
     payRef: text('pay_ref'),
+    pickupTime: text('pickup_time'), // فقط pickup — زمان دریافت دلخواه مشتری
+    clientToken: text('client_token'), // idempotency key از /order/checkout
     jalaliDate: text('jalali_date').notNull(),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1454,6 +1456,7 @@ export const orders = pgTable(
   (t) => ({
     orderNoUidx: uniqueIndex('orders_order_no_uidx').on(t.orderNo),
     trackTokenUidx: uniqueIndex('orders_track_token_uidx').on(t.trackToken),
+    clientTokenUidx: uniqueIndex('orders_client_token_uidx').on(t.clientToken),
     branchStatusIdx: index('orders_branch_status_idx').on(t.branchId, t.status),
   })
 );

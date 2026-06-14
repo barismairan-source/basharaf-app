@@ -6,28 +6,8 @@ import { Clock, Minus, Plus, ShoppingBag } from 'lucide-react';
 import { Button, Card, Chip, Empty } from '@/components/ui';
 import { fmt, toFa } from '@/lib/utils';
 import { publicOrderRepo } from '@/lib/repos/publicOrder.api';
+import { loadCart, saveCart, type Cart } from '@/lib/ordering/cart';
 import type { PublicOrderItem, PublicOrderMenu, PublicOrderSection } from '@/types';
-
-const CART_STORAGE_KEY = 'basharaf-order-cart';
-
-type Cart = Record<string, number>;
-
-function loadCart(): Cart {
-  if (typeof window === 'undefined') return {};
-  try {
-    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw) as unknown;
-    if (!parsed || typeof parsed !== 'object') return {};
-    const cart: Cart = {};
-    for (const [id, qty] of Object.entries(parsed as Record<string, unknown>)) {
-      if (typeof qty === 'number' && qty > 0) cart[id] = qty;
-    }
-    return cart;
-  } catch {
-    return {};
-  }
-}
 
 export default function PublicOrderPage() {
   const router = useRouter();
@@ -44,7 +24,7 @@ export default function PublicOrderPage() {
 
   useEffect(() => {
     if (!hydrated) return;
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
+    saveCart(cart);
   }, [cart, hydrated]);
 
   useEffect(() => {
