@@ -6,14 +6,18 @@ import { getPaymentGateway } from '@/lib/payments';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/public/order/pay/callback — بازگشت از درگاه Zarinpal (Authority, Status).
+ * GET /api/public/order/pay/callback — بازگشت از درگاه پرداخت آنلاین.
+ * هر درگاه نام پارامتر authority را متفاوت برمی‌گرداند:
+ * Zarinpal=Authority، Zibal=trackId، IDPay=id — بدون تداخل، با fallback پیدا می‌شود.
  * idempotent: اگر سفارش قبلاً paid شده، دوباره verify نمی‌شود.
  * مبلغ verify همیشه order.total سمت سرور است (نه مقداری از کلاینت) — ضد دستکاری.
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const authority = url.searchParams.get('Authority');
-  const status = url.searchParams.get('Status');
+  const authority =
+    url.searchParams.get('Authority') ?? // Zarinpal
+    url.searchParams.get('trackId') ?? // Zibal
+    url.searchParams.get('id'); // IDPay
 
   if (!authority) {
     return NextResponse.redirect(new URL('/order', req.url));
@@ -32,7 +36,16 @@ export async function GET(req: Request) {
     return NextResponse.redirect(trackUrl);
   }
 
-  if (status !== 'OK') {
+  // برخی درگاه‌ها وضعیت لغو/شکست را در همان callback اعلام می‌کنند —
+  // برای جلوگیری از تماس غیرلازم با verify در حالت لغو کاربر:
+  // Zarinpal: Status=OK/NOK — Zibal: success=1/0
+  const zarinpalStatus = url.searchParams.get('Status');
+  const zibalSuccess = url.searchParams.get('success');
+  const canceledEarly =
+    (zarinpalStatus !== null && zarinpalStatus !== 'OK') ||
+    (zibalSuccess !== null && zibalSuccess !== '1');
+
+  if (canceledEarly) {
     if (order.payStatus !== 'failed') {
       await db.transaction(async (tx) => {
         await tx.update(schema.orders)
@@ -49,10 +62,10 @@ export async function GET(req: Request) {
     return NextResponse.redirect(trackUrl);
   }
 
-  const gateway = getPaymentGateway();
   let result;
   try {
-    result = await gateway.verify(authority, order.total);
+    const gateway = await getPaymentGateway(order.branchId);
+    result = await gateway.verify(authority, order.total, order.id);
   } catch {
     result = { ok: false as const, message: 'خطا در ارتباط با درگاه پرداخت' };
   }

@@ -1394,6 +1394,11 @@ export const ordSettings = pgTable(
     pickupEnabled: boolean('pickup_enabled').notNull().default(true),
     payCash: boolean('pay_cash').notNull().default(true),
     payOnline: boolean('pay_online').notNull().default(false),
+    // درگاه پرداخت آنلاین فعال + کلید/مرچنت هر درگاه (پیکربندی از پنل، نه env)
+    payGateway: text('pay_gateway').notNull().default('zarinpal'),
+    zarinpalMerchantId: text('zarinpal_merchant_id'),
+    idpayApiKey: text('idpay_api_key'),
+    zibalMerchantId: text('zibal_merchant_id'),
     minOrder: bigint('min_order', { mode: 'number' }).notNull().default(0),
     prepBufferMin: integer('prep_buffer_min').notNull().default(30),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

@@ -1,5 +1,14 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-14 — push فاز۱+فاز۲ کانال منو + پکیج نسخه‌ی `v0.9.7-menu-channel-public` — اکانت ۲
+**چه شد:** کاربر تأیید کرد `db-menu-channel-migration.sql` روی DB production اجرا شده. `git push origin main` انجام شد (دو کامیت محلی فاز۱ `ebdf822` + فاز۲ `fa50941` → `fdea0a3..fa50941`). طبق قرارداد انتشار نسخه‌دار، پوشه‌ی `v0.9.7-menu-channel-public/` ساخته شد: `basharaf-deploy.zip` (خروجی `git archive HEAD`؛ بدون node_modules/.next/.git، چون gitignore هستند) + کپی `db-menu-channel-migration.sql` برای آرشیو (این migration از قبل روی DB اجرا شده — کپی فقط برای کامل‌بودن باندل دیپلوی است).
+**فایل‌ها:** `v0.9.7-menu-channel-public/basharaf-deploy.zip` (gitignored، untracked)، `v0.9.7-menu-channel-public/db-menu-channel-migration.sql` (جدید، tracked)، `HANDOFF.md`.
+**Build:** بدون تغییر کد در این جلسه — tsc/build قبلاً در همین commitها سبز تأیید شده بود (فاز۲).
+**ناتمام:** —
+**برای جلسه‌ی بعد:** بعد از دیپلوی خودکار (production)، `/m` (سالن)، `/m/{takeawaySlug}` (بیرون‌بر)، و تب QR پنل `/menu` چک شوند. سپس سایر آیتم‌های Backlog (#14 دیپلوی عملیات روی Liara، #15 retest تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions).
+
+---
+
 ## 📓 2026-06-13 — منو: کانال سالن/بیرون‌بر (فاز۲ — صفحه‌ی عمومی بیرون‌بر + QR دوم) — اکانت ۲
 **چه شد:**
 (۱) `lib/db/menuSerializers.ts`: تابع جدید `buildPublicMenuSections(categories, items, channel, settings)` — برای یک کانال (`hall`/`takeaway`) فقط آیتم‌های `inHall`/`inTakeaway`=true را نگه می‌دارد، قیمت را resolve می‌کند (سالن: `price`؛ بیرون‌بر: `priceTakeaway ?? price`)، اگر سوییچ نمایش قیمت آن کانال خاموش باشد `price` را `null` می‌کند، و دسته‌های بدون آیتم در آن کانال را حذف می‌کند.

@@ -6,7 +6,7 @@ import { Button, Card, CardBody, CardHeader, Field, Input, Select, Switch, Empty
 import { useAppStore } from '@/store';
 import { fmt, parseAmount, formatNumericInputValue } from '@/lib/utils';
 import { orderingRepo } from '@/lib/repos/ordering.api';
-import type { OrdSettings, OrdZone } from '@/types';
+import type { OrdSettings, OrdZone, PaymentGatewayId } from '@/types';
 
 type ShowToast = (text: string, tone?: ToastTone, sub?: string) => void;
 
@@ -32,6 +32,10 @@ export default function OrderingSettingsPage() {
     pickupEnabled: true,
     payCash: true,
     payOnline: false,
+    payGateway: 'zarinpal' as PaymentGatewayId,
+    zarinpalMerchantId: '',
+    idpayApiKey: '',
+    zibalMerchantId: '',
     minOrderDisplay: '',
     prepBufferMin: '30',
   });
@@ -59,6 +63,10 @@ export default function OrderingSettingsPage() {
           pickupEnabled: s.pickupEnabled,
           payCash: s.payCash,
           payOnline: s.payOnline,
+          payGateway: s.payGateway,
+          zarinpalMerchantId: s.zarinpalMerchantId ?? '',
+          idpayApiKey: s.idpayApiKey ?? '',
+          zibalMerchantId: s.zibalMerchantId ?? '',
           minOrderDisplay: s.minOrder ? s.minOrder.toLocaleString('en-US') : '',
           prepBufferMin: String(s.prepBufferMin),
         });
@@ -93,6 +101,10 @@ export default function OrderingSettingsPage() {
         pickupEnabled: form.pickupEnabled,
         payCash: form.payCash,
         payOnline: form.payOnline,
+        payGateway: form.payGateway,
+        zarinpalMerchantId: form.zarinpalMerchantId.trim(),
+        idpayApiKey: form.idpayApiKey.trim(),
+        zibalMerchantId: form.zibalMerchantId.trim(),
         minOrder: parseAmount(form.minOrderDisplay),
         prepBufferMin: Number(form.prepBufferMin) || 0,
       });
@@ -216,6 +228,49 @@ export default function OrderingSettingsPage() {
                     />
                   </Field>
                 </div>
+
+                {form.payOnline && (
+                  <div className="rounded-md border border-stone-200 p-3 space-y-3">
+                    <div className="text-[12px] font-medium text-stone-700">پرداخت آنلاین</div>
+                    <Field label="درگاه فعال">
+                      <Select
+                        value={form.payGateway}
+                        onChange={e => setForm({ ...form, payGateway: e.target.value as PaymentGatewayId })}
+                      >
+                        <option value="zarinpal">زرین‌پال</option>
+                        <option value="idpay">آی‌دی‌پی (IDPay)</option>
+                        <option value="zibal">زیبال (Zibal)</option>
+                      </Select>
+                    </Field>
+                    {form.payGateway === 'zarinpal' && (
+                      <Field label="Merchant ID زرین‌پال">
+                        <Input
+                          dir="ltr" value={form.zarinpalMerchantId}
+                          onChange={e => setForm({ ...form, zarinpalMerchantId: e.target.value })}
+                          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        />
+                      </Field>
+                    )}
+                    {form.payGateway === 'idpay' && (
+                      <Field label="کلید API آی‌دی‌پی">
+                        <Input
+                          dir="ltr" value={form.idpayApiKey}
+                          onChange={e => setForm({ ...form, idpayApiKey: e.target.value })}
+                          placeholder="کلید API از پنل آی‌دی‌پی"
+                        />
+                      </Field>
+                    )}
+                    {form.payGateway === 'zibal' && (
+                      <Field label="Merchant ID زیبال">
+                        <Input
+                          dir="ltr" value={form.zibalMerchantId}
+                          onChange={e => setForm({ ...form, zibalMerchantId: e.target.value })}
+                          placeholder="Merchant ID از پنل زیبال"
+                        />
+                      </Field>
+                    )}
+                  </div>
+                )}
 
                 <div className="flex justify-end">
                   <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSaveSettings}>ذخیره</Button>

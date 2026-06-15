@@ -10,11 +10,17 @@ export interface OrdSettings {
   pickupEnabled: boolean;
   payCash: boolean;
   payOnline: boolean;
+  payGateway: PaymentGatewayId;
+  zarinpalMerchantId: string | null;
+  idpayApiKey: string | null;
+  zibalMerchantId: string | null;
   minOrder: number;
   prepBufferMin: number;
   createdAt: string;
   updatedAt: string;
 }
+
+export type PaymentGatewayId = 'zarinpal' | 'idpay' | 'zibal';
 
 export interface OrdSettingsPatch {
   isOpen?: boolean;
@@ -24,6 +30,10 @@ export interface OrdSettingsPatch {
   pickupEnabled?: boolean;
   payCash?: boolean;
   payOnline?: boolean;
+  payGateway?: PaymentGatewayId;
+  zarinpalMerchantId?: string;
+  idpayApiKey?: string;
+  zibalMerchantId?: string;
   minOrder?: number;
   prepBufferMin?: number;
 }

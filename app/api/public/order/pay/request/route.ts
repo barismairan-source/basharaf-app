@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     }
 
     const callbackUrl = new URL('/api/public/order/pay/callback', req.url).toString();
-    const gateway = getPaymentGateway();
+    const gateway = await getPaymentGateway(order.branchId);
     const { url, authority } = await gateway.request(order.total, order.id, callbackUrl);
 
     await db.update(schema.orders)

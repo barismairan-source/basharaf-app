@@ -15,6 +15,10 @@ const patchSchema = z.object({
   pickupEnabled: z.boolean().optional(),
   payCash: z.boolean().optional(),
   payOnline: z.boolean().optional(),
+  payGateway: z.enum(['zarinpal', 'idpay', 'zibal']).optional(),
+  zarinpalMerchantId: z.string().trim().max(100).optional(),
+  idpayApiKey: z.string().trim().max(100).optional(),
+  zibalMerchantId: z.string().trim().max(100).optional(),
   minOrder: z.number().int().min(0).max(999_999_999_999).optional(),
   prepBufferMin: z.number().int().min(0).max(1440).optional(),
 });

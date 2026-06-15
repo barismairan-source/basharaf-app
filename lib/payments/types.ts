@@ -29,6 +29,8 @@ export interface PaymentGateway {
   /**
    * تایید پرداخت پس از بازگشت از درگاه. amount (تومان) همان مبلغ ثبت‌شده‌ی
    * سفارش در دیتابیس است — هرگز مبلغ ارسالی از کلاینت را اینجا پاس ندهید.
+   * orderId همان مقداری است که به request() داده شده (برخی درگاه‌ها مثل
+   * IDPay برای verify به آن نیاز دارند).
    */
-  verify(authority: string, amount: number): Promise<PaymentVerifyResult>;
+  verify(authority: string, amount: number, orderId: string): Promise<PaymentVerifyResult>;
 }
