@@ -14,6 +14,8 @@ export default function OrderTrackPage() {
   const [order, setOrder] = useState<PublicOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [payRedirecting, setPayRedirecting] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,6 +34,19 @@ export default function OrderTrackPage() {
       cancelled = true;
     };
   }, [params.token]);
+
+  async function handlePay() {
+    if (!order) return;
+    setPayRedirecting(true);
+    setPayError(null);
+    try {
+      const { url } = await publicOrderRepo.requestPayment(order.trackToken);
+      window.location.href = url;
+    } catch (err) {
+      setPayError((err as Error).message);
+      setPayRedirecting(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -163,9 +178,32 @@ export default function OrderTrackPage() {
               <span>مبلغ قابل پرداخت</span>
               <span>{fmt(order.total)} تومان</span>
             </div>
-            <p className="text-[11.5px] text-stone-400">
-              پرداخت نقدی {order.serviceType === 'delivery' ? '— هنگام تحویل به پیک' : '— هنگام دریافت حضوری'}
-            </p>
+
+            {order.payMethod === 'cash' && (
+              <p className="text-[11.5px] text-stone-400">
+                پرداخت نقدی {order.serviceType === 'delivery' ? '— هنگام تحویل به پیک' : '— هنگام دریافت حضوری'}
+              </p>
+            )}
+
+            {order.payMethod === 'online' && order.payStatus === 'paid' && (
+              <p className="text-[11.5px] text-emerald-600">
+                پرداخت آنلاین انجام شد{order.payRef ? ` — کد پیگیری: ${toFa(order.payRef)}` : ''}
+              </p>
+            )}
+
+            {order.payMethod === 'online' && order.payStatus !== 'paid' && (
+              <div className="space-y-2 pt-1">
+                <p className="text-[11.5px] text-amber-600">
+                  {order.payStatus === 'failed'
+                    ? 'پرداخت آنلاین ناموفق بود — می‌توانید دوباره تلاش کنید.'
+                    : 'پرداخت این سفارش هنوز انجام نشده است.'}
+                </p>
+                {payError && <p className="text-[11.5px] text-rose-600">{payError}</p>}
+                <Button variant="primary" loading={payRedirecting} onClick={handlePay}>
+                  پرداخت آنلاین
+                </Button>
+              </div>
+            )}
           </CardBody>
         </Card>
       </section>

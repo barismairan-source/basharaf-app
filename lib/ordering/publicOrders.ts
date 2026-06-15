@@ -45,7 +45,7 @@ async function loadOrderDetail(order: OrderRow): Promise<PublicOrder> {
 }
 
 /**
- * ثبت سفارش عمومی (نقدی) — /order/checkout.
+ * ثبت سفارش عمومی (نقدی یا آنلاین) — /order/checkout.
  *
  * - idempotent با client_token: اگر سفارشی با همین token باشد، همان برگردانده می‌شود.
  * - قیمت‌ها از menu_items دوباره خوانده می‌شود؛ به subtotal/total ارسالی از کلاینت اعتماد نمی‌شود.
@@ -72,8 +72,11 @@ export async function createPublicOrder(input: CreateOrderInput): Promise<{ orde
   if (input.serviceType === 'pickup' && !settings.pickupEnabled) {
     throw new ApiError(422, 'سفارش با تحویل حضوری در حال حاضر فعال نیست', 'PICKUP_DISABLED');
   }
-  if (!settings.payCash) {
+  if (input.payMethod === 'cash' && !settings.payCash) {
     throw new ApiError(422, 'پرداخت نقدی در حال حاضر فعال نیست', 'CASH_DISABLED');
+  }
+  if (input.payMethod === 'online' && !settings.payOnline) {
+    throw new ApiError(422, 'پرداخت آنلاین در حال حاضر فعال نیست', 'ONLINE_DISABLED');
   }
 
   let zone: OrdZoneRow | null = null;
@@ -142,7 +145,7 @@ export async function createPublicOrder(input: CreateOrderInput): Promise<{ orde
       deliveryFee,
       discount,
       total,
-      payMethod: 'cash',
+      payMethod: input.payMethod,
       payStatus: 'unpaid',
       jalaliDate,
       note: input.note || null,

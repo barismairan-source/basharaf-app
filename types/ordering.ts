@@ -110,6 +110,7 @@ export interface CreateOrderItemInput {
 export interface CreateOrderInput {
   clientToken: string;
   serviceType: 'delivery' | 'pickup';
+  payMethod: 'cash' | 'online';
   customerName: string;
   customerPhone: string;
   address?: string;
@@ -143,6 +144,7 @@ export interface PublicOrder {
   total: number;
   payMethod: string;
   payStatus: string;
+  payRef: string | null;
   jalaliDate: string;
   note: string | null;
   createdAt: string;

@@ -22,4 +22,11 @@ export const publicOrderRepo: PublicOrderRepo = {
     );
     return data.order;
   },
+
+  async requestPayment(trackToken) {
+    return apiFetch<{ url: string }>('/api/public/order/pay/request', {
+      method: 'POST',
+      body: JSON.stringify({ trackToken }),
+    });
+  },
 };

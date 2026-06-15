@@ -11,6 +11,7 @@ import { loadCart, clearCart, type Cart } from '@/lib/ordering/cart';
 import type { CreateOrderInput, PublicOrderItem, PublicOrderMenu } from '@/types';
 
 type ServiceType = 'delivery' | 'pickup';
+type PayMethod = 'cash' | 'online';
 
 export default function OrderCheckoutPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function OrderCheckoutPage() {
   const [hydrated, setHydrated] = useState(false);
 
   const [serviceType, setServiceType] = useState<ServiceType>('delivery');
+  const [payMethod, setPayMethod] = useState<PayMethod>('cash');
   const [zoneId, setZoneId] = useState('');
   const [address, setAddress] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -103,12 +105,28 @@ export default function OrderCheckoutPage() {
     return opts;
   }, [menu]);
 
+  const payMethodOptions = useMemo(() => {
+    const opts: { value: PayMethod; label: string }[] = [];
+    if (menu?.settings.payCash) opts.push({ value: 'cash', label: 'نقدی' });
+    if (menu?.settings.payOnline) opts.push({ value: 'online', label: 'آنلاین' });
+    return opts;
+  }, [menu]);
+
+  // اگر روش انتخاب‌شده دیگر در دسترس نیست، اولین روش فعال را انتخاب کن.
+  useEffect(() => {
+    if (payMethodOptions.length === 0) return;
+    if (!payMethodOptions.some((o) => o.value === payMethod)) {
+      setPayMethod(payMethodOptions[0]!.value);
+    }
+  }, [payMethodOptions, payMethod]);
+
   const canSubmit =
     hydrated &&
     !!menu &&
     cartItems.length > 0 &&
     isOpenNow &&
     serviceOptions.length > 0 &&
+    payMethodOptions.length > 0 &&
     customerName.trim().length >= 2 &&
     customerPhone.trim().length >= 5 &&
     (serviceType !== 'delivery' || (!!zoneId && address.trim().length >= 5)) &&
@@ -123,6 +141,7 @@ export default function OrderCheckoutPage() {
       const payload: CreateOrderInput = {
         clientToken,
         serviceType,
+        payMethod,
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         note: note.trim() || undefined,
@@ -136,6 +155,18 @@ export default function OrderCheckoutPage() {
       }
       const order = await publicOrderRepo.createOrder(payload);
       clearCart();
+      if (payMethod === 'online') {
+        try {
+          const { url } = await publicOrderRepo.requestPayment(order.trackToken);
+          window.location.href = url;
+          return;
+        } catch {
+          // اگر اتصال به درگاه شکست خورد، سفارش ثبت شده — کاربر از صفحه‌ی
+          // رهگیری می‌تواند دوباره پرداخت را شروع کند.
+          router.push(`/order/track/${order.trackToken}`);
+          return;
+        }
+      }
       router.push(`/order/track/${order.trackToken}`);
     } catch (err) {
       setSubmitError((err as Error).message);
@@ -264,6 +295,32 @@ export default function OrderCheckoutPage() {
         </section>
       )}
 
+      {payMethodOptions.length === 0 && (
+        <div className="mb-5 rounded-md border border-rose-100 bg-rose-50 px-3 py-2.5 text-[12.5px] text-rose-700">
+          روش پرداختی برای سفارش‌گیری تعریف نشده — لطفاً با فروشگاه تماس بگیرید.
+        </div>
+      )}
+
+      {payMethodOptions.length > 0 && (
+        <section className="mb-5">
+          <h2 className="mb-2 text-[13px] text-stone-500">روش پرداخت</h2>
+          <Card>
+            <CardBody className="space-y-2">
+              {payMethodOptions.length > 1 ? (
+                <Toggle value={payMethod} onChange={setPayMethod} options={payMethodOptions} />
+              ) : (
+                <p className="text-[13px] text-stone-700">{payMethodOptions[0]!.label}</p>
+              )}
+              <p className="text-[11.5px] text-stone-400">
+                {payMethod === 'cash'
+                  ? `پرداخت نقدی ${serviceType === 'delivery' ? '— هنگام تحویل به پیک' : '— هنگام دریافت حضوری'}`
+                  : 'پس از ثبت سفارش به درگاه پرداخت آنلاین منتقل می‌شوید.'}
+              </p>
+            </CardBody>
+          </Card>
+        </section>
+      )}
+
       <section className="mb-5">
         <h2 className="mb-2 text-[13px] text-stone-500">اطلاعات تماس</h2>
         <Card>
@@ -320,9 +377,6 @@ export default function OrderCheckoutPage() {
             {remaining > 0 && (
               <p className="text-[11.5px] text-amber-600">{fmt(remaining)} تومان تا حداقل سفارش</p>
             )}
-            <p className="text-[11.5px] text-stone-400">
-              پرداخت نقدی {serviceType === 'delivery' ? '— هنگام تحویل به پیک' : '— هنگام دریافت حضوری'}
-            </p>
           </CardBody>
         </Card>
       </section>
@@ -340,7 +394,7 @@ export default function OrderCheckoutPage() {
             <div className="text-[15px] text-stone-800">{fmt(total)} تومان</div>
           </div>
           <Button variant="primary" loading={submitting} disabled={!canSubmit} onClick={handleSubmit}>
-            ثبت سفارش
+            {payMethod === 'online' ? 'پرداخت و ثبت سفارش' : 'ثبت سفارش'}
           </Button>
         </div>
       </div>

@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 const bodySchema = z.object({
   clientToken: z.string().trim().min(8).max(100),
   serviceType: z.enum(['delivery', 'pickup']),
+  payMethod: z.enum(['cash', 'online']),
   customerName: z.string().trim().min(2, 'نام را کامل وارد کنید').max(100),
   customerPhone: z.string().trim().min(5, 'شماره تلفن نامعتبر است').max(20),
   address: z.string().trim().max(500).optional(),
@@ -25,7 +26,7 @@ const bodySchema = z.object({
 });
 
 /**
- * POST /api/public/order/create — ثبت سفارش بیرون‌بر (عمومی، بدون auth، فقط نقدی).
+ * POST /api/public/order/create — ثبت سفارش بیرون‌بر (عمومی، بدون auth، نقدی یا آنلاین).
  * idempotent با clientToken: درخواست تکراری همان سفارش قبلی را برمی‌گرداند.
  */
 export async function POST(req: Request) {

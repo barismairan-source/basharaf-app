@@ -1,6 +1,6 @@
 {
   "name": "basharaf-app",
-  "version": "0.9.10-order-board",
+  "version": "0.9.11-online-payment",
   "private": true,
   "description": "سامانه حسابداری چندشعبه‌ای با شرف — basharaf demo 0.1",
   "scripts": {

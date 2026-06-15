@@ -67,6 +67,7 @@ export function rowToPublicOrder(order: OrderRow, lines: OrderLineRow[], zoneNam
     total: toNum(order.total),
     payMethod: order.payMethod,
     payStatus: order.payStatus,
+    payRef: order.payRef,
     jalaliDate: order.jalaliDate,
     note: order.note,
     createdAt: order.createdAt.toISOString(),
