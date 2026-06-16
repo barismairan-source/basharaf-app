@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.14-customer` |
+| **نسخه** | `0.9.15-neshan-map` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | ✅ Liara production سالم (هر دو migration باکس ۵ اجرا شده). 🆕 باکس الف (ماژول مشتری) کدش push شد ولی **`db-customer-migration.sql` هنوز روی production اجرا نشده** — `/order/account` و لینک customer به سفارش تا اجرای migration خطا می‌دهند. `v0.9.14-customer/basharaf-deploy.zip` هنوز ساخته نشده. zipهای دیگر: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) هنوز دیپلوی نشده. |
-| **کار نیمه‌تمام (in-progress)** | — (کد کامل، migration لازم است اجرا شود) |
-| **کار بعدی پیشنهادی** | (۱) اجرای `db-customer-migration.sql` روی Liara (جداول `web_customers`، `web_customer_addresses`، `web_customer_otp` + ستون `orders.order_customer_id`). (۲) اضافه کردن `CUSTOMER_JWT_SECRET=<رشته ≥۳۲ کاراکتری>` به env Liara. (۳) ساخت `v0.9.14-customer/basharaf-deploy.zip` + دیپلوی. (۴) در `/orders/settings` درگاه پرداخت پیکربندی کن. (۵) دسته‌ی «نوشیدنی» با VAT ۱۶٪ بساز. (۶) تست end-to-end: ورود با OTP از `/order/account`، ذخیره آدرس، سفارش با آدرس ذخیره‌شده، تاریخچه سفارش. (۷) Backlog #14/#15. |
-| **بلاک‌شده/منتظر کاربر** | اجرای `db-customer-migration.sql` + تنظیم `CUSTOMER_JWT_SECRET` در env |
+| **دیپلوی** | ✅ Liara production سالم. 🆕 باکس الف + باکس ب push شدند ولی **`db-customer-migration.sql` هنوز روی production اجرا نشده** + **`NEXT_PUBLIC_NESHAN_API_KEY` و `CUSTOMER_JWT_SECRET` هنوز در env Liara نیستند**. `v0.9.15-neshan-map/basharaf-deploy.zip` هنوز ساخته نشده. |
+| **کار نیمه‌تمام (in-progress)** | — (کد کامل، env + migration لازم است) |
+| **کار بعدی پیشنهادی** | (۱) اجرای `db-customer-migration.sql` روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` + `NEXT_PUBLIC_NESHAN_API_KEY` در env Liara. (۳) ساخت `v0.9.15-neshan-map/basharaf-deploy.zip` + دیپلوی. (۴) تست: ورود OTP → ذخیره آدرس با نقشه‌ی نشان → سفارش delivery با آدرس ذخیره‌شده. (۵) پیکربندی درگاه پرداخت + دسته «نوشیدنی» VAT ۱۶٪. (۶) Backlog #14/#15. |
+| **بلاک‌شده/منتظر کاربر** | اجرای `db-customer-migration.sql` + تنظیم `CUSTOMER_JWT_SECRET` و `NEXT_PUBLIC_NESHAN_API_KEY` در env |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — باکس ب: نقشه‌ی نشان (AddressPicker) در فرم آدرس + checkout — اکانت ۱
+**چه شد:**
+(۱) پکیج `@neshan-maps-platform/leaflet@1.0.8` + `@types/leaflet` نصب شد (پکیج رسمی نشان که نوع رسمی TS ندارد — declaration دستی در `types/neshan-leaflet.d.ts` ساخته شد).
+(۲) کامپوننت `components/order/AddressPicker.tsx` (جدید): نقشه‌ی تعاملی نشان با مارکر قابل drag؛ کلیک روی نقشه مارکر را منتقل می‌کند؛ هر جابه‌جایی `GET api.neshan.org/v5/reverse` را فراخوانی و آدرس فارسی را نشان می‌دهد (با `NEXT_PUBLIC_NESHAN_API_KEY` header)؛ جستجوی متنی debounced با `api.neshan.org/v1/search` + dropdown نتایج؛ دکمه‌ی «تأیید موقعیت» → callback با `(lat, lng, address)`. static import با `ssr: false` dynamic import در parent (Leaflet به window نیاز دارد).
+(۳) `/order/account` (`AddressesTab`): dynamic import کامپوننت؛ فرم افزودن آدرس حالا `lat`/`lng` هم نگه می‌دارد؛ دکمه‌ی «انتخاب روی نقشه» → modal تمام‌صفحه → بعد از تأیید، آدرس + lat/lng در فرم پر می‌شود؛ lat/lng با آدرس در `web_customer_addresses` ذخیره می‌شود (schema باکس الف دارد، migration ندارد).
+(۴) `/order/checkout`: dynamic import کامپوننت؛ در بخش delivery بعد از textarea آدرس، دکمه‌ی «انتخاب روی نقشه» → modal → آدرس متنی پر می‌شود.
+(۵) `types/neshan-leaflet.d.ts` (جدید): declaration برای SDK بدون types رسمی.
+(۶) تداخل `Map` (lucide-react icon) با JavaScript `Map<K,V>` → به `MapIcon as Map` تغییر نام داده شد در هر دو فایل.
+**فایل‌ها:** `components/order/AddressPicker.tsx` (جدید)، `types/neshan-leaflet.d.ts` (جدید)، `app/order/account/page.tsx` (+dynamic import، +lat/lng، +AddressPicker)، `app/order/checkout/page.tsx` (+dynamic import، +AddressPicker در delivery)، `package.json` (+@neshan-maps-platform/leaflet, +@types/leaflet).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** `NEXT_PUBLIC_NESHAN_API_KEY` در env Liara تنظیم نشده — بدون آن نقشه لود می‌شود (Neshan CSS + tiles) ولی آدرس reverse geocode و جستجو کار نمی‌کنند. تست UI زنده در sandbox انجام نشد (نیاز به مرورگر).
+**برای جلسه‌ی بعد:** (۱) کاربر API Key نشان از https://developers.neshan.org بگیرد و `NEXT_PUBLIC_NESHAN_API_KEY` در env Liara تنظیم کند. (۲) `db-customer-migration.sql` اجرا کند. (۳) `CUSTOMER_JWT_SECRET` تنظیم کند. (۴) ساخت zip + دیپلوی. (۵) تست: کلیک نقشه → marker جابه‌جا → آدرس فارسی → تأیید → در فرم پر می‌شود.
 
 ## 📓 2026-06-16 — باکس الف: ماژول مشتری آنلاین (OTP + آدرس‌ها + تاریخچه‌ی سفارش) — اکانت ۱
 **چه شد:**

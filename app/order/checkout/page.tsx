@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { MapPin, Phone, User } from 'lucide-react';
+import { Map as MapIcon, MapPin, Phone, User } from 'lucide-react';
 import { Button, Card, CardBody, Empty, Field, Input, Select, Textarea, Toggle } from '@/components/ui';
 import { fmt, toFa } from '@/lib/utils';
 import { publicOrderRepo } from '@/lib/repos/publicOrder.api';
@@ -11,6 +12,11 @@ import { customerRepo } from '@/lib/repos/customer.api';
 import { loadCart, clearCart, type Cart } from '@/lib/ordering/cart';
 import type { CreateOrderInput, PublicOrderItem, PublicOrderMenu } from '@/types';
 import type { WebCustomer, WebCustomerAddress } from '@/types/webCustomer';
+
+const AddressPicker = dynamic(
+  () => import('@/components/order/AddressPicker'),
+  { ssr: false }
+);
 
 type ServiceType = 'delivery' | 'pickup';
 type PayMethod = 'cash' | 'online';
@@ -40,6 +46,10 @@ export default function OrderCheckoutPage() {
   const [currentCustomer, setCurrentCustomer] = useState<WebCustomer | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<WebCustomerAddress[]>([]);
   const [selectedSavedAddress, setSelectedSavedAddress] = useState<string>('');
+  const [showAddressPicker, setShowAddressPicker] = useState(false);
+  // lat/lng برای اتصال احتمالی به zone یا ذخیره در مشتری (فعلاً فقط آدرس متنی استفاده می‌شود)
+  const [pickedLat, setPickedLat] = useState<number | null>(null);
+  const [pickedLng, setPickedLng] = useState<number | null>(null);
 
   useEffect(() => {
     setCart(loadCart());
@@ -231,6 +241,21 @@ export default function OrderCheckoutPage() {
   }
 
   return (
+    <>
+    {showAddressPicker && (
+      <AddressPicker
+        initialLat={pickedLat ?? undefined}
+        initialLng={pickedLng ?? undefined}
+        onConfirm={(lat, lng, addr) => {
+          setAddress(addr);
+          setPickedLat(lat);
+          setPickedLng(lng);
+          setSelectedSavedAddress('');
+          setShowAddressPicker(false);
+        }}
+        onClose={() => setShowAddressPicker(false)}
+      />
+    )}
     <div className="mx-auto max-w-2xl px-4 pb-32 pt-6 sm:px-6">
       <header className="mb-5 flex items-start justify-between">
         <div>
@@ -349,10 +374,23 @@ export default function OrderCheckoutPage() {
                       onChange={(e) => {
                         setAddress(e.target.value);
                         setSelectedSavedAddress('');
+                        setPickedLat(null);
+                        setPickedLng(null);
                       }}
                       placeholder="آدرس کامل برای ارسال"
                       rows={2}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressPicker(true)}
+                      className="mt-1.5 flex items-center gap-1.5 text-[12px] text-stone-500 hover:text-stone-800"
+                    >
+                      <MapIcon size={13} />
+                      انتخاب روی نقشه
+                      {pickedLat && pickedLng && (
+                        <span className="text-[10.5px] text-emerald-600">✓ موقعیت انتخاب شد</span>
+                      )}
+                    </button>
                   </Field>
                 </>
               )}
@@ -475,5 +513,6 @@ export default function OrderCheckoutPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

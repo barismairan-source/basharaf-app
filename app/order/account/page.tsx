@@ -1,11 +1,18 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { MapPin, Package, Plus, Trash2, Star, Phone, User, LogOut, ChevronRight } from 'lucide-react';
+import { MapPin, Package, Plus, Trash2, Star, Phone, User, LogOut, ChevronRight, Map as MapIcon } from 'lucide-react';
 import { customerRepo } from '@/lib/repos/customer.api';
 import { fmt, toFa } from '@/lib/utils';
 import type { WebCustomer, WebCustomerAddress, WebCustomerOrder } from '@/types/webCustomer';
+
+// dynamic import — Leaflet به window نیاز دارد و SSR را تحمل نمی‌کند
+const AddressPicker = dynamic(
+  () => import('@/components/order/AddressPicker'),
+  { ssr: false }
+);
 
 // ─── صفحه‌ی اکانت مشتری (OTP Login + آدرس‌ها + سفارش‌ها) ─────────────
 
@@ -163,9 +170,10 @@ function AddressesTab({ customerId }: { customerId: string }) {
   const [addresses, setAddresses] = useState<WebCustomerAddress[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ title: '', address: '' });
+  const [form, setForm] = useState({ title: '', address: '', lat: null as number | null, lng: null as number | null });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [showMap, setShowMap] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -188,9 +196,11 @@ function AddressesTab({ customerId }: { customerId: string }) {
       await customerRepo.addAddress({
         title: form.title.trim(),
         address: form.address.trim(),
+        lat: form.lat,
+        lng: form.lng,
         isDefault: addresses.length === 0,
       });
-      setForm({ title: '', address: '' });
+      setForm({ title: '', address: '', lat: null, lng: null });
       setShowForm(false);
       await load();
     } catch (err) {
@@ -224,101 +234,127 @@ function AddressesTab({ customerId }: { customerId: string }) {
   }
 
   return (
-    <div className="space-y-3">
-      {addresses.length === 0 && !showForm && (
-        <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-[12.5px] text-stone-400">
-          هنوز آدرسی ذخیره نشده
-        </p>
+    <>
+      {/* AddressPicker modal */}
+      {showMap && (
+        <AddressPicker
+          initialLat={form.lat ?? undefined}
+          initialLng={form.lng ?? undefined}
+          onConfirm={(lat, lng, addr) => {
+            setForm((f) => ({ ...f, address: addr, lat, lng }));
+            setShowMap(false);
+          }}
+          onClose={() => setShowMap(false)}
+        />
       )}
 
-      {addresses.map((addr) => (
-        <div
-          key={addr.id}
-          className="flex items-start gap-3 rounded-xl border border-stone-100 bg-white px-4 py-3"
-        >
-          <MapPin size={16} className="mt-0.5 shrink-0 text-stone-400" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[13px] font-medium text-stone-700">{addr.title}</span>
-              {addr.isDefault && (
-                <span className="flex items-center gap-0.5 text-[10.5px] text-amber-600">
-                  <Star size={10} className="fill-current" /> پیش‌فرض
-                </span>
-              )}
+      <div className="space-y-3">
+        {addresses.length === 0 && !showForm && (
+          <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-[12.5px] text-stone-400">
+            هنوز آدرسی ذخیره نشده
+          </p>
+        )}
+
+        {addresses.map((addr) => (
+          <div
+            key={addr.id}
+            className="flex items-start gap-3 rounded-xl border border-stone-100 bg-white px-4 py-3"
+          >
+            <MapPin size={16} className="mt-0.5 shrink-0 text-stone-400" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] font-medium text-stone-700">{addr.title}</span>
+                {addr.isDefault && (
+                  <span className="flex items-center gap-0.5 text-[10.5px] text-amber-600">
+                    <Star size={10} className="fill-current" /> پیش‌فرض
+                  </span>
+                )}
+              </div>
+              <p className="mt-0.5 text-[12px] text-stone-500 leading-relaxed">{addr.address}</p>
             </div>
-            <p className="mt-0.5 text-[12px] text-stone-500 leading-relaxed">{addr.address}</p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            {!addr.isDefault && (
+            <div className="flex shrink-0 gap-2">
+              {!addr.isDefault && (
+                <button
+                  onClick={() => handleSetDefault(addr.id)}
+                  className="text-[11px] text-stone-400 hover:text-amber-600"
+                  title="تنظیم به عنوان پیش‌فرض"
+                >
+                  <Star size={14} />
+                </button>
+              )}
               <button
-                onClick={() => handleSetDefault(addr.id)}
-                className="text-[11px] text-stone-400 hover:text-amber-600"
-                title="تنظیم به عنوان پیش‌فرض"
+                onClick={() => handleDelete(addr.id)}
+                className="text-[11px] text-stone-300 hover:text-rose-500"
               >
-                <Star size={14} />
+                <Trash2 size={14} />
               </button>
-            )}
-            <button
-              onClick={() => handleDelete(addr.id)}
-              className="text-[11px] text-stone-300 hover:text-rose-500"
-            >
-              <Trash2 size={14} />
-            </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
 
-      {showForm ? (
-        <form onSubmit={handleAdd} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 space-y-3">
-          <div>
-            <label className="mb-1 block text-[12px] text-stone-500">عنوان آدرس</label>
-            <input
-              value={form.title}
-              onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
-              placeholder="مثلاً: خانه، محل کار"
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[13px] focus:border-stone-400 focus:outline-none"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-[12px] text-stone-500">آدرس کامل</label>
-            <textarea
-              value={form.address}
-              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-              placeholder="آدرس کامل با کوچه و پلاک"
-              rows={2}
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[13px] focus:border-stone-400 focus:outline-none resize-none"
-            />
-          </div>
-          {formError && (
-            <p className="text-[12px] text-rose-600">{formError}</p>
-          )}
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={saving || !form.title.trim() || form.address.trim().length < 5}
-              className="flex-1 rounded-lg bg-stone-900 py-2 text-[13px] text-white disabled:opacity-50"
-            >
-              {saving ? 'در حال ذخیره…' : 'ذخیره'}
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowForm(false); setFormError(null); }}
-              className="rounded-lg border border-stone-200 px-3 py-2 text-[13px] text-stone-500"
-            >
-              انصراف
-            </button>
-          </div>
-        </form>
-      ) : (
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 py-3 text-[13px] text-stone-500 hover:border-stone-400 hover:text-stone-700"
-        >
-          <Plus size={16} />
-          افزودن آدرس جدید
-        </button>
-      )}
-    </div>
+        {showForm ? (
+          <form onSubmit={handleAdd} className="rounded-xl border border-stone-200 bg-stone-50 px-4 py-4 space-y-3">
+            <div>
+              <label className="mb-1 block text-[12px] text-stone-500">عنوان آدرس</label>
+              <input
+                value={form.title}
+                onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                placeholder="مثلاً: خانه، محل کار"
+                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[13px] focus:border-stone-400 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-[12px] text-stone-500">آدرس کامل</label>
+              <textarea
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value, lat: null, lng: null }))}
+                placeholder="آدرس کامل با کوچه و پلاک"
+                rows={2}
+                className="w-full rounded-lg border border-stone-200 px-3 py-2 text-[13px] focus:border-stone-400 focus:outline-none resize-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowMap(true)}
+                className="mt-1.5 flex items-center gap-1.5 text-[12px] text-stone-500 hover:text-stone-800"
+              >
+                <MapIcon size={13} />
+                انتخاب روی نقشه
+                {form.lat && form.lng && (
+                  <span className="text-[10.5px] text-emerald-600">✓ موقعیت ذخیره شد</span>
+                )}
+              </button>
+            </div>
+            {formError && (
+              <p className="text-[12px] text-rose-600">{formError}</p>
+            )}
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={saving || !form.title.trim() || form.address.trim().length < 5}
+                className="flex-1 rounded-lg bg-stone-900 py-2 text-[13px] text-white disabled:opacity-50"
+              >
+                {saving ? 'در حال ذخیره…' : 'ذخیره'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowForm(false); setFormError(null); setShowMap(false); }}
+                className="rounded-lg border border-stone-200 px-3 py-2 text-[13px] text-stone-500"
+              >
+                انصراف
+              </button>
+            </div>
+          </form>
+        ) : (
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-stone-300 py-3 text-[13px] text-stone-500 hover:border-stone-400 hover:text-stone-700"
+          >
+            <Plus size={16} />
+            افزودن آدرس جدید
+          </button>
+        )}
+      </div>
+    </>
   );
 }
 

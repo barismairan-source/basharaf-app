@@ -1,6 +1,6 @@
 {
   "name": "basharaf-app",
-  "version": "0.9.14-customer",
+  "version": "0.9.15-neshan-map",
   "private": true,
   "description": "سامانه حسابداری چندشعبه‌ای با شرف — basharaf demo 0.1",
   "scripts": {
@@ -18,8 +18,10 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
+    "@neshan-maps-platform/leaflet": "^1.0.8",
     "@supabase/supabase-js": "^2.45.4",
     "@types/file-saver": "^2.0.7",
+    "@types/leaflet": "^1.9.21",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
