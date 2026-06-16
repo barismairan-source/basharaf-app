@@ -28,7 +28,7 @@ export function Card({ className, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        'border border-stone-200 rounded-lg bg-white overflow-hidden',
+        'border border-border rounded-lg bg-surface overflow-hidden',
         className
       )}
       {...props}
@@ -64,7 +64,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        'flex items-start justify-between px-5 py-3.5 border-b border-stone-100',
+        'flex items-start justify-between px-5 py-3.5 border-b border-border',
         className
       )}
       {...props}

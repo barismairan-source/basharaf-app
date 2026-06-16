@@ -96,6 +96,16 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+
+  /* .num — برای هر عدد/مبلغ در متن RTL:
+     - tabular-nums: ارقام هم‌عرض (ستون‌بندی صحیح)
+     - isolate: عدد را از جریان bidi اطراف جدا می‌کند تا علامت منفی
+       و کاما/نقطه‌ی اعشار در کنار عدد بمانند و به سمت اشتباه نروند
+     استفاده: <span className="num">{fmt(amount)}</span> */
+  .num {
+    font-variant-numeric: tabular-nums;
+    unicode-bidi: isolate;
+  }
 }
 
 /* Native <select> arrow placement in RTL — prototype puts it on the left */

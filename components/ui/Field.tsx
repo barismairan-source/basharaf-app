@@ -54,16 +54,16 @@ export function Field({
   return (
     <div className={cn(className)}>
       <div className="flex items-center justify-between mb-1.5">
-        <div className="text-[12px] text-stone-600">{label}</div>
-        {hint && <div className="text-[11px] text-stone-400">{hint}</div>}
+        <div className="text-[12px] text-text/70">{label}</div>
+        {hint && <div className="text-[11px] text-muted">{hint}</div>}
       </div>
       {children}
       {error ? (
-        <div className="text-[11px] text-rose-600 mt-1" role="alert">
+        <div className="text-[11px] text-danger mt-1" role="alert">
           {error}
         </div>
       ) : helper ? (
-        <div className="text-[11px] text-stone-400 mt-1">{helper}</div>
+        <div className="text-[11px] text-muted mt-1">{helper}</div>
       ) : null}
     </div>
   );

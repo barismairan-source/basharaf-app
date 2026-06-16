@@ -7,12 +7,11 @@ import { cn } from '@/lib/utils';
 import { SidebarContent } from './Sidebar';
 
 /**
- * MobileMenu — off-canvas drawer navigation برای موبایل.
+ * MobileMenu — drawer ناوبری ثانویه برای موبایل (md:hidden).
  *
- * - دکمه hamburger در header (فقط < lg)
- * - کلیک → drawer از راست باز می‌شود (RTL — سمت start)
- * - کلیک روی overlay یا هر لینک → بسته می‌شود
- * - با route change بسته می‌شود
+ * فقط مقصدهایی نشان می‌دهد که در BottomTabBar نیستند
+ * (صندوق‌ها، طرف‌حساب‌ها، سفارش‌های بیرون‌بر، تجهیزات، سفارش خرید،
+ * وظایف، مشتریان، مدیریت منو، تنظیمات).
  */
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -28,12 +27,12 @@ export function MobileMenu() {
 
   return (
     <>
-      {/* Hamburger button */}
+      {/* Hamburger — فقط موبایل */}
       <button
         type="button"
         onClick={() => setOpen(true)}
         aria-label="باز کردن منو"
-        className="lg:hidden w-10 h-10 flex items-center justify-center rounded-md text-stone-600 hover:bg-stone-50 transition-colors"
+        className="md:hidden w-10 h-10 flex items-center justify-center rounded-md text-muted hover:bg-bg transition-colors"
       >
         <Menu size={20} strokeWidth={1.5} />
       </button>
@@ -41,17 +40,17 @@ export function MobileMenu() {
       {/* Backdrop */}
       <div
         className={cn(
-          'fixed inset-0 z-40 bg-stone-900/40 lg:hidden transition-opacity duration-300',
+          'fixed inset-0 z-40 bg-black/40 md:hidden transition-opacity duration-300',
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
         )}
         onClick={() => setOpen(false)}
         aria-hidden="true"
       />
 
-      {/* Drawer — slides in from right (RTL start side) */}
+      {/* Drawer — از راست (RTL start) */}
       <div
         className={cn(
-          'fixed inset-y-0 right-0 z-50 w-72 bg-white shadow-2xl lg:hidden',
+          'fixed inset-y-0 right-0 z-50 w-72 bg-surface shadow-modal md:hidden',
           'transform transition-transform duration-300 ease-out print:hidden',
           open ? 'translate-x-0' : 'translate-x-full',
         )}
@@ -59,20 +58,20 @@ export function MobileMenu() {
         role="dialog"
         aria-label="منوی ناوبری"
       >
-        {/* Close button */}
         <button
           type="button"
           onClick={() => setOpen(false)}
           aria-label="بستن منو"
-          className="absolute top-3 left-3 w-9 h-9 flex items-center justify-center rounded-md text-stone-500 hover:bg-stone-50 z-10 transition-colors"
+          className="absolute top-3 left-3 w-9 h-9 flex items-center justify-center rounded-md text-muted hover:bg-bg z-10 transition-colors"
         >
           <X size={18} strokeWidth={1.5} />
         </button>
 
-        {/* Full sidebar content — no collapse toggle in mobile drawer */}
+        {/* فقط مقصدهای ثانوی (bottom nav را حذف می‌کند) */}
         <SidebarContent
           collapsed={false}
           showToggle={false}
+          secondaryOnly
           onNavClick={() => setOpen(false)}
         />
       </div>

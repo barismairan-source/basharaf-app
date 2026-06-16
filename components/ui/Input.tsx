@@ -47,7 +47,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const height = variant === 'auth' ? 'h-11' : 'h-10';
+    const height = variant === 'auth' ? 'h-12' : 'h-11';
     const fontSize = variant === 'auth' ? 'text-[13.5px]' : 'text-[13.5px]';
 
     return (

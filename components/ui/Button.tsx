@@ -13,22 +13,26 @@ import { cn } from '@/lib/utils';
  * هیچ‌گونه conflict ایجاد نمی‌کند (به لطف tailwind-merge در cn).
  */
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-1',
+  'inline-flex items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
   {
     variants: {
       variant: {
-        default: 'bg-white border-stone-200 text-stone-700 hover:bg-stone-50',
-        primary: 'bg-stone-900 border-stone-900 text-white hover:bg-stone-800',
-        ghost: 'bg-transparent border-transparent text-stone-600 hover:bg-stone-100',
-        danger: 'bg-white border-stone-200 text-rose-600 hover:bg-rose-50 hover:border-rose-100',
-        // برای دکمه تایید/رد در DetailPanel که در پروتوتایپ class override داشتند:
-        success: 'bg-emerald-600 border-emerald-600 text-white hover:bg-emerald-700',
-        destructive: 'bg-rose-600 border-rose-600 text-white hover:bg-rose-700',
+        // border خاکستری — برای اقدام پیش‌فرض
+        default:     'bg-surface border-border text-text hover:bg-bg',
+        // همان default — نام معنادار برای کدهای جدید
+        secondary:   'bg-surface border-border text-text hover:bg-bg',
+        // accent آبی — اقدام اصلی صفحه
+        primary:     'bg-accent border-accent text-white hover:bg-blue-700',
+        ghost:       'bg-transparent border-transparent text-muted hover:bg-bg',
+        danger:      'bg-surface border-border text-danger hover:bg-danger-subtle hover:border-danger/20',
+        success:     'bg-ok border-ok text-white hover:bg-emerald-800',
+        destructive: 'bg-danger border-danger text-white hover:bg-rose-800',
       },
       size: {
         sm: 'h-8 px-3 text-[12.5px] gap-1.5',
-        md: 'h-10 px-4 text-[13px] gap-2',
-        lg: 'h-11 px-5 text-[13.5px] gap-2',
+        // md و lg حداقل ۴۴px — هدف لمسی موبایل (WCAG 2.5.5)
+        md: 'h-11 px-4 text-[13px] gap-2',
+        lg: 'h-12 px-5 text-[13.5px] gap-2',
       },
     },
     defaultVariants: {

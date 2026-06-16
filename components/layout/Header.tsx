@@ -15,7 +15,7 @@ import { RealtimeIndicator } from './RealtimeIndicator';
  */
 export function Header() {
   return (
-    <header className="h-14 px-3 lg:px-6 border-b border-stone-200 bg-white flex items-center justify-between sticky top-0 z-30 print:hidden">
+    <header className="h-14 px-3 md:px-6 border-b border-border bg-surface flex items-center justify-between sticky top-0 z-30 print:hidden">
       {/* موبایل: hamburger / دسکتاپ: خالی */}
       <div className="flex items-center">
         <MobileMenu />

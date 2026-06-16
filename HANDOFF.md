@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.17-fix-dashboard-redirect` |
+| **نسخه** | `0.9.18-inventory-home` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | 🟡 zip جدید آماده: `v0.9.17-fix-dashboard-redirect/basharaf-deploy.zip`. migration نیاز ندارد. باید روی Liara دیپلوی شود. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) — build تأیید نشده (tsc کافی است) |
+| **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. باید روی Liara دیپلوی شود. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) دیپلوی `v0.9.17-fix-dashboard-redirect/basharaf-deploy.zip` روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara اگر هنوز نشده. (۳) از پنل `/orders/settings` کلید API نشان را وارد و ذخیره کن. (۴) تست: ورود OTP → ذخیره آدرس با نقشه → سفارش → تاریخچه. (۵) پیکربندی درگاه پرداخت + دسته «نوشیدنی» VAT ۱۶٪. (۶) Backlog #14/#15. |
+| **کار بعدی پیشنهادی** | (۱) صفحه‌های جزئیات انبار بساز (`/inventory/receive`, `/inventory/stocktake`, `/inventory/sales`, `/inventory/exceptions`, `/inventory/items`, `/inventory/cartable`, `/inventory/recipes`, `/inventory/variance`, `/inventory/plan`) — می‌توان محتوای تب‌های قدیمی را به آن‌ها منتقل کرد. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
 | **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — v0.9.18: بازنویسی صفحه انبار به خانه‌ی اقدام‌محور + سیستم توکن طراحی + کتابخانه کامپوننت — اکانت ۱
+**چه شد:**
+(۱) سیستم توکن طراحی: `lib/design/tokens.ts` (singleton رنگ/فاصله/فونت)، `tailwind.config.ts` (توکن‌های جدید: bg/surface/accent/ok/warn/danger و variant subtle)، `app/globals.css` (کلاس `.num` با tabular-nums + unicode-bidi: isolate)، `lib/design/format.ts` (formatMoney/formatMoneyShort/formatBranchName).
+(۲) کامپوننت‌های UI جدید: `MetricCard`, `Sheet`, `DataList`, `StatusPill`, `EmptyState`. به‌روزرسانی: `Button` (accent primary، h-11)، `Card`, `Chip`, `Field`, `Input`.
+(۳) ناوبری: `BottomTabBar` (FAB + Sheet سریع)، `Sidebar` (active=accent)، `MobileMenu` (secondaryOnly)، `Header`، `layout.tsx` — همه از lg: به md: تغییر کردند.
+(۴) رفع باگ v0.9.17: `/order` به PUBLIC_PATH_PREFIXES در `sessionExpiry.ts` اضافه شد.
+(۵) صفحه `/inventory/page.tsx` از ۱۷۱۴ خط جدول ۹‌تبی به صفحه‌ی اقدام‌محور بازنویسی شد: header + انتخاب شعبه، ۴ کارت اقدام (دریافت بار/انبارگردانی/ثبت فروش/هشدارها با badge)، «وضعیت امروز» از API exceptions، «کارهای بیشتر» (لیست ثانوی). tsc ✅ ۰ خطا.
+**فایل‌ها:** `lib/design/tokens.ts` (جدید)، `lib/design/format.ts` (جدید)، `tailwind.config.ts`، `app/globals.css`، `components/ui/MetricCard.tsx` (جدید)، `components/ui/Sheet.tsx` (جدید)، `components/ui/DataList.tsx` (جدید)، `components/ui/StatusPill.tsx` (جدید)، `components/ui/EmptyState.tsx` (جدید)، `components/ui/Button.tsx`، `components/ui/Card.tsx`، `components/ui/Chip.tsx`، `components/ui/Field.tsx`، `components/ui/Input.tsx`، `components/ui/index.ts`، `components/layout/BottomTabBar.tsx`، `components/layout/Sidebar.tsx`، `components/layout/MobileMenu.tsx`، `components/layout/Header.tsx`، `app/(app)/layout.tsx`، `lib/auth/sessionExpiry.ts`، `app/(app)/inventory/page.tsx`، `package.json` (v0.9.18-inventory-home)، `HANDOFF.md`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` تأیید نشده.
+**ناتمام:** صفحه‌های جزئیات (`/inventory/receive` و بقیه) هنوز وجود ندارند — لینک‌های کارت‌های اقدام ۴۰۴ می‌دهند.
+**برای جلسه‌ی بعد:** (۱) ساخت sub-page های `/inventory/*` با انتقال محتوای تب‌های قدیمی. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara.
 
 ## 📓 2026-06-16 — v0.9.17: رفع باگ «میپره تو داشبورد» — اکانت ۱
 **چه شد:**
