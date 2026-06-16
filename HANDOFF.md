@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.18-inventory-home` |
+| **نسخه** | `0.9.19-inventory-items` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) — build تأیید نشده (tsc کافی است) |
-| **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. باید روی Liara دیپلوی شود. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) |
+| **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) صفحه‌های جزئیات انبار بساز (`/inventory/receive`, `/inventory/stocktake`, `/inventory/sales`, `/inventory/exceptions`, `/inventory/items`, `/inventory/cartable`, `/inventory/recipes`, `/inventory/variance`, `/inventory/plan`) — می‌توان محتوای تب‌های قدیمی را به آن‌ها منتقل کرد. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
+| **کار بعدی پیشنهادی** | (۱) سایر sub-page های انبار: `/inventory/cartable`, `/inventory/receive`, `/inventory/stocktake`, `/inventory/sales`, `/inventory/exceptions`, `/inventory/recipes`, `/inventory/variance`, `/inventory/plan`. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
 | **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,14 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — v0.9.19: صفحه اقلام انبار با DataList — اکانت ۱
+**چه شد:**
+`app/(app)/inventory/items/page.tsx` (جدید): صفحه کامل اقلام انبار با DataList — موبایل: کارت عمودی (نام+کد، موجودی، میانگین بها، ⋮)؛ دسکتاپ: جدول. جستجوی sticky بالای فهرست. فرم تدریجی در Sheet: ۴ فیلد اصلی (کد پیشنهادی auto +1، نام، واحد، شعبه*) + آکاردئون «تنظیمات پیشرفته» (ضریب تبدیل با preview زنده «۱ کیلوگرم = ۱۰۰۰ گرم»، راندمان، حداقل موجودی). دکمه Submit تا انتخاب شعبه disabled. آیکون info کنار موجودی صفر با آخرین میانگین بها (tooltip). هدف لمسی ۴۴px روی همه دکمه‌ها. DataList generic از `Record<string,unknown>` به `object` تغییر یافت.
+**فایل‌ها:** `app/(app)/inventory/items/page.tsx` (جدید)، `components/ui/DataList.tsx` (generic fix).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** سایر sub-page های انبار (cartable/receive/stocktake/...) + دیپلوی.
 
 ## 📓 2026-06-16 — v0.9.18: بازنویسی صفحه انبار به خانه‌ی اقدام‌محور + سیستم توکن طراحی + کتابخانه کامپوننت — اکانت ۱
 **چه شد:**

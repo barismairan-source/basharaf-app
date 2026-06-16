@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 import { Th, Td, TableContainer } from './Table';
 import { Empty } from './Empty';
 
-export interface DataColumn<T> {
+export interface DataColumn<T extends object> {
   /** شناسه یکتا — برای key در React */
   key: string;
   /** سرستون در جدول دسکتاپ */
@@ -24,7 +24,7 @@ export interface DataColumn<T> {
   desktopHide?: boolean;
 }
 
-export interface DataListProps<T> {
+export interface DataListProps<T extends object> {
   columns: DataColumn<T>[];
   data: T[];
   /** کلید یکتا هر ردیف */
@@ -51,7 +51,7 @@ export interface DataListProps<T> {
  *   ];
  *   <DataList columns={cols} data={txList} keyExtractor={r => r.id} onRowClick={openDetail} />
  */
-function DataList<T extends Record<string, unknown>>({
+function DataList<T extends object>({
   columns,
   data,
   keyExtractor,
@@ -59,7 +59,7 @@ function DataList<T extends Record<string, unknown>>({
   empty,
   onRowClick,
   className,
-}: DataListProps<T>): React.ReactElement | null {
+}: DataListProps<T>): React.JSX.Element | null {
   if (loading) {
     return (
       <div className={cn('space-y-2', className)}>
@@ -150,6 +150,5 @@ function DataList<T extends Record<string, unknown>>({
   );
 }
 
-// named export سازگار با barrel
 export { DataList };
 export type { DataColumn as DataListColumn };
