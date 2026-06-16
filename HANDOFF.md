@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.16-neshan-key-ui` |
+| **نسخه** | `0.9.17-fix-dashboard-redirect` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | 🔴 هنوز دیپلوی نشده. migration `db-customer-migration.sql` + `db-neshan-key-migration.sql` هنوز روی Liara اجرا نشده‌اند. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. `v0.9.16-neshan-key-ui/basharaf-deploy.zip` هنوز ساخته نشده. |
-| **کار نیمه‌تمام (in-progress)** | — (کد کامل، migration + env + zip + دیپلوی لازم است) |
-| **کار بعدی پیشنهادی** | (۱) اجرای `db-customer-migration.sql` + `db-neshan-key-migration.sql` روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara (NEXT_PUBLIC_NESHAN_API_KEY دیگر لازم نیست — از پنل `/orders/settings` وارد می‌شود). (۳) ساخت zip + دیپلوی. (۴) از پنل `/orders/settings` کلید API نشان را وارد کن و ذخیره کن. (۵) تست: ورود OTP → ذخیره آدرس با نقشه → سفارش → تاریخچه. (۶) پیکربندی درگاه پرداخت + دسته «نوشیدنی» VAT ۱۶٪. (۷) Backlog #14/#15. |
-| **بلاک‌شده/منتظر کاربر** | اجرای دو migration روی Liara + تنظیم `CUSTOMER_JWT_SECRET` در env + ساخت zip + دیپلوی |
+| **دیپلوی** | 🟡 zip جدید آماده: `v0.9.17-fix-dashboard-redirect/basharaf-deploy.zip`. migration نیاز ندارد. باید روی Liara دیپلوی شود. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
+| **کار نیمه‌تمام (in-progress)** | — |
+| **کار بعدی پیشنهادی** | (۱) دیپلوی `v0.9.17-fix-dashboard-redirect/basharaf-deploy.zip` روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara اگر هنوز نشده. (۳) از پنل `/orders/settings` کلید API نشان را وارد و ذخیره کن. (۴) تست: ورود OTP → ذخیره آدرس با نقشه → سفارش → تاریخچه. (۵) پیکربندی درگاه پرداخت + دسته «نوشیدنی» VAT ۱۶٪. (۶) Backlog #14/#15. |
+| **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,14 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — v0.9.17: رفع باگ «میپره تو داشبورد» — اکانت ۱
+**چه شد:**
+باگ: وقتی کاربر ادمین صفحه‌ی عمومی `/order/account` یا `/order/checkout` را باز می‌کرد، browser هیچ کوکی مشتری (`basharaf-customer`) نداشت → `GET /api/customer/me` → `401` برمی‌گشت. `sessionExpiry.ts` (در root layout نصب شده) هر `401` از `/api/*` را به‌عنوان «سشن ادمین منقضی شده» تفسیر می‌کرد — چون `/order` در `PUBLIC_PATH_PREFIXES` نبود. نتیجه: کاربر ادمین از لاگین‌شدن خارج می‌شد → ریدایرکت به `/login` → middleware ادمین لاگین‌شده را به `/dashboard` می‌فرستاد → داشبورد با `user: null` خالی. رفع: `/order` به `PUBLIC_PATH_PREFIXES` در `lib/auth/sessionExpiry.ts` اضافه شد (یک خط). حالا هیچ ۴۰۱‌ای از صفحات مشتری ادمین را logout نمی‌کند.
+**فایل‌ها:** `lib/auth/sessionExpiry.ts` (+`'/order'` به آرایه)، `package.json` (نسخه `0.9.17`)، `v0.9.17-fix-dashboard-redirect/basharaf-deploy.zip` (جدید)، `HANDOFF.md`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** دیپلوی zip جدید. بعد از دیپلوی: تست ادمین در صفحات `/order/*` بدون اینکه به داشبورد پرتاب شود.
 
 ## 📓 2026-06-16 — v0.9.16: کلید API نشان از پنل ادمین (نه env var) — اکانت ۱
 **چه شد:**

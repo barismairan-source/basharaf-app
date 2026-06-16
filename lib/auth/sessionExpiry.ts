@@ -13,7 +13,7 @@
  * هدایت می‌کند.
  */
 
-const PUBLIC_PATH_PREFIXES = ['/login', '/signup', '/forgot', '/apply', '/m'];
+const PUBLIC_PATH_PREFIXES = ['/login', '/signup', '/forgot', '/apply', '/m', '/order'];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
