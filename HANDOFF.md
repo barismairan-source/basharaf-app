@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.19-inventory-items` |
+| **نسخه** | `0.9.20-inventory-complete` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) سایر sub-page های انبار: `/inventory/cartable`, `/inventory/receive`, `/inventory/stocktake`, `/inventory/sales`, `/inventory/exceptions`, `/inventory/recipes`, `/inventory/variance`, `/inventory/plan`. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
+| **کار بعدی پیشنهادی** | (۱) zip برای تست: `git archive HEAD --output=basharaf-v0.9.20.zip`. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
 | **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,23 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — v0.9.20: ۸ زیرصفحه‌ی انبار (cartable/receive/stocktake/sales/recipes/plan/variance/exceptions) — اکانت ۱
+**چه شد:**
+تمام زیرصفحه‌های انبار که از context summary باقی مانده بودند یک‌جا ساخته شدند:
+(۱) `/inventory/cartable/page.tsx` — تأیید/رد/حذف برگه‌ها، باز/بسته کردن جزئیات، modal انتخاب صندوق برای رسید خرید، اصلاحی (RotateCcw) برای SuperAdmin.
+(۲) `/inventory/receive/page.tsx` — دو تب «ثبت برگه» (in/out/waste + import اکسل) + «خرید سریع» (پخش مبلغ کل به نسبت مقدار).
+(۳) `/inventory/stocktake/page.tsx` — جدول شمارش واقعی vs سیستم، فقط مغایرت‌ها ثبت می‌شوند.
+(۴) `/inventory/sales/page.tsx` — تعداد فروش هر رسپی → برگه‌ی فروش با جمع درآمد.
+(۵) `/inventory/recipes/page.tsx` — RecipeCard با portionCalc (ماشین‌حساب پرس از موجودی)، costing (food cost/حاشیه)، print (popup HTML)، فرم افزودن در modal.
+(۶) `/inventory/plan/page.tsx` — پیش‌بینی نیاز مواد با افق انتخابی.
+(۷) `/inventory/variance/page.tsx` — گزارش تئوریک vs واقعی + اکسپورت xlsx.
+(۸) `/inventory/exceptions/page.tsx` — ۴ کارت هشدار (stalePending/clamp/belowMin/reversals) با refresh auto هر ۶۰ ثانیه.
+همه با design tokens (bg-surface/text-text/text-muted/...) و touch target 44px. tsc ✅ ۰ خطا. build ✅ سبز.
+**فایل‌ها:** `app/(app)/inventory/cartable/page.tsx` (جدید)، `app/(app)/inventory/receive/page.tsx` (جدید)، `app/(app)/inventory/stocktake/page.tsx` (جدید)، `app/(app)/inventory/sales/page.tsx` (جدید)، `app/(app)/inventory/recipes/page.tsx` (جدید)، `app/(app)/inventory/plan/page.tsx` (جدید)، `app/(app)/inventory/variance/page.tsx` (جدید)، `app/(app)/inventory/exceptions/page.tsx` (جدید)، `package.json` (نسخه `0.9.20-inventory-complete`)، `HANDOFF.md`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** zip تست آماده نشده.
+**برای جلسه‌ی بعد:** (۱) ساخت zip با `git archive HEAD --output=basharaf-v0.9.20.zip` و تست. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. (۴) اجرای `db-customer-migration.sql` روی Liara.
 
 ## 📓 2026-06-16 — v0.9.19: صفحه اقلام انبار با DataList — اکانت ۱
 **چه شد:**
