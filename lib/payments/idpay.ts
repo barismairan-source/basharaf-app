@@ -1,8 +1,10 @@
 import { ApiError } from '@/lib/api-error';
 import type { PaymentGateway, PaymentRequestResult, PaymentVerifyResult } from './types';
+import { toGatewayAmount } from './types';
 
 // ─── درگاه IDPay (API v1.1) ─────────────────────────────────────────────
-// ⚠️ IDPay مبلغ را به ریال می‌خواهد — مبلغ تومانی سفارش × ۱۰ (تبدیل صریح).
+// currencyUnit: 'rial' — IDPay مبلغ را به ریال می‌خواهد؛ toGatewayAmount مبلغ
+// تومانی سفارش را ×۱۰ می‌کند (تبدیل از یک نقطه‌ی واحد، نه ضرب پراکنده).
 // apiKey از تنظیمات سفارش (پنل) می‌آید — هرگز به کلاینت نشت نمی‌کند.
 
 const REQUEST_URL = 'https://api.idpay.ir/v1.1/payment';
@@ -27,13 +29,15 @@ export function createIdpayGateway(apiKey: string): PaymentGateway {
   };
 
   return {
+    currencyUnit: 'rial',
+
     async request(amount, orderId, callbackUrl): Promise<PaymentRequestResult> {
       const res = await fetch(REQUEST_URL, {
         method: 'POST',
         headers,
         body: JSON.stringify({
           order_id: orderId,
-          amount: amount * 10, // تومان → ریال
+          amount: toGatewayAmount(amount, 'rial'),
           callback: callbackUrl,
           desc: `پرداخت سفارش ${orderId}`,
         }),

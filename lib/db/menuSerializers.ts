@@ -24,6 +24,7 @@ export function rowToMenuCategory(row: typeof schema.menuCategories.$inferSelect
     labelEn: row.labelEn,
     labelFa: row.labelFa,
     sortOrder: row.sortOrder,
+    vatRate: row.vatRate,
   };
 }
 

@@ -1,8 +1,10 @@
 import { ApiError } from '@/lib/api-error';
 import type { PaymentGateway, PaymentRequestResult, PaymentVerifyResult } from './types';
+import { toGatewayAmount } from './types';
 
 // ─── درگاه Zibal (API v1) ───────────────────────────────────────────────
-// ⚠️ Zibal مبلغ را به ریال می‌خواهد — مبلغ تومانی سفارش × ۱۰ (تبدیل صریح).
+// currencyUnit: 'rial' — Zibal مبلغ را به ریال می‌خواهد؛ toGatewayAmount مبلغ
+// تومانی سفارش را ×۱۰ می‌کند (تبدیل از یک نقطه‌ی واحد، نه ضرب پراکنده).
 // merchant از تنظیمات سفارش (پنل) می‌آید — هرگز به کلاینت نشت نمی‌کند.
 
 const REQUEST_URL = 'https://gateway.zibal.ir/v1/request';
@@ -23,13 +25,15 @@ interface ZibalVerifyResponse {
 
 export function createZibalGateway(merchant: string): PaymentGateway {
   return {
+    currencyUnit: 'rial',
+
     async request(amount, orderId, callbackUrl): Promise<PaymentRequestResult> {
       const res = await fetch(REQUEST_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           merchant,
-          amount: amount * 10, // تومان → ریال
+          amount: toGatewayAmount(amount, 'rial'),
           callbackUrl,
           orderId,
           description: `پرداخت سفارش ${orderId}`,

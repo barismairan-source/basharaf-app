@@ -1,9 +1,10 @@
 import { ApiError } from '@/lib/api-error';
 import type { PaymentGateway, PaymentRequestResult, PaymentVerifyResult } from './types';
+import { toGatewayAmount } from './types';
 
 // ─── درگاه Zarinpal (API v4) ────────────────────────────────────────────
-// مبلغ به‌صورت تومان (currency: 'IRT') ارسال می‌شود — تبدیل ریال/تومان به
-// عهده‌ی Zarinpal است، نه ضرب دستی در ۱۰ (ریسک خطای واحد را حذف می‌کند).
+// currencyUnit: 'toman' — با currency: 'IRT' مبلغ تومانی مستقیم ارسال می‌شود؛
+// toGatewayAmount برای unit='toman' بی‌اثر است (فقط برای یکدستی با سایر درگاه‌ها).
 // merchantId از تنظیمات سفارش (پنل) می‌آید — هرگز به کلاینت نشت نمی‌کند.
 
 const REQUEST_URL = 'https://payment.zarinpal.com/pg/v4/payment/request.json';
@@ -22,13 +23,15 @@ interface ZarinpalVerifyResponse {
 
 export function createZarinpalGateway(merchantId: string): PaymentGateway {
   return {
+    currencyUnit: 'toman',
+
     async request(amount, orderId, callbackUrl): Promise<PaymentRequestResult> {
       const res = await fetch(REQUEST_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           merchant_id: merchantId,
-          amount,
+          amount: toGatewayAmount(amount, 'toman'),
           currency: 'IRT',
           callback_url: callbackUrl,
           description: `پرداخت سفارش ${orderId}`,
@@ -48,7 +51,7 @@ export function createZarinpalGateway(merchantId: string): PaymentGateway {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           merchant_id: merchantId,
-          amount,
+          amount: toGatewayAmount(amount, 'toman'),
           currency: 'IRT',
           authority,
         }),

@@ -13,6 +13,7 @@ const createSchema = z.object({
   labelEn: z.string().min(1).max(80),
   labelFa: z.string().min(1).max(80),
   sortOrder: z.number().int().optional().default(0),
+  vatRate: z.number().int().min(0).max(100).nullable().optional(),
 });
 
 export async function POST(req: Request) {

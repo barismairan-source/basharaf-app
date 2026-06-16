@@ -5,6 +5,7 @@ export interface MenuCategory {
   labelEn: string;
   labelFa: string;
   sortOrder: number;
+  vatRate: number | null;
 }
 
 export interface MenuItem {

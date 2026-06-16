@@ -20,6 +20,7 @@ export default function MenuAdminPage() {
   const updateItem = useAppStore(s => s.updateMenuItem);
   const deleteItem = useAppStore(s => s.deleteMenuItem);
   const createCategory = useAppStore(s => s.createMenuCategory);
+  const updateCategory = useAppStore(s => s.updateMenuCategory);
   const deleteCategory = useAppStore(s => s.deleteMenuCategory);
   const updateSettings = useAppStore(s => s.updateMenuSettings);
   const showToast = useAppStore(s => s.showToast);
@@ -71,7 +72,7 @@ export default function MenuAdminPage() {
             onCreate={createItem} onUpdate={updateItem} onDelete={deleteItem} showToast={showToast} />
         )}
         {tab === 'categories' && (
-          <CategoriesTab sections={sections} onCreate={createCategory} onDelete={deleteCategory} showToast={showToast} />
+          <CategoriesTab sections={sections} onCreate={createCategory} onUpdate={updateCategory} onDelete={deleteCategory} showToast={showToast} />
         )}
         {tab === 'settings' && settings && (
           <SettingsTab settings={settings} onUpdate={updateSettings} showToast={showToast} />
@@ -307,14 +308,17 @@ function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
 }
 
 // ─── Categories Tab ──────────────────────────────────────────────
-function CategoriesTab({ sections, onCreate, onDelete, showToast }: any) {
+function CategoriesTab({ sections, onCreate, onUpdate, onDelete, showToast }: any) {
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ slug: '', labelFa: '', labelEn: '', sortOrder: '' });
+  const [form, setForm] = useState({ slug: '', labelFa: '', labelEn: '', sortOrder: '', vatRate: '' });
 
   async function handleAdd() {
     if (!form.slug.trim() || !form.labelFa.trim()) { showToast('slug و نام فارسی الزامی است', 'danger'); return; }
-    const ok = await onCreate({ slug: form.slug.trim(), labelFa: form.labelFa.trim(), labelEn: form.labelEn.trim() || form.labelFa.trim(), sortOrder: Number(form.sortOrder) || 0 });
-    if (ok) { showToast('دسته اضافه شد', 'success'); setShowForm(false); setForm({ slug: '', labelFa: '', labelEn: '', sortOrder: '' }); }
+    const ok = await onCreate({
+      slug: form.slug.trim(), labelFa: form.labelFa.trim(), labelEn: form.labelEn.trim() || form.labelFa.trim(),
+      sortOrder: Number(form.sortOrder) || 0, vatRate: form.vatRate.trim() ? Number(form.vatRate) : null,
+    });
+    if (ok) { showToast('دسته اضافه شد', 'success'); setShowForm(false); setForm({ slug: '', labelFa: '', labelEn: '', sortOrder: '', vatRate: '' }); }
     else showToast('خطا — شاید slug تکراری است', 'danger');
   }
 
@@ -332,6 +336,10 @@ function CategoriesTab({ sections, onCreate, onDelete, showToast }: any) {
               <Field label="نام انگلیسی"><Input dir="ltr" value={form.labelEn} onChange={e => setForm({ ...form, labelEn: e.target.value })} /></Field>
               <Field label="slug (انگلیسی، یکتا)"><Input dir="ltr" placeholder="drinks" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value.toLowerCase() })} /></Field>
               <Field label="ترتیب"><Input type="text" inputMode="numeric" dir="ltr" value={form.sortOrder} onChange={e => setForm({ ...form, sortOrder: e.target.value.replace(/\D/g, '') })} /></Field>
+              <Field label="نرخ مالیات ٪ (اختیاری)">
+                <Input type="text" inputMode="numeric" dir="ltr" placeholder="۱۰ (پیش‌فرض غذا)" value={form.vatRate}
+                  onChange={e => setForm({ ...form, vatRate: e.target.value.replace(/\D/g, '').slice(0, 3) })} />
+              </Field>
             </div>
             <div className="flex gap-2 justify-end">
               <Button variant="default" size="sm" onClick={() => setShowForm(false)}>لغو</Button>
@@ -347,6 +355,7 @@ function CategoriesTab({ sections, onCreate, onDelete, showToast }: any) {
               <tr>
                 <th className="text-right text-[11px] text-stone-500 font-normal px-5 py-3">نام</th>
                 <th className="text-center text-[11px] text-stone-500 font-normal px-3 py-3">آیتم‌ها</th>
+                <th className="text-center text-[11px] text-stone-500 font-normal px-3 py-3">مالیات ٪</th>
                 <th className="w-12"></th>
               </tr>
             </thead>
@@ -358,6 +367,9 @@ function CategoriesTab({ sections, onCreate, onDelete, showToast }: any) {
                     <div className="text-[10.5px] text-stone-400" dir="ltr">{s.slug}</div>
                   </td>
                   <td className="px-3 py-3 text-center"><span className="text-[12px] text-stone-500 tabular-nums">{s.items.length}</span></td>
+                  <td className="px-3 py-3 text-center">
+                    <VatRateCell category={s} onUpdate={onUpdate} showToast={showToast} />
+                  </td>
                   <td className="px-3 py-3 text-center">
                     <button onClick={async () => { const r = await onDelete(s.id); if (r.ok) showToast('حذف شد', 'success'); else showToast(r.error ?? 'خطا', 'danger'); }}
                       className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600">
@@ -371,6 +383,32 @@ function CategoriesTab({ sections, onCreate, onDelete, showToast }: any) {
         </CardBody>
       </Card>
     </div>
+  );
+}
+
+/** ورودی درون‌خطی نرخ مالیات هر دسته — خالی = پیش‌فرض ۱۰٪ (غذا). */
+function VatRateCell({ category, onUpdate, showToast }: any) {
+  const [value, setValue] = useState(category.vatRate === null || category.vatRate === undefined ? '' : String(category.vatRate));
+  const [saving, setSaving] = useState(false);
+
+  async function handleBlur() {
+    const current = category.vatRate === null || category.vatRate === undefined ? '' : String(category.vatRate);
+    if (value === current) return;
+    setSaving(true);
+    const vatRate = value.trim() ? Number(value) : null;
+    const ok = await onUpdate(category.id, { vatRate });
+    setSaving(false);
+    if (ok) showToast('ذخیره شد', 'success');
+    else { showToast('خطا', 'danger'); setValue(current); }
+  }
+
+  return (
+    <Input type="text" inputMode="numeric" dir="ltr" placeholder="۱۰" disabled={saving}
+      className="w-16 text-center mx-auto"
+      value={value}
+      onChange={e => setValue(e.target.value.replace(/\D/g, '').slice(0, 3))}
+      onBlur={handleBlur}
+    />
   );
 }
 

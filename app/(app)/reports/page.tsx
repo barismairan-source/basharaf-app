@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Wallet, Users,
-  Building2, Download, Printer, type LucideIcon,
+  Building2, Download, Printer, ShoppingBag, type LucideIcon,
 } from 'lucide-react';
 import {
   Button, Card, CardBody, CardHeader, Select, Field, JalaliDatePicker,
@@ -22,6 +22,7 @@ interface ReportData {
   byBranch: Array<{ id: string; name: string; income: number; expense: number; balance: number }>;
   byCategory: Array<{ name: string; type: string; total: number; count: number }>;
   byUser: Array<{ userId: string; name: string; approved: number; pending: number; rejected: number; total: number }>;
+  takeaway: { count: number; totalSales: number; avgBasket: number; deliveryCount: number; pickupCount: number };
 }
 
 function toMillions(v: number) {
@@ -159,6 +160,36 @@ export default function ReportsPage() {
               </Card>
             )}
 
+            {/* Takeaway orders KPI */}
+            {data.takeaway.count > 0 && (
+              <Card>
+                <CardHeader title="سفارش‌های بیرون‌بر" sub="سفارش‌های تکمیل‌شده — تحویل‌شده/کامل" />
+                <CardBody>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+                    <TakeawayStat label="تعداد سفارش" value={`${fmt(data.takeaway.count)} سفارش`} icon={ShoppingBag} />
+                    <TakeawayStat label="فروش بیرون‌بر" value={`${fmt(data.takeaway.totalSales)} تومان`} icon={TrendingUp} />
+                    <TakeawayStat label="میانگین سبد" value={`${fmt(data.takeaway.avgBasket)} تومان`} icon={Wallet} />
+                  </div>
+                  <ResponsiveContainer width="100%" height={140}>
+                    <BarChart
+                      data={[
+                        { name: 'ارسال', تعداد: data.takeaway.deliveryCount },
+                        { name: 'تحویل حضوری', تعداد: data.takeaway.pickupCount },
+                      ]}
+                      layout="vertical"
+                      margin={{ top: 5, right: 20, left: 5, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" />
+                      <XAxis type="number" allowDecimals={false} tick={{ fontSize: 10, fill: '#78716c' }} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: '#78716c' }} width={80} />
+                      <Tooltip contentStyle={{ fontSize: 11, fontFamily: 'Vazirmatn', borderRadius: 8, border: '1px solid #e7e5e4' }} />
+                      <Bar dataKey="تعداد" name="تعداد سفارش" fill="#0ea5e9" radius={[0, 3, 3, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardBody>
+              </Card>
+            )}
+
             {/* Branch comparison */}
             {isAdmin && data.byBranch.length > 0 && (
               <Card>
@@ -275,6 +306,20 @@ export default function ReportsPage() {
             </div>
           </>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function TakeawayStat({ label, value, icon: Icon }: { label: string; value: string; icon: LucideIcon }) {
+  return (
+    <div className="flex items-center gap-3 bg-stone-50/60 rounded-lg px-4 py-3">
+      <div className="w-8 h-8 rounded-full bg-white border border-stone-100 flex items-center justify-center shrink-0">
+        <Icon size={14} strokeWidth={1.5} className="text-stone-500" />
+      </div>
+      <div>
+        <div className="text-[11px] text-stone-500">{label}</div>
+        <div className="text-[14px] font-medium text-stone-900 tabular-nums mt-0.5">{value}</div>
       </div>
     </div>
   );

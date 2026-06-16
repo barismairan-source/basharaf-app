@@ -105,13 +105,13 @@ export async function createPublicOrder(input: CreateOrderInput): Promise<{ orde
     ));
   const priceMap = new Map(rows.map((r) => [r.id, { name: r.titleFa, price: Number(r.priceTakeaway ?? r.price ?? 0) }]));
 
-  const lines: { itemName: string; unitPrice: number; qty: number; lineTotal: number }[] = [];
+  const lines: { itemName: string; unitPrice: number; qty: number; lineTotal: number; menuItemId: string }[] = [];
   let subtotal = 0;
   for (const it of input.items) {
     const info = priceMap.get(it.id);
     if (!info) throw new ApiError(422, 'یک یا چند آیتم سبد دیگر در دسترس نیست', 'ITEM_UNAVAILABLE');
     const lineTotal = info.price * it.qty;
-    lines.push({ itemName: info.name, unitPrice: info.price, qty: it.qty, lineTotal });
+    lines.push({ itemName: info.name, unitPrice: info.price, qty: it.qty, lineTotal, menuItemId: it.id });
     subtotal += lineTotal;
   }
 

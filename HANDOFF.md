@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.12-payment-gateways` |
-| **آخرین به‌روزرسانی** | 2026-06-15 — اکانت: ۲ |
+| **نسخه** | `0.9.13-order-fulfillment` |
+| **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | 🆕 `v0.9.12-payment-gateways/basharaf-deploy.zip` + `v0.9.12-payment-gateways/db-ordering-payment-gateway-migration.sql` آماده‌ی دیپلوی (پیکربندی دستی درگاه پرداخت از پنل `/orders/settings` — Zarinpal+IDPay+Zibal، `ord_settings` +۴ ستون، `getPaymentGateway(branchId)` async/per-branch، **`ZARINPAL_MERCHANT_ID` از env کاملاً حذف شد**؛ به‌جای آن از پنل وارد می‌شود). ✅ `v0.9.8-order-public` (باکس۰+۱) دیپلوی شده. ✅ `v0.9.7-menu-channel-public/basharaf-deploy.zip` (push شده). zipهای قبلی هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`)، و `basharaf-0.9.4-inv-foundation.zip` + `db-inventory-reversal.sql`. |
-| **کار نیمه‌تمام (in-progress)** | 🔴 **اورژانسی — production الان خراب است:** کاربر گزارش داد بعد از این دیپلوی، `/order` (منوی عمومی سفارش بیرون‌بر) خطا می‌دهد («سفارش آنلاین در دسترس نیست») و `/orders/settings` هم بارگذاری نمی‌شود. علت: ۴ migration معلق روی هم تلنبار شده‌اند (`ord_settings`/`orders`/`order_events` ستون جدید کم دارند) — Drizzle حالا این ستون‌ها را در SELECT می‌خواهد ولی در DB نیستند → خطای «column does not exist». فایل جدید **`db-ordering-pending-migrations-combined.sql`** (ریشه‌ی پروژه) همه‌ی ۴ migration معلق را یکجا و idempotent اجرا می‌کند — همین یک فایل کافی است. |
-| **کار بعدی پیشنهادی** | (۱) **فوری:** کاربر `db-ordering-pending-migrations-combined.sql` را در pgAdmin/Supabase SQL editor اجرا کند، سپس `/order` و `/orders/settings` و `/orders` را رفرش و تأیید کند که خطا رفع شده (نقدی/سایر ماژول‌ها تحت تأثیر نیست — فقط ALTER/CREATE IF NOT EXISTS افزایشی). (۲) بعد از آن، در `/orders/settings`: «پرداخت آنلاین» را روشن، درگاه را انتخاب، credential واقعی وارد و ذخیره شود. (۳) تست end-to-end کامل سرویس سفارش (ثبت/پیگیری/پنل پرسنل + پرداخت آنلاین موفق/ناموفق/idempotent). (۴) دیپلوی `basharaf-tasks-ops-liara.zip` روی Liara (Backlog #14). (۵) retest باگ قدیمی «خطا در ثبت تجهیزات/سفارش خرید» (Backlog #15). |
-| **بلاک‌شده/منتظر کاربر** | 🔴 اجرای `db-ordering-pending-migrations-combined.sql` روی pgAdmin/Supabase — تا قبل از آن کل ماژول سفارش بیرون‌بر (مشتری + پنل تنظیمات) در production کار نمی‌کند. |
+| **دیپلوی** | ✅ هر دو migration معلق (`db-ordering-pending-migrations-combined.sql` + `db-ordering-fulfillment-migration.sql`) روی Liara اجرا و توسط کاربر تأیید شد — `/order`، `/order/checkout`، `/orders`، `/orders/settings` سالم. 🆕 کد باکس ۵ push شد ولی **`v0.9.13-order-fulfillment/basharaf-deploy.zip` هنوز ساخته و دیپلوی نشده**. zipهای دیگر هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`). |
+| **کار نیمه‌تمام (in-progress)** | ساخت `v0.9.13-order-fulfillment/basharaf-deploy.zip` (`git archive HEAD`) + دیپلوی روی Liara. |
+| **کار بعدی پیشنهادی** | (۱) ساخت zip نسخه‌دار + دیپلوی Liara. (۲) در `/orders/settings`: پرداخت آنلاین روشن، درگاه انتخاب، credential واقعی وارد/ذخیره. (۳) دسته‌ی «نوشیدنی» با نرخ VAT ۱۶٪ در پنل منو → دسته‌ها بساز (وگرنه split مالیات نوشیدنی‌ها غلط ثبت می‌شود). (۴) تست end-to-end: سفارش نقدی + آنلاین تا «تحویل» → بررسی سند فروش در حسابداری + کسر انبار. (۵) Backlog #14 (دیپلوی عملیات) + #15 (retest تجهیزات/سفارش‌خرید). |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — باکس ۵ سفارش: اتصال حسابداری/انبار + VAT دسته‌ها + KPI + commit نهایی — اکانت ۱
+**چه شد:**
+(۱) `lib/ordering/orderAccounting.ts` (جدید) — پل حسابداری/انبار برای تکمیل سفارش: سند فروش approved با split VAT خط‌به‌خط (نرخ از `menu_categories.vat_rate`، fallback ۱۰٪)، `applyBalance` روی صندوق، `applyMenuSaleDeduction` برای backflushing رسپی + COGS، هشدار audit + اعلان SuperAdmin برای آیتم‌های بدون نگاشت. قفل ضد-تکرار: `orders.sale_transaction_id` (idempotent — حداکثر یک سند فروش به ازای هر سفارش).
+(۲) `lib/ordering/orders.ts` → `transitionOrderStatus`: باکس ۵ wire شد — فقط در `delivered`/`completed` با پرداخت تسویه‌شده (آنلاین=paid، نقدی=همین لحظه) `postOrderSaleToAccounting` فراخوانی می‌شود.
+(۳) `lib/payments/types.ts`: `GatewayCurrencyUnit = 'toman' | 'rial'` + `toGatewayAmount(amount, unit)` — واحد پول هر درگاه از یک نقطه‌ی واحد کنترل می‌شود (Zarinpal=toman، IDPay=rial، Zibal=rial).
+(۴) `menu_categories.vat_rate` (integer، nullable) به schema + migration اضافه شد. UI پنل منو → تب دسته‌ها: فرم ایجاد + inline edit نرخ VAT هر دسته.
+(۵) KPI بیرون‌بر در `/reports`: تعداد/فروش/میانگین سبد/نسبت ارسال-پیکاپ + نمودار recharts.
+(۶) هر دو migration (`db-ordering-pending-migrations-combined.sql` + `db-ordering-fulfillment-migration.sql`) توسط کاربر روی Liara اجرا و تأیید شد — اورژانسی production رفع، `/order`/`/orders`/`/orders/settings` سالم.
+**فایل‌ها:** `lib/ordering/orderAccounting.ts` (جدید)، `lib/ordering/orders.ts`، `lib/ordering/publicOrders.ts`، `lib/db/schema.ts` (+`order_lines.menu_item_id`، `orders.sale_transaction_id`، `menu_categories.vat_rate`)، `lib/payments/types.ts`، `lib/payments/zarinpal.ts`، `lib/payments/idpay.ts`، `lib/payments/zibal.ts`، `app/(app)/menu/page.tsx`، `app/api/menu/categories/route.ts`، `app/api/menu/categories/[id]/route.ts`، `types/menu.ts`، `lib/db/menuSerializers.ts`، `app/api/reports/route.ts`، `app/(app)/reports/page.tsx`، `db-ordering-fulfillment-migration.sql` (جدید)، `package.json` (نسخه `0.9.13-order-fulfillment`)، `HANDOFF.md`، `project-docs/online-order-report.md` (جدید).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** `v0.9.13-order-fulfillment/basharaf-deploy.zip` هنوز ساخته و دیپلوی نشده.
+**برای جلسه‌ی بعد:** (۱) ساخت zip + دیپلوی Liara. (۲) دسته‌ی «نوشیدنی» با VAT ۱۶٪ در پنل منو بساز. (۳) در `/orders/settings` درگاه پرداخت را پیکربندی کن. (۴) تست end-to-end: سفارش نقدی+آنلاین تا «تحویل» → بررسی سند فروش حسابداری + کسر انبار. (۵) Backlog #14/#15.
 
 ## 📓 2026-06-15 — 🔴 رفع اورژانسی: production سفارش بیرون‌بر خراب (migrationهای معلق تلنبارشده) — اکانت ۲
 **چه شد:** کاربر بعد از دیپلوی `v0.9.12` گزارش داد `/order` (منوی عمومی) با خطا «سفارش آنلاین در دسترس نیست» و `/orders/settings` بارگذاری نمی‌شوند. علت: `getOrdSettings()` حالا ستون‌های جدید `ord_settings` (`pay_gateway`/`zarinpal_merchant_id`/`idpay_api_key`/`zibal_merchant_id` از migration این جلسه) را در SELECT می‌خواهد، ولی DB production هنوز این ستون‌ها (و ۳ migration معلق قبلی روی `orders`/`order_events`) را ندارد → Postgres «column does not exist». فایل جدید `db-ordering-pending-migrations-combined.sql` (ریشه‌ی پروژه) هر ۴ migration معلق (v0.9.9 تا v0.9.12، همه idempotent/افزایشی) را یکجا اجرا می‌کند — تنها اقدام لازم برای رفع خرابی production است.
@@ -122,12 +135,6 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** کاربر `v0.9.8-order-public/db-ordering-migration.sql` را روی pgAdmin اجرا کند، سپس `v0.9.8-order-public/basharaf-deploy.zip` را روی Liara دیپلوی کند و `/orders/settings` و `/order` را تست کند. بعد از آن سراغ سایر آیتم‌های بخش ۰ (پرداخت/checkout واقعی، Backlog #14/#15، چک کانال منو روی production).
 
-## 📓 2026-06-14 — صفحه‌ی عمومی سفارش /order: مرور منو + سبد (باکس ۱) — اکانت ۲
-**چه شد:** صفحه‌ی عمومی `/order` (بدون auth، خارج از middleware محافظت‌شده) ساخته شد — مرحله‌ی «مرور منو + سبد»، هنوز بدون ثبت سفارش/پرداخت. هلپر فقط‌خواندنی جدید `lib/ordering/publicMenu.ts` → `getPublicOrderMenu()`: شعبه = اولین شعبه (`branches[0]` به ترتیب `createdAt`)، تنظیمات از `ord_settings` (اگر ردیف نبود → fallback به مقادیر پیش‌فرض schema، **بدون insert**)، کاتالوگ از `menu_items` با `in_takeaway=true AND is_available=true` + `COALESCE(price_takeaway, price)`، دسته‌بندی از `menu_categories` با حذف دسته‌های بدون آیتم بیرون‌بر. تابع `isWithinOpenHours()` وضعیت باز/بسته‌ی لحظه‌ای را با ساعت تهران (`Asia/Tehran`) محاسبه می‌کند (شامل بازه‌ی گذرنده از نیمه‌شب). API عمومی جدید `GET /api/public/order/menu` (بدون auth، `force-dynamic`) فقط همین داده را برمی‌گرداند — هیچ فیلد پنل/قیمت خام/admin leak ندارد. صفحه‌ی `/order` (client component، دیزاین `components/ui` + پالت stone + Vazirmatn از layout ریشه، هم‌خانواده‌ی `/m`): هدر نام شعبه + Chip باز/بسته + ساعت کاری + حداقل سفارش؛ اگر بسته یا خارج ساعت → بنر قرمز هشدار + قفل دکمه‌های افزایش/کاهش تعداد؛ بخش‌های منو با شمارشگر تعداد per-item؛ سبد در state کلاینت با persist در `localStorage` (`basharaf-order-cart`)، نوار پایین چسبان با تعداد قلم/subtotal/کمبود تا حداقل سفارش/دکمه «ادامه» (غیرفعال تا شعبه باز باشد، سبد خالی نباشد، و حداقل سفارش برسد) → `/order/checkout`. صفحه‌ی placeholder جدید `/order/checkout`.
-**فایل‌ها:** `types/ordering.ts` (+`PublicOrderItem/Section/Settings/Menu`)، `lib/ordering/publicMenu.ts` (جدید)، `app/api/public/order/menu/route.ts` (جدید)، `lib/repos/publicOrder.types.ts` + `lib/repos/publicOrder.api.ts` (جدید)، `app/order/layout.tsx` + `app/order/page.tsx` + `app/order/checkout/page.tsx` (جدید).
-**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (`/order` 4.24 kB استاتیک، `/order/checkout` 183B استاتیک، `/api/public/order/menu` دینامیک). smoke-test دستی: `/order` در dev سرور 200 برمی‌گرداند و در غیاب `DATABASE_URL` (محیط sandbox، بدون env) به‌درستی fallback خطا (`Empty`) نشان می‌دهد — همان رفتار سایر روت‌های DB-dependent در این محیط، نه باگ این تغییر.
-**ناتمام:** ⚠️ `db-ordering-migration.sql` (از باکس ۰) هنوز روی DB production اجرا نشده — تا قبل از اجرا، `/order` با خطای جدول‌نبودن مواجه می‌شود (چون `getPublicOrderMenu` به `ord_settings`/`menu_items`/`menu_categories` کوئری می‌زند). ثبت سفارش/پرداخت/checkout واقعی هنوز ساخته نشده — فقط placeholder.
-**برای جلسه‌ی بعد:** ۱) کاربر `db-ordering-migration.sql` را روی pgAdmin اجرا کند (پیش‌نیاز هم `/orders/settings` هم `/order`)، سپس `/order` با چند سناریو تست شود: شعبه باز/بسته، حداقل سفارش>۰، دسته‌های بدون آیتم بیرون‌بر مخفی. ۲) باکس‌های بعدی سرویس سفارش: ثبت سفارش واقعی + `/order/checkout` (آدرس/منطقه‌ی ارسال از `ord_zones`، روش پرداخت از تنظیمات، ایجاد رکورد `orders`+`order_lines`)، پیگیری سفارش با `track_token`، پنل مدیریت سفارش‌ها. ۳) سایر Backlog (#14 دیپلوی عملیات Liara، #15 retest تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions).
 
 ---
 

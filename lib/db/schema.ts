@@ -454,6 +454,8 @@ export const menuCategories = pgTable('menu_categories', {
   labelEn: text('label_en').notNull(),
   labelFa: text('label_fa').notNull(),
   sortOrder: integer('sort_order').notNull().default(0),
+  /** نرخ مالیات ارزش‌افزوده (٪) برای آیتم‌های این دسته — null یعنی نرخ پیش‌فرض (۱۰٪ غذا). نوشیدنی‌ها ۱۶٪. */
+  vatRate: integer('vat_rate'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -1453,6 +1455,8 @@ export const orders = pgTable(
     payAuthority: text('pay_authority'), // authority درگاه (Zarinpal) برای lookup در callback
     pickupTime: text('pickup_time'), // فقط pickup — زمان دریافت دلخواه مشتری
     clientToken: text('client_token'), // idempotency key از /order/checkout
+    /** سند فروش approved ساخته‌شده هنگام تکمیل سفارش — جلوگیری از ساخت تکراری (Box 5) */
+    saleTransactionId: uuid('sale_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
     jalaliDate: text('jalali_date').notNull(),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -1478,6 +1482,8 @@ export const orderLines = pgTable(
     unitPrice: bigint('unit_price', { mode: 'number' }).notNull(),
     qty: integer('qty').notNull(),
     lineTotal: bigint('line_total', { mode: 'number' }).notNull(),
+    /** اتصال به menu_items برای نگاشت رسپی (کسر انبار) و نرخ VAT — نال برای داده‌های قدیمی */
+    menuItemId: uuid('menu_item_id').references(() => menuItems.id, { onDelete: 'set null' }),
   },
   (t) => ({
     orderIdx: index('order_lines_order_idx').on(t.orderId),

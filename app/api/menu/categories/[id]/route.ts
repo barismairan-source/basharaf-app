@@ -13,6 +13,7 @@ const patchSchema = z.object({
   labelEn: z.string().min(1).max(80).optional(),
   labelFa: z.string().min(1).max(80).optional(),
   sortOrder: z.number().int().optional(),
+  vatRate: z.number().int().min(0).max(100).nullable().optional(),
 });
 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, and, sql, gte, lte, desc } from 'drizzle-orm';
+import { eq, and, sql, gte, lte, desc, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
@@ -177,6 +177,29 @@ export async function GET(req: Request) {
       }));
     }
 
+    // ─── ۶. سفارش‌های بیرون‌بر (تکمیل‌شده) — تعداد، فروش، میانگین سبد، نسبت ارسال/پیکاپ ──
+    const orderConditions = [inArray(schema.orders.status, ['delivered', 'completed'])];
+    if (session.role === 'BranchUser' && session.branchId) {
+      orderConditions.push(eq(schema.orders.branchId, session.branchId));
+    } else if (session.role === 'SuperAdmin' && params.branchId) {
+      orderConditions.push(eq(schema.orders.branchId, params.branchId));
+    }
+    if (params.from) orderConditions.push(gte(schema.orders.jalaliDate, params.from));
+    if (params.to) orderConditions.push(lte(schema.orders.jalaliDate, params.to));
+
+    const [orderTotals] = await db
+      .select({
+        count: sql<string>`COUNT(*)`,
+        totalSales: sql<string>`COALESCE(SUM(${schema.orders.total}), 0)`,
+        deliveryCount: sql<string>`COUNT(CASE WHEN ${schema.orders.serviceType} = 'delivery' THEN 1 END)`,
+        pickupCount: sql<string>`COUNT(CASE WHEN ${schema.orders.serviceType} = 'pickup' THEN 1 END)`,
+      })
+      .from(schema.orders)
+      .where(and(...orderConditions));
+
+    const takeawayCount = Number(orderTotals?.count ?? 0);
+    const takeawaySales = Number(orderTotals?.totalSales ?? 0);
+
     return NextResponse.json({
       summary: {
         income,
@@ -188,6 +211,13 @@ export async function GET(req: Request) {
       byBranch,
       byCategory,
       byUser,
+      takeaway: {
+        count: takeawayCount,
+        totalSales: takeawaySales,
+        avgBasket: takeawayCount > 0 ? Math.round(takeawaySales / takeawayCount) : 0,
+        deliveryCount: Number(orderTotals?.deliveryCount ?? 0),
+        pickupCount: Number(orderTotals?.pickupCount ?? 0),
+      },
     });
   } catch (e) {
     return handleError(e);

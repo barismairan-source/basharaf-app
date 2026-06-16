@@ -3,6 +3,7 @@ import { db, schema } from '@/lib/db/client';
 import { ApiError } from '@/lib/api-error';
 import { getTodayJalali } from '@/lib/jalali';
 import { rowToBoardOrder } from '@/lib/db/ordering.serializers';
+import { postOrderSaleToAccounting } from './orderAccounting';
 import { ORDER_STATUS_LABELS, TERMINAL_STATUSES, canTransition } from './orderStatus';
 import type { BoardOrder, OrderStatus } from '@/types';
 
@@ -87,10 +88,21 @@ export async function transitionOrderStatus(
     );
   }
 
+  // باکس ۵: اثر مالی/انباری فقط در وضعیت نهایی موفق (delivered/completed) —
+  // آنلاین: فقط اگر pay_status=paid؛ نقدی: همین تحویل/تکمیل = تسویه‌شدن.
+  const isSuccessfulCompletion = toStatus === 'delivered' || toStatus === 'completed';
+  const paymentSettled = existing.payMethod === 'online' ? existing.payStatus === 'paid' : true;
+  const shouldPostSale = isSuccessfulCompletion && paymentSettled && !existing.saleTransactionId;
+
   const updated = await db.transaction(async (tx) => {
+    const statusUpdate: Partial<typeof schema.orders.$inferInsert> = { status: toStatus };
+    if (shouldPostSale && existing.payMethod === 'cash' && existing.payStatus !== 'paid') {
+      statusUpdate.payStatus = 'paid';
+    }
+
     const [order] = await tx
       .update(schema.orders)
-      .set({ status: toStatus })
+      .set(statusUpdate)
       .where(eq(schema.orders.id, existing.id))
       .returning();
     if (!order) throw new ApiError(500, 'خطا در به‌روزرسانی سفارش', 'UPDATE_FAILED');
@@ -102,7 +114,18 @@ export async function transitionOrderStatus(
       actorUserId,
     });
 
-    return order;
+    if (!shouldPostSale) return order;
+
+    const orderLines = await tx.select().from(schema.orderLines).where(eq(schema.orderLines.orderId, order.id));
+    const [branch] = await tx.select().from(schema.branches).where(eq(schema.branches.id, order.branchId)).limit(1);
+    const result = await postOrderSaleToAccounting(tx, order, orderLines, branch?.name ?? '', actorUserId);
+
+    const [final] = await tx
+      .update(schema.orders)
+      .set({ saleTransactionId: result.transactionId })
+      .where(eq(schema.orders.id, order.id))
+      .returning();
+    return final ?? order;
   });
 
   const lines = await db.select().from(schema.orderLines).where(eq(schema.orderLines.orderId, updated.id));
