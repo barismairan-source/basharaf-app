@@ -14,6 +14,7 @@ export interface OrdSettings {
   zarinpalMerchantId: string | null;
   idpayApiKey: string | null;
   zibalMerchantId: string | null;
+  neshanApiKey: string | null;
   minOrder: number;
   prepBufferMin: number;
   createdAt: string;
@@ -34,6 +35,7 @@ export interface OrdSettingsPatch {
   zarinpalMerchantId?: string;
   idpayApiKey?: string;
   zibalMerchantId?: string;
+  neshanApiKey?: string;
   minOrder?: number;
   prepBufferMin?: number;
 }
@@ -94,6 +96,7 @@ export interface PublicOrderSettings {
   payCash: boolean;
   payOnline: boolean;
   minOrder: number;
+  neshanApiKey: string | null;
 }
 
 export interface PublicOrderZone {

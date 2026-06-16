@@ -36,6 +36,7 @@ export default function OrderingSettingsPage() {
     zarinpalMerchantId: '',
     idpayApiKey: '',
     zibalMerchantId: '',
+    neshanApiKey: '',
     minOrderDisplay: '',
     prepBufferMin: '30',
   });
@@ -67,6 +68,7 @@ export default function OrderingSettingsPage() {
           zarinpalMerchantId: s.zarinpalMerchantId ?? '',
           idpayApiKey: s.idpayApiKey ?? '',
           zibalMerchantId: s.zibalMerchantId ?? '',
+          neshanApiKey: s.neshanApiKey ?? '',
           minOrderDisplay: s.minOrder ? s.minOrder.toLocaleString('en-US') : '',
           prepBufferMin: String(s.prepBufferMin),
         });
@@ -105,6 +107,7 @@ export default function OrderingSettingsPage() {
         zarinpalMerchantId: form.zarinpalMerchantId.trim(),
         idpayApiKey: form.idpayApiKey.trim(),
         zibalMerchantId: form.zibalMerchantId.trim(),
+        neshanApiKey: form.neshanApiKey.trim(),
         minOrder: parseAmount(form.minOrderDisplay),
         prepBufferMin: Number(form.prepBufferMin) || 0,
       });
@@ -271,6 +274,22 @@ export default function OrderingSettingsPage() {
                     )}
                   </div>
                 )}
+
+                <div className="rounded-md border border-stone-200 p-3 space-y-3">
+                  <div className="text-[12px] font-medium text-stone-700">نقشه نشان</div>
+                  <Field label="کلید API نشان">
+                    <Input
+                      dir="ltr" value={form.neshanApiKey}
+                      onChange={e => setForm({ ...form, neshanApiKey: e.target.value })}
+                      placeholder="service.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    />
+                  </Field>
+                  <p className="text-[11px] text-stone-400">
+                    برای نمایش نقشه در صفحه‌ی انتخاب آدرس. کلید را از{' '}
+                    <a href="https://platform.neshan.org" target="_blank" rel="noreferrer" className="underline">platform.neshan.org</a>
+                    {' '}دریافت کنید.
+                  </p>
+                </div>
 
                 <div className="flex justify-end">
                   <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSaveSettings}>ذخیره</Button>

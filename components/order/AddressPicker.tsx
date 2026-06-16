@@ -8,10 +8,8 @@ import nmp from '@neshan-maps-platform/leaflet';
 import { MapPin, Search, X, Check, Loader2 } from 'lucide-react';
 import '@neshan-maps-platform/leaflet/dist/leaflet.css';
 
-// مختصات مرکز تهران به‌عنوان نقطه‌ی شروع پیش‌فرض
 const TEHRAN_LAT = 35.699739;
 const TEHRAN_LNG = 51.338097;
-const NESHAN_API = process.env.NEXT_PUBLIC_NESHAN_API_KEY ?? '';
 
 interface SearchResult {
   title: string;
@@ -21,6 +19,7 @@ interface SearchResult {
 }
 
 export interface AddressPickerProps {
+  apiKey: string;
   initialLat?: number | null;
   initialLng?: number | null;
   onConfirm: (lat: number, lng: number, address: string) => void;
@@ -28,6 +27,7 @@ export interface AddressPickerProps {
 }
 
 export default function AddressPicker({
+  apiKey,
   initialLat,
   initialLng,
   onConfirm,
@@ -48,12 +48,12 @@ export default function AddressPicker({
   const [geocoding, setGeocoding] = useState(false);
 
   const reverseGeocode = useCallback(async (lat: number, lng: number) => {
-    if (!NESHAN_API) return;
+    if (!apiKey) return;
     setGeocoding(true);
     try {
       const res = await fetch(
         `https://api.neshan.org/v5/reverse?lat=${lat}&lng=${lng}`,
-        { headers: { 'Api-Key': NESHAN_API } }
+        { headers: { 'Api-Key': apiKey } }
       );
       if (!res.ok) return;
       const data = (await res.json()) as { formatted_address?: string };
@@ -88,7 +88,7 @@ export default function AddressPicker({
     const map: LeafletMap = (nmp as unknown as {
       map: (el: HTMLElement, opts: Record<string, unknown>) => LeafletMap;
     }).map(mapContainerRef.current, {
-      key: NESHAN_API,
+      key: apiKey,
       maptype: 'dreamy',
       poi: true,
       traffic: false,
@@ -133,7 +133,7 @@ export default function AddressPicker({
 
   // جستجوی نشان (با debounce ساده)
   useEffect(() => {
-    if (!searchTerm.trim() || !NESHAN_API) {
+    if (!searchTerm.trim() || !apiKey) {
       setSearchResults([]);
       setShowDropdown(false);
       return;
@@ -143,7 +143,7 @@ export default function AddressPicker({
       try {
         const res = await fetch(
           `https://api.neshan.org/v1/search?term=${encodeURIComponent(searchTerm.trim())}&lat=${currentLat}&lng=${currentLng}`,
-          { headers: { 'Api-Key': NESHAN_API } }
+          { headers: { 'Api-Key': apiKey } }
         );
         if (!res.ok) return;
         const data = (await res.json()) as {

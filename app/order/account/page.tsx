@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { MapPin, Package, Plus, Trash2, Star, Phone, User, LogOut, ChevronRight, Map as MapIcon } from 'lucide-react';
 import { customerRepo } from '@/lib/repos/customer.api';
+import { publicOrderRepo } from '@/lib/repos/publicOrder.api';
 import { fmt, toFa } from '@/lib/utils';
 import type { WebCustomer, WebCustomerAddress, WebCustomerOrder } from '@/types/webCustomer';
 
@@ -165,7 +166,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
 
 // ─── پنل آدرس‌ها ──────────────────────────────────────────────────────
 
-function AddressesTab({ customerId }: { customerId: string }) {
+function AddressesTab({ customerId, neshanApiKey }: { customerId: string; neshanApiKey: string }) {
   void customerId;
   const [addresses, setAddresses] = useState<WebCustomerAddress[]>([]);
   const [loading, setLoading] = useState(true);
@@ -238,6 +239,7 @@ function AddressesTab({ customerId }: { customerId: string }) {
       {/* AddressPicker modal */}
       {showMap && (
         <AddressPicker
+          apiKey={neshanApiKey}
           initialLat={form.lat ?? undefined}
           initialLng={form.lng ?? undefined}
           onConfirm={(lat, lng, addr) => {
@@ -420,9 +422,13 @@ export default function CustomerAccountPage() {
   const [customer, setCustomer] = useState<WebCustomer | null | undefined>(undefined);
   const [activeTab, setActiveTab] = useState<Tab>('addresses');
   const [loggingOut, setLoggingOut] = useState(false);
+  const [neshanApiKey, setNeshanApiKey] = useState('');
 
   useEffect(() => {
     customerRepo.getMe().then(setCustomer);
+    publicOrderRepo.getMenu().then((menu) => {
+      if (menu?.settings.neshanApiKey) setNeshanApiKey(menu.settings.neshanApiKey);
+    }).catch(() => {});
   }, []);
 
   async function handleLogout() {
@@ -495,7 +501,7 @@ export default function CustomerAccountPage() {
 
       {/* محتوا */}
       {activeTab === 'addresses' ? (
-        <AddressesTab customerId={customer.id} />
+        <AddressesTab customerId={customer.id} neshanApiKey={neshanApiKey} />
       ) : (
         <OrdersTab />
       )}

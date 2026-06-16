@@ -99,8 +99,9 @@ export async function getPublicOrderMenu(): Promise<PublicOrderMenu | null> {
         payCash: s.payCash,
         payOnline: s.payOnline,
         minOrder: Number(s.minOrder),
+        neshanApiKey: s.neshanApiKey,
       }
-    : DEFAULT_SETTINGS;
+    : { ...DEFAULT_SETTINGS, neshanApiKey: null };
 
   const settings: PublicOrderSettings = {
     ...base,

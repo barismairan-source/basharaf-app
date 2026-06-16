@@ -19,6 +19,7 @@ const patchSchema = z.object({
   zarinpalMerchantId: z.string().trim().max(100).optional(),
   idpayApiKey: z.string().trim().max(100).optional(),
   zibalMerchantId: z.string().trim().max(100).optional(),
+  neshanApiKey: z.string().trim().max(200).optional(),
   minOrder: z.number().int().min(0).max(999_999_999_999).optional(),
   prepBufferMin: z.number().int().min(0).max(1440).optional(),
 });

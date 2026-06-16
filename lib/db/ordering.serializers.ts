@@ -29,6 +29,7 @@ export function rowToOrdSettings(row: OrdSettingsRow) {
     zarinpalMerchantId: row.zarinpalMerchantId,
     idpayApiKey: row.idpayApiKey,
     zibalMerchantId: row.zibalMerchantId,
+    neshanApiKey: row.neshanApiKey,
     minOrder: toNum(row.minOrder),
     prepBufferMin: row.prepBufferMin,
     createdAt: row.createdAt.toISOString(),

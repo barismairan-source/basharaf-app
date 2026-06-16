@@ -1401,6 +1401,7 @@ export const ordSettings = pgTable(
     zarinpalMerchantId: text('zarinpal_merchant_id'),
     idpayApiKey: text('idpay_api_key'),
     zibalMerchantId: text('zibal_merchant_id'),
+    neshanApiKey: text('neshan_api_key'),
     minOrder: bigint('min_order', { mode: 'number' }).notNull().default(0),
     prepBufferMin: integer('prep_buffer_min').notNull().default(30),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

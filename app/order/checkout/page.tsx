@@ -244,6 +244,7 @@ export default function OrderCheckoutPage() {
     <>
     {showAddressPicker && (
       <AddressPicker
+        apiKey={menu?.settings.neshanApiKey ?? ''}
         initialLat={pickedLat ?? undefined}
         initialLng={pickedLng ?? undefined}
         onConfirm={(lat, lng, addr) => {

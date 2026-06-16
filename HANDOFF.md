@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.15-neshan-map` |
+| **نسخه** | `0.9.16-neshan-key-ui` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | ✅ Liara production سالم. 🆕 باکس الف + باکس ب push شدند ولی **`db-customer-migration.sql` هنوز روی production اجرا نشده** + **`NEXT_PUBLIC_NESHAN_API_KEY` و `CUSTOMER_JWT_SECRET` هنوز در env Liara نیستند**. `v0.9.15-neshan-map/basharaf-deploy.zip` هنوز ساخته نشده. |
-| **کار نیمه‌تمام (in-progress)** | — (کد کامل، env + migration لازم است) |
-| **کار بعدی پیشنهادی** | (۱) اجرای `db-customer-migration.sql` روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` + `NEXT_PUBLIC_NESHAN_API_KEY` در env Liara. (۳) ساخت `v0.9.15-neshan-map/basharaf-deploy.zip` + دیپلوی. (۴) تست: ورود OTP → ذخیره آدرس با نقشه‌ی نشان → سفارش delivery با آدرس ذخیره‌شده. (۵) پیکربندی درگاه پرداخت + دسته «نوشیدنی» VAT ۱۶٪. (۶) Backlog #14/#15. |
-| **بلاک‌شده/منتظر کاربر** | اجرای `db-customer-migration.sql` + تنظیم `CUSTOMER_JWT_SECRET` و `NEXT_PUBLIC_NESHAN_API_KEY` در env |
+| **دیپلوی** | 🔴 هنوز دیپلوی نشده. migration `db-customer-migration.sql` + `db-neshan-key-migration.sql` هنوز روی Liara اجرا نشده‌اند. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. `v0.9.16-neshan-key-ui/basharaf-deploy.zip` هنوز ساخته نشده. |
+| **کار نیمه‌تمام (in-progress)** | — (کد کامل، migration + env + zip + دیپلوی لازم است) |
+| **کار بعدی پیشنهادی** | (۱) اجرای `db-customer-migration.sql` + `db-neshan-key-migration.sql` روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara (NEXT_PUBLIC_NESHAN_API_KEY دیگر لازم نیست — از پنل `/orders/settings` وارد می‌شود). (۳) ساخت zip + دیپلوی. (۴) از پنل `/orders/settings` کلید API نشان را وارد کن و ذخیره کن. (۵) تست: ورود OTP → ذخیره آدرس با نقشه → سفارش → تاریخچه. (۶) پیکربندی درگاه پرداخت + دسته «نوشیدنی» VAT ۱۶٪. (۷) Backlog #14/#15. |
+| **بلاک‌شده/منتظر کاربر** | اجرای دو migration روی Liara + تنظیم `CUSTOMER_JWT_SECRET` در env + ساخت zip + دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,24 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — v0.9.16: کلید API نشان از پنل ادمین (نه env var) — اکانت ۱
+**چه شد:**
+(۱) کاربر گزارش داد «جایی برای زدن api نشان نیست» — تصمیم: به‌جای `NEXT_PUBLIC_NESHAN_API_KEY` در env، کلید از پنل `/orders/settings` وارد و در `ord_settings.neshan_api_key` در DB ذخیره شود (همان الگوی `zarinpalMerchantId`/`idpayApiKey`/`zibalMerchantId`).
+(۲) `lib/db/schema.ts`: ستون `neshanApiKey: text('neshan_api_key')` به `ordSettings` اضافه شد.
+(۳) `db-neshan-key-migration.sql` (جدید): `ALTER TABLE ord_settings ADD COLUMN IF NOT EXISTS neshan_api_key text`.
+(۴) `lib/db/ordering.serializers.ts`: `neshanApiKey: row.neshanApiKey` به `rowToOrdSettings` اضافه شد.
+(۵) `types/ordering.ts`: `neshanApiKey: string | null` به `OrdSettings` و `OrdSettingsPatch` و `PublicOrderSettings` اضافه شد.
+(۶) `app/api/orders/settings/route.ts`: `neshanApiKey: z.string().trim().max(200).optional()` به patchSchema اضافه شد.
+(۷) `lib/ordering/publicMenu.ts`: `neshanApiKey: s.neshanApiKey` از تنظیمات DB به response عمومی اضافه شد.
+(۸) `components/order/AddressPicker.tsx`: `NESHAN_API` ثابت حذف شد → `apiKey: string` prop شد (در `AddressPickerProps` و استفاده داخلی در `reverseGeocode` + `useEffect` جستجو + init نقشه).
+(۹) `app/order/checkout/page.tsx`: `apiKey={menu?.settings.neshanApiKey ?? ''}` به `<AddressPicker>` اضافه شد.
+(۱۰) `app/order/account/page.tsx`: `publicOrderRepo` import شد؛ `neshanApiKey` state در `CustomerAccountPage` از `getMenu()` خوانده می‌شود؛ به `AddressesTab` به‌عنوان prop پاس داده می‌شود؛ `AddressesTab` آن را دریافت و به `<AddressPicker>` می‌دهد.
+(۱۱) `app/(app)/orders/settings/page.tsx`: فرم + UI فیلد «کلید API نشان» با placeholder + لینک platform.neshan.org اضافه شد.
+**فایل‌ها:** `lib/db/schema.ts`، `db-neshan-key-migration.sql` (جدید)، `lib/db/ordering.serializers.ts`، `types/ordering.ts`، `app/api/orders/settings/route.ts`، `lib/ordering/publicMenu.ts`، `components/order/AddressPicker.tsx`، `app/order/checkout/page.tsx`، `app/order/account/page.tsx`، `app/(app)/orders/settings/page.tsx`، `package.json` (نسخه `0.9.16-neshan-key-ui`).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای `db-customer-migration.sql` + `db-neshan-key-migration.sql` روی Liara (هر دو idempotent). (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara (NEXT_PUBLIC_NESHAN_API_KEY دیگر لازم نیست). (۳) ساخت `v0.9.16-neshan-key-ui/basharaf-deploy.zip` + دیپلوی. (۴) از `/orders/settings` کلید API نشان را وارد و ذخیره کن. (۵) تست کامل.
 
 ## 📓 2026-06-16 — باکس ب: نقشه‌ی نشان (AddressPicker) در فرم آدرس + checkout — اکانت ۱
 **چه شد:**
