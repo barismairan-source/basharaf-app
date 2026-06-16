@@ -128,6 +128,8 @@ export interface CreateOrderInput {
   pickupTime?: string;
   note?: string;
   items: CreateOrderItemInput[];
+  /** اگر مشتری لاگین کرده باشد، سفارش به حسابش وصل می‌شود */
+  orderCustomerId?: string;
 }
 
 export interface PublicOrderLine {

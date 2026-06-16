@@ -149,6 +149,7 @@ export async function createPublicOrder(input: CreateOrderInput): Promise<{ orde
       payStatus: 'unpaid',
       jalaliDate,
       note: input.note || null,
+      orderCustomerId: input.orderCustomerId ?? null,
     }).returning();
     if (!order) throw new ApiError(500, 'خطا در ثبت سفارش', 'INSERT_FAILED');
 

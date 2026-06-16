@@ -1431,6 +1431,58 @@ export const ordZones = pgTable(
   })
 );
 
+// ─── web_customers — مشتریان آنلاین (لاگین OTP برای /order/account) ────
+// کاملاً جدا از جدول customers (CRM/loyalty) — این جدول فقط برای ماژول سفارش آنلاین است
+export const webCustomers = pgTable(
+  'web_customers',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    phone: text('phone').notNull(),
+    name: text('name'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    phoneUniq: uniqueIndex('web_customers_phone_uniq').on(t.phone),
+  })
+);
+
+export const webCustomerAddresses = pgTable(
+  'web_customer_addresses',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    customerId: uuid('customer_id').notNull().references(() => webCustomers.id, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    address: text('address').notNull(),
+    lat: numeric('lat'),
+    lng: numeric('lng'),
+    isDefault: boolean('is_default').notNull().default(false),
+    sortOrder: integer('sort_order').notNull().default(0),
+  },
+  (t) => ({
+    customerIdx: index('web_customer_addresses_customer_idx').on(t.customerId),
+  })
+);
+
+export const webCustomerOtp = pgTable(
+  'web_customer_otp',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    phone: text('phone').notNull(),
+    code: text('code').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    used: boolean('used').notNull().default(false),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    phoneUsedIdx: index('web_customer_otp_phone_used_idx').on(t.phone, t.used),
+  })
+);
+
+export type WebCustomer = typeof webCustomers.$inferSelect;
+export type WebCustomerAddress = typeof webCustomerAddresses.$inferSelect;
+export type WebCustomerOtp = typeof webCustomerOtp.$inferSelect;
+
 // ─── orders — سفارش بیرون‌بر (ارسال/پیکاپ، نقدی/آنلاین، guest checkout) ───
 export const orders = pgTable(
   'orders',
@@ -1457,6 +1509,8 @@ export const orders = pgTable(
     clientToken: text('client_token'), // idempotency key از /order/checkout
     /** سند فروش approved ساخته‌شده هنگام تکمیل سفارش — جلوگیری از ساخت تکراری (Box 5) */
     saleTransactionId: uuid('sale_transaction_id').references(() => transactions.id, { onDelete: 'set null' }),
+    /** مشتری آنلاین لاگین‌شده — nullable؛ سفارش‌های guest دست نمی‌خورند */
+    orderCustomerId: uuid('order_customer_id').references(() => webCustomers.id, { onDelete: 'set null' }),
     jalaliDate: text('jalali_date').notNull(),
     note: text('note'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

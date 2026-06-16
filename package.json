@@ -1,6 +1,6 @@
 {
   "name": "basharaf-app",
-  "version": "0.9.13-order-fulfillment",
+  "version": "0.9.14-customer",
   "private": true,
   "description": "سامانه حسابداری چندشعبه‌ای با شرف — basharaf demo 0.1",
   "scripts": {

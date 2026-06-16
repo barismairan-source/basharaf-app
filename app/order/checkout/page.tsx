@@ -3,12 +3,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Phone, User } from 'lucide-react';
+import { MapPin, Phone, User } from 'lucide-react';
 import { Button, Card, CardBody, Empty, Field, Input, Select, Textarea, Toggle } from '@/components/ui';
 import { fmt, toFa } from '@/lib/utils';
 import { publicOrderRepo } from '@/lib/repos/publicOrder.api';
+import { customerRepo } from '@/lib/repos/customer.api';
 import { loadCart, clearCart, type Cart } from '@/lib/ordering/cart';
 import type { CreateOrderInput, PublicOrderItem, PublicOrderMenu } from '@/types';
+import type { WebCustomer, WebCustomerAddress } from '@/types/webCustomer';
 
 type ServiceType = 'delivery' | 'pickup';
 type PayMethod = 'cash' | 'online';
@@ -34,9 +36,30 @@ export default function OrderCheckoutPage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [clientToken] = useState(() => crypto.randomUUID());
 
+  // مشتری لاگین‌شده و آدرس‌های ذخیره‌شده
+  const [currentCustomer, setCurrentCustomer] = useState<WebCustomer | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<WebCustomerAddress[]>([]);
+  const [selectedSavedAddress, setSelectedSavedAddress] = useState<string>('');
+
   useEffect(() => {
     setCart(loadCart());
     setHydrated(true);
+  }, []);
+
+  // بررسی session مشتری و بارگذاری آدرس‌ها (اگر لاگین کرده)
+  useEffect(() => {
+    customerRepo.getMe().then((me) => {
+      if (!me) return;
+      setCurrentCustomer(me);
+      customerRepo.getAddresses().then((list) => {
+        setSavedAddresses(list);
+        const def = list.find((a) => a.isDefault);
+        if (def) {
+          setSelectedSavedAddress(def.id);
+          setAddress(def.address);
+        }
+      }).catch(() => {});
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -146,6 +169,7 @@ export default function OrderCheckoutPage() {
         customerPhone: customerPhone.trim(),
         note: note.trim() || undefined,
         items: cartItems.map((it) => ({ id: it.id, qty: it.qty })),
+        orderCustomerId: currentCustomer?.id,
       };
       if (serviceType === 'delivery') {
         payload.address = address.trim();
@@ -208,14 +232,32 @@ export default function OrderCheckoutPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 pb-32 pt-6 sm:px-6">
-      <header className="mb-5">
-        <h1 className="text-lg text-stone-800 sm:text-xl">تکمیل سفارش</h1>
-        <Link
-          href="/order"
-          className="mt-1 inline-block text-[12px] text-stone-500 underline-offset-2 hover:underline"
-        >
-          بازگشت به منو
-        </Link>
+      <header className="mb-5 flex items-start justify-between">
+        <div>
+          <h1 className="text-lg text-stone-800 sm:text-xl">تکمیل سفارش</h1>
+          <Link
+            href="/order"
+            className="mt-1 inline-block text-[12px] text-stone-500 underline-offset-2 hover:underline"
+          >
+            بازگشت به منو
+          </Link>
+        </div>
+        {currentCustomer ? (
+          <Link
+            href="/order/account"
+            className="flex items-center gap-1 rounded-lg border border-stone-200 px-3 py-1.5 text-[12px] text-stone-600 hover:border-stone-300"
+          >
+            <User size={12} />
+            {currentCustomer.name ?? currentCustomer.phone}
+          </Link>
+        ) : (
+          <Link
+            href="/order/account"
+            className="rounded-lg border border-stone-200 px-3 py-1.5 text-[12px] text-stone-500 hover:border-stone-300 hover:text-stone-700"
+          >
+            ورود / ثبت‌نام
+          </Link>
+        )}
       </header>
 
       {!isOpenNow && (
@@ -270,10 +312,44 @@ export default function OrderCheckoutPage() {
                       هنوز محدوده‌ی ارسالی تعریف نشده — لطفاً با فروشگاه تماس بگیرید.
                     </p>
                   )}
+
+                  {/* آدرس‌های ذخیره‌شده مشتری لاگین‌شده */}
+                  {currentCustomer && savedAddresses.length > 0 && (
+                    <div>
+                      <p className="mb-2 flex items-center gap-1.5 text-[12px] text-stone-500">
+                        <MapPin size={12} />
+                        آدرس‌های ذخیره‌شده
+                      </p>
+                      <div className="space-y-1.5">
+                        {savedAddresses.map((a) => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedSavedAddress(a.id);
+                              setAddress(a.address);
+                            }}
+                            className={`w-full rounded-lg border px-3 py-2 text-right text-[12.5px] transition-colors ${
+                              selectedSavedAddress === a.id
+                                ? 'border-stone-800 bg-stone-50 text-stone-800'
+                                : 'border-stone-100 text-stone-600 hover:border-stone-200'
+                            }`}
+                          >
+                            <span className="font-medium">{a.title}</span>
+                            <span className="mr-2 text-stone-400">{a.address}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <Field label="آدرس">
                     <Textarea
                       value={address}
-                      onChange={(e) => setAddress(e.target.value)}
+                      onChange={(e) => {
+                        setAddress(e.target.value);
+                        setSelectedSavedAddress('');
+                      }}
                       placeholder="آدرس کامل برای ارسال"
                       rows={2}
                     />

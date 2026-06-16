@@ -1,5 +1,12 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-14 — پکیج دیپلوی نسخه‌ی `v0.9.8-order-public` (ماژول سفارش بیرون‌بر: باکس ۰+۱) — اکانت ۲
+**چه شد:** طبق قرارداد انتشار نسخه‌دار، برای کل کار ماژول سفارش بیرون‌بر تا اینجا (باکس ۰: جدول‌ها+تنظیمات+محدوده‌های ارسال، باکس ۱: صفحه‌ی عمومی `/order`) یک نسخه‌ی جدید ساخته شد: `package.json` از `0.9.7-menu-channel-public` به `0.9.8-order-public` ارتقا یافت. پوشه‌ی `v0.9.8-order-public/` ساخته شد شامل `basharaf-deploy.zip` (خروجی `git archive HEAD`، gitignored — فقط روی این دیسک) + کپی `db-ordering-migration.sql`.
+**فایل‌ها:** `package.json` (نسخه)، `v0.9.8-order-public/db-ordering-migration.sql` (جدید، tracked)، `HANDOFF.md`.
+**Build:** بدون تغییر کد منطقی در این جلسه.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (آرشیو شده — وضعیت resolved)
+
 ## 📓 2026-06-14 — صفحه‌ی عمومی سفارش /order: مرور منو + سبد (باکس ۱) — اکانت ۲
 **چه شد:** صفحه‌ی عمومی `/order` (بدون auth، خارج از middleware محافظت‌شده) ساخته شد — مرحله‌ی «مرور منو + سبد»، هنوز بدون ثبت سفارش/پرداخت. هلپر فقط‌خواندنی جدید `lib/ordering/publicMenu.ts` → `getPublicOrderMenu()`: شعبه = اولین شعبه (`branches[0]` به ترتیب `createdAt`)، تنظیمات از `ord_settings` (اگر ردیف نبود → fallback به مقادیر پیش‌فرض schema، **بدون insert**)، کاتالوگ از `menu_items` با `in_takeaway=true AND is_available=true` + `COALESCE(price_takeaway, price)`، دسته‌بندی از `menu_categories` با حذف دسته‌های بدون آیتم بیرون‌بر. تابع `isWithinOpenHours()` وضعیت باز/بسته‌ی لحظه‌ای را با ساعت تهران (`Asia/Tehran`) محاسبه می‌کند (شامل بازه‌ی گذرنده از نیمه‌شب). API عمومی جدید `GET /api/public/order/menu` (بدون auth، `force-dynamic`) فقط همین داده را برمی‌گرداند — هیچ فیلد پنل/قیمت خام/admin leak ندارد. صفحه‌ی `/order` (client component، دیزاین `components/ui` + پالت stone + Vazirmatn از layout ریشه، هم‌خانواده‌ی `/m`): هدر نام شعبه + Chip باز/بسته + ساعت کاری + حداقل سفارش؛ اگر بسته یا خارج ساعت → بنر قرمز هشدار + قفل دکمه‌های افزایش/کاهش تعداد؛ بخش‌های منو با شمارشگر تعداد per-item؛ سبد در state کلاینت با persist در `localStorage` (`basharaf-order-cart`)، نوار پایین چسبان با تعداد قلم/subtotal/کمبود تا حداقل سفارش/دکمه «ادامه» (غیرفعال تا شعبه باز باشد، سبد خالی نباشد، و حداقل سفارش برسد) → `/order/checkout`. صفحه‌ی placeholder جدید `/order/checkout`.
 **فایل‌ها:** `types/ordering.ts` (+`PublicOrderItem/Section/Settings/Menu`)، `lib/ordering/publicMenu.ts` (جدید)، `app/api/public/order/menu/route.ts` (جدید)، `lib/repos/publicOrder.types.ts` + `lib/repos/publicOrder.api.ts` (جدید)، `app/order/layout.tsx` + `app/order/page.tsx` + `app/order/checkout/page.tsx` (جدید).

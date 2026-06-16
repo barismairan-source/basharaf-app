@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.13-order-fulfillment` |
+| **نسخه** | `0.9.14-customer` |
 | **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) — `npm run build` ✅ سبز |
-| **دیپلوی** | ✅ هر دو migration معلق (`db-ordering-pending-migrations-combined.sql` + `db-ordering-fulfillment-migration.sql`) روی Liara اجرا و توسط کاربر تأیید شد — `/order`، `/order/checkout`، `/orders`، `/orders/settings` سالم. 🆕 کد باکس ۵ push شد ولی **`v0.9.13-order-fulfillment/basharaf-deploy.zip` هنوز ساخته و دیپلوی نشده**. zipهای دیگر هنوز دیپلوی نشده: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`). |
-| **کار نیمه‌تمام (in-progress)** | ساخت `v0.9.13-order-fulfillment/basharaf-deploy.zip` (`git archive HEAD`) + دیپلوی روی Liara. |
-| **کار بعدی پیشنهادی** | (۱) ساخت zip نسخه‌دار + دیپلوی Liara. (۲) در `/orders/settings`: پرداخت آنلاین روشن، درگاه انتخاب، credential واقعی وارد/ذخیره. (۳) دسته‌ی «نوشیدنی» با نرخ VAT ۱۶٪ در پنل منو → دسته‌ها بساز (وگرنه split مالیات نوشیدنی‌ها غلط ثبت می‌شود). (۴) تست end-to-end: سفارش نقدی + آنلاین تا «تحویل» → بررسی سند فروش در حسابداری + کسر انبار. (۵) Backlog #14 (دیپلوی عملیات) + #15 (retest تجهیزات/سفارش‌خرید). |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **دیپلوی** | ✅ Liara production سالم (هر دو migration باکس ۵ اجرا شده). 🆕 باکس الف (ماژول مشتری) کدش push شد ولی **`db-customer-migration.sql` هنوز روی production اجرا نشده** — `/order/account` و لینک customer به سفارش تا اجرای migration خطا می‌دهند. `v0.9.14-customer/basharaf-deploy.zip` هنوز ساخته نشده. zipهای دیگر: `basharaf-tasks-ops-liara.zip` (شامل `db-operations-migration.sql`) هنوز دیپلوی نشده. |
+| **کار نیمه‌تمام (in-progress)** | — (کد کامل، migration لازم است اجرا شود) |
+| **کار بعدی پیشنهادی** | (۱) اجرای `db-customer-migration.sql` روی Liara (جداول `web_customers`، `web_customer_addresses`، `web_customer_otp` + ستون `orders.order_customer_id`). (۲) اضافه کردن `CUSTOMER_JWT_SECRET=<رشته ≥۳۲ کاراکتری>` به env Liara. (۳) ساخت `v0.9.14-customer/basharaf-deploy.zip` + دیپلوی. (۴) در `/orders/settings` درگاه پرداخت پیکربندی کن. (۵) دسته‌ی «نوشیدنی» با VAT ۱۶٪ بساز. (۶) تست end-to-end: ورود با OTP از `/order/account`، ذخیره آدرس، سفارش با آدرس ذخیره‌شده، تاریخچه سفارش. (۷) Backlog #14/#15. |
+| **بلاک‌شده/منتظر کاربر** | اجرای `db-customer-migration.sql` + تنظیم `CUSTOMER_JWT_SECRET` در env |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,23 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-16 — باکس الف: ماژول مشتری آنلاین (OTP + آدرس‌ها + تاریخچه‌ی سفارش) — اکانت ۱
+**چه شد:**
+کل ماژول مشتری آنلاین در یک جلسه پیاده‌سازی شد:
+(۱) سه جدول جدید با نام `web_customers`/`web_customer_addresses`/`web_customer_otp` (جدا از جدول CRM `customers` موجود) + ستون nullable `order_customer_id` روی `orders` — `db-customer-migration.sql` (idempotent).
+(۲) Drizzle schema: سه `pgTable` جدید + FK روی `orders`.
+(۳) JWT مستقل: `lib/auth/customerJwt.ts` با `CUSTOMER_JWT_SECRET` جداگانه (≥۳۲ کاراکتر) + `lib/auth/customerSession.ts` با cookie `basharaf-customer` — کاملاً بی‌ربط به JWT پرسنل.
+(۴) لایه‌ی سرور: `lib/ordering/webCustomer.ts` — `getOrCreateWebCustomer`, `createWebOtp` (ضد‌اسپم ۲ دقیقه‌ای→429, mock console.log)، `verifyWebOtp`، CRUD آدرس، `getWebCustomerOrders`, `linkOrderToWebCustomer`.
+(۵) هفت API route جدید: `POST /api/customer/auth/send-otp`, `/verify`, `/logout`؛ `GET /api/customer/me`؛ `GET/POST /api/customer/addresses`؛ `PATCH/DELETE /api/customer/addresses/[id]`؛ `GET /api/customer/orders`. همه با `requireCustomer()` guard (نه middleware) کاملاً مستقل از auth پرسنل.
+(۶) Client repo: `lib/repos/customer.api.ts` با `sendOtp`, `verifyOtp`, `logout`, `getMe`, `getAddresses`, `addAddress`, `updateAddress`, `deleteAddress`, `getOrders`.
+(۷) صفحه‌ی جدید `/order/account` — client component: فرم OTP (۲ مرحله: شماره موبایل → کد ۶ رقمی) اگر نلاگین؛ بعد از لاگین: تب «آدرس‌های من» (CRUD) + تب «سفارش‌های من» (با لینک به رهگیری). RTL/Vazirmatn/mobile-first.
+(۸) `/order/checkout` یکپارچه شد: اگر مشتری لاگین کرده، آدرس‌های ذخیره‌شده نمایش داده می‌شوند (انتخاب یک کلیک)؛ دکمه‌ی «ورود/ثبت‌نام» در header؛ `orderCustomerId` در payload سفارش.
+(۹) `types/ordering.ts` → `CreateOrderInput.orderCustomerId?` اضافه شد؛ `lib/ordering/publicOrders.ts` → `orderCustomerId` هنگام insert order ذخیره می‌شود.
+**فایل‌ها:** `db-customer-migration.sql` (جدید)، `lib/db/schema.ts` (+`webCustomers/webCustomerAddresses/webCustomerOtp` + `orders.orderCustomerId`)، `lib/auth/customerJwt.ts` (جدید)، `lib/auth/customerSession.ts` (جدید)، `lib/ordering/webCustomer.ts` (جدید)، `types/webCustomer.ts` (جدید)، `lib/repos/customer.api.ts` (جدید)، `app/api/customer/auth/send-otp/route.ts` (جدید)، `app/api/customer/auth/verify/route.ts` (جدید)، `app/api/customer/auth/logout/route.ts` (جدید)، `app/api/customer/me/route.ts` (جدید)، `app/api/customer/addresses/route.ts` (جدید)، `app/api/customer/addresses/[id]/route.ts` (جدید)، `app/api/customer/orders/route.ts` (جدید)، `app/order/account/page.tsx` (جدید)، `app/order/checkout/page.tsx` (آدرس‌های ذخیره‌شده + دکمه‌ی ورود)، `types/ordering.ts` (+`orderCustomerId?`)، `lib/ordering/publicOrders.ts` (+`orderCustomerId`)، `package.json` (نسخه `0.9.14-customer`)، `HANDOFF.md`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (`/order/account` 4.43 kB در build output).
+**ناتمام:** `db-customer-migration.sql` هنوز روی production اجرا نشده. `CUSTOMER_JWT_SECRET` در env Liara هنوز تنظیم نشده. زیپ نسخه‌دار ساخته نشده.
+**برای جلسه‌ی بعد:** (۱) اجرای `db-customer-migration.sql` روی Liara + تنظیم `CUSTOMER_JWT_SECRET` در env. (۲) ساخت `v0.9.14-customer/basharaf-deploy.zip` + دیپلوی. (۳) تست: ورود OTP در `/order/account` → ذخیره آدرس → checkout با آدرس ذخیره‌شده → تاریخچه سفارش. (۴) پیکربندی درگاه پرداخت + دسته‌ی «نوشیدنی» با VAT ۱۶٪.
 
 ## 📓 2026-06-16 — باکس ۵ سفارش: اتصال حسابداری/انبار + VAT دسته‌ها + KPI + commit نهایی — اکانت ۱
 **چه شد:**
@@ -127,13 +144,6 @@
 **Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز (`/order/checkout` 5.17 kB، `/order/track/[token]` 3.66 kB دینامیک، `/api/public/order/create` و `/api/public/order/track/[token]` دینامیک).
 **ناتمام:** ⚠️ `db-ordering-checkout-migration.sql` (ستون‌های `pickup_time`/`client_token` + ایندکس یکتا روی `orders`) هنوز روی DB production اجرا نشده — تا قبل از اجرا، `POST /api/public/order/create` با خطای ستون‌نبودن fail می‌شود (یعنی `/order/checkout` نمی‌تواند سفارش را ثبت کند). تست UI زنده در sandbox انجام نشد (بدون `DATABASE_URL` محلی) — فقط tsc/build سبز تأیید شد.
 **برای جلسه‌ی بعد:** ۱) کاربر `v0.9.9-order-checkout/db-ordering-checkout-migration.sql` را روی pgAdmin اجرا کند. ۲) بعد از دیپلوی، `/order/checkout` تست شود: سفارش ارسال (با انتخاب محدوده+آدرس) و سفارش پیکاپ هر دو ثبت شوند؛ دوبار زدن دکمه‌ی «ثبت سفارش» نباید سفارش تکراری بسازد (idempotency با `client_token` ثابت در state صفحه)؛ زیر حداقل سفارش دکمه غیرفعال بماند؛ `/order/track/[token]` وضعیت «سفارش ثبت شد» را نشان دهد. ۳) سایر Backlog (#14 دیپلوی عملیات Liara، #15 retest تجهیزات/سفارش‌خرید، فاز۹ کانال فروش transactions) + باکس بعدی ماژول سفارش: پرداخت آنلاین.
-
-## 📓 2026-06-14 — پکیج دیپلوی نسخه‌ی `v0.9.8-order-public` (ماژول سفارش بیرون‌بر: باکس ۰+۱) — اکانت ۲
-**چه شد:** طبق قرارداد انتشار نسخه‌دار، برای کل کار ماژول سفارش بیرون‌بر تا اینجا (باکس ۰: جدول‌ها+تنظیمات+محدوده‌های ارسال، باکس ۱: صفحه‌ی عمومی `/order`) یک نسخه‌ی جدید ساخته شد: `package.json` از `0.9.7-menu-channel-public` به `0.9.8-order-public` ارتقا یافت. پوشه‌ی `v0.9.8-order-public/` ساخته شد شامل `basharaf-deploy.zip` (خروجی `git archive HEAD`، gitignored — فقط روی این دیسک) + کپی `db-ordering-migration.sql` (هنوز روی DB production اجرا نشده — این migration **باید قبل از استفاده از کد جدید روی DB اجرا شود**، هم برای `/orders/settings` هم `/order`).
-**فایل‌ها:** `package.json` (نسخه)، `v0.9.8-order-public/db-ordering-migration.sql` (جدید، tracked)، `v0.9.8-order-public/basharaf-deploy.zip` (جدید، gitignored/untracked)، `HANDOFF.md`.
-**Build:** بدون تغییر کد منطقی در این جلسه — tsc/build قبلاً در `c6e42ed` سبز تأیید شده بود.
-**ناتمام:** —
-**برای جلسه‌ی بعد:** کاربر `v0.9.8-order-public/db-ordering-migration.sql` را روی pgAdmin اجرا کند، سپس `v0.9.8-order-public/basharaf-deploy.zip` را روی Liara دیپلوی کند و `/orders/settings` و `/order` را تست کند. بعد از آن سراغ سایر آیتم‌های بخش ۰ (پرداخت/checkout واقعی، Backlog #14/#15، چک کانال منو روی production).
 
 
 ---
