@@ -106,7 +106,7 @@ function NavLink({
             : 'h-10 gap-2.5 px-3',
           active
             ? 'bg-accent-subtle text-accent font-medium'
-            : 'text-muted hover:bg-bg hover:text-text',
+            : 'text-stone-700 hover:bg-stone-100 hover:text-stone-900',
         )}
         aria-current={active ? 'page' : undefined}
       >

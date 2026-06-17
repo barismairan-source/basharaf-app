@@ -111,7 +111,7 @@ export function BottomTabBar() {
                 href={tab.href}
                 className={cn(
                   'flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[48px] transition-colors',
-                  active ? 'text-accent' : 'text-muted hover:text-text',
+                  active ? 'text-accent' : 'text-stone-500 hover:text-stone-700',
                 )}
                 aria-current={active ? 'page' : undefined}
               >
@@ -151,7 +151,7 @@ export function BottomTabBar() {
                 href={tab.href}
                 className={cn(
                   'flex-1 flex flex-col items-center justify-center gap-0.5 min-h-[48px] transition-colors',
-                  active ? 'text-accent' : 'text-muted hover:text-text',
+                  active ? 'text-accent' : 'text-stone-500 hover:text-stone-700',
                 )}
                 aria-current={active ? 'page' : undefined}
               >
