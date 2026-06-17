@@ -12,6 +12,7 @@ import {
   DashboardSkeleton,
   UnifiedOverview,
   OperationsStrip,
+  RoleHome,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import {
@@ -97,6 +98,7 @@ export default function DashboardPage() {
   }));
 
   const isAdmin = user.role === 'SuperAdmin';
+  const isOperational = user.role === 'Warehouse' || user.role === 'Chef';
   const showBranchSummary = isAdmin && !branchFilter;
 
   return (
@@ -121,91 +123,91 @@ export default function DashboardPage() {
           {isAdmin && <BranchPicker />}
         </div>
 
+        {/* ─── کارت‌های نقش‌محور برای Warehouse و Chef ─── */}
+        {isOperational && <RoleHome role={user.role} />}
+
         {/* ─── داشبورد یکپارچه: انبار + فروش/مالی + پرسنل/حقوق در یک نگاه ─── */}
-        <UnifiedOverview />
+        {!isOperational && <UnifiedOverview />}
 
         {/* ─── میانبر عملیات: PO باز / تجهیزات در تعمیر / وظایف امروزِ ناتمام ─── */}
-        <OperationsStrip />
+        {!isOperational && <OperationsStrip />}
 
-        {/* ─── KPI grid ─── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard
-            tone="balance"
-            label="موجودی (تراکنش‌ها)"
-            value={metrics.balance}
-            icon={Wallet}
-            spark={SPARK_BALANCE}
-            highlightNegative
-          />
-          <KPICard
-            tone="income"
-            label="مجموع درآمد"
-            value={metrics.income}
-            icon={TrendingUp}
-            spark={SPARK_INCOME}
-          />
-          <KPICard
-            tone="expense"
-            label="مجموع هزینه"
-            value={metrics.expense}
-            icon={TrendingDown}
-            spark={SPARK_EXPENSE}
-          />
-          <KPICard
-            tone="pending"
-            label={`در انتظار (${new Intl.NumberFormat('fa-IR').format(
-              metrics.pendingCount
-            )} مورد)`}
-            value={metrics.pendingAmount}
-            icon={Clock}
-            spark={SPARK_PENDING}
-          />
-        </div>
-
-        {/* ─── Accounts quick summary ─── */}
-        {accounts.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {accounts.slice(0, 4).map(a => (
-              <div key={a.id} title={`${fmt(a.balance)} تومان`}>
-                <MetricCard
-                  label={a.name}
-                  value={a.balance}
-                  sparkColor={a.balance >= 0 ? '#15803d' : '#be123c'}
-                />
-              </div>
-            ))}
+        {/* ─── بخش مالی — فقط برای مدیران با دسترسی مالی ─── */}
+        {!isOperational && <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <KPICard
+              tone="balance"
+              label="موجودی (تراکنش‌ها)"
+              value={metrics.balance}
+              icon={Wallet}
+              spark={SPARK_BALANCE}
+              highlightNegative
+            />
+            <KPICard
+              tone="income"
+              label="مجموع درآمد"
+              value={metrics.income}
+              icon={TrendingUp}
+              spark={SPARK_INCOME}
+            />
+            <KPICard
+              tone="expense"
+              label="مجموع هزینه"
+              value={metrics.expense}
+              icon={TrendingDown}
+              spark={SPARK_EXPENSE}
+            />
+            <KPICard
+              tone="pending"
+              label={`در انتظار (${new Intl.NumberFormat('fa-IR').format(
+                metrics.pendingCount
+              )} مورد)`}
+              value={metrics.pendingAmount}
+              icon={Clock}
+              spark={SPARK_PENDING}
+            />
           </div>
-        )}
 
-        {/* ─── Branch summary (SuperAdmin only, no filter) ─── */}
-        {showBranchSummary && (
-          <BranchSummary
-            data={branchSummaryData}
-            onBranchClick={(id) => {
-              setBranchFilter(id);
-              // اسکرول به بالا تا KPI کارت‌ها با شعبه جدید نمایش داده شوند
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        )}
+          {accounts.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {accounts.slice(0, 4).map(a => (
+                <div key={a.id} title={`${fmt(a.balance)} تومان`}>
+                  <MetricCard
+                    label={a.name}
+                    value={a.balance}
+                    sparkColor={a.balance >= 0 ? '#15803d' : '#be123c'}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
-        {/* ─── Two-column breakdown + recent ─── */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <BreakdownCard
-            title="تفکیک هزینه"
-            subtitle={`${breakdownForCard.length} دسته`}
-            tone="expense"
-            data={breakdownForCard}
-          />
-          <RecentList transactions={metrics.filtered} limit={6} />
-        </div>
+          {showBranchSummary && (
+            <BranchSummary
+              data={branchSummaryData}
+              onBranchClick={(id) => {
+                setBranchFilter(id);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          )}
 
-        {/* ─── Empty state if absolutely no data ─── */}
-        {metrics.filtered.length === 0 && (
-          <div className="text-center text-[12px] text-muted py-8">
-            هنوز هیچ تراکنشی برای نمایش وجود ندارد.
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <BreakdownCard
+              title="تفکیک هزینه"
+              subtitle={`${breakdownForCard.length} دسته`}
+              tone="expense"
+              data={breakdownForCard}
+            />
+            <RecentList transactions={metrics.filtered} limit={6} />
           </div>
-        )}
+
+          {metrics.filtered.length === 0 && (
+            <div className="text-center text-[12px] text-muted py-8">
+              هنوز هیچ تراکنشی برای نمایش وجود ندارد.
+            </div>
+          )}
+        </>}
       </div>
     </div>
   );

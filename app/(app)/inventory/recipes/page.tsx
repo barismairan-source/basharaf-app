@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Loader2, Plus, Trash2, Calculator, Printer, AlertTriangle, X, Check,
+  Loader2, Plus, Trash2, Calculator, Printer, AlertTriangle, X, Check, Search,
 } from 'lucide-react';
 import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
@@ -15,6 +15,10 @@ const repos = createRepos(null as never);
 const UNIT_LABELS: Record<string, string> = {
   kg: 'کیلوگرم', g: 'گرم', L: 'لیتر', ml: 'میلی‌لیتر',
   pcs: 'عدد', can: 'قوطی', pack: 'بسته',
+};
+
+const UNIT_SHORT: Record<string, string> = {
+  kg: 'kg', g: 'g', L: 'L', ml: 'ml', pcs: 'عدد', can: 'قوطی', pack: 'بسته',
 };
 
 export default function RecipesPage() {
@@ -91,9 +95,10 @@ export default function RecipesPage() {
       )}
 
       {showAdd && (
-        <AddRecipeModal
+        <AddRecipeWizard
           items={items}
           branches={branches}
+          canSeePrices={canSeePrices}
           onClose={() => setShowAdd(false)}
           onDone={async () => { setShowAdd(false); await load(); }}
           showToast={showToast}
@@ -102,6 +107,8 @@ export default function RecipesPage() {
     </div>
   );
 }
+
+// ─── RecipeCard ──────────────────────────────────────────────────
 
 function RecipeCard({
   recipe, items, onDelete, canSeePrices,
@@ -304,42 +311,132 @@ function RecipeCard({
   );
 }
 
-function AddRecipeModal({
-  items, branches, onClose, onDone, showToast,
+// ─── 3-step Recipe Wizard ────────────────────────────────────────
+
+type WizardStep = 1 | 2 | 3;
+interface WizardLine { itemId: string; qty: string; }
+
+function AddRecipeWizard({
+  items, branches, canSeePrices, onClose, onDone, showToast,
 }: {
   items: InventoryItem[];
   branches: { id: string; name: string }[];
+  canSeePrices: boolean;
   onClose: () => void;
   onDone: () => void;
   showToast: (m: string, t?: ToastTone) => void;
 }) {
+  const [step, setStep] = useState<WizardStep>(1);
+
+  // Step 1
   const [name, setName] = useState('');
-  const [branchId, setBranchId] = useState('');
+  const [cookMode, setCookMode] = useState<'daily' | 'batch'>('daily');
   const [portions, setPortions] = useState('1');
+  const [branchId, setBranchId] = useState('');
+
+  // Step 2
+  const [lines, setLines] = useState<WizardLine[]>([]);
+  const [search, setSearch] = useState('');
+
+  // Step 3
   const [price, setPrice] = useState('');
-  const [lines, setLines] = useState<{ itemId: string; qty: string }[]>([{ itemId: '', qty: '' }]);
   const [saving, setSaving] = useState(false);
 
-  async function save() {
-    if (!name.trim()) { showToast('نام رسپی الزامی است', 'danger'); return; }
-    const valid = lines.filter(
-      (l) => l.itemId && parseInt(l.qty.replace(/\D/g, ''), 10) > 0
+  const portionsNum = parseInt(portions, 10) || 1;
+  const priceNum = parseInt(price.replace(/[^0-9]/g, ''), 10) || 0;
+
+  const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  // Live cost — pure client calc using items' avgCostPerBase + yieldPct
+  const liveCost = useMemo(() => {
+    let total = 0;
+    for (const line of lines) {
+      const item = itemById.get(line.itemId);
+      const qty = parseInt(line.qty, 10) || 0;
+      if (!item || qty === 0 || item.avgCostPerBase <= 0) continue;
+      const yieldFactor = Math.max(1, item.yieldPct || 100) / 100;
+      total += (qty * item.avgCostPerBase) / yieldFactor;
+    }
+    const totalCost = Math.round(total);
+    return { totalCost, costPerPortion: Math.round(totalCost / portionsNum) };
+  }, [lines, itemById, portionsNum]);
+
+  const foodCostPct =
+    priceNum > 0 && liveCost.costPerPortion > 0
+      ? Math.round((liveCost.costPerPortion / priceNum) * 1000) / 10
+      : null;
+
+  const fcColorClass =
+    foodCostPct == null ? 'text-muted' :
+    foodCostPct < 30   ? 'text-ok' :
+    foodCostPct < 40   ? 'text-warn' :
+                         'text-danger';
+
+  const fcBgClass =
+    foodCostPct == null ? 'bg-border/20 text-muted' :
+    foodCostPct < 30   ? 'bg-ok-subtle text-ok' :
+    foodCostPct < 40   ? 'bg-warn-subtle text-warn' :
+                         'bg-danger-subtle text-danger';
+
+  // Search results for step 2
+  const filteredItems = useMemo(() => {
+    const q = search.trim();
+    if (!q) return [];
+    return items
+      .filter((it) => it.isActive && (it.name.includes(q) || it.code.includes(q)))
+      .slice(0, 12);
+  }, [search, items]);
+
+  const selectedIds = useMemo(() => new Set(lines.map((l) => l.itemId)), [lines]);
+
+  function addLine(itemId: string) {
+    if (selectedIds.has(itemId)) return;
+    setLines((prev) => [...prev, { itemId, qty: '' }]);
+    setSearch('');
+  }
+
+  function removeLine(itemId: string) {
+    setLines((prev) => prev.filter((l) => l.itemId !== itemId));
+  }
+
+  function setLineQty(itemId: string, val: string) {
+    setLines((prev) =>
+      prev.map((l) => l.itemId === itemId ? { ...l, qty: val.replace(/\D/g, '') } : l)
     );
-    if (valid.length === 0) { showToast('حداقل یک ماده', 'danger'); return; }
+  }
+
+  function goNext() {
+    if (step === 1) {
+      if (!name.trim()) { showToast('نام غذا را وارد کنید', 'danger'); return; }
+      setStep(2);
+    } else if (step === 2) {
+      const valid = lines.filter((l) => l.itemId && parseInt(l.qty, 10) > 0);
+      if (valid.length === 0) { showToast('حداقل یک ماده با مقدار وارد کنید', 'danger'); return; }
+      setStep(3);
+    }
+  }
+
+  function goPrev() {
+    if (step === 3) setStep(2);
+    else if (step === 2) setStep(1);
+  }
+
+  async function save() {
+    const validLines = lines.filter((l) => l.itemId && parseInt(l.qty, 10) > 0);
     setSaving(true);
     try {
       await repos.inventory.saveRecipe({
         id: null,
         name: name.trim(),
         branchId: branchId || null,
-        portions: parseInt(portions, 10) || 1,
+        portions: portionsNum,
         targetFcPct: 30,
-        price: price ? parseInt(price.replace(/\D/g, ''), 10) : 0,
-        cookMode: 'daily',
+        price: priceNum,
+        cookMode,
         shelfLifeDays: 1,
-        lines: valid.map((l) => ({
+        lines: validLines.map((l) => ({
           itemId: l.itemId,
-          qtyBase: parseInt(l.qty.replace(/\D/g, ''), 10),
+          qtyBase: parseInt(l.qty, 10),
         })),
       } as InventoryRecipe);
       showToast('رسپی ذخیره شد', 'success');
@@ -351,117 +448,319 @@ function AddRecipeModal({
     }
   }
 
+  const stepLabels = ['نام و نوع', 'مواد', 'قیمت'];
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-surface rounded-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto"
+        className="bg-surface rounded-t-2xl sm:rounded-xl w-full sm:max-w-lg max-h-[92dvh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[16px] font-medium text-text">رسپی جدید</h2>
-          <button onClick={onClose} className="w-11 h-11 flex items-center justify-center text-muted hover:text-text">
-            <X size={18} />
-          </button>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-[11.5px] text-muted">نام غذا</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-              placeholder="چلوکباب کوبیده"
-            />
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="text-[11.5px] text-muted">تعداد پرس</label>
-              <input
-                value={portions}
-                onChange={(e) => setPortions(e.target.value.replace(/\D/g, ''))}
-                dir="ltr"
-                className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="text-[11.5px] text-muted">قیمت فروش (تومان)</label>
-              <input
-                value={price}
-                onChange={(e) => setPrice(formatNumericInputValue(e.target))}
-                dir="ltr"
-                className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-[11.5px] text-muted">شعبه</label>
-            <select
-              value={branchId}
-              onChange={(e) => setBranchId(e.target.value)}
-              className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-            >
-              <option value="">— همه —</option>
-              {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11.5px] text-muted">مواد (مقدار به واحد پایه برای کل رسپی)</label>
-            {lines.map((l, i) => (
-              <div key={i} className="flex gap-2">
-                <select
-                  value={l.itemId}
-                  onChange={(e) => setLines((prev) => prev.map((x, idx) => idx === i ? { ...x, itemId: e.target.value } : x))}
-                  className="flex-1 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-                >
-                  <option value="">— ماده —</option>
-                  {items.map((it) => <option key={it.id} value={it.id}>{it.name}</option>)}
-                </select>
-                <input
-                  value={l.qty}
-                  onChange={(e) => {
-                    const formatted = formatNumericInputValue(e.target);
-                    setLines((prev) => prev.map((x, idx) => idx === i ? { ...x, qty: formatted } : x));
-                  }}
-                  dir="ltr"
-                  placeholder="مقدار"
-                  className="w-28 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-                />
-                {lines.length > 1 && (
-                  <button
-                    onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
-                    className="w-11 h-11 flex items-center justify-center text-muted hover:text-danger"
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              onClick={() => setLines((prev) => [...prev, { itemId: '', qty: '' }])}
-              className="flex items-center gap-1 text-[12px] text-muted hover:text-text py-1"
-            >
-              <Plus size={13} />افزودن ماده
+        {/* Header + Step progress */}
+        <div className="px-5 pt-5 pb-3 border-b border-border shrink-0">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-[15px] font-semibold text-text">رسپی جدید</h2>
+            <button onClick={onClose} className="w-11 h-11 flex items-center justify-center text-muted hover:text-text">
+              <X size={18} />
             </button>
           </div>
+          <div className="flex items-center gap-1">
+            {([1, 2, 3] as const).map((s, i) => (
+              <div key={s} className="flex items-center gap-1 flex-1 min-w-0">
+                <div className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold shrink-0 transition-colors ${
+                  s < step  ? 'bg-text/50 text-surface' :
+                  s === step ? 'bg-text text-surface' :
+                               'bg-border text-muted'
+                }`}>
+                  {s < step ? <Check size={10} /> : s}
+                </div>
+                <span className={`text-[10.5px] truncate transition-colors ${s === step ? 'text-text font-medium' : 'text-muted'}`}>
+                  {stepLabels[i]}
+                </span>
+                {s < 3 && <div className="flex-1 h-px bg-border mx-1 shrink-0" style={{ minWidth: 8 }} />}
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="flex items-center gap-1.5 bg-text text-surface px-4 py-2.5 rounded-lg text-[13px] disabled:opacity-50 min-h-[44px]"
-          >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-            ذخیره
-          </button>
-          <button
-            onClick={onClose}
-            className="px-4 py-2.5 rounded-lg text-[13px] border border-border text-muted min-h-[44px]"
-          >
-            لغو
-          </button>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 px-5 py-4">
+
+          {/* ── Step 1: Name & cook type ── */}
+          {step === 1 && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-[11.5px] text-muted block mb-1">نام غذا</label>
+                <input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  placeholder="مثال: چلوکباب کوبیده"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11.5px] text-muted block mb-1.5">نوع پخت</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['daily', 'batch'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => setCookMode(mode)}
+                      className={`py-2.5 rounded-lg text-[12.5px] border transition-colors ${
+                        cookMode === mode
+                          ? 'border-text bg-text text-surface'
+                          : 'border-border text-muted hover:border-text/40'
+                      }`}
+                    >
+                      {mode === 'daily' ? 'پخت روزانه' : 'پخت دسته‌ای'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11.5px] text-muted block mb-1">تعداد پرس</label>
+                  <input
+                    value={portions}
+                    onChange={(e) => setPortions(e.target.value.replace(/\D/g, '') || '1')}
+                    dir="ltr"
+                    inputMode="numeric"
+                    className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11.5px] text-muted block mb-1">شعبه</label>
+                  <select
+                    value={branchId}
+                    onChange={(e) => setBranchId(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  >
+                    <option value="">— همه —</option>
+                    {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── Step 2: Ingredient search & selection ── */}
+          {step === 2 && (
+            <div className="space-y-3">
+              <div className="relative">
+                <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full border border-border rounded-lg pr-9 pl-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  placeholder="جستجو در مواد و نیمه‌آماده‌ها..."
+                />
+              </div>
+
+              {/* Search results */}
+              {filteredItems.length > 0 && (
+                <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                  {filteredItems.map((it) => {
+                    const alreadyAdded = selectedIds.has(it.id);
+                    return (
+                      <button
+                        key={it.id}
+                        onClick={() => addLine(it.id)}
+                        disabled={alreadyAdded}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 text-right transition-colors ${
+                          alreadyAdded ? 'opacity-40 cursor-default' : 'hover:bg-bg'
+                        }`}
+                      >
+                        <span className="text-[12.5px] text-text">{it.name}</span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            it.kind === 'prep'
+                              ? 'bg-accent/10 text-accent'
+                              : 'bg-bg text-muted border border-border'
+                          }`}>
+                            {it.kind === 'prep' ? 'نیمه‌آماده' : 'ماده اولیه'}
+                          </span>
+                          {alreadyAdded
+                            ? <Check size={13} className="text-ok" />
+                            : <Plus size={13} className="text-muted" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Empty hint */}
+              {!search && lines.length === 0 && (
+                <div className="text-center text-[12.5px] text-muted py-8 bg-bg rounded-xl">
+                  نام ماده یا نیمه‌آماده را تایپ کنید تا انتخاب کنید
+                </div>
+              )}
+
+              {/* Selected lines with quantity inputs */}
+              {lines.length > 0 && (
+                <div>
+                  <div className="text-[11px] text-muted mb-2">مواد انتخاب‌شده ({lines.length})</div>
+                  <div className="space-y-1.5">
+                    {lines.map((l) => {
+                      const item = itemById.get(l.itemId);
+                      if (!item) return null;
+                      const unitLabel = UNIT_SHORT[item.unit] ?? item.unit;
+                      return (
+                        <div key={l.itemId} className="flex items-center gap-2 bg-bg rounded-lg px-3 py-2">
+                          <span className="flex-1 text-[12.5px] text-text truncate min-w-0">{item.name}</span>
+                          <input
+                            value={l.qty}
+                            onChange={(e) => setLineQty(l.itemId, e.target.value)}
+                            dir="ltr"
+                            inputMode="numeric"
+                            placeholder="مقدار"
+                            className="w-20 border border-border rounded-md px-2 py-1 text-[12.5px] text-center focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text shrink-0"
+                          />
+                          <span className="text-[11px] text-muted w-8 text-center shrink-0">{unitLabel}</span>
+                          <button
+                            onClick={() => removeLine(l.itemId)}
+                            className="w-8 h-8 flex items-center justify-center text-muted hover:text-danger shrink-0"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Step 3: Price & food cost ── */}
+          {step === 3 && (
+            <div className="space-y-4">
+              {canSeePrices && (
+                <div>
+                  <label className="text-[11.5px] text-muted block mb-1">قیمت فروش هر پرس (تومان)</label>
+                  <input
+                    autoFocus
+                    value={price}
+                    onChange={(e) => setPrice(formatNumericInputValue(e.target))}
+                    dir="ltr"
+                    inputMode="numeric"
+                    className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                    placeholder="۱۵۰٬۰۰۰"
+                  />
+                  <p className="text-[11px] text-muted mt-1">
+                    اگر قیمت هنوز مشخص نیست، می‌توانید بدون قیمت ذخیره کنید.
+                  </p>
+                </div>
+              )}
+
+              {/* Cost & food cost summary */}
+              <div className="bg-bg rounded-xl p-4 space-y-3">
+                <div className="text-[11px] text-muted font-medium">خلاصه این رسپی</div>
+                <div className="flex justify-between text-[12.5px]">
+                  <span className="text-muted">بهای هر پرس</span>
+                  <span className="font-medium text-text num">
+                    {liveCost.costPerPortion > 0 ? `${fmt(liveCost.costPerPortion)} تومان` : '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[12.5px]">
+                  <span className="text-muted">بهای کل ({portionsNum} پرس)</span>
+                  <span className="font-medium text-text num">
+                    {liveCost.totalCost > 0 ? `${fmt(liveCost.totalCost)} تومان` : '—'}
+                  </span>
+                </div>
+                {liveCost.costPerPortion === 0 && (
+                  <div className="text-[11px] text-warn flex items-center gap-1">
+                    <AlertTriangle size={11} />
+                    بعضی مواد هنوز قیمت ندارند — پس از ثبت رسید خرید به‌روز می‌شود.
+                  </div>
+                )}
+
+                {canSeePrices && priceNum > 0 && (
+                  <>
+                    <div className="h-px bg-border" />
+                    <div className="flex justify-between text-[12.5px]">
+                      <span className="text-muted">food cost</span>
+                      <span className={`font-semibold num ${fcColorClass}`}>
+                        {foodCostPct !== null ? `٪${foodCostPct}` : '—'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-[12.5px]">
+                      <span className="text-muted">حاشیه سود</span>
+                      <span className={`font-medium num ${
+                        foodCostPct !== null
+                          ? (100 - foodCostPct) >= 30 ? 'text-ok' : 'text-danger'
+                          : 'text-muted'
+                      }`}>
+                        {foodCostPct !== null ? `٪${Math.round((100 - foodCostPct) * 10) / 10}` : '—'}
+                      </span>
+                    </div>
+                    <div className={`text-[11.5px] text-center py-1.5 rounded-lg font-medium ${fcBgClass}`}>
+                      {foodCostPct == null ? 'قیمت وارد نشده' :
+                       foodCostPct < 30 ? 'food cost ایده‌آل ✓' :
+                       foodCostPct < 40 ? 'food cost قابل قبول' :
+                       'food cost بالاست — قیمت را بررسی کنید'}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Live cost bar — step 2 only */}
+        {step === 2 && lines.length > 0 && liveCost.totalCost > 0 && (
+          <div className="border-t border-border bg-bg px-5 py-2.5 shrink-0">
+            <div className="flex justify-between items-center text-[12px]">
+              <span className="text-muted">بهای زنده</span>
+              <div className="flex items-center gap-1.5">
+                <span className="num text-text font-medium">{fmt(liveCost.costPerPortion)} تومان</span>
+                <span className="text-muted">/ پرس</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer nav */}
+        <div className="flex gap-2 px-5 py-4 border-t border-border shrink-0">
+          {step === 1 ? (
+            <button
+              onClick={onClose}
+              className="px-4 py-2.5 rounded-lg text-[13px] border border-border text-muted min-h-[44px]"
+            >
+              لغو
+            </button>
+          ) : (
+            <button
+              onClick={goPrev}
+              className="px-4 py-2.5 rounded-lg text-[13px] border border-border text-muted min-h-[44px]"
+            >
+              ← قبلی
+            </button>
+          )}
+
+          {step < 3 ? (
+            <button
+              onClick={goNext}
+              className="flex-1 bg-text text-surface rounded-lg text-[13px] min-h-[44px] flex items-center justify-center gap-1.5"
+            >
+              بعدی →
+            </button>
+          ) : (
+            <button
+              onClick={save}
+              disabled={saving}
+              className="flex-1 bg-text text-surface rounded-lg text-[13px] min-h-[44px] flex items-center justify-center gap-1.5 disabled:opacity-50"
+            >
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              ذخیره رسپی
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ export interface CreateExpenseTxInput {
   vatAmount?: number;
   isCredit?: boolean;
   createdBy: string;
-  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse';
+  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef';
 }
 
 export type CreatedExpenseTx = typeof schema.transactions.$inferSelect;

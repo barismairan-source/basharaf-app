@@ -30,6 +30,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   SuperAdmin: 'مدیر',
   BranchUser: 'کاربر شعبه',
   Warehouse: 'انباردار',
+  Chef: 'سرآشپز',
 };
 
 export default function TasksPage() {

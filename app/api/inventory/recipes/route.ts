@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
-import { requireSession, requireAdmin } from '@/lib/auth/session';
+import { requireSession, requireRole } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvRecipe } from '@/lib/db/inventory.serializers';
 
@@ -48,7 +48,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    await requireAdmin();
+    await requireRole('SuperAdmin', 'Chef');
     const input = saveSchema.parse(await req.json());
 
     const result = await db.transaction(async (dbTx) => {

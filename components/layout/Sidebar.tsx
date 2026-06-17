@@ -4,94 +4,24 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  LayoutDashboard, Receipt, BarChart3,
-  Landmark, Users, UtensilsCrossed, ScrollText, Briefcase, Calculator,
-  Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
-  CalendarClock, ChevronLeft, ChevronRight, LogOut, Wrench, ShoppingCart,
-  ClipboardList, Truck,
+  ChevronLeft, ChevronRight, ChevronDown, LogOut,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { BrandMark, Avatar } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
-import type { UserRole } from '@/types';
-import { BOTTOM_NAV_HREFS } from './BottomTabBar';
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  roles: ReadonlyArray<UserRole>;
-  matchPrefix?: boolean;
-}
-
-interface NavGroup {
-  label: string;
-  items: ReadonlyArray<NavItem>;
-}
-
-const NAV_GROUPS: ReadonlyArray<NavGroup> = [
-  {
-    label: 'عملیات اصلی',
-    items: [
-      { href: '/dashboard',     label: 'داشبورد',           icon: LayoutDashboard, roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/transactions',  label: 'تراکنش‌ها',          icon: Receipt,         roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
-      { href: '/orders',        label: 'سفارش‌های بیرون‌بر', icon: Truck,           roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
-      { href: '/accounts',      label: 'صندوق‌ها',           icon: Landmark,        roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/contacts',      label: 'طرف‌حساب‌ها',        icon: Users,           roles: ['SuperAdmin', 'BranchUser'] },
-    ],
-  },
-  {
-    label: 'پشت صحنه',
-    items: [
-      { href: '/inventory',       label: 'انبار و آشپزخانه', icon: Package,         roles: ['SuperAdmin', 'Warehouse'] },
-      { href: '/menu',            label: 'مدیریت منو',        icon: UtensilsCrossed, roles: ['SuperAdmin'] },
-      { href: '/equipment',       label: 'تجهیزات',           icon: Wrench,          roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
-      { href: '/purchase-orders', label: 'سفارش خرید',        icon: ShoppingCart,    roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
-      { href: '/tasks',           label: 'وظایف روزانه',      icon: ClipboardList,   roles: ['SuperAdmin', 'BranchUser', 'Warehouse'] },
-    ],
-  },
-  {
-    label: 'روابط و منابع',
-    items: [
-      { href: '/customers',    label: 'امور مشتریان',  icon: UserCircle,    roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
-      { href: '/reservations', label: 'رزرو میز',      icon: CalendarClock, roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/coupons',      label: 'کوپن‌ها',        icon: Ticket,        roles: ['SuperAdmin'] },
-      { href: '/employees',    label: 'پرسنل',          icon: Briefcase,     roles: ['SuperAdmin'] },
-      { href: '/payroll',      label: 'حقوق و دستمزد', icon: Calculator,    roles: ['SuperAdmin'] },
-      { href: '/recruitment',  label: 'استخدام',        icon: UserPlus,      roles: ['SuperAdmin'] },
-    ],
-  },
-  {
-    label: 'تحلیل و گزارش',
-    items: [
-      { href: '/reports', label: 'گزارش‌ها',  icon: BarChart3,  roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/logs',    label: 'لاگ سیستم', icon: ScrollText, roles: ['SuperAdmin'] },
-    ],
-  },
-];
-
-const SETTINGS_ITEM: NavItem = {
-  href: '/settings', label: 'تنظیمات', icon: SettingsIcon,
-  roles: ['SuperAdmin', 'BranchUser'],
-};
-
-function isActive(item: NavItem, pathname: string): boolean {
-  if (item.matchPrefix) {
-    if (item.href === '/transactions')
-      return pathname === '/transactions' || pathname === '/transactions/new' || pathname.startsWith('/transactions/');
-    return pathname.startsWith(item.href);
-  }
-  return pathname === item.href;
-}
+import {
+  NAV_GROUPS, BOTTOM_NAV_HREFS, SETTINGS_NAV_ITEM,
+  isNavItemActive, type NavItem,
+} from './nav-config';
 
 function NavLink({
   item, pathname, collapsed, onNavClick,
 }: {
   item: NavItem; pathname: string; collapsed: boolean; onNavClick?: () => void;
 }) {
-  const active = isActive(item, pathname);
+  const active = isNavItemActive(item.href, pathname, item.matchPrefix);
   const Icon = item.icon;
   return (
     <li>
@@ -145,6 +75,15 @@ export function SidebarContent({
   const router = useRouter();
   const user = useAppStore((s) => s.user);
   const logout = useAppStore((s) => s.logout);
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+  function toggleGroup(label: string) {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      return next;
+    });
+  }
 
   const canSee = (item: NavItem): boolean => {
     if (!user) return false;
@@ -162,11 +101,11 @@ export function SidebarContent({
     if (!user) return false;
     if (secondaryOnly) {
       // settings همیشه در secondary nav نشان داده می‌شود
-      const section = sectionForPath(SETTINGS_ITEM.href);
-      return section ? canAccessSection(user, section) : SETTINGS_ITEM.roles.includes(user.role);
+      const section = sectionForPath(SETTINGS_NAV_ITEM.href);
+      return section ? canAccessSection(user, section) : SETTINGS_NAV_ITEM.roles.includes(user.role);
     }
-    const section = sectionForPath(SETTINGS_ITEM.href);
-    return section ? canAccessSection(user, section) : SETTINGS_ITEM.roles.includes(user.role);
+    const section = sectionForPath(SETTINGS_NAV_ITEM.href);
+    return section ? canAccessSection(user, section) : SETTINGS_NAV_ITEM.roles.includes(user.role);
   })();
 
   function handleLogout() {
@@ -211,29 +150,51 @@ export function SidebarContent({
       {/* ─── Navigation ─── */}
       <nav className={cn('flex-1 overflow-y-auto py-4', collapsed ? 'px-1' : 'px-3')}>
         <div className="space-y-5">
-          {visibleGroups.map((group) => (
-            <div key={group.label}>
-              {!collapsed && (
-                <div className="px-3 mb-1.5 text-[10.5px] font-medium text-muted tracking-wide select-none">
-                  {group.label}
-                </div>
-              )}
-              {collapsed && (
-                <div className="h-px bg-border mx-2 mb-2" />
-              )}
-              <ul className="space-y-0.5">
-                {group.items.map((item) => (
-                  <NavLink
-                    key={item.href}
-                    item={item}
-                    pathname={pathname}
-                    collapsed={collapsed}
-                    onNavClick={onNavClick}
-                  />
-                ))}
-              </ul>
-            </div>
-          ))}
+          {visibleGroups.map((group) => {
+            const commonItems = group.items.filter((i) => !i.rarely);
+            const rareItems = group.items.filter((i) => i.rarely);
+            const isExpanded = expandedGroups.has(group.label);
+            const shownItems = collapsed || isExpanded
+              ? group.items
+              : commonItems;
+            return (
+              <div key={group.label}>
+                {!collapsed && (
+                  <div className="px-3 mb-1.5 text-[10.5px] font-medium text-muted tracking-wide select-none">
+                    {group.label}
+                  </div>
+                )}
+                {collapsed && (
+                  <div className="h-px bg-border mx-2 mb-2" />
+                )}
+                <ul className="space-y-0.5">
+                  {shownItems.map((item) => (
+                    <NavLink
+                      key={item.href}
+                      item={item}
+                      pathname={pathname}
+                      collapsed={collapsed}
+                      onNavClick={onNavClick}
+                    />
+                  ))}
+                </ul>
+                {!collapsed && rareItems.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.label)}
+                    className="mt-0.5 flex items-center gap-1 h-8 px-3 w-full text-[11.5px] text-muted hover:text-text transition-colors"
+                  >
+                    <ChevronDown
+                      size={12}
+                      strokeWidth={2}
+                      className={cn('transition-transform', isExpanded ? 'rotate-180' : '')}
+                    />
+                    {isExpanded ? 'کمتر' : `${rareItems.length} مورد بیشتر`}
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
       </nav>
 
@@ -245,7 +206,7 @@ export function SidebarContent({
         )}>
           <ul>
             <NavLink
-              item={SETTINGS_ITEM}
+              item={SETTINGS_NAV_ITEM}
               pathname={pathname}
               collapsed={collapsed}
               onNavClick={onNavClick}

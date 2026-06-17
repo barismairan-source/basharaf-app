@@ -43,7 +43,7 @@ import { relations, sql } from 'drizzle-orm';
  * ───────────────────────────────────────────────────────────────── */
 
 // ─── Enums ───
-export const userRoleEnum = pgEnum('user_role', ['SuperAdmin', 'BranchUser', 'Warehouse']);
+export const userRoleEnum = pgEnum('user_role', ['SuperAdmin', 'BranchUser', 'Warehouse', 'Chef']);
 export const txTypeEnum = pgEnum('tx_type', ['income', 'expense', 'transfer']);
 export const txStatusEnum = pgEnum('tx_status', [
   'pending',

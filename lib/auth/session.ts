@@ -34,7 +34,7 @@ const THIRTY_DAYS_SECONDS = 60 * 60 * 24 * 30;
  */
 export async function setServerSession(payload: {
   userId: string;
-  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse';
+  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef';
   branchId: string | null;
   permissions?: string[] | null;
 }): Promise<void> {
@@ -114,7 +114,7 @@ export async function requireAdmin(): Promise<JWTPayload> {
 
 /** اجازه بر اساس فهرستی از نقش‌های مجاز. */
 export async function requireRole(
-  ...roles: Array<'SuperAdmin' | 'BranchUser' | 'Warehouse'>
+  ...roles: Array<'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef'>
 ): Promise<JWTPayload> {
   const session = await requireSession();
   if (!roles.includes(session.role)) {

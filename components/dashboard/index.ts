@@ -6,3 +6,4 @@ export { DashboardSkeleton } from './DashboardSkeleton';
 export { RecentList } from './RecentList';
 export { UnifiedOverview } from './UnifiedOverview';
 export { OperationsStrip } from './OperationsStrip';
+export { RoleHome } from './RoleHome';

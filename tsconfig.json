@@ -23,5 +23,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "release-artifacts", "graphify-out", "v0.9.8-order-public"]
+  "exclude": ["node_modules", "release-artifacts", "graphify-out", "v0.9.7-menu-channel-public", "v0.9.8-order-public", "v0.9.9-order-checkout", "v0.9.10-order-board", "v0.9.11-online-payment", "v0.9.12-payment-gateways", "v0.9.13-order-fulfillment", "v0.9.15-neshan-map", "v0.9.16-neshan-key-ui", "v0.9.17-fix-dashboard-redirect", "v0.9.20-inventory-complete", "v9.1.0"]
 }

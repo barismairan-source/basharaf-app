@@ -11,10 +11,10 @@ const createBodySchema = z
     name: z.string().min(2).max(80).transform(v => v.trim()),
     email: z.string().email().max(254).transform(v => v.trim().toLowerCase()),
     password: z.string().min(8, 'رمز عبور باید حداقل ۸ کاراکتر باشد').max(128),
-    role: z.enum(['SuperAdmin', 'BranchUser']),
+    role: z.enum(['SuperAdmin', 'BranchUser', 'Warehouse', 'Chef']),
     assignedBranchId: z.string().uuid().nullable(),
   })
-  .refine(d => !(d.role === 'BranchUser' && !d.assignedBranchId), {
+  .refine(d => !((d.role === 'BranchUser' || d.role === 'Warehouse' || d.role === 'Chef') && !d.assignedBranchId), {
     message: 'برای کاربر شعبه باید یک شعبه انتخاب کنید',
     path: ['assignedBranchId'],
   });

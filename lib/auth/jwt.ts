@@ -20,7 +20,7 @@ const TOKEN_EXPIRY = '30d';
 export interface JWTPayload {
   /** user.id (uuid) */
   sub: string;
-  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse';
+  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef';
   branchId: string | null;
   /** لیست بخش‌های مجاز (granular). اگر null/خالی → پیش‌فرض نقش. */
   permissions?: string[] | null;
@@ -70,7 +70,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
     // type-narrow
     if (
       typeof payload.sub !== 'string' ||
-      (payload.role !== 'SuperAdmin' && payload.role !== 'BranchUser' && payload.role !== 'Warehouse')
+      (payload.role !== 'SuperAdmin' && payload.role !== 'BranchUser' && payload.role !== 'Warehouse' && payload.role !== 'Chef')
     ) {
       return null;
     }

@@ -3,8 +3,10 @@
  *
  * - SuperAdmin: دسترسی به همه شعب، تنظیمات، مدیریت تیم
  * - BranchUser: فقط داده‌های شعبه‌ی تخصیص‌یافته خود را می‌بیند
+ * - Warehouse: فقط انبار — بدون قیمت و اطلاعات مالی
+ * - Chef: سرآشپز — رسپی، برنامه پخت، food cost، انقضا
  */
-export type UserRole = 'SuperAdmin' | 'BranchUser' | 'Warehouse';
+export type UserRole = 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef';
 
 /**
  * Discriminated union: یک SuperAdmin همیشه `assignedBranch === null` دارد،
@@ -41,6 +43,17 @@ export type User =
       email: string;
       role: 'Warehouse';
       assignedBranch: string; // branch.id — انباردار به یک شعبه تخصیص می‌یابد
+      initials: string;
+      lastSeen: string;
+      joined: string;
+      permissions?: string[] | null;
+    }
+  | {
+      id: string;
+      name: string;
+      email: string;
+      role: 'Chef';
+      assignedBranch: string; // branch.id — سرآشپز به یک شعبه تخصیص می‌یابد
       initials: string;
       lastSeen: string;
       joined: string;

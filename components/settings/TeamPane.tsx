@@ -18,9 +18,9 @@ const createSchema = z.object({
   name: z.string().min(2, 'نام الزامی است').max(80).transform(v => v.trim()),
   email: z.string().email('ایمیل معتبر وارد کنید').max(254).transform(v => v.trim().toLowerCase()),
   password: z.string().min(8, 'رمز باید حداقل ۸ کاراکتر باشد').max(128),
-  role: z.enum(['SuperAdmin', 'BranchUser', 'Warehouse']),
+  role: z.enum(['SuperAdmin', 'BranchUser', 'Warehouse', 'Chef']),
   assignedBranchId: z.string().nullable(),
-}).refine(d => !((d.role === 'BranchUser' || d.role === 'Warehouse') && !d.assignedBranchId), {
+}).refine(d => !((d.role === 'BranchUser' || d.role === 'Warehouse' || d.role === 'Chef') && !d.assignedBranchId), {
   message: 'برای کاربر شعبه یک شعبه انتخاب کنید',
   path: ['assignedBranchId'],
 });
@@ -66,7 +66,7 @@ export function TeamPane() {
       label: 'نقش',
       render: (u) => (
         <Chip tone={u.role === 'SuperAdmin' ? 'neutral' : 'green'}>
-          {u.role === 'SuperAdmin' ? 'مدیر کل' : u.role === 'Warehouse' ? 'انباردار' : 'کاربر شعبه'}
+          {u.role === 'SuperAdmin' ? 'مدیر کل' : u.role === 'Warehouse' ? 'انباردار' : u.role === 'Chef' ? 'سرآشپز' : 'کاربر شعبه'}
         </Chip>
       ),
     },
@@ -75,7 +75,7 @@ export function TeamPane() {
       label: 'شعبه',
       mobileHide: true,
       render: (u) => {
-        const branch = (u.role === 'BranchUser' || u.role === 'Warehouse')
+        const branch = (u.role === 'BranchUser' || u.role === 'Warehouse' || u.role === 'Chef')
           ? branches.find(b => b.id === u.assignedBranch)?.name ?? '—'
           : '—';
         return <span className="text-[11.5px] text-stone-600">{branch}</span>;
@@ -161,7 +161,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
 
   const role = watch('role');
 
-  function handleRoleChange(r: 'SuperAdmin' | 'BranchUser' | 'Warehouse') {
+  function handleRoleChange(r: 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef') {
     setValue('role', r);
     setValue('assignedBranchId', r === 'SuperAdmin' ? null : (branches[0]?.id ?? null));
   }
@@ -223,10 +223,11 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
               <Select value={role} onChange={e => handleRoleChange(e.target.value as any)}>
                 <option value="BranchUser">کاربر شعبه</option>
                 <option value="Warehouse">انباردار</option>
+                <option value="Chef">سرآشپز</option>
                 <option value="SuperAdmin">مدیر کل</option>
               </Select>
             </Field>
-            {(role === 'BranchUser' || role === 'Warehouse') && (
+            {(role === 'BranchUser' || role === 'Warehouse' || role === 'Chef') && (
               <Field label="شعبه" error={errors.assignedBranchId?.message}>
                 <Select {...register('assignedBranchId')}>
                   {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}

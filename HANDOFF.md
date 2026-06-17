@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.20-inventory-complete` |
-| **آخرین به‌روزرسانی** | 2026-06-16 — اکانت: ۱ |
+| **نسخه** | `0.9.21-ux-nav` |
+| **آخرین به‌روزرسانی** | 2026-06-18 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) zip برای تست: `git archive HEAD --output=basharaf-v0.9.20.zip`. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
+| **کار بعدی پیشنهادی** | (۱) zip برای تست: `git archive HEAD --output=basharaf-v0.9.21.zip`. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
 | **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-18 — v0.9.21: ویزارد رسپی ۳-مرحله‌ای + ناوبری یکپارچه (S1/S2/S3) — اکانت ۲
+**چه شد:**
+(۱) **Recipe Wizard (S-recipe):** افزودن رسپی از modal تک‌صفحه به ویزارد ۳-قدمی تبدیل شد: قدم ۱ (نام+پخت+پرس+شعبه)، قدم ۲ (جستجو و انتخاب مواد + live cost bar کلاینت‌ساید)، قدم ۳ (قیمت فروش + food cost رنگی سبز/زرد/قرمز). محاسبه‌ی هزینه بدون API round-trip با `avgCostPerBase × qty / (yieldPct/100)` انجام می‌شود. نقش Chef هم اجازه‌ی ذخیره دارد (قبلاً فقط SuperAdmin). فرمول دقیقاً با `costRecipe` سرور هماهنگ است.
+(۲) **S3 — ناوبری یکپارچه:** دو ناوبری موازی (هامبرگر هدر + drawer) به یک نوار پایین ۵-تبه + تب «⋮ بیشتر» (MoreSheet) تبدیل شد. `nav-config.ts` به‌عنوان فایل مشترک بدون وابستگی دوری ایجاد شد. `MobileMenu.tsx` حذف و از `Header.tsx` و `index.ts` پاک‌سازی شد.
+(۳) **S1 — sidebar بیشتر:** آیتم‌های نادر «روابط و منابع» (کوپن‌ها، پرسنل، حقوق، استخدام) با فیلد `rarely: true` در nav-config علامت‌گذاری شدند. در Sidebar دسکتاپ این موارد پشت دکمه «N مورد بیشتر» پنهان می‌مانند و با کلیک باز می‌شوند. حالت collapsed (icon-only) همه را نشان می‌دهد.
+(۴) **S2 — همه شعب:** `همه‌ی شعب` → `همه شعب` در orders/page.tsx.
+**فایل‌ها:** `app/(app)/inventory/recipes/page.tsx` (بازنویسی کامل wizard)، `app/api/inventory/recipes/route.ts` (requireRole Chef+SuperAdmin)، `components/layout/nav-config.ts` (جدید، rarely field)، `components/layout/BottomTabBar.tsx` (بازنویسی + MoreSheet)، `components/layout/Sidebar.tsx` (NAV_GROUPS از nav-config، toggle rarely)، `components/layout/Header.tsx` (حذف MobileMenu)، `components/layout/index.ts` (حذف export MobileMenu)، `app/(app)/orders/page.tsx` (S2).
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) دیپلوی روی Liara (`git archive HEAD --output=basharaf-v0.9.21.zip`). (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. (۳) S4/S5 (formatMoneyShort در صفحات جمع‌بندی) اگر کاربر خواست.
 
 ## 📓 2026-06-16 — v0.9.20: ۸ زیرصفحه‌ی انبار (cartable/receive/stocktake/sales/recipes/plan/variance/exceptions) — اکانت ۱
 **چه شد:**

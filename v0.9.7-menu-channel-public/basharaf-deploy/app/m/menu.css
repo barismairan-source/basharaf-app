@@ -1,0 +1,59 @@
+/* ─── فونت‌های منوی عمومی ─── */
+@font-face {
+  font-family: 'Gochi Hand';
+  src: url('/fonts/GochiHand-Regular.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215;
+}
+@font-face {
+  font-family: 'NeveshtFaNum';
+  src: url('/fonts/NeveshtFaNum-Black.ttf') format('truetype');
+  font-weight: 900; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'IRANMarker';
+  src: url('/fonts/IRANMarker.ttf') format('truetype');
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'HastiHeavy';
+  src: url('/fonts/Hasti-HeavyR.ttf') format('truetype');
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'BlockFD';
+  src: url('/fonts/BlockFD-VF.ttf') format('truetype');
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+
+/* ─── tokens منو ─── */
+.menu-root {
+  --background: 30 9% 98%;
+  --foreground: 24 10% 10%;
+  --border: 24 6% 90%;
+  --muted: 30 9% 96%;
+  --muted-foreground: 25 5% 45%;
+  --danger: 350 89% 41%;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  min-height: 100vh;
+}
+.menu-root .bg-background { background: hsl(var(--background)); }
+.menu-root .text-foreground { color: hsl(var(--foreground)); }
+.menu-root .text-muted-foreground { color: hsl(var(--muted-foreground)); }
+.menu-root .border-border { border-color: hsl(var(--border)); }
+.menu-root .divide-border > * + * { border-color: hsl(var(--border)); }
+
+/* فونت بر اساس زبان و انتخاب ادمین */
+html[data-lang='en'] .menu-root {
+  font-family: 'Gochi Hand', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+html[data-lang='fa'][data-fa-font='NeveshtFaNum'] .menu-root { font-family: 'NeveshtFaNum', system-ui, sans-serif; line-height: 1.6; }
+html[data-lang='fa'][data-fa-font='IRANMarker'] .menu-root { font-family: 'IRANMarker', system-ui, sans-serif; line-height: 1.7; }
+html[data-lang='fa'][data-fa-font='HastiHeavy'] .menu-root { font-family: 'HastiHeavy', system-ui, sans-serif; line-height: 1.7; }
+html[data-lang='fa'][data-fa-font='BlockFD'] .menu-root { font-family: 'BlockFD', system-ui, sans-serif; line-height: 1.8; }
+html[data-lang='fa']:not([data-fa-font]) .menu-root { font-family: 'IRANMarker', system-ui, sans-serif; line-height: 1.7; }
+
+@keyframes menu-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.menu-root.animate-fade-in { animation: menu-fade-in 0.4s ease; }

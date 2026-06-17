@@ -131,7 +131,7 @@ export default function OrdersBoardPage() {
           <div className="flex items-center gap-2 flex-wrap">
             {user.role === 'SuperAdmin' && (
               <Select value={branchId} onChange={(e) => setBranchId(e.target.value)} className="w-40">
-                <option value="">همه‌ی شعب</option>
+                <option value="">همه شعب</option>
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}

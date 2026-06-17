@@ -30,21 +30,21 @@ export interface SectionDef {
   key: SectionKey;
   label: string;
   /** بخش‌هایی که حتی بدون permission هم برای این نقش‌ها قابل دسترسی‌اند (پیش‌فرض نقش). */
-  defaultRoles: ReadonlyArray<'SuperAdmin' | 'BranchUser' | 'Warehouse'>;
+  defaultRoles: ReadonlyArray<'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef'>;
 }
 
 /** فهرست کامل بخش‌ها — منبع واحد حقیقت برای sidebar، middleware، و پنل دسترسی. */
 export const SECTIONS: ReadonlyArray<SectionDef> = [
-  { key: 'dashboard',    label: 'داشبورد',          defaultRoles: ['SuperAdmin', 'BranchUser'] },
+  { key: 'dashboard',    label: 'داشبورد',          defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
   { key: 'transactions', label: 'تراکنش‌ها',        defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'accounts',     label: 'صندوق‌ها',          defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'contacts',     label: 'طرف‌حساب‌ها',       defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'reports',      label: 'گزارش مالی',        defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'employees',    label: 'پرسنل',             defaultRoles: ['SuperAdmin'] },
   { key: 'payroll',      label: 'حقوق و دستمزد',     defaultRoles: ['SuperAdmin'] },
-  { key: 'inventory',    label: 'انبار و آشپزخانه',  defaultRoles: ['SuperAdmin', 'Warehouse'] },
-  { key: 'menu',         label: 'مدیریت منو',        defaultRoles: ['SuperAdmin'] },
-  { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser'] },
+  { key: 'inventory',    label: 'انبار و آشپزخانه',  defaultRoles: ['SuperAdmin', 'Warehouse', 'Chef'] },
+  { key: 'menu',         label: 'مدیریت منو',        defaultRoles: ['SuperAdmin', 'Chef'] },
+  { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
   { key: 'recruitment',  label: 'استخدام',           defaultRoles: ['SuperAdmin'] },
   { key: 'logs',         label: 'لاگ سیستم',         defaultRoles: ['SuperAdmin'] },
   { key: 'settings',     label: 'تنظیمات',           defaultRoles: ['SuperAdmin', 'BranchUser'] },
@@ -70,14 +70,14 @@ export interface CapabilityDef {
   key: CapabilityKey;
   label: string;
   /** نقش‌هایی که این عملیات را به‌صورت پیش‌فرض دارند (وقتی permissions صریح نیست). */
-  defaultRoles: ReadonlyArray<'SuperAdmin' | 'BranchUser' | 'Warehouse'>;
+  defaultRoles: ReadonlyArray<'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef'>;
 }
 
 export const CAPABILITIES: ReadonlyArray<CapabilityDef> = [
   // پیش‌فرض: فقط مدیر کل تأیید می‌کند (مثل قبل). با دادن این مجوز، حسابدار هم می‌تواند.
   { key: 'inventory.approve', label: 'تأیید برگه‌ی انبار', defaultRoles: ['SuperAdmin'] },
   // تفکیک وظایف انبار/حسابداری: انباردار فقط مقدار فیزیکی می‌بیند، نه بهای تمام‌شده/مبالغ
-  { key: 'inventory.viewCosts', label: 'مشاهده‌ی بهای تمام‌شده و مبالغ مالی انبار', defaultRoles: ['SuperAdmin', 'BranchUser'] },
+  { key: 'inventory.viewCosts', label: 'مشاهده‌ی بهای تمام‌شده و مبالغ مالی انبار', defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
   // زیرتب‌های تنظیمات — به‌صورت گرانولار قابل اعطا به نقش‌های غیر مدیر کل
   { key: 'settings.team', label: 'مدیریت تیم (تنظیمات)', defaultRoles: ['SuperAdmin'] },
   { key: 'settings.branches', label: 'مدیریت شعب (تنظیمات)', defaultRoles: ['SuperAdmin'] },
@@ -128,7 +128,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
 }
 
 interface AccessUser {
-  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse';
+  role: 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef';
   permissions?: string[] | null;
 }
 
