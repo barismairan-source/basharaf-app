@@ -138,7 +138,7 @@ export function UnifiedOverview() {
 
   if (error || !data) {
     return (
-      <div className="text-center text-[12px] text-stone-400 py-6 border border-dashed border-stone-200 rounded-xl">
+      <div className="text-center text-[12px] text-muted py-6 border border-dashed border-stone-200 rounded-xl">
         نمایش یکپارچه در دسترس نیست — لطفاً بعداً دوباره تلاش کنید.
       </div>
     );

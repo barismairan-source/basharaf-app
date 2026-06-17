@@ -23,7 +23,7 @@ function StatBox({
       className="bg-white border border-stone-200 rounded-lg px-4 py-3 text-right hover:border-stone-300 transition-colors"
     >
       <div className="flex items-center gap-1.5 mb-2">
-        <Icon size={12} strokeWidth={1.5} className="text-stone-400" />
+        <Icon size={12} strokeWidth={1.5} className="text-muted" />
         <span className="text-[10.5px] text-stone-500 truncate">{label}</span>
       </div>
       <div className={cn('text-[16px] font-medium tabular-nums', value > 0 ? 'text-amber-700' : 'text-stone-900')}>

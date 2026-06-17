@@ -50,7 +50,7 @@ export default function OrderTrackPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-[13px] text-stone-400">
+      <div className="flex min-h-screen items-center justify-center text-[13px] text-muted">
         در حال بارگذاری…
       </div>
     );
@@ -85,7 +85,7 @@ export default function OrderTrackPage() {
           <Chip tone={status.tone}>{status.label}</Chip>
           <span className="text-[12px] text-stone-500">شماره سفارش: {toFa(order.orderNo)}</span>
         </div>
-        <p className="mt-1 text-[12px] text-stone-400">تاریخ ثبت: {toFa(order.jalaliDate)}</p>
+        <p className="mt-1 text-[12px] text-muted">تاریخ ثبت: {toFa(order.jalaliDate)}</p>
       </header>
 
       <section className="mb-5">
@@ -145,7 +145,7 @@ export default function OrderTrackPage() {
             {order.lines.map((line, i) => (
               <div key={i} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
                 <div className="text-stone-700">
-                  {line.itemName} <span className="text-stone-400">× {toFa(line.qty)}</span>
+                  {line.itemName} <span className="text-muted">× {toFa(line.qty)}</span>
                 </div>
                 <div className="text-stone-800">{fmt(line.lineTotal)} تومان</div>
               </div>
@@ -180,7 +180,7 @@ export default function OrderTrackPage() {
             </div>
 
             {order.payMethod === 'cash' && (
-              <p className="text-[11.5px] text-stone-400">
+              <p className="text-[11.5px] text-muted">
                 پرداخت نقدی {order.serviceType === 'delivery' ? '— هنگام تحویل به پیک' : '— هنگام دریافت حضوری'}
               </p>
             )}

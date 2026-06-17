@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Clock, Landmark } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
   KPICard,
@@ -21,6 +21,8 @@ import {
   SPARK_PENDING,
 } from '@/lib/sparklines';
 import { fmt } from '@/lib/utils';
+import { formatBranchName } from '@/lib/design/format';
+import { MetricCard } from '@/components/ui';
 
 /**
  * Dashboard — صفحه اصلی اپلیکیشن بعد از login.
@@ -109,14 +111,9 @@ export default function DashboardPage() {
             <div className="text-[12px] text-stone-500 mt-1">
               {isAdmin
                 ? branchFilter
-                  ? `نمایش: ${
-                      branches.find((b) => b.id === branchFilter)?.name ?? '—'
-                    }`
+                  ? `نمایش: ${formatBranchName(branches.find((b) => b.id === branchFilter) ?? { name: '—' })}`
                   : 'نمایش: همه شعب'
-                : `شعبه: ${
-                    branches.find((b) => b.id === user.assignedBranch)?.name ??
-                    '—'
-                  }`}
+                : `شعبه: ${formatBranchName(branches.find((b) => b.id === user.assignedBranch) ?? { name: '—' })}`}
             </div>
           </div>
 
@@ -169,15 +166,12 @@ export default function DashboardPage() {
         {accounts.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
             {accounts.slice(0, 4).map(a => (
-              <div key={a.id} className="bg-white border border-stone-200 rounded-lg px-4 py-3">
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Landmark size={12} strokeWidth={1.5} className="text-stone-400" />
-                  <span className="text-[10.5px] text-stone-500 truncate">{a.name}</span>
-                </div>
-                <div className={`text-[16px] font-medium tabular-nums ${a.balance >= 0 ? 'text-stone-900' : 'text-rose-700'}`}>
-                  {fmt(a.balance)}
-                </div>
-                <div className="text-[9.5px] text-stone-400 mt-0.5">تومان</div>
+              <div key={a.id} title={`${fmt(a.balance)} تومان`}>
+                <MetricCard
+                  label={a.name}
+                  value={a.balance}
+                  sparkColor={a.balance >= 0 ? '#15803d' : '#be123c'}
+                />
               </div>
             ))}
           </div>
@@ -208,7 +202,7 @@ export default function DashboardPage() {
 
         {/* ─── Empty state if absolutely no data ─── */}
         {metrics.filtered.length === 0 && (
-          <div className="text-center text-[12px] text-stone-400 py-8">
+          <div className="text-center text-[12px] text-muted py-8">
             هنوز هیچ تراکنشی برای نمایش وجود ندارد.
           </div>
         )}

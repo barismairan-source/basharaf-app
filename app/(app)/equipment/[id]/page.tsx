@@ -250,7 +250,7 @@ export default function EquipmentDetailPage() {
                     </div>
                     <div>
                       <div className="text-[15px] text-stone-900 font-medium">{eq.name}</div>
-                      <div className="text-[11px] text-stone-400" dir="ltr">{eq.code} · {eq.category}</div>
+                      <div className="text-[11px] text-muted" dir="ltr">{eq.code} · {eq.category}</div>
                     </div>
                   </div>
                   <Chip tone={STATUS_TONES[eq.status]}>{STATUS_LABELS[eq.status]}</Chip>
@@ -258,19 +258,19 @@ export default function EquipmentDetailPage() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[12px]">
                   <div>
-                    <div className="text-stone-400 mb-0.5">شعبه</div>
+                    <div className="text-muted mb-0.5">شعبه</div>
                     <div className="text-stone-700">{branchLabel}</div>
                   </div>
                   <div>
-                    <div className="text-stone-400 mb-0.5">بهای خرید</div>
+                    <div className="text-muted mb-0.5">بهای خرید</div>
                     <div className="text-stone-700 tabular-nums">{fmt(eq.purchaseCost)} تومان</div>
                   </div>
                   <div>
-                    <div className="text-stone-400 mb-0.5">تاریخ خرید</div>
+                    <div className="text-muted mb-0.5">تاریخ خرید</div>
                     <div className="text-stone-700 tabular-nums">{eq.purchaseDate || '—'}</div>
                   </div>
                   <div>
-                    <div className="text-stone-400 mb-0.5">پایان گارانتی</div>
+                    <div className="text-muted mb-0.5">پایان گارانتی</div>
                     <div className="text-stone-700 tabular-nums">{eq.warrantyExpiry || '—'}</div>
                   </div>
                 </div>
@@ -365,11 +365,11 @@ export default function EquipmentDetailPage() {
                         <span className="text-[11px] text-stone-500 tabular-nums">{log.date}</span>
                       </div>
                       {log.vendor && <div className="text-[11.5px] text-stone-600 mt-1">{log.vendor}</div>}
-                      {log.note && <div className="text-[11px] text-stone-400 mt-0.5">{log.note}</div>}
+                      {log.note && <div className="text-[11px] text-muted mt-0.5">{log.note}</div>}
                     </div>
                     <div className="text-end flex-shrink-0">
                       <div className="text-[12.5px] text-stone-700 tabular-nums">{log.cost > 0 ? fmt(log.cost) : '—'}</div>
-                      {log.refTransactionId && <div className="text-[10px] text-stone-400 mt-0.5">تراکنش ثبت شد</div>}
+                      {log.refTransactionId && <div className="text-[10px] text-muted mt-0.5">تراکنش ثبت شد</div>}
                     </div>
                   </div>
                 ))}

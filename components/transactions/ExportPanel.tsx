@@ -145,7 +145,7 @@ export function ExportPanel({ className }: ExportPanelProps) {
               >
                 دانلود CSV
               </Button>
-              <span className="text-[11px] text-stone-400 mr-auto">
+              <span className="text-[11px] text-muted mr-auto">
                 فرمت CSV برای Google Sheets و Excel مناسب است
               </span>
             </div>

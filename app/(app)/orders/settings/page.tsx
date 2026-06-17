@@ -284,7 +284,7 @@ export default function OrderingSettingsPage() {
                       placeholder="service.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                     />
                   </Field>
-                  <p className="text-[11px] text-stone-400">
+                  <p className="text-[11px] text-muted">
                     برای نمایش نقشه در صفحه‌ی انتخاب آدرس. کلید را از{' '}
                     <a href="https://platform.neshan.org" target="_blank" rel="noreferrer" className="underline">platform.neshan.org</a>
                     {' '}دریافت کنید.
@@ -474,10 +474,10 @@ function ZoneRow({ zone, onUpdate, onDelete, showToast }: {
       <td className="px-3 py-2.5 text-center"><Chip tone={zone.isActive ? 'green' : 'neutral'}>{zone.isActive ? 'فعال' : 'غیرفعال'}</Chip></td>
       <td className="px-3 py-2.5 text-center">
         <div className="flex items-center justify-center gap-1">
-          <button onClick={startEdit} className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700">
+          <button onClick={startEdit} className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
             <Edit3 size={13} strokeWidth={1.5} />
           </button>
-          <button onClick={handleDelete} className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600">
+          <button onClick={handleDelete} className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
         </div>

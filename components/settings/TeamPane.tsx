@@ -6,9 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { UserPlus, Trash2, Mail, User as UserIcon, X, Eye, EyeOff, AlertCircle, SlidersHorizontal } from 'lucide-react';
 import {
-  Avatar, Button, Card, CardBody, CardHeader, Chip, Empty,
-  Field, Input, Select, Th, Td, TableContainer,
+  Avatar, Button, Card, CardBody, CardHeader, Chip, DataList, Empty,
+  Field, Input, Select,
 } from '@/components/ui';
+import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore } from '@/store';
 import { SECTIONS, CAPABILITIES, capStorageKey } from '@/lib/auth/permissions';
 import type { User } from '@/types';
@@ -41,6 +42,73 @@ export function TeamPane() {
 
   if (!currentUser) return null;
 
+  const columns: DataColumn<User>[] = [
+    {
+      key: 'user',
+      label: 'کاربر',
+      render: (u) => {
+        const isSelf = u.id === currentUser!.id;
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar initials={u.initials} role={u.role} size="md" />
+            <div className="min-w-0">
+              <div className="text-[12.5px] text-stone-800 truncate">
+                {u.name}{isSelf && <span className="text-[10.5px] text-muted mx-1">(شما)</span>}
+              </div>
+              <div className="text-[10.5px] text-muted truncate" dir="ltr">{u.email}</div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'role',
+      label: 'نقش',
+      render: (u) => (
+        <Chip tone={u.role === 'SuperAdmin' ? 'neutral' : 'green'}>
+          {u.role === 'SuperAdmin' ? 'مدیر کل' : u.role === 'Warehouse' ? 'انباردار' : 'کاربر شعبه'}
+        </Chip>
+      ),
+    },
+    {
+      key: 'branch',
+      label: 'شعبه',
+      mobileHide: true,
+      render: (u) => {
+        const branch = (u.role === 'BranchUser' || u.role === 'Warehouse')
+          ? branches.find(b => b.id === u.assignedBranch)?.name ?? '—'
+          : '—';
+        return <span className="text-[11.5px] text-stone-600">{branch}</span>;
+      },
+    },
+    {
+      key: 'actions',
+      label: '',
+      mobileLabel: '',
+      cellClassName: 'text-end',
+      headerClassName: 'text-end',
+      render: (u) => {
+        const isSelf = u.id === currentUser!.id;
+        const isDeleting = deletingId === u.id;
+        if (isSelf) return <span className="text-[10.5px] text-muted">—</span>;
+        if (isDeleting) return (
+          <div className="flex items-center gap-1 justify-end">
+            <Button variant="destructive" size="sm" loading={actionLoading} onClick={() => handleDelete(u.id)}>مطمئنم</Button>
+            <Button variant="default" size="sm" disabled={actionLoading} onClick={() => setDeletingId(null)}>لغو</Button>
+          </div>
+        );
+        return (
+          <div className="flex items-center gap-1 justify-end">
+            {u.role !== 'SuperAdmin' && (
+              <Button variant="default" size="sm" icon={SlidersHorizontal} onClick={() => setPermUser(u)}>دسترسی‌ها</Button>
+            )}
+            <Button variant="danger" size="sm" icon={Trash2} onClick={() => setDeletingId(u.id)}>حذف</Button>
+          </div>
+        );
+      },
+    },
+  ];
+
   async function handleDelete(id: string) {
     setActionLoading(true);
     const ok = await deleteUser(id, currentUser!);
@@ -65,71 +133,12 @@ export function TeamPane() {
             </Button>
           }
         />
-        {users.length === 0 ? (
-          <CardBody><Empty title="کاربری ثبت نشده" icon={UserIcon} /></CardBody>
-        ) : (
-          <TableContainer>
-            <table className="w-full">
-              <thead className="bg-stone-50/50 border-b border-stone-100">
-                <tr>
-                  <Th>کاربر</Th>
-                  <Th>نقش</Th>
-                  <Th className="hidden md:table-cell">شعبه</Th>
-                  <Th className="text-end">عملیات</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => {
-                  const isSelf = u.id === currentUser.id;
-                  const isDeleting = deletingId === u.id;
-                  const branch = (u.role === 'BranchUser' || u.role === 'Warehouse')
-                    ? branches.find(b => b.id === u.assignedBranch)?.name ?? '—'
-                    : '—';
-                  return (
-                    <tr key={u.id} className="border-b border-stone-50 last:border-b-0">
-                      <Td>
-                        <div className="flex items-center gap-3">
-                          <Avatar initials={u.initials} role={u.role} size="md" />
-                          <div className="min-w-0">
-                            <div className="text-[12.5px] text-stone-800 truncate">
-                              {u.name}{isSelf && <span className="text-[10.5px] text-stone-400 mx-1">(شما)</span>}
-                            </div>
-                            <div className="text-[10.5px] text-stone-400 truncate" dir="ltr">{u.email}</div>
-                          </div>
-                        </div>
-                      </Td>
-                      <Td>
-                        <Chip tone={u.role === 'SuperAdmin' ? 'neutral' : 'green'}>
-                          {u.role === 'SuperAdmin' ? 'مدیر کل' : u.role === 'Warehouse' ? 'انباردار' : 'کاربر شعبه'}
-                        </Chip>
-                      </Td>
-                      <Td className="hidden md:table-cell">
-                        <span className="text-[11.5px] text-stone-600">{branch}</span>
-                      </Td>
-                      <Td className="text-end">
-                        {isSelf ? (
-                          <span className="text-[10.5px] text-stone-400">—</span>
-                        ) : isDeleting ? (
-                          <div className="flex items-center gap-1 justify-end">
-                            <Button variant="destructive" size="sm" loading={actionLoading} onClick={() => handleDelete(u.id)}>مطمئنم</Button>
-                            <Button variant="default" size="sm" disabled={actionLoading} onClick={() => setDeletingId(null)}>لغو</Button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1 justify-end">
-                            {u.role !== 'SuperAdmin' && (
-                              <Button variant="default" size="sm" icon={SlidersHorizontal} onClick={() => setPermUser(u)}>دسترسی‌ها</Button>
-                            )}
-                            <Button variant="danger" size="sm" icon={Trash2} onClick={() => setDeletingId(u.id)}>حذف</Button>
-                          </div>
-                        )}
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </TableContainer>
-        )}
+        <DataList
+          columns={columns}
+          data={users}
+          keyExtractor={u => u.id}
+          empty={<CardBody><Empty title="کاربری ثبت نشده" icon={UserIcon} /></CardBody>}
+        />
       </Card>
       {showAdd && <AddUserModal onClose={() => setShowAdd(false)} />}
       {permUser && <PermissionsModal user={permUser} onClose={() => setPermUser(null)} />}
@@ -175,7 +184,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
         <div className="p-6">
           <div className="flex items-start justify-between mb-4">
             <h2 className="text-[15px] font-medium text-stone-900">افزودن کاربر جدید</h2>
-            <button type="button" onClick={onClose} aria-label="بستن" className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-stone-400">
+            <button type="button" onClick={onClose} aria-label="بستن" className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-muted">
               <X size={14} strokeWidth={1.5} />
             </button>
           </div>
@@ -204,7 +213,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
                 <button
                   type="button"
                   onClick={() => setShowPw(!showPw)}
-                  className="absolute inset-y-0 left-3 flex items-center text-stone-400 hover:text-stone-600"
+                  className="absolute inset-y-0 left-3 flex items-center text-muted hover:text-stone-600"
                 >
                   {showPw ? <EyeOff size={14} strokeWidth={1.5} /> : <Eye size={14} strokeWidth={1.5} />}
                 </button>
@@ -266,9 +275,9 @@ function PermissionsModal({ user, onClose }: { user: User; onClose: () => void }
       <div className="bg-white rounded-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-[16px] font-medium text-stone-900">دسترسی‌های {user.name}</h2>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+          <button onClick={onClose} className="text-muted hover:text-stone-700"><X size={18} /></button>
         </div>
-        <p className="text-[11.5px] text-stone-500 mb-4 leading-relaxed">
+        <p className="text-[11.5px] text-muted mb-4 leading-relaxed">
           مشخص کنید این کاربر کدام بخش‌ها را ببیند. تغییرات از <b>ورود بعدی</b> کاربر اعمال می‌شود.
         </p>
 
@@ -279,7 +288,7 @@ function PermissionsModal({ user, onClose }: { user: User; onClose: () => void }
 
         {!useDefault && (
           <div className="space-y-1.5 border-t border-stone-100 pt-3">
-            <div className="text-[11.5px] text-stone-500 mb-1">بخش‌های مجاز را تیک بزنید:</div>
+            <div className="text-[11.5px] text-muted mb-1">بخش‌های مجاز را تیک بزنید:</div>
             {SECTIONS.map(s => (
               <label key={s.key} className="flex items-center gap-2 py-1 cursor-pointer">
                 <input type="checkbox" checked={selected.includes(s.key)} onChange={() => toggle(s.key)} className="accent-stone-900" />
@@ -290,7 +299,7 @@ function PermissionsModal({ user, onClose }: { user: User; onClose: () => void }
               <div className="text-[11px] text-amber-600 mt-1">هیچ بخشی انتخاب نشده — کاربر فقط داشبورد را می‌بیند.</div>
             )}
 
-            <div className="text-[11.5px] text-stone-500 mt-3 mb-1 pt-3 border-t border-stone-100">اجازه‌های ویژه:</div>
+            <div className="text-[11.5px] text-muted mt-3 mb-1 pt-3 border-t border-stone-100">اجازه‌های ویژه:</div>
             {CAPABILITIES.map(c => {
               const key = capStorageKey(c.key);
               return (

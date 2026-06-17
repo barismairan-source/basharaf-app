@@ -20,7 +20,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         ref={ref}
         rows={rows}
         className={cn(
-          'w-full px-3 py-2.5 rounded-md border bg-white text-[13.5px] text-stone-800 placeholder:text-stone-300 focus:outline-none resize-none leading-7 transition-colors',
+          'w-full px-3 py-2.5 rounded-md border bg-white text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none resize-none leading-7 transition-colors',
           hasError
             ? 'border-rose-300 focus:border-rose-400'
             : 'border-stone-200 focus:border-stone-400',

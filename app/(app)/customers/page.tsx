@@ -210,7 +210,7 @@ export default function CustomersPage() {
                       <td className="px-5 py-3">
                         <Link href={`/customers/${c.id}`} className="block">
                           <div className="text-[12.5px] text-stone-800">{c.name}</div>
-                          <div className="text-[10.5px] text-stone-400" dir="ltr">
+                          <div className="text-[10.5px] text-muted" dir="ltr">
                             {c.phone}
                           </div>
                         </Link>
@@ -232,7 +232,7 @@ export default function CustomersPage() {
                       <td className="px-3 py-3 text-center">
                         <Link
                           href={`/customers/${c.id}`}
-                          className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700"
+                          className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700"
                         >
                           <ChevronLeft size={15} strokeWidth={1.5} />
                         </Link>

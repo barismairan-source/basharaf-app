@@ -167,7 +167,7 @@ export default function EmployeesPage() {
               {roles.map(r => (
                 <span key={r.value} className="inline-flex items-center gap-1.5 bg-white border border-stone-200 rounded-full pr-3 pl-2 py-1 text-[12px] text-stone-700">
                   {r.label}
-                  <button onClick={() => removeRole(r.value)} className="text-stone-300 hover:text-rose-600"><Trash2 size={12} strokeWidth={1.5} /></button>
+                  <button onClick={() => removeRole(r.value)} className="text-muted hover:text-rose-600"><Trash2 size={12} strokeWidth={1.5} /></button>
                 </span>
               ))}
             </div>
@@ -188,7 +188,7 @@ export default function EmployeesPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[13.5px] font-medium text-stone-900">{e.fullName}</span>
                     <Chip tone="neutral">{roleLabel(e.role)}</Chip>
-                    {e.branchName && <span className="text-[10.5px] text-stone-400">{e.branchName}</span>}
+                    {e.branchName && <span className="text-[10.5px] text-muted">{e.branchName}</span>}
                   </div>
                   <div className="text-[11px] text-stone-500 mt-0.5 flex items-center gap-3 flex-wrap">
                     <span className="flex items-center gap-1"><Phone size={11} strokeWidth={1.5} />{e.phone}</span>
@@ -197,12 +197,12 @@ export default function EmployeesPage() {
                 </div>
                 <div className="text-left flex-shrink-0">
                   <div className="text-[13px] font-medium text-stone-800 tabular-nums">{fmt(e.baseMonthlySalary)}</div>
-                  <div className="text-[9.5px] text-stone-400">تومان / ماه</div>
+                  <div className="text-[9.5px] text-muted">تومان / ماه</div>
                 </div>
-                <button onClick={() => openEdit(e)} className="text-stone-400 hover:text-stone-700 p-1 flex-shrink-0">
+                <button onClick={() => openEdit(e)} className="text-muted hover:text-stone-700 p-1 flex-shrink-0">
                   <Pencil size={14} strokeWidth={1.5} />
                 </button>
-                <button onClick={() => handleDelete(e.id, e.fullName)} className="text-stone-400 hover:text-rose-600 p-1 flex-shrink-0">
+                <button onClick={() => handleDelete(e.id, e.fullName)} className="text-muted hover:text-rose-600 p-1 flex-shrink-0">
                   <Trash2 size={15} strokeWidth={1.5} />
                 </button>
               </div>

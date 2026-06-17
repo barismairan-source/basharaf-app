@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { Banknote, Plus, PiggyBank, CreditCard, Trash2, Edit3, X, Check, RefreshCw } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Chip, Empty, Field, Input, Select } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Select } from '@/components/ui';
+import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore } from '@/store';
-import { fmt } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { fmt, cn } from '@/lib/utils';
+import { formatMoneyShort } from '@/lib/design/format';
+import type { Account } from '@/types/transaction';
 
 const TYPE_ICONS: Record<string, typeof Banknote> = {
   cash: PiggyBank,
@@ -60,7 +62,6 @@ export default function AccountsPage() {
   if (!hydrated || !user) return null;
 
   const isAdmin = user.role === 'SuperAdmin';
-
   const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 
   async function handleAdd() {
@@ -89,6 +90,95 @@ export default function AccountsPage() {
     else showToast('خطا', 'danger');
   }
 
+  const columns: DataColumn<Account>[] = [
+    {
+      key: 'name',
+      label: 'حساب',
+      render: (account) => {
+        const Icon = TYPE_ICONS[account.type] ?? Banknote;
+        return (
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-md bg-stone-100 flex items-center justify-center flex-shrink-0">
+              <Icon size={16} strokeWidth={1.5} className="text-stone-600" />
+            </div>
+            <div className="min-w-0">
+              {editingId === account.id ? (
+                <Input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  className="text-[13px]"
+                  autoFocus
+                  onKeyDown={e => e.key === 'Enter' && handleEditSave(account.id)}
+                  onClick={e => e.stopPropagation()}
+                />
+              ) : (
+                <div className="text-[13px] text-stone-900 font-medium truncate">{account.name}</div>
+              )}
+              <div className="text-[11px] text-muted">{TYPE_LABELS[account.type] ?? account.type}</div>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      key: 'balance',
+      label: 'موجودی',
+      render: (account) => (
+        <button
+          onClick={e => { e.stopPropagation(); window.location.href = `/accounts/${account.id}`; }}
+          className="group text-right"
+          title={`${fmt(account.balance)} تومان`}
+        >
+          <div className={cn('text-[14px] font-medium num group-hover:underline', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
+            {formatMoneyShort(account.balance)}
+          </div>
+          <div className="text-[10px] text-muted mt-0.5">مشاهده دفتر کل</div>
+        </button>
+      ),
+    },
+    ...(isAdmin ? [{
+      key: 'actions',
+      label: '',
+      mobileLabel: '',
+      render: (account: Account) => {
+        if (editingId === account.id) {
+          return (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={e => { e.stopPropagation(); handleEditSave(account.id); }}
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-emerald-50 text-emerald-600"
+              >
+                <Check size={13} strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); setEditingId(null); }}
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
+              >
+                <X size={13} strokeWidth={1.5} />
+              </button>
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center gap-1">
+            <button
+              onClick={e => { e.stopPropagation(); setEditingId(account.id); setEditName(account.name); }}
+              className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
+            >
+              <Edit3 size={13} strokeWidth={1.5} />
+            </button>
+            <button
+              onClick={e => { e.stopPropagation(); handleDelete(account.id); }}
+              className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
+            >
+              <Trash2 size={13} strokeWidth={1.5} />
+            </button>
+          </div>
+        );
+      },
+    }] as DataColumn<Account>[] : []),
+  ];
+
   return (
     <div className="p-4 lg:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -96,7 +186,7 @@ export default function AccountsPage() {
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">صندوق‌ها و حساب‌ها</h1>
-            <div className="text-[12px] text-stone-500 mt-1">مدیریت موجودی حساب‌های بانکی و صندوق‌های نقدی</div>
+            <div className="text-[12px] text-muted mt-1">مدیریت موجودی حساب‌های بانکی و صندوق‌های نقدی</div>
           </div>
           {isAdmin && (
             <div className="flex items-center gap-2 flex-wrap">
@@ -115,13 +205,15 @@ export default function AccountsPage() {
           <CardBody>
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <div className="text-[11.5px] text-stone-500 mb-1">مجموع موجودی همه حساب‌ها</div>
-                <div className={cn('text-[22px] sm:text-[28px] font-medium tabular-nums truncate', totalBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
-                  {fmt(totalBalance)}
+                <div className="text-[11.5px] text-muted mb-1">مجموع موجودی همه حساب‌ها</div>
+                <div
+                  className={cn('text-[22px] sm:text-[28px] font-medium num truncate', totalBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}
+                  title={`${fmt(totalBalance)} تومان`}
+                >
+                  {formatMoneyShort(totalBalance)}
                 </div>
-                <div className="text-[11px] text-stone-400 mt-1">تومان</div>
               </div>
-              <Banknote size={32} strokeWidth={1} className="text-stone-300 flex-shrink-0" />
+              <Banknote size={32} strokeWidth={1} className="text-stone-400 flex-shrink-0" />
             </div>
           </CardBody>
         </Card>
@@ -141,7 +233,7 @@ export default function AccountsPage() {
                   />
                 </Field>
                 <Field label="نوع">
-                  <Select value={newType} onChange={e => setNewType(e.target.value as any)}>
+                  <Select value={newType} onChange={e => setNewType(e.target.value as 'cash' | 'bank' | 'pos')}>
                     <option value="cash">صندوق نقدی</option>
                     <option value="bank">حساب بانکی</option>
                     <option value="pos">دستگاه پوز</option>
@@ -159,90 +251,12 @@ export default function AccountsPage() {
         )}
 
         {/* Accounts list */}
-        {accounts.length === 0 ? (
-          <Card>
-            <CardBody>
-              <Empty title="هنوز حسابی ثبت نشده" sub={isAdmin ? 'از دکمه بالا یک حساب اضافه کنید' : 'حسابی وجود ندارد'} icon={Banknote} />
-            </CardBody>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {accounts.map(account => {
-              const Icon = TYPE_ICONS[account.type] ?? Banknote;
-              const isEditing = editingId === account.id;
-
-              return (
-                <Card key={account.id}>
-                  <CardBody>
-                    <div className="flex items-start justify-between gap-2 mb-4">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-8 h-8 rounded-md bg-stone-100 flex items-center justify-center flex-shrink-0">
-                          <Icon size={16} strokeWidth={1.5} className="text-stone-600" />
-                        </div>
-                        <div className="min-w-0">
-                          {isEditing ? (
-                            <Input
-                              value={editName}
-                              onChange={e => setEditName(e.target.value)}
-                              className="text-[13px]"
-                              autoFocus
-                              onKeyDown={e => e.key === 'Enter' && handleEditSave(account.id)}
-                            />
-                          ) : (
-                            <div className="text-[13px] text-stone-900 font-medium truncate">{account.name}</div>
-                          )}
-                          <div className="text-[11px] text-stone-400">{TYPE_LABELS[account.type] ?? account.type}</div>
-                        </div>
-                      </div>
-
-                      {isAdmin && (
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          {isEditing ? (
-                            <>
-                              <button onClick={() => handleEditSave(account.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-emerald-50 text-emerald-600">
-                                <Check size={13} strokeWidth={1.5} />
-                              </button>
-                              <button onClick={() => setEditingId(null)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-stone-400">
-                                <X size={13} strokeWidth={1.5} />
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => { setEditingId(account.id); setEditName(account.name); }}
-                                className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-stone-400"
-                              >
-                                <Edit3 size={13} strokeWidth={1.5} />
-                              </button>
-                              <button
-                                onClick={() => handleDelete(account.id)}
-                                className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600"
-                              >
-                                <Trash2 size={13} strokeWidth={1.5} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      onClick={() => window.location.href = `/accounts/${account.id}`}
-                      className="text-right w-full group"
-                    >
-                      <div className={cn('text-[22px] font-medium tabular-nums truncate group-hover:underline', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
-                        {fmt(account.balance)}
-                      </div>
-                      <div className="text-[10.5px] text-stone-400 mt-0.5 flex items-center gap-1">
-                        تومان · مشاهده دفتر کل
-                      </div>
-                    </button>
-                  </CardBody>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+        <DataList
+          columns={columns}
+          data={accounts}
+          keyExtractor={a => a.id}
+          empty={<Empty title="هنوز حسابی ثبت نشده" sub={isAdmin ? 'از دکمه بالا یک حساب اضافه کنید' : 'حسابی وجود ندارد'} icon={Banknote} />}
+        />
       </div>
     </div>
   );

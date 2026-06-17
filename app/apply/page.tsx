@@ -104,7 +104,7 @@ export default function ApplyPage() {
           {STEPS.map((label, i) => (
             <div key={i} className="flex-1">
               <div className={cn('h-1 rounded-full transition-colors', i <= step ? 'bg-stone-900' : 'bg-stone-200')} />
-              <div className={cn('text-[10px] mt-1 text-center', i === step ? 'text-stone-900 font-medium' : 'text-stone-400')}>{label}</div>
+              <div className={cn('text-[10px] mt-1 text-center', i === step ? 'text-stone-900 font-medium' : 'text-muted')}>{label}</div>
             </div>
           ))}
         </div>
@@ -159,9 +159,9 @@ export default function ApplyPage() {
                 </div>
                 {hasResume ? (
                   <label className="flex items-center gap-2 border border-dashed border-stone-300 rounded-lg p-3 cursor-pointer hover:border-stone-400">
-                    <Upload size={16} className="text-stone-400" />
+                    <Upload size={16} className="text-muted" />
                     <span className="text-[12px] text-stone-500 flex-1 truncate">{file ? file.name : 'فایل PDF، عکس یا Word'}</span>
-                    {file && <X size={14} className="text-stone-400" onClick={e => { e.preventDefault(); setFile(null); }} />}
+                    {file && <X size={14} className="text-muted" onClick={e => { e.preventDefault(); setFile(null); }} />}
                     <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
                       onChange={e => setFile(e.target.files?.[0] ?? null)} />
                   </label>
@@ -223,5 +223,5 @@ export default function ApplyPage() {
 }
 
 function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between"><span className="text-stone-400">{k}</span><span className="text-stone-800">{v}</span></div>;
+  return <div className="flex justify-between"><span className="text-muted">{k}</span><span className="text-stone-800">{v}</span></div>;
 }

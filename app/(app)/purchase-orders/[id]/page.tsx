@@ -342,7 +342,7 @@ export default function PurchaseOrderDetailPage() {
                         onChange={e => setEditRow(i, { qty: formatNumericInputValue(e.target) })}
                       />
                       {r.inventoryItemId && (
-                        <div className="w-14 text-[11px] text-stone-400 text-center shrink-0">
+                        <div className="w-14 text-[11px] text-muted text-center shrink-0">
                           {UNIT_LABELS[branchItems.find(it => it.id === r.inventoryItemId)?.unit ?? ''] ?? ''}
                         </div>
                       )}
@@ -353,7 +353,7 @@ export default function PurchaseOrderDetailPage() {
                       />
                       <div className="w-24 text-[12px] text-stone-600 tabular-nums text-end">{fmt(rowTotal(r))}</div>
                       {editRows.length > 1 && (
-                        <button onClick={() => setEditRows(prev => prev.filter((_, idx) => idx !== i))} className="text-stone-400 hover:text-rose-600 px-1">
+                        <button onClick={() => setEditRows(prev => prev.filter((_, idx) => idx !== i))} className="text-muted hover:text-rose-600 px-1">
                           <Trash2 size={15} />
                         </button>
                       )}
@@ -390,7 +390,7 @@ export default function PurchaseOrderDetailPage() {
                     </div>
                     <div>
                       <div className="text-[15px] text-stone-900 font-medium" dir="ltr">{po.no}</div>
-                      <div className="text-[11px] text-stone-400">{supplierLabel}</div>
+                      <div className="text-[11px] text-muted">{supplierLabel}</div>
                     </div>
                   </div>
                   <Chip tone={STATUS_TONES[po.status]}>{STATUS_LABELS[po.status]}</Chip>
@@ -399,21 +399,21 @@ export default function PurchaseOrderDetailPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[12px]">
                   {isAdmin && (
                     <div>
-                      <div className="text-stone-400 mb-0.5">شعبه</div>
+                      <div className="text-muted mb-0.5">شعبه</div>
                       <div className="text-stone-700">{branchLabel}</div>
                     </div>
                   )}
                   <div>
-                    <div className="text-stone-400 mb-0.5">تاریخ تحویل مورد انتظار</div>
+                    <div className="text-muted mb-0.5">تاریخ تحویل مورد انتظار</div>
                     <div className="text-stone-700 tabular-nums">{po.expectedDate || '—'}</div>
                   </div>
                   <div>
-                    <div className="text-stone-400 mb-0.5">جمع برآوردی</div>
+                    <div className="text-muted mb-0.5">جمع برآوردی</div>
                     <div className="text-stone-700 tabular-nums">{fmt(po.estTotal)} تومان</div>
                   </div>
                   {po.finalTotal != null && (
                     <div>
-                      <div className="text-stone-400 mb-0.5">جمع نهایی</div>
+                      <div className="text-muted mb-0.5">جمع نهایی</div>
                       <div className="text-stone-700 tabular-nums">{fmt(po.finalTotal)} تومان</div>
                     </div>
                   )}
@@ -451,7 +451,7 @@ export default function PurchaseOrderDetailPage() {
               {receiveRows.map((r, i) => (
                 <div key={r.poItemId} className="flex flex-wrap items-center gap-2">
                   <div className="flex-1 min-w-[160px] text-[12.5px] text-stone-800">{r.description}</div>
-                  <div className="text-[11px] text-stone-400 tabular-nums w-24 text-center">
+                  <div className="text-[11px] text-muted tabular-nums w-24 text-center">
                     سفارش: {fmt(r.orderedQty)} {UNIT_LABELS[r.unit] ?? ''}
                   </div>
                   <Input
@@ -460,7 +460,7 @@ export default function PurchaseOrderDetailPage() {
                     onChange={e => setReceiveRow(i, { receivedQty: formatNumericInputValue(e.target) })}
                   />
                   {r.unit && (
-                    <div className="w-14 text-[11px] text-stone-400 text-center shrink-0">{UNIT_LABELS[r.unit] ?? ''}</div>
+                    <div className="w-14 text-[11px] text-muted text-center shrink-0">{UNIT_LABELS[r.unit] ?? ''}</div>
                   )}
                   {canSeePrices && (
                     <>
@@ -522,7 +522,7 @@ export default function PurchaseOrderDetailPage() {
                     <tr key={it.id} className="border-b border-stone-50 last:border-b-0">
                       <td className="px-5 py-3 text-[12.5px] text-stone-800">{it.description}</td>
                       <td className="px-3 py-3 text-center text-[12px] text-stone-600 tabular-nums">{fmt(it.qty)}</td>
-                      <td className="px-3 py-3 text-center text-[11px] text-stone-400">
+                      <td className="px-3 py-3 text-center text-[11px] text-muted">
                         {it.inventoryItemId ? (UNIT_LABELS[invItems.find(i => i.id === it.inventoryItemId)?.unit ?? ''] ?? '—') : '—'}
                       </td>
                       <td className="px-3 py-3 text-end text-[12px] text-stone-600 tabular-nums">{fmt(it.unitCost)}</td>

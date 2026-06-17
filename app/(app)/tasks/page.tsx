@@ -207,7 +207,7 @@ export default function TasksPage() {
                     <div key={t.id} className="flex flex-wrap items-center gap-3 px-3 py-2 rounded-md bg-stone-50/60">
                       <div className="flex-1 min-w-[140px]">
                         <div className="text-[12.5px] text-stone-800">{t.title}</div>
-                        <div className="text-[10.5px] text-stone-400">
+                        <div className="text-[10.5px] text-muted">
                           {t.category} · {FREQ_LABELS[t.frequency]} · {ROLE_LABELS[t.assignedRole]} · {toFa(t.estimatedMinutes)} دقیقه · {t.branchId ? branchName(t.branchId) : 'همه شعب'}
                         </div>
                       </div>
@@ -309,7 +309,7 @@ export default function TasksPage() {
                 <div key={task.id} className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-stone-50 last:border-b-0">
                   <div className="flex-1 min-w-[160px]">
                     <div className="text-[12.5px] text-stone-800">{task.title}</div>
-                    <div className="text-[10.5px] text-stone-400">{task.category} · {toFa(task.estimatedMinutes)} دقیقه</div>
+                    <div className="text-[10.5px] text-muted">{task.category} · {toFa(task.estimatedMinutes)} دقیقه</div>
                     {task.note && (
                       <div className="text-[10.5px] text-amber-600 mt-0.5">یادداشت: {task.note}</div>
                     )}
@@ -319,7 +319,7 @@ export default function TasksPage() {
                     {task.assignedUserId === user.id ? (
                       <div className="flex items-center justify-center gap-1.5">
                         <Chip tone="neutral">شما</Chip>
-                        <button onClick={() => unassignTask(task.id)} className="text-stone-400 hover:text-rose-600 text-[10.5px]">رها کردن</button>
+                        <button onClick={() => unassignTask(task.id)} className="text-muted hover:text-rose-600 text-[10.5px]">رها کردن</button>
                       </div>
                     ) : task.assignedUserId ? (
                       isAdmin ? (
@@ -349,7 +349,7 @@ export default function TasksPage() {
                       <Button variant="default" size="sm" onClick={() => { setSkippingId(task.id); setSkipNote(''); }}>رد کردن</Button>
                     )}
                     {task.status !== 'pending' && (
-                      <button onClick={() => markStatus(task.id, 'pending', null)} className="text-[11px] text-stone-400 hover:text-stone-700">بازگشت</button>
+                      <button onClick={() => markStatus(task.id, 'pending', null)} className="text-[11px] text-muted hover:text-stone-700">بازگشت</button>
                     )}
                   </div>
 

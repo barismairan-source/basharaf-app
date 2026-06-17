@@ -42,7 +42,7 @@ export function CategoriesPane() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="text-[13px] text-stone-600 leading-7">
+        <div className="text-[13px] text-muted leading-7">
           دسته‌بندی‌ها در فرم ثبت تراکنش جدید به‌صورت dropdown نمایش داده می‌شوند.
           هر تراکنش <code className="bg-stone-100 px-1 rounded text-stone-700">categoryName</code>{' '}
           را در زمان ثبت کپی می‌کند، پس حذف یک دسته به تراکنش‌های قبلی آسیب نمی‌رساند.
@@ -281,7 +281,7 @@ function CategoryModal({ mode, type, category, onClose }: CategoryModalProps) {
               type="button"
               onClick={onClose}
               aria-label="بستن"
-              className="w-7 h-7 rounded-md hover:bg-stone-50 flex items-center justify-center text-stone-400"
+              className="w-7 h-7 rounded-md hover:bg-stone-50 flex items-center justify-center text-muted"
             >
               <X size={13} strokeWidth={1.5} />
             </button>

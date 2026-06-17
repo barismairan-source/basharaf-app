@@ -210,7 +210,7 @@ export default function OrderCheckoutPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-[13px] text-stone-400">
+      <div className="flex min-h-screen items-center justify-center text-[13px] text-muted">
         در حال بارگذاری…
       </div>
     );
@@ -305,7 +305,7 @@ export default function OrderCheckoutPage() {
             {cartItems.map((it) => (
               <div key={it.id} className="flex items-center justify-between px-4 py-2.5 text-[13px]">
                 <div className="text-stone-700">
-                  {it.titleFa} <span className="text-stone-400">× {toFa(it.qty)}</span>
+                  {it.titleFa} <span className="text-muted">× {toFa(it.qty)}</span>
                 </div>
                 <div className="text-stone-800">{fmt(it.lineTotal)} تومان</div>
               </div>
@@ -362,7 +362,7 @@ export default function OrderCheckoutPage() {
                             }`}
                           >
                             <span className="font-medium">{a.title}</span>
-                            <span className="mr-2 text-stone-400">{a.address}</span>
+                            <span className="mr-2 text-muted">{a.address}</span>
                           </button>
                         ))}
                       </div>
@@ -426,7 +426,7 @@ export default function OrderCheckoutPage() {
               ) : (
                 <p className="text-[13px] text-stone-700">{payMethodOptions[0]!.label}</p>
               )}
-              <p className="text-[11.5px] text-stone-400">
+              <p className="text-[11.5px] text-muted">
                 {payMethod === 'cash'
                   ? `پرداخت نقدی ${serviceType === 'delivery' ? '— هنگام تحویل به پیک' : '— هنگام دریافت حضوری'}`
                   : 'پس از ثبت سفارش به درگاه پرداخت آنلاین منتقل می‌شوید.'}
@@ -505,7 +505,7 @@ export default function OrderCheckoutPage() {
       <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[11.5px] text-stone-400">{toFa(cartItems.length)} قلم</div>
+            <div className="text-[11.5px] text-muted">{toFa(cartItems.length)} قلم</div>
             <div className="text-[15px] text-stone-800">{fmt(total)} تومان</div>
           </div>
           <Button variant="primary" loading={submitting} disabled={!canSubmit} onClick={handleSubmit}>

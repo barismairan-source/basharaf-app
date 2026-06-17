@@ -21,8 +21,9 @@ const config: Config = {
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         muted: {
-          DEFAULT:    'hsl(var(--muted))',
+          DEFAULT:    dt.muted,                        /* '#57534e' stone-600 — برای text-muted */
           foreground: 'hsl(var(--muted-foreground))',
+          bg:         'hsl(var(--muted))',              /* hsl(30 9% 96%) — در صورت نیاز به bg-muted-bg */
         },
         primary: {
           DEFAULT:    'hsl(var(--primary))',

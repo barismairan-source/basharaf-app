@@ -115,7 +115,7 @@ export default function CustomerProfilePage() {
   }
 
   if (loading) {
-    return <div className="p-6 text-center text-[12px] text-stone-400">در حال بارگذاری…</div>;
+    return <div className="p-6 text-center text-[12px] text-muted">در حال بارگذاری…</div>;
   }
   if (notFound || !data) {
     return (
@@ -271,7 +271,7 @@ export default function CustomerProfilePage() {
                             {LOYALTY_TYPE_LABELS[l.type] ?? l.type}
                           </div>
                           {l.reason && (
-                            <div className="text-[10.5px] text-stone-400">{l.reason}</div>
+                            <div className="text-[10.5px] text-muted">{l.reason}</div>
                           )}
                         </div>
                         <span
@@ -307,7 +307,7 @@ export default function CustomerProfilePage() {
                         <div className="text-[12.5px] text-stone-800">
                           {r.date} — <span dir="ltr">{r.time}</span>
                         </div>
-                        <div className="text-[10.5px] text-stone-400">{fmt(r.partySize)} نفر</div>
+                        <div className="text-[10.5px] text-muted">{fmt(r.partySize)} نفر</div>
                       </div>
                       <Chip tone="neutral">{RES_STATUS_LABELS[r.status] ?? r.status}</Chip>
                     </li>
@@ -546,7 +546,7 @@ function Stat({
         {label}
       </div>
       <div className="text-[15px] font-medium text-stone-900 tabular-nums">{value}</div>
-      {suffix && <div className="text-[9.5px] text-stone-400">{suffix}</div>}
+      {suffix && <div className="text-[9.5px] text-muted">{suffix}</div>}
     </div>
   );
 }

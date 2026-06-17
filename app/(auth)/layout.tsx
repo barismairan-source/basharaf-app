@@ -31,7 +31,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             <br />
             ساده و یک‌جا.
           </h1>
-          <p className="text-stone-400 text-[13px] leading-7 max-w-sm">
+          <p className="text-muted text-[13px] leading-7 max-w-sm">
             ثبت تراکنش‌ها، تایید توسط مدیر کل، گزارش‌گیری
             شفاف برای همه شعب — بدون پیچیدگی.
           </p>
@@ -58,7 +58,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       {/* لینک bottom-right برای footer ساده روی موبایل */}
       <Link
         href="/login"
-        className="md:hidden fixed bottom-4 inset-x-0 text-center text-[11px] text-stone-400"
+        className="md:hidden fixed bottom-4 inset-x-0 text-center text-[11px] text-muted"
       >
         © ۱۴۰۵ با شرف
       </Link>

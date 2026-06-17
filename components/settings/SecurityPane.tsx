@@ -129,12 +129,12 @@ export function SecurityPane() {
                   <div className="flex-1 min-w-0">
                     <span className={cn('text-[12.5px]', color)}>{label}</span>
                     {entry.ip && (
-                      <span className="text-[11px] text-stone-400 mr-2" dir="ltr">
+                      <span className="text-[11px] text-muted mr-2" dir="ltr">
                         {entry.ip}
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-stone-400 flex-shrink-0">
+                  <div className="text-[11px] text-muted flex-shrink-0">
                     {formatted}
                   </div>
                 </div>

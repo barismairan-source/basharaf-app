@@ -189,7 +189,7 @@ export default function AddressPicker({
           انصراف
         </button>
         <span className="flex items-center gap-1.5 text-[13px] font-medium text-stone-700">
-          <MapPin size={14} className="text-stone-400" />
+          <MapPin size={14} className="text-muted" />
           انتخاب موقعیت روی نقشه
         </span>
         <div className="w-14" />
@@ -198,7 +198,7 @@ export default function AddressPicker({
       {/* جستجو */}
       <div className="relative shrink-0 border-b border-stone-100 bg-white px-3 py-2">
         <div className="relative">
-          <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" />
+          <Search size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             value={searchTerm}
@@ -208,7 +208,7 @@ export default function AddressPicker({
             className="w-full rounded-lg border border-stone-200 bg-stone-50 py-2 pr-8 pl-8 text-[12.5px] focus:border-stone-300 focus:outline-none focus:bg-white"
           />
           {searching && (
-            <Loader2 size={13} className="absolute left-3 top-1/2 -translate-y-1/2 animate-spin text-stone-400" />
+            <Loader2 size={13} className="absolute left-3 top-1/2 -translate-y-1/2 animate-spin text-muted" />
           )}
         </div>
 
@@ -223,7 +223,7 @@ export default function AddressPicker({
                 >
                   <span className="text-[12.5px] font-medium text-stone-700">{r.title}</span>
                   {r.address && (
-                    <span className="text-[11px] text-stone-400">{r.address}</span>
+                    <span className="text-[11px] text-muted">{r.address}</span>
                   )}
                 </button>
               </li>
@@ -239,14 +239,14 @@ export default function AddressPicker({
       <div className="shrink-0 border-t border-stone-100 bg-white px-4 py-3">
         <div className="mb-3 min-h-[2.5rem] rounded-lg bg-stone-50 px-3 py-2">
           {geocoding ? (
-            <span className="flex items-center gap-1.5 text-[12px] text-stone-400">
+            <span className="flex items-center gap-1.5 text-[12px] text-muted">
               <Loader2 size={12} className="animate-spin" />
               در حال دریافت آدرس…
             </span>
           ) : address ? (
             <p className="text-[12.5px] leading-relaxed text-stone-700">{address}</p>
           ) : (
-            <p className="text-[12px] text-stone-400">
+            <p className="text-[12px] text-muted">
               روی نقشه کلیک کنید یا مارکر را بکشید تا آدرس بارگذاری شود
             </p>
           )}

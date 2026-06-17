@@ -116,7 +116,7 @@ export function RejectModal({
               onClick={() => !loading && onCancel()}
               disabled={loading}
               aria-label="بستن"
-              className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-stone-400 transition-colors disabled:opacity-40"
+              className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-muted transition-colors disabled:opacity-40"
             >
               <X size={14} strokeWidth={1.5} aria-hidden="true" />
             </button>

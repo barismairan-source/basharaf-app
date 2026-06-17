@@ -86,7 +86,7 @@ export function JalaliDatePicker({
         disabled && 'bg-stone-50/60 cursor-not-allowed'
       )}
     >
-      <div className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-stone-400 z-10">
+      <div className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted z-10">
         <CalendarIcon size={14} strokeWidth={1.5} aria-hidden="true" />
       </div>
 
@@ -102,7 +102,7 @@ export function JalaliDatePicker({
         placeholder={placeholder}
         // کلاس‌های inline برای input که picker render می‌کند
         inputClass={cn(
-          'w-full h-10 ps-10 pe-3 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-300 focus:outline-none rounded-md tabular-nums',
+          'w-full h-10 ps-10 pe-3 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none rounded-md tabular-nums',
           disabled && 'cursor-not-allowed text-stone-500'
         )}
         // container parent (تخصیص می‌گیرد به portal)

@@ -59,7 +59,7 @@ export default function LoginPage() {
               label="رمز عبور"
               error={errors.password?.message}
               hint={
-                <Link href="/forgot" className="text-[11px] text-stone-400 hover:text-stone-700 transition-colors">
+                <Link href="/forgot" className="text-[11px] text-muted hover:text-stone-700 transition-colors">
                   فراموش کرده‌اید؟
                 </Link>
               }

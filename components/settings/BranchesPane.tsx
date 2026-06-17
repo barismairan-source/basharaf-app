@@ -111,10 +111,10 @@ export function BranchesPane() {
                           <div className="text-[13px] text-stone-900 truncate">
                             {b.name}
                           </div>
-                          <div className="text-[11.5px] text-stone-500 mt-1 truncate">
+                          <div className="text-[11.5px] text-muted mt-1 truncate">
                             {b.address}
                           </div>
-                          <div className="text-[11px] text-stone-400 mt-1.5 flex items-center gap-3 flex-wrap">
+                          <div className="text-[11px] text-muted mt-1.5 flex items-center gap-3 flex-wrap">
                             <span>مدیر: {b.manager}</span>
                             <span>·</span>
                             <span>افتتاح: {b.opened}</span>
@@ -268,7 +268,7 @@ function BranchModal({ mode, branch, onClose }: BranchModalProps) {
               type="button"
               onClick={onClose}
               aria-label="بستن"
-              className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-stone-400"
+              className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-muted"
             >
               <X size={14} strokeWidth={1.5} />
             </button>

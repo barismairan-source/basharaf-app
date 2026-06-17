@@ -44,7 +44,7 @@ export function RealtimeIndicator() {
         'flex items-center gap-1.5 text-[10.5px] px-2 py-1 rounded-full border transition-colors',
         connected
           ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
-          : 'text-stone-400 bg-stone-50 border-stone-200'
+          : 'text-muted bg-stone-50 border-stone-200'
       )}
     >
       <span

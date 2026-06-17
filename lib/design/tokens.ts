@@ -29,7 +29,7 @@ export const colors = {
 
   // متن
   text:           '#1c1917',   // stone-900 — متن اصلی
-  muted:          '#78716c',   // stone-500 — متن ثانوی / placeholder
+  muted:          '#57534e',   // stone-600 — تست ثانوی/label (WCAG AA ≥4.5:1)
 
   // accent — آبی برای تعامل‌پذیری، لینک، state فعال
   accent:         '#2563eb',   // blue-600

@@ -54,7 +54,7 @@ export function FeedbackSummaryCard() {
                   <span className="text-[13px] font-medium text-stone-800 tabular-nums" dir="ltr">
                     {row.average.toFixed(1)}
                   </span>
-                  <span className="text-[10.5px] text-stone-400 tabular-nums">
+                  <span className="text-[10.5px] text-muted tabular-nums">
                     ({row.count})
                   </span>
                 </div>

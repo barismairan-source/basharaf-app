@@ -207,14 +207,14 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
               )}
             >
               {tx.type === 'income' ? '+' : '−'} {fmt(tx.amount)}
-              <span className="text-[11px] text-stone-400 me-1.5"> تومان</span>
+              <span className="text-[11px] text-muted me-1.5"> تومان</span>
             </div>
           </div>
           <button
             type="button"
             onClick={() => !actionLoading && onClose()}
             aria-label="بستن"
-            className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-stone-400 transition-colors flex-shrink-0"
+            className="w-8 h-8 rounded-md hover:bg-stone-50 flex items-center justify-center text-muted transition-colors flex-shrink-0"
           >
             <X size={14} strokeWidth={1.5} aria-hidden="true" />
           </button>
@@ -471,7 +471,7 @@ function DetailRow({ icon: Icon, label, value, monospace }: DetailRowProps) {
         <Icon size={12} strokeWidth={1.5} aria-hidden="true" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[10.5px] text-stone-400">{label}</div>
+        <div className="text-[10.5px] text-muted">{label}</div>
         <div
           className={cn(
             'text-[12.5px] text-stone-800 mt-0.5 break-words',
@@ -522,7 +522,7 @@ function TimelineRow({ icon: Icon, label, by, at, tone }: TimelineRowProps) {
         <div className="text-[12px] text-stone-700">
           {label} توسط <span className="text-stone-900">{by}</span>
         </div>
-        <div className="text-[10.5px] text-stone-400 mt-0.5">{formatted}</div>
+        <div className="text-[10.5px] text-muted mt-0.5">{formatted}</div>
       </div>
     </div>
   );

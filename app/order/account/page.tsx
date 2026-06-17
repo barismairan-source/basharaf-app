@@ -103,7 +103,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="09xxxxxxxxx"
-              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-center text-[14px] tracking-widest placeholder:text-stone-300 focus:border-stone-400 focus:outline-none"
+              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-center text-[14px] tracking-widest placeholder:text-stone-400 focus:border-stone-400 focus:outline-none"
             />
           </div>
           {error && (
@@ -132,7 +132,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               placeholder="------"
-              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-center text-[18px] tracking-[0.4em] placeholder:text-stone-300 focus:border-stone-400 focus:outline-none"
+              className="w-full rounded-xl border border-stone-200 px-4 py-3 text-center text-[18px] tracking-[0.4em] placeholder:text-stone-400 focus:border-stone-400 focus:outline-none"
             />
           </div>
           {error && (
@@ -148,7 +148,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
           <button
             type="button"
             onClick={() => { setStep('phone'); setCode(''); setError(null); }}
-            className="w-full text-center text-[12px] text-stone-400 underline-offset-2 hover:underline"
+            className="w-full text-center text-[12px] text-muted underline-offset-2 hover:underline"
           >
             تغییر شماره
           </button>
@@ -156,7 +156,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
       )}
 
       <div className="mt-8 text-center">
-        <Link href="/order" className="text-[12px] text-stone-400 underline-offset-2 hover:underline">
+        <Link href="/order" className="text-[12px] text-muted underline-offset-2 hover:underline">
           بازگشت به منو
         </Link>
       </div>
@@ -231,7 +231,7 @@ function AddressesTab({ customerId, neshanApiKey }: { customerId: string; neshan
   }
 
   if (loading) {
-    return <p className="py-8 text-center text-[12.5px] text-stone-400">در حال بارگذاری…</p>;
+    return <p className="py-8 text-center text-[12.5px] text-muted">در حال بارگذاری…</p>;
   }
 
   return (
@@ -252,7 +252,7 @@ function AddressesTab({ customerId, neshanApiKey }: { customerId: string; neshan
 
       <div className="space-y-3">
         {addresses.length === 0 && !showForm && (
-          <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-[12.5px] text-stone-400">
+          <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-[12.5px] text-muted">
             هنوز آدرسی ذخیره نشده
           </p>
         )}
@@ -262,7 +262,7 @@ function AddressesTab({ customerId, neshanApiKey }: { customerId: string; neshan
             key={addr.id}
             className="flex items-start gap-3 rounded-xl border border-stone-100 bg-white px-4 py-3"
           >
-            <MapPin size={16} className="mt-0.5 shrink-0 text-stone-400" />
+            <MapPin size={16} className="mt-0.5 shrink-0 text-muted" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-[13px] font-medium text-stone-700">{addr.title}</span>
@@ -278,7 +278,7 @@ function AddressesTab({ customerId, neshanApiKey }: { customerId: string; neshan
               {!addr.isDefault && (
                 <button
                   onClick={() => handleSetDefault(addr.id)}
-                  className="text-[11px] text-stone-400 hover:text-amber-600"
+                  className="text-[11px] text-muted hover:text-amber-600"
                   title="تنظیم به عنوان پیش‌فرض"
                 >
                   <Star size={14} />
@@ -286,7 +286,7 @@ function AddressesTab({ customerId, neshanApiKey }: { customerId: string; neshan
               )}
               <button
                 onClick={() => handleDelete(addr.id)}
-                className="text-[11px] text-stone-300 hover:text-rose-500"
+                className="text-[11px] text-muted hover:text-rose-500"
               >
                 <Trash2 size={14} />
               </button>
@@ -375,12 +375,12 @@ function OrdersTab() {
   }, []);
 
   if (loading) {
-    return <p className="py-8 text-center text-[12.5px] text-stone-400">در حال بارگذاری…</p>;
+    return <p className="py-8 text-center text-[12.5px] text-muted">در حال بارگذاری…</p>;
   }
 
   if (orders.length === 0) {
     return (
-      <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-[12.5px] text-stone-400">
+      <p className="rounded-xl bg-stone-50 px-4 py-6 text-center text-[12.5px] text-muted">
         هنوز سفارشی ثبت نشده
       </p>
     );
@@ -394,7 +394,7 @@ function OrdersTab() {
           href={`/order/track/${order.trackToken}`}
           className="flex items-center gap-3 rounded-xl border border-stone-100 bg-white px-4 py-3 hover:border-stone-200"
         >
-          <Package size={16} className="shrink-0 text-stone-400" />
+          <Package size={16} className="shrink-0 text-muted" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="text-[13px] font-medium text-stone-700">{order.orderNo}</span>
@@ -404,12 +404,12 @@ function OrdersTab() {
                 {STATUS_LABEL[order.status] ?? order.status}
               </span>
             </div>
-            <div className="mt-0.5 flex items-center gap-3 text-[11.5px] text-stone-400">
+            <div className="mt-0.5 flex items-center gap-3 text-[11.5px] text-muted">
               <span>{order.jalaliDate}</span>
               <span>{fmt(order.total)} تومان</span>
             </div>
           </div>
-          <ChevronRight size={14} className="shrink-0 text-stone-300" />
+          <ChevronRight size={14} className="shrink-0 text-muted" />
         </Link>
       ))}
     </div>
@@ -441,7 +441,7 @@ export default function CustomerAccountPage() {
   // بارگذاری
   if (customer === undefined) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-[13px] text-stone-400" dir="rtl">
+      <div className="flex min-h-screen items-center justify-center text-[13px] text-muted" dir="rtl">
         در حال بارگذاری…
       </div>
     );
@@ -508,7 +508,7 @@ export default function CustomerAccountPage() {
 
       {/* لینک منو */}
       <div className="mt-8 text-center">
-        <Link href="/order" className="text-[12px] text-stone-400 underline-offset-2 hover:underline">
+        <Link href="/order" className="text-[12px] text-muted underline-offset-2 hover:underline">
           بازگشت به منو
         </Link>
       </div>

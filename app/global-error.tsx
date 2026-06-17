@@ -63,7 +63,7 @@ export default function GlobalError({
             </div>
 
             {error.digest && (
-              <div className="mt-6 text-[10.5px] text-stone-400" dir="ltr">
+              <div className="mt-6 text-[10.5px] text-muted" dir="ltr">
                 Error ID: {error.digest}
               </div>
             )}

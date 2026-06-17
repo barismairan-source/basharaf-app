@@ -27,7 +27,7 @@ export function Label({ optional, children, className, ...props }: LabelProps) {
     >
       {children}
       {optional && (
-        <span className="text-stone-400 text-[11px]">(اختیاری)</span>
+        <span className="text-muted text-[11px]">(اختیاری)</span>
       )}
     </label>
   );

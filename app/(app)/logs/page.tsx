@@ -103,7 +103,7 @@ export default function LogsPage() {
                   <span className="text-[11.5px] text-stone-500">{s.label}</span>
                 </div>
                 <div className={cn('text-[20px] font-medium tabular-nums', s.color)}>{counts[lv] ?? 0}</div>
-                <div className="text-[9.5px] text-stone-400 mt-0.5">۲۴ ساعت اخیر</div>
+                <div className="text-[9.5px] text-muted mt-0.5">۲۴ ساعت اخیر</div>
               </button>
             );
           })}
@@ -135,17 +135,17 @@ export default function LogsPage() {
                         <Chip tone="neutral">{log.category}</Chip>
                         {log.statusCode && <span className={cn('text-[10.5px] tabular-nums', s.color)}>{log.statusCode}</span>}
                         {log.method && log.path && (
-                          <span className="text-[10.5px] text-stone-400" dir="ltr">{log.method} {log.path}</span>
+                          <span className="text-[10.5px] text-muted" dir="ltr">{log.method} {log.path}</span>
                         )}
                       </div>
                       <div className="text-[12.5px] text-stone-800 mt-1 truncate">{log.message}</div>
-                      <div className="text-[10px] text-stone-400 mt-0.5">
+                      <div className="text-[10px] text-muted mt-0.5">
                         {fmtTime(log.createdAt)}
                         {log.userEmail && <span> · {log.userEmail}</span>}
                         {log.ip && <span dir="ltr"> · {log.ip}</span>}
                       </div>
                     </div>
-                    <ChevronDown size={14} className={cn('text-stone-400 transition-transform flex-shrink-0', isOpen && 'rotate-180')} />
+                    <ChevronDown size={14} className={cn('text-muted transition-transform flex-shrink-0', isOpen && 'rotate-180')} />
                   </button>
                   {isOpen && (log.context || log.stack) && (
                     <div className="border-t border-stone-100 p-3 bg-stone-50/50 space-y-2">

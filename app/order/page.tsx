@@ -81,7 +81,7 @@ export default function PublicOrderPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-[13px] text-stone-400">
+      <div className="flex min-h-screen items-center justify-center text-[13px] text-muted">
         در حال بارگذاری منو…
       </div>
     );
@@ -138,7 +138,7 @@ export default function PublicOrderPage() {
         <div className="fixed inset-x-0 bottom-0 border-t border-stone-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-[11.5px] text-stone-400">{toFa(cartCount)} قلم</div>
+              <div className="text-[11.5px] text-muted">{toFa(cartCount)} قلم</div>
               <div className="text-[15px] text-stone-800">{fmt(subtotal)} تومان</div>
               {remaining > 0 && (
                 <div className="text-[11px] text-amber-600">
@@ -208,7 +208,7 @@ function ItemRow({
       <div className="min-w-0 flex-1">
         <div className="text-[13.5px] text-stone-800">{item.titleFa}</div>
         {item.descriptionFa && (
-          <div className="mt-0.5 text-[11.5px] leading-relaxed text-stone-400">
+          <div className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
             {item.descriptionFa}
           </div>
         )}

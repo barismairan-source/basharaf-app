@@ -170,7 +170,7 @@ export function NotificationsBell() {
                       <div className="text-[11.5px] text-stone-500 truncate mt-0.5">
                         {n.sub}
                       </div>
-                      <div className="text-[10.5px] text-stone-400 mt-1">
+                      <div className="text-[10.5px] text-muted mt-1">
                         {n.time}
                       </div>
                     </div>

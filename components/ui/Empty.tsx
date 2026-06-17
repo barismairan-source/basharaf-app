@@ -51,12 +51,12 @@ export function Empty({
         className
       )}
     >
-      <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 mb-3">
+      <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center text-muted mb-3">
         <Icon size={16} strokeWidth={1.5} />
       </div>
       <div className="text-[13.5px] text-stone-700">{title}</div>
       {sub && (
-        <div className="text-[12px] text-stone-400 mt-1 max-w-xs">{sub}</div>
+        <div className="text-[12px] text-muted mt-1 max-w-xs">{sub}</div>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

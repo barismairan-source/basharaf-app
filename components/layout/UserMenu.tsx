@@ -70,7 +70,7 @@ export function UserMenu() {
         <ChevronDown
           size={12}
           strokeWidth={1.5}
-          className="text-stone-400 hidden md:block"
+          className="text-muted hidden md:block"
           aria-hidden="true"
         />
       </button>
@@ -85,7 +85,7 @@ export function UserMenu() {
             <div className="text-[13px] text-stone-800 truncate">
               {user.name}
             </div>
-            <div className="text-[11px] text-stone-400 mt-0.5 truncate" dir="ltr">
+            <div className="text-[11px] text-muted mt-0.5 truncate" dir="ltr">
               {user.email}
             </div>
             <div className="mt-2 inline-flex items-center text-[10.5px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 border border-stone-200">

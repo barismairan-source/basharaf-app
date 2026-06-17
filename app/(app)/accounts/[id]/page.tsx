@@ -67,7 +67,7 @@ export default function AccountLedgerPage() {
                 <div className={cn('text-[26px] font-medium tabular-nums', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
                   {fmt(account.balance)}
                 </div>
-                <div className="text-[10.5px] text-stone-400 mt-0.5">موجودی فعلی (تومان)</div>
+                <div className="text-[10.5px] text-muted mt-0.5">موجودی فعلی (تومان)</div>
               </CardBody>
             </Card>
 
@@ -99,7 +99,7 @@ export default function AccountLedgerPage() {
                               )}
                               <div>
                                 <div className="text-[12.5px] text-stone-800">{e.title}</div>
-                                <div className="text-[10px] text-stone-400">{e.payee}</div>
+                                <div className="text-[10px] text-muted">{e.payee}</div>
                               </div>
                             </div>
                           </td>

@@ -35,7 +35,7 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           className
         )}
       >
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
           <Lock size={14} strokeWidth={1.5} />
         </div>
         <input
@@ -43,14 +43,14 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           type={show ? 'text' : 'password'}
           dir="ltr"
           disabled={disabled}
-          className="w-full h-11 pr-10 pl-10 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-300 focus:outline-none rounded-md"
+          className="w-full h-11 pr-10 pl-10 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none rounded-md"
           {...props}
         />
         <button
           type="button"
           onClick={() => setShow((s) => !s)}
           aria-label={show ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded text-stone-400 hover:text-stone-700 hover:bg-stone-50 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded text-muted hover:text-stone-700 hover:bg-stone-50 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
         >
           {show ? (
             <EyeOff size={14} strokeWidth={1.5} />

@@ -277,7 +277,7 @@ export default function PurchaseOrdersPage() {
                       <div key={r.itemId} className="flex flex-wrap items-center gap-2">
                         <Checkbox checked={r.selected} onChange={e => setSuggestRow(i, { selected: e.target.checked })} />
                         <div className="flex-1 min-w-[140px] text-[12.5px] text-stone-800">{r.name}</div>
-                        <div className="text-[11px] text-stone-400 tabular-nums w-32 text-center">
+                        <div className="text-[11px] text-muted tabular-nums w-32 text-center">
                           موجودی: {fmt(r.currentQty)} / حداقل: {fmt(r.minQty)} {UNIT_LABELS[r.unit] ?? ''}
                         </div>
                         <Input
@@ -285,7 +285,7 @@ export default function PurchaseOrdersPage() {
                           value={r.qty}
                           onChange={e => setSuggestRow(i, { qty: formatNumericInputValue(e.target) })}
                         />
-                        <div className="w-14 text-[11px] text-stone-400 text-center shrink-0">{UNIT_LABELS[r.unit] ?? ''}</div>
+                        <div className="w-14 text-[11px] text-muted text-center shrink-0">{UNIT_LABELS[r.unit] ?? ''}</div>
                         <Input
                           className="w-28" dir="ltr" inputMode="numeric" placeholder="بهای واحد"
                           value={r.unitCost}
@@ -377,7 +377,7 @@ export default function PurchaseOrdersPage() {
                       onChange={e => setRow(i, { qty: formatNumericInputValue(e.target) })}
                     />
                     {r.inventoryItemId && (
-                      <div className="w-14 text-[11px] text-stone-400 text-center shrink-0">
+                      <div className="w-14 text-[11px] text-muted text-center shrink-0">
                         {UNIT_LABELS[branchItems.find(it => it.id === r.inventoryItemId)?.unit ?? ''] ?? ''}
                       </div>
                     )}
@@ -388,7 +388,7 @@ export default function PurchaseOrdersPage() {
                     />
                     <div className="w-24 text-[12px] text-stone-600 tabular-nums text-end">{fmt(rowTotal(r))}</div>
                     {rows.length > 1 && (
-                      <button onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))} className="text-stone-400 hover:text-rose-600 px-1">
+                      <button onClick={() => setRows(prev => prev.filter((_, idx) => idx !== i))} className="text-muted hover:text-rose-600 px-1">
                         <Trash2 size={15} />
                       </button>
                     )}

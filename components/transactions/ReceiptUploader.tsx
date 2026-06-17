@@ -194,11 +194,11 @@ export function ReceiptUploader({
 
           <div className="flex flex-col items-center gap-2">
             {isUploading ? (
-              <Loader2 size={24} className="text-stone-400 animate-spin" />
+              <Loader2 size={24} className="text-muted animate-spin" />
             ) : state === 'success' ? (
               <CheckCircle2 size={24} className="text-emerald-600" />
             ) : (
-              <Upload size={24} className="text-stone-400" />
+              <Upload size={24} className="text-muted" />
             )}
 
             <div className="text-[13px] text-stone-700">
@@ -210,7 +210,7 @@ export function ReceiptUploader({
             </div>
 
             {!isUploading && state !== 'success' && (
-              <div className="text-[11px] text-stone-400">
+              <div className="text-[11px] text-muted">
                 JPG، PNG، WebP، PDF — حداکثر {MAX_MB} مگابایت
               </div>
             )}
@@ -255,9 +255,9 @@ export function ReceiptUploader({
           <div className="flex items-center justify-between gap-2 px-4 py-3 bg-white border-t border-stone-100">
             <div className="flex items-center gap-2 min-w-0">
               {preview && !preview.includes('.pdf') ? (
-                <ImageIcon size={14} strokeWidth={1.5} className="text-stone-400 flex-shrink-0" />
+                <ImageIcon size={14} strokeWidth={1.5} className="text-muted flex-shrink-0" />
               ) : (
-                <FileText size={14} strokeWidth={1.5} className="text-stone-400 flex-shrink-0" />
+                <FileText size={14} strokeWidth={1.5} className="text-muted flex-shrink-0" />
               )}
               <span className="text-[12px] text-stone-600 truncate">رسید آپلود شده</span>
             </div>

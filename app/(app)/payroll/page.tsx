@@ -201,10 +201,10 @@ export default function PayrollPage() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[13.5px] font-medium text-stone-900">دوره {periodLabel(run.periodYearMonth)}</span>
                         <Chip tone={st.tone as any}>{st.label}</Chip>
-                        {run.branchName && <span className="text-[10.5px] text-stone-400">{run.branchName}</span>}
+                        {run.branchName && <span className="text-[10.5px] text-muted">{run.branchName}</span>}
                       </div>
                     </div>
-                    {isBusy && <Loader2 size={15} className="animate-spin text-stone-400" />}
+                    {isBusy && <Loader2 size={15} className="animate-spin text-muted" />}
                     {/* اکشن‌ها بر اساس وضعیت */}
                     {!isBusy && run.status === 'draft' && (
                       <Button variant="default" size="sm" icon={CalcIcon} onClick={() => handleCalculate(run.id)}>محاسبه</Button>
@@ -219,17 +219,17 @@ export default function PayrollPage() {
                     {!isBusy && run.status === 'approved' && (
                       <Button variant="primary" size="sm" icon={Send} onClick={() => handlePost(run.id)}>ثبت در حسابداری</Button>
                     )}
-                    <button onClick={() => openDetail(run.id)} className="text-stone-400 p-1">
+                    <button onClick={() => openDetail(run.id)} className="text-muted p-1">
                       <ChevronDown size={16} className={cn('transition-transform', isOpen && 'rotate-180')} />
                     </button>
                   </div>
                   {isOpen && (
                     <div className="border-t border-stone-100 bg-stone-50/50 p-3">
                       {slips.length === 0 ? (
-                        <div className="text-[12px] text-stone-400 text-center py-3">فیشی نیست (اول محاسبه کنید)</div>
+                        <div className="text-[12px] text-muted text-center py-3">فیشی نیست (اول محاسبه کنید)</div>
                       ) : (
                         <div className="space-y-1.5">
-                          <div className="grid grid-cols-4 gap-2 text-[10px] text-stone-400 px-2">
+                          <div className="grid grid-cols-4 gap-2 text-[10px] text-muted px-2">
                             <span>کارمند</span><span className="text-left">ناخالص</span>
                             <span className="text-left">کسورات</span><span className="text-left">خالص</span>
                           </div>
@@ -243,7 +243,7 @@ export default function PayrollPage() {
                               </div>
                               {s.deductionLines && s.deductionLines.length > 0 && (
                                 <div className="border-t border-stone-50 px-2 py-1.5 space-y-1">
-                                  <div className="text-[9.5px] text-stone-400">تفکیک کسورات:</div>
+                                  <div className="text-[9.5px] text-muted">تفکیک کسورات:</div>
                                   {s.deductionLines.map((d, i) => (
                                     <div key={i} className="flex justify-between text-[10.5px] text-stone-500">
                                       <span>{d.label}</span>
@@ -395,7 +395,7 @@ export default function PayrollPage() {
                       <span className="flex-1 text-stone-700">{ev.employeeName} · {ev.typeLabel}</span>
                       <span className="text-stone-500">{ev.periodYearMonth}</span>
                       <span className="tabular-nums text-stone-800">{fmt(ev.amount)}</span>
-                      <button onClick={() => handleVoidEvent(ev.id)} className="text-stone-400 hover:text-rose-600">
+                      <button onClick={() => handleVoidEvent(ev.id)} className="text-muted hover:text-rose-600">
                         <Trash2 size={13} strokeWidth={1.5} />
                       </button>
                     </div>

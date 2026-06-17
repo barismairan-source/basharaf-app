@@ -168,7 +168,7 @@ export default function EquipmentPage() {
                     >
                       <td className="px-5 py-3">
                         <div className="text-[12.5px] text-stone-800">{eq.name}</div>
-                        <div className="text-[10.5px] text-stone-400" dir="ltr">{eq.code} · {eq.category}</div>
+                        <div className="text-[10.5px] text-muted" dir="ltr">{eq.code} · {eq.category}</div>
                       </td>
                       {isAdmin && (
                         <td className="px-3 py-3 text-center">

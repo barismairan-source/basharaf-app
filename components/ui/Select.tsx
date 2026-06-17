@@ -45,7 +45,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         >
           {children}
         </select>
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-stone-400">
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted">
           <ChevronDown size={14} strokeWidth={1.5} />
         </div>
       </div>

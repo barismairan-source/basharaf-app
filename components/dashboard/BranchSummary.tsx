@@ -55,7 +55,7 @@ export function BranchSummary({ data, onBranchClick }: BranchSummaryProps) {
                   <Building2
                     size={13}
                     strokeWidth={1.5}
-                    className="text-stone-400"
+                    className="text-muted"
                     aria-hidden="true"
                   />
                   <span className="text-[12.5px] text-stone-800 truncate">
@@ -65,15 +65,15 @@ export function BranchSummary({ data, onBranchClick }: BranchSummaryProps) {
 
                 <div className="flex items-center gap-4 text-[11.5px] tabular-nums">
                   <div className="hidden sm:flex flex-col items-end">
-                    <div className="text-[10px] text-stone-400">درآمد</div>
+                    <div className="text-[10px] text-muted">درآمد</div>
                     <div className="text-emerald-700">{fmt(row.income)}</div>
                   </div>
                   <div className="hidden sm:flex flex-col items-end">
-                    <div className="text-[10px] text-stone-400">هزینه</div>
+                    <div className="text-[10px] text-muted">هزینه</div>
                     <div className="text-rose-700">{fmt(row.expense)}</div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <div className="text-[10px] text-stone-400">موجودی</div>
+                    <div className="text-[10px] text-muted">موجودی</div>
                     <div
                       className={cn(
                         row.balance > 0 && 'text-emerald-700',
@@ -87,7 +87,7 @@ export function BranchSummary({ data, onBranchClick }: BranchSummaryProps) {
                   <ArrowLeft
                     size={12}
                     strokeWidth={1.5}
-                    className="text-stone-300 group-hover:text-stone-500 transition-colors flex-shrink-0"
+                    className="text-stone-500 group-hover:text-stone-700 transition-colors flex-shrink-0"
                     aria-hidden="true"
                   />
                 </div>

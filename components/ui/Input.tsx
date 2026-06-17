@@ -62,7 +62,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
       >
         {Icon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none">
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none">
             <Icon size={14} strokeWidth={1.5} />
           </div>
         )}
@@ -72,7 +72,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           dir={dir}
           disabled={disabled}
           className={cn(
-            'w-full bg-transparent text-stone-800 placeholder:text-stone-300 focus:outline-none rounded-md',
+            'w-full bg-transparent text-stone-800 placeholder:text-stone-400 focus:outline-none rounded-md',
             height,
             fontSize,
             Icon ? 'pr-10' : 'pr-3',

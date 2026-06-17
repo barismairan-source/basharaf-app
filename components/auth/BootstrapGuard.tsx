@@ -21,7 +21,7 @@ export function BootstrapGuard({ children }: { children: React.ReactNode }) {
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-2 border-stone-300 border-t-stone-800 rounded-full animate-spin" />
-          <div className="text-[12px] text-stone-400">در حال بارگذاری...</div>
+          <div className="text-[12px] text-muted">در حال بارگذاری...</div>
         </div>
       </div>
     );

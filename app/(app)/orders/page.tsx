@@ -155,11 +155,11 @@ export default function OrdersBoardPage() {
               <div key={col.key} className="flex-shrink-0 w-[300px] flex flex-col">
                 <div className="flex items-center justify-between px-1 mb-2">
                   <h2 className="text-[13px] text-stone-600 font-medium">{col.label}</h2>
-                  <span className="text-[11px] text-stone-400 tabular-nums">{toFa(colOrders.length)}</span>
+                  <span className="text-[11px] text-muted tabular-nums">{toFa(colOrders.length)}</span>
                 </div>
                 <div className="space-y-2 min-h-[60px]">
                   {colOrders.length === 0 && (
-                    <div className="text-[11.5px] text-stone-300 text-center py-4 border border-dashed border-stone-200 rounded-lg">—</div>
+                    <div className="text-[11.5px] text-muted text-center py-4 border border-dashed border-stone-200 rounded-lg">—</div>
                   )}
                   {colOrders.map((order) => (
                     <OrderCard
@@ -203,7 +203,7 @@ function OrderCard({
           <span className="text-stone-800 font-medium truncate">#{toFa(order.orderNo)}</span>
           <Chip tone={statusTone}>{ORDER_STATUS_LABELS[order.status]}</Chip>
         </div>
-        <span className="text-stone-400 text-[11px] tabular-nums flex-shrink-0">{formatTehranTime(order.createdAt)}</span>
+        <span className="text-muted text-[11px] tabular-nums flex-shrink-0">{formatTehranTime(order.createdAt)}</span>
       </div>
 
       {showBranchName && (
@@ -216,7 +216,7 @@ function OrderCard({
       <div className="flex items-center gap-2 text-stone-600">
         <Chip tone="neutral">{order.serviceType === 'delivery' ? 'ارسال' : 'دریافت حضوری'}</Chip>
         <span className="truncate">{order.customerName}</span>
-        <span dir="ltr" className="text-stone-400 text-[11.5px]">{order.customerPhone}</span>
+        <span dir="ltr" className="text-muted text-[11.5px]">{order.customerPhone}</span>
       </div>
 
       {order.serviceType === 'delivery' && order.address && (
@@ -232,7 +232,7 @@ function OrderCard({
       <div className="border-t border-stone-100 pt-2 space-y-0.5">
         {order.lines.map((line, i) => (
           <div key={i} className="flex items-center justify-between text-stone-600">
-            <span className="truncate">{line.itemName} <span className="text-stone-400">× {toFa(line.qty)}</span></span>
+            <span className="truncate">{line.itemName} <span className="text-muted">× {toFa(line.qty)}</span></span>
             <span className="text-stone-700 flex-shrink-0">{fmt(line.lineTotal)}</span>
           </div>
         ))}

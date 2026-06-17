@@ -247,11 +247,11 @@ export default function ReservationsPage() {
                       className="inline-flex items-center gap-2 bg-stone-50 rounded-lg px-3 py-1.5 text-[12px] text-stone-700"
                     >
                       <span>{t.name}</span>
-                      <span className="text-[10px] text-stone-400 tabular-nums">{fmt(t.capacity)} نفر</span>
-                      {isAdmin && <span className="text-[10px] text-stone-400">{branchName(t.branchId)}</span>}
+                      <span className="text-[10px] text-muted tabular-nums">{fmt(t.capacity)} نفر</span>
+                      {isAdmin && <span className="text-[10px] text-muted">{branchName(t.branchId)}</span>}
                       <button
                         onClick={() => deleteTable(t.id)}
-                        className="text-stone-400 hover:text-rose-600"
+                        className="text-muted hover:text-rose-600"
                       >
                         <X size={12} strokeWidth={2} />
                       </button>
@@ -417,7 +417,7 @@ export default function ReservationsPage() {
                       {r.tableId ? ` · میز ${tableName(r.tableId)}` : ''}
                       {isAdmin ? ` · ${branchName(r.branchId)}` : ''}
                     </div>
-                    {r.note && <div className="text-[11px] text-stone-400 mt-1">{r.note}</div>}
+                    {r.note && <div className="text-[11px] text-muted mt-1">{r.note}</div>}
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     {(NEXT_STATES[r.status] ?? []).map((ns) => (
@@ -431,7 +431,7 @@ export default function ReservationsPage() {
                     ))}
                     <button
                       onClick={() => deleteReservation(r.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-stone-300 hover:text-rose-600"
+                      className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
                     >
                       <Trash2 size={13} strokeWidth={1.5} />
                     </button>

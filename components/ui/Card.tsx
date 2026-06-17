@@ -72,7 +72,7 @@ export function CardHeader({
       <div className="min-w-0 flex-1">
         <div className="text-[13.5px] text-stone-800">{title}</div>
         {sub && (
-          <div className="text-[11.5px] text-stone-400 mt-0.5">{sub}</div>
+          <div className="text-[11.5px] text-muted mt-0.5">{sub}</div>
         )}
       </div>
       {action && <div className="flex-shrink-0">{action}</div>}

@@ -209,7 +209,7 @@ export default function ReportsPage() {
                         <tr key={i} className="border-b border-stone-50 last:border-b-0">
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2">
-                              <Building2 size={12} strokeWidth={1.5} className="text-stone-400" />
+                              <Building2 size={12} strokeWidth={1.5} className="text-muted" />
                               <span className="text-[12.5px] text-stone-800">{b.name}</span>
                             </div>
                           </td>
@@ -281,7 +281,7 @@ export default function ReportsPage() {
                         <tr key={i} className="border-b border-stone-50 last:border-b-0">
                           <td className="px-5 py-2.5">
                             <div className="flex items-center gap-2">
-                              <Users size={12} strokeWidth={1.5} className="text-stone-400" />
+                              <Users size={12} strokeWidth={1.5} className="text-muted" />
                               <span className="text-[12.5px] text-stone-800">{u.name}</span>
                             </div>
                           </td>
@@ -333,10 +333,10 @@ function KPICard({ label, value, icon: Icon, color }: {
       <CardBody>
         <div className="flex items-start justify-between mb-3">
           <div className="text-[11.5px] text-stone-500">{label}</div>
-          <Icon size={14} strokeWidth={1.5} className="text-stone-400" />
+          <Icon size={14} strokeWidth={1.5} className="text-muted" />
         </div>
         <div className={cn('text-[22px] font-medium tabular-nums', color)}>{fmt(value)}</div>
-        <div className="text-[10.5px] text-stone-400 mt-1">تومان</div>
+        <div className="text-[10.5px] text-muted mt-1">تومان</div>
       </CardBody>
     </Card>
   );

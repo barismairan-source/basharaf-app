@@ -277,7 +277,7 @@ function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
     <tr className={cn('border-b border-stone-50 last:border-b-0', !item.isAvailable && 'opacity-50')}>
       <td className="px-5 py-3">
         <div className="text-[12.5px] text-stone-800">{item.titleFa}</div>
-        <div className="text-[10.5px] text-stone-400" dir="ltr">{item.titleEn}</div>
+        <div className="text-[10.5px] text-muted" dir="ltr">{item.titleEn}</div>
         <div className="flex gap-1 mt-1">
           <Chip tone={item.inHall ? 'green' : 'neutral'}>سالن</Chip>
           <Chip tone={item.inTakeaway ? 'green' : 'neutral'}>بیرون</Chip>
@@ -288,17 +288,17 @@ function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
       <td className="px-2 py-3 text-center">
         <button onClick={async () => { await onUpdate(item.id, { isAvailable: !item.isAvailable }); }}
           className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-stone-100">
-          {item.isAvailable ? <Eye size={14} className="text-emerald-600" /> : <EyeOff size={14} className="text-stone-400" />}
+          {item.isAvailable ? <Eye size={14} className="text-emerald-600" /> : <EyeOff size={14} className="text-muted" />}
         </button>
       </td>
       <td className="px-3 py-3 text-center">
         <div className="flex items-center justify-center gap-1">
           <button onClick={startEdit}
-            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700">
+            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
             <Edit3 size={13} strokeWidth={1.5} />
           </button>
           <button onClick={async () => { if (await onDelete(item.id)) showToast('حذف شد', 'success'); }}
-            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600">
+            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
         </div>
@@ -364,7 +364,7 @@ function CategoriesTab({ sections, onCreate, onUpdate, onDelete, showToast }: an
                 <tr key={s.id} className="border-b border-stone-50 last:border-b-0">
                   <td className="px-5 py-3">
                     <div className="text-[12.5px] text-stone-800">{s.labelFa}</div>
-                    <div className="text-[10.5px] text-stone-400" dir="ltr">{s.slug}</div>
+                    <div className="text-[10.5px] text-muted" dir="ltr">{s.slug}</div>
                   </td>
                   <td className="px-3 py-3 text-center"><span className="text-[12px] text-stone-500 tabular-nums">{s.items.length}</span></td>
                   <td className="px-3 py-3 text-center">
@@ -372,7 +372,7 @@ function CategoriesTab({ sections, onCreate, onUpdate, onDelete, showToast }: an
                   </td>
                   <td className="px-3 py-3 text-center">
                     <button onClick={async () => { const r = await onDelete(s.id); if (r.ok) showToast('حذف شد', 'success'); else showToast(r.error ?? 'خطا', 'danger'); }}
-                      className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600">
+                      className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
                       <Trash2 size={13} strokeWidth={1.5} />
                     </button>
                   </td>
@@ -517,7 +517,7 @@ function QrTab({ settings, showToast }: { settings: MenuSettings | null; showToa
           showToast={showToast}
         />
       </div>
-      <p className="text-[11px] text-stone-400 leading-6 text-center">
+      <p className="text-[11px] text-muted leading-6 text-center">
         این کدها به صفحه‌های منوی عمومی وصل‌اند. هر تغییری در منو یا تنظیمات فوری در آن‌ها دیده می‌شود —
         با تغییر «لینک منوی بیرون‌بر» در تب تنظیمات، QR بیرون‌بر هم به‌روز می‌شود.
       </p>

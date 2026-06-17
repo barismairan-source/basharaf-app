@@ -66,7 +66,7 @@ export function BreakdownCard({
                     <div className="text-[12px] text-stone-900 tabular-nums font-medium">
                       {fmt(row.amount)}
                     </div>
-                    <div className="text-[10.5px] text-stone-400 tabular-nums w-10 text-end">
+                    <div className="text-[10.5px] text-muted tabular-nums w-10 text-end">
                       {Math.round(row.percent)}٪
                     </div>
                   </div>

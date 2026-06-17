@@ -126,7 +126,7 @@ export function RecentList({ transactions, limit = 5 }: RecentListProps) {
                       >
                         {tx.title}
                       </div>
-                      <div className="text-[10.5px] text-stone-400 mt-0.5 truncate">
+                      <div className="text-[10.5px] text-muted mt-0.5 truncate">
                         {tx.branch} · {tx.date}
                       </div>
                     </div>

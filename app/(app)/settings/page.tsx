@@ -38,7 +38,7 @@ export default function SettingsPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-6">
           <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">تنظیمات</h1>
-          <div className="text-[12px] text-stone-500 mt-1">مدیریت حساب، شعب، کاربران و امنیت</div>
+          <div className="text-[12px] text-muted mt-1">مدیریت حساب، شعب، کاربران و امنیت</div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">

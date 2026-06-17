@@ -55,7 +55,7 @@ export function ImportPanel({ onDone }: { onDone?: () => void }) {
         <Card className="mt-3">
           <div className="px-4 pt-4 flex items-center justify-between">
             <span className="text-[14px] font-medium">ورود دسته‌ای تراکنش‌ها از اکسل</span>
-            <button onClick={() => setOpen(false)} className="text-stone-400 hover:text-stone-700"><X size={16} /></button>
+            <button onClick={() => setOpen(false)} className="text-muted hover:text-stone-700"><X size={16} /></button>
           </div>
           <CardBody>
             <div className="space-y-4">
@@ -67,7 +67,7 @@ export function ImportPanel({ onDone }: { onDone?: () => void }) {
               <Button variant="default" size="sm" icon={Download} onClick={downloadTemplate}>دانلود تمپلیت اکسل</Button>
 
               <label className="flex items-center gap-2 border border-dashed border-stone-300 rounded-lg p-3 cursor-pointer hover:border-stone-400">
-                <Upload size={16} className="text-stone-400" />
+                <Upload size={16} className="text-muted" />
                 <span className="text-[12.5px] text-stone-600 flex-1 truncate">{file ? file.name : 'فایل اکسل پرشده را انتخاب کنید'}</span>
                 <input ref={inputRef} type="file" className="hidden" accept=".xlsx,.xls"
                   onChange={(e) => { setFile(e.target.files?.[0] ?? null); setResult(null); }} />

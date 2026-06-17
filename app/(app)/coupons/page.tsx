@@ -296,14 +296,14 @@ export default function CouponsPage() {
                             onClick={() => toggleActive(c.id, c.isActive)}
                             title={c.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'}
                             className={`w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 ${
-                              c.isActive ? 'text-emerald-600' : 'text-stone-400'
+                              c.isActive ? 'text-emerald-600' : 'text-muted'
                             }`}
                           >
                             <Power size={13} strokeWidth={1.5} />
                           </button>
                           <button
                             onClick={() => handleDelete(c.id)}
-                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-stone-400 hover:text-rose-600"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
                           >
                             <Trash2 size={13} strokeWidth={1.5} />
                           </button>

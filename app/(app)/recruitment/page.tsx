@@ -272,7 +272,7 @@ export default function RecruitmentPage() {
                       <Star size={13} fill="currentColor" /> {a.score}
                     </span>
                   )}
-                  {a.resumeUrl && <FileText size={15} className="text-stone-400" />}
+                  {a.resumeUrl && <FileText size={15} className="text-muted" />}
                 </button>
 
                 {/* Detail */}
@@ -280,9 +280,9 @@ export default function RecruitmentPage() {
                   <CardBody className="border-t border-stone-100 space-y-4">
                     {/* personal */}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] text-stone-600 sm:grid-cols-4">
-                      <div><span className="text-stone-400">سن: </span>{a.age ?? '—'}</div>
-                      <div><span className="text-stone-400">جنسیت: </span>{a.gender ? GENDER_LABELS[a.gender] : '—'}</div>
-                      <div className="col-span-2"><span className="text-stone-400">سکونت: </span>{a.city ?? '—'}</div>
+                      <div><span className="text-muted">سن: </span>{a.age ?? '—'}</div>
+                      <div><span className="text-muted">جنسیت: </span>{a.gender ? GENDER_LABELS[a.gender] : '—'}</div>
+                      <div className="col-span-2"><span className="text-muted">سکونت: </span>{a.city ?? '—'}</div>
                     </div>
 
                     {a.resumeUrl ? (
@@ -291,7 +291,7 @@ export default function RecruitmentPage() {
                       </a>
                     ) : a.manualInfo ? (
                       <div className="rounded-md bg-stone-50 p-3 text-[12px] leading-6 text-stone-700">
-                        <div className="mb-1 text-[11px] text-stone-400">اطلاعات کلی (بدون رزومه)</div>
+                        <div className="mb-1 text-[11px] text-muted">اطلاعات کلی (بدون رزومه)</div>
                         {a.manualInfo}
                       </div>
                     ) : null}
@@ -300,7 +300,7 @@ export default function RecruitmentPage() {
                     <div className="space-y-2.5">
                       {SCREENING_QUESTIONS.map((q) => (
                         <div key={q.id}>
-                          <div className="text-[11.5px] text-stone-400">{q.title}</div>
+                          <div className="text-[11.5px] text-muted">{q.title}</div>
                           <div className="text-[12.5px] leading-6 text-stone-700">{a.answers[q.id] || '—'}</div>
                         </div>
                       ))}
@@ -355,19 +355,19 @@ export default function RecruitmentPage() {
             <div className="bg-white rounded-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-1">
                 <h2 className="text-[16px] font-medium text-stone-900">مدیریت سوال‌های فرم</h2>
-                <button onClick={() => setShowQuestions(false)} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+                <button onClick={() => setShowQuestions(false)} className="text-muted hover:text-stone-700"><X size={18} /></button>
               </div>
               <p className="text-[11.5px] text-stone-500 mb-4">سوال‌ها در فرم استخدام به همین ترتیب نمایش داده می‌شوند.</p>
               {qLoading ? (
-                <div className="flex justify-center py-8"><Loader2 className="animate-spin text-stone-400" /></div>
+                <div className="flex justify-center py-8"><Loader2 className="animate-spin text-muted" /></div>
               ) : (
                 <div className="space-y-3">
                   {questions.map((q, i) => (
                     <div key={q.id} className="border border-stone-200 rounded-lg p-3 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-stone-400 w-5">{i + 1}</span>
+                        <span className="text-[11px] text-muted w-5">{i + 1}</span>
                         <Input value={q.title} onChange={e => updateQuestion(i, { title: e.target.value })} placeholder="عنوان کوتاه" />
-                        <button onClick={() => removeQuestion(i)} className="text-stone-400 hover:text-rose-600 p-1"><Trash2 size={15} /></button>
+                        <button onClick={() => removeQuestion(i)} className="text-muted hover:text-rose-600 p-1"><Trash2 size={15} /></button>
                       </div>
                       <Textarea value={q.prompt} onChange={e => updateQuestion(i, { prompt: e.target.value })} rows={2} placeholder="متن کامل سوال" />
                     </div>
@@ -393,7 +393,7 @@ function NoteEditor({ initial, onSave }: { initial: string; onSave: (v: string) 
   const [val, setVal] = useState(initial);
   return (
     <div className="space-y-1.5">
-      <div className="text-[11.5px] text-stone-400">یادداشت بررسی</div>
+      <div className="text-[11.5px] text-muted">یادداشت بررسی</div>
       <div className="flex items-start gap-2">
         <Input value={val} onChange={(e) => setVal(e.target.value)} placeholder="یادداشت داخلی…" />
         <Button variant="default" size="md" onClick={() => onSave(val)} disabled={val === initial}>ذخیره</Button>
