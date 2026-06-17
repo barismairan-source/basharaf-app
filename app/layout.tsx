@@ -46,6 +46,7 @@ export const metadata: Metadata = {
     ],
   },
   formatDetection: { telephone: false, email: false, address: false },
+  other: { 'mobile-web-app-capable': 'yes' },
 };
 
 export const viewport: Viewport = {

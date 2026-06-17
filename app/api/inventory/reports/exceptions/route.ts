@@ -1,6 +1,6 @@
 // GET /api/inventory/reports/exceptions?branchId=X
 import { NextResponse } from 'next/server';
-import { and, eq, lt, isNotNull, sql } from 'drizzle-orm';
+import { and, eq, lt, gt, isNotNull, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
       .from(schema.auditLog)
       .where(and(
         eq(schema.auditLog.action, 'inventory_clamp_warning'),
-        sql`${schema.auditLog.createdAt} > ${cutoff7d}`,
+        gt(schema.auditLog.createdAt, cutoff7d),
       ));
 
     // ۳. اقلام زیر حداقل موجودی
@@ -55,8 +55,8 @@ export async function GET(req: Request) {
       .where(and(
         eq(schema.invItems.branchId, branchId),
         eq(schema.invItems.isActive, true),
-        sql`${schema.invItems.minBase} > 0`,
-        sql`${schema.invItems.qtyPhysical} < ${schema.invItems.minBase}`,
+        sql`${schema.invItems.minBase}::numeric > 0`,
+        sql`${schema.invItems.qtyPhysical}::numeric < ${schema.invItems.minBase}::numeric`,
       ));
 
     // ۴. reversal های pending

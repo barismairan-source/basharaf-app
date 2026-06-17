@@ -70,8 +70,8 @@ export default function InventoryPage() {
     if (!effectiveBranchId) return;
     setExcLoading(true);
     fetch(`/api/inventory/reports/exceptions?branchId=${effectiveBranchId}`)
-      .then((r) => r.json())
-      .then((data: ExceptionsData) => setExceptions(data))
+      .then((r) => r.ok ? r.json() : null)
+      .then((data: ExceptionsData | null) => { if (data?.stalePending) setExceptions(data); })
       .catch(() => {})
       .finally(() => setExcLoading(false));
   }, [effectiveBranchId]);
