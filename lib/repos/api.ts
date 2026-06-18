@@ -68,6 +68,20 @@ export async function apiFetch<T>(
   }
 
   if (!res.ok) {
+    // ── Global 401 interceptor ──────────────────────────────────────────
+    // هر 401 یعنی session منقضی یا revoke شده. به‌جای نشان دادن خطا
+    // به کاربر، فوری به login redirect می‌کنیم تا session مرده باقی نماند.
+    // چک pathname برای جلوگیری از redirect loop روی صفحات عمومی.
+    if (
+      res.status === 401 &&
+      typeof window !== 'undefined' &&
+      !window.location.pathname.startsWith('/login')
+    ) {
+      window.location.replace('/login');
+      // promise هرگز resolve نمی‌شود — navigation در حال انجام است
+      return new Promise<T>(() => {});
+    }
+
     const errorMsg =
       (data as { error?: string })?.error ?? `HTTP ${res.status}`;
     throw new Error(errorMsg);

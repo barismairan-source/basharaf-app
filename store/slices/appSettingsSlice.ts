@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand';
+import { apiFetch } from '@/lib/repos/api';
 
 /**
  * AppSettingsSlice — متن‌های داینامیک UI.
@@ -35,14 +36,10 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> =
 
     async _loadAppSettings() {
       try {
-        const res = await fetch('/api/settings', { credentials: 'include' });
-        if (!res.ok) return;
-        const { settings } = (await res.json()) as {
-          settings: Record<string, string>;
-        };
+        const { settings } = await apiFetch<{ settings: Record<string, string> }>('/api/settings');
         set({ appSettings: settings, appSettingsLoaded: true });
       } catch {
-        // اگر fail شد، fallback‌های hardcode استفاده می‌شوند
+        // اگر fail شد (شامل 401 که خودش redirect می‌کند)، fallback‌های hardcode
         set({ appSettingsLoaded: true });
       }
     },
@@ -56,13 +53,10 @@ export const createAppSettingsSlice: StateCreator<AppSettingsSlice> =
       }));
 
       try {
-        const res = await fetch('/api/settings', {
+        await apiFetch('/api/settings', {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
           body: JSON.stringify({ key, value }),
         });
-        if (!res.ok) throw new Error('Save failed');
         return true;
       } catch {
         // Rollback

@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.21-ux-nav` |
+| **نسخه** | `0.9.22-auth-interceptor` |
 | **آخرین به‌روزرسانی** | 2026-06-18 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
@@ -49,6 +49,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-18 — v0.9.22: رفع باگ ساختاری auth (401 interceptor) — اکانت ۲
+**چه شد:**
+۳ فایل تغییر یافت تا session منقضی‌شده دیگر کاربر را stuck نگذارد:
+(۱) `lib/repos/api.ts` — `apiFetch` interceptor: هر جواب 401 = فوری `window.location.replace('/login')`. promise هرگز resolve نمی‌شود تا component crash نکند. چک pathname برای جلوگیری از redirect loop.
+(۲) `store/index.ts` — `bootstrap()`: اگر `/api/auth/me` جواب 401 داد، redirect صریح به login (قبلاً فقط `bootstrapped: true` می‌گذاشت، کاربر روی صفحه blank می‌ماند).
+(۳) `store/slices/appSettingsSlice.ts` — `_loadAppSettings` و `updateSetting` به `apiFetch` تبدیل شدند تا از interceptor بهره ببرند.
+**چرا این نه آن:** middleware فقط روی navigation اجرا می‌شود، نه روی fetch‌های in-page. وقتی session mid-session منقضی می‌شود، هیچ navigation‌ای رخ نمی‌دهد پس middleware کمکی نمی‌کند — interceptor client-side الزامی است.
+**درباره 404 روی Liara:** کد صحیح است؛ 404 از cold-start یا proxy Liara است نه کد. با interceptor، 404 مثل 401 handle می‌شود (redirect به login).
+**فایل‌ها:** `lib/repos/api.ts`، `store/index.ts`، `store/slices/appSettingsSlice.ts`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** دیپلوی روی Liara. تنظیم `CUSTOMER_JWT_SECRET` در env Liara.
 
 ## 📓 2026-06-18 — v0.9.21: ویزارد رسپی ۳-مرحله‌ای + ناوبری یکپارچه (S1/S2/S3) — اکانت ۲
 **چه شد:**

@@ -189,6 +189,12 @@ export const useAppStore = create<AppStore>()(
           const meRes = await fetch('/api/auth/me', { credentials: 'include' });
           if (!meRes.ok) {
             set({ bootstrapped: true });
+            // 401 = session منقضی یا revoke شده — redirect صریح
+            // (middleware فقط روی navigation اجرا می‌شود؛ اگر session
+            // درست روی صفحه منقضی شود، باید خودمان redirect کنیم)
+            if (meRes.status === 401 && typeof window !== 'undefined') {
+              window.location.replace('/login');
+            }
             return;
           }
           const { user } = (await meRes.json()) as { user: User };
