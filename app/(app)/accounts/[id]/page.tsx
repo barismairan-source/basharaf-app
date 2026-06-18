@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowRight, ArrowUpCircle, ArrowDownCircle, Printer } from 'lucide-react';
-import { Card, CardBody, CardHeader, Empty } from '@/components/ui';
+import { ArrowUpCircle, ArrowDownCircle, Printer } from 'lucide-react';
+import { Card, CardBody, CardHeader, Empty, PageHeader } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 
@@ -44,17 +44,17 @@ export default function AccountLedgerPage() {
   return (
     <div className="p-4 lg:p-6 print:p-2">
       <div className="max-w-3xl mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between gap-4 print:hidden">
-          <button onClick={() => router.push('/accounts')} className="flex items-center gap-1.5 text-[12px] text-stone-500 hover:text-stone-800">
-            <ArrowRight size={14} strokeWidth={1.5} />
-            بازگشت به صندوق‌ها
-          </button>
-          <button onClick={() => window.print()} className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-stone-200 text-[12px] text-stone-600 hover:bg-stone-50">
-            <Printer size={13} strokeWidth={1.5} />
-            <span className="hidden sm:inline">چاپ</span>
-          </button>
-        </div>
+        <PageHeader
+          title={account?.name ?? 'دفتر حساب'}
+          backHref="/accounts"
+          backLabel="صندوق‌ها"
+          actions={
+            <button onClick={() => window.print()} className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[12px] text-muted hover:bg-bg transition-colors">
+              <Printer size={13} strokeWidth={1.5} />
+              <span className="hidden sm:inline">چاپ</span>
+            </button>
+          }
+        />
 
         {loading ? (
           <div className="h-64 bg-stone-100 rounded-lg animate-pulse" />

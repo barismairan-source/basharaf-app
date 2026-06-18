@@ -6,6 +6,7 @@ import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
 import { fmt } from '@/lib/utils';
+import { PageHeader } from '@/components/ui';
 import type { InventoryItem, InventoryVoucher, Account } from '@/types';
 
 const repos = createRepos(null as never);
@@ -136,7 +137,7 @@ export default function CartablePage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-6">
-      <h1 className="text-[17px] font-semibold text-text">کارتابل برگه‌ها</h1>
+      <PageHeader title="کارتابل برگه‌ها" backHref="/inventory" />
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-muted" /></div>

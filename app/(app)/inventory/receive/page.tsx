@@ -6,6 +6,7 @@ import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt, formatNumericInputValue } from '@/lib/utils';
+import { PageHeader } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/ui';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
 import type { InventoryItem, InvVoucherKind } from '@/types';
@@ -56,7 +57,7 @@ export default function ReceivePage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      <h1 className="text-[17px] font-semibold text-text">دریافت بار</h1>
+      <PageHeader title="دریافت بار" backHref="/inventory" />
 
       <div className="flex gap-1 border-b border-border">
         <button

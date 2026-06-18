@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, RefreshCw, Clock, AlertTriangle, TrendingDown, RotateCcw } from 'lucide-react';
 import { useAppStore } from '@/store';
+import { PageHeader } from '@/components/ui';
 
 type ExceptionsData = {
   stalePending: { count: number };
@@ -89,16 +90,20 @@ export default function ExceptionsPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-[17px] font-semibold text-text">داشبورد هشدارها</h1>
-        <button
-          onClick={load}
-          className="w-11 h-11 flex items-center justify-center text-muted hover:text-text rounded-lg"
-          title="به‌روزرسانی"
-        >
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-        </button>
-      </div>
+      <PageHeader
+        title="داشبورد هشدارها"
+        backHref="/inventory"
+        actions={
+          <button
+            onClick={load}
+            className="w-11 h-11 flex items-center justify-center text-muted hover:text-text rounded-lg"
+            title="به‌روزرسانی"
+            aria-label="به‌روزرسانی"
+          >
+            {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+          </button>
+        }
+      />
 
       {lastUpdated && (
         <div className="text-[11px] text-muted">

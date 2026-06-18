@@ -6,7 +6,7 @@ import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
 import { fmt, toFa } from '@/lib/utils';
-import { Button, DataList, EmptyState, Sheet } from '@/components/ui';
+import { Button, DataList, EmptyState, Sheet, PageHeader } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import type { InventoryItem, NewInventoryItemInput, InvUnit, InvItemKind } from '@/types';
 
@@ -340,12 +340,11 @@ export default function InventoryItemsPage() {
 
       <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
         {/* ─── Header ─── */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-[17px] font-semibold text-text">اقلام انبار</h1>
-          {canAdd && (
-            <Button size="sm" onClick={openAdd}>+ افزودن قلم</Button>
-          )}
-        </div>
+        <PageHeader
+          title="اقلام انبار"
+          backHref="/inventory"
+          actions={canAdd ? <Button size="sm" onClick={openAdd}>+ افزودن قلم</Button> : undefined}
+        />
 
         {/* ─── Sticky search ─── */}
         <div className="sticky top-14 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2.5 bg-bg/95 backdrop-blur border-b border-border">

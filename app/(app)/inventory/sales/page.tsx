@@ -5,7 +5,7 @@ import { Loader2, TrendingUp } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt } from '@/lib/utils';
-import { JalaliDatePicker } from '@/components/ui';
+import { JalaliDatePicker, PageHeader } from '@/components/ui';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
 import type { InventoryRecipe } from '@/types';
 
@@ -104,7 +104,7 @@ export default function SalesPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      <h1 className="text-[17px] font-semibold text-text">ثبت فروش روزانه</h1>
+      <PageHeader title="ثبت فروش روزانه" backHref="/inventory" />
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="animate-spin text-muted" size={24} /></div>

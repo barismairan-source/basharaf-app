@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.22-auth-interceptor` |
+| **نسخه** | `0.9.23-rtl-nav` |
 | **آخرین به‌روزرسانی** | 2026-06-18 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
@@ -49,6 +49,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-18 — v0.9.23: PageHeader + RTL wizard arrows — اکانت ۲
+**چه شد:**
+(۱) **کامپوننت PageHeader (جدید):** `components/ui/PageHeader.tsx` — هدر استاندارد صفحات فرعی. دکمه «→ بازگشت» با ArrowRight (در RTL به معنای رفتن به عقب = راست). `backHref` یا `onBack` یا `router.back()`. `actions` slot برای دکمه‌های سمت چپ. export شده از `components/ui/index.ts`.
+(۲) **اعمال روی ۸ صفحه فرعی انبار:** receive/stocktake/sales/plan/variance/cartable + exceptions (با دکمه refresh در actions) + items (با دکمه افزودن در actions). همه `backHref="/inventory"`.
+(۳) **accounts/[id]:** PageHeader جایگزین دکمه back دست‌ساز شد؛ عنوان = نام صندوق؛ دکمه چاپ در actions.
+(۴) **فلش‌های ویزارد رسپی (RTL fix):** باگ: `← قبلی` و `بعدی →` با Unicode char — در RTL flex ← روی سمت راست (اشتباه برای قبلی) و → سمت چپ (اشتباه برای بعدی). اصلاح: «قبلی» → `ArrowRight` اول در DOM (در RTL flex = سمت راست = درست برای برگشت)؛ «بعدی» → text اول + `ArrowLeft` بعد (در RTL flex = سمت چپ = درست برای پیشروی).
+**فایل‌ها:** `components/ui/PageHeader.tsx` (جدید)، `components/ui/index.ts`، `app/(app)/inventory/{receive,stocktake,sales,plan,variance,cartable,exceptions,items}/page.tsx`، `app/(app)/accounts/[id]/page.tsx`، `app/(app)/inventory/recipes/page.tsx`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** دیپلوی روی Liara + تنظیم `CUSTOMER_JWT_SECRET`.
 
 ## 📓 2026-06-18 — v0.9.22: رفع باگ ساختاری auth (401 interceptor) — اکانت ۲
 **چه شد:**

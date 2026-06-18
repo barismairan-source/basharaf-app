@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Loader2, Plus, Trash2, Calculator, Printer, AlertTriangle, X, Check, Search,
+  ArrowLeft, ArrowRight,
 } from 'lucide-react';
 import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
@@ -738,9 +739,11 @@ function AddRecipeWizard({
           ) : (
             <button
               onClick={goPrev}
-              className="px-4 py-2.5 rounded-lg text-[13px] border border-border text-muted min-h-[44px]"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-[13px] border border-border text-muted min-h-[44px]"
             >
-              ← قبلی
+              {/* RTL: ArrowRight (→) = رفتن به عقب */}
+              <ArrowRight size={14} strokeWidth={1.5} aria-hidden="true" />
+              قبلی
             </button>
           )}
 
@@ -749,7 +752,9 @@ function AddRecipeWizard({
               onClick={goNext}
               className="flex-1 bg-text text-surface rounded-lg text-[13px] min-h-[44px] flex items-center justify-center gap-1.5"
             >
-              بعدی →
+              {/* RTL: ArrowLeft (←) = رفتن به جلو */}
+              بعدی
+              <ArrowLeft size={14} strokeWidth={1.5} aria-hidden="true" />
             </button>
           ) : (
             <button

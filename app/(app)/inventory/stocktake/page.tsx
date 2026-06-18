@@ -5,7 +5,7 @@ import { Loader2, ClipboardList } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt } from '@/lib/utils';
-import { JalaliDatePicker } from '@/components/ui';
+import { JalaliDatePicker, PageHeader } from '@/components/ui';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
 import type { InventoryItem } from '@/types';
 
@@ -94,7 +94,7 @@ export default function StocktakePage() {
 
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-4">
-      <h1 className="text-[17px] font-semibold text-text">انبارگردانی</h1>
+      <PageHeader title="انبارگردانی" backHref="/inventory" />
 
       <div className="bg-surface border border-border rounded-lg p-4 space-y-4">
         <div className="grid grid-cols-2 gap-3">
