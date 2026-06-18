@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.23-rtl-nav` |
+| **نسخه** | `0.9.24-ui-polish` |
 | **آخرین به‌روزرسانی** | 2026-06-18 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
@@ -49,6 +49,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-18 — v0.9.24: UI polish (EmptyState + card hover + add-row button) — اکانت ۲
+**چه شد:**
+(۱) **EmptyState در recipes:** متن ساده «هنوز رسپی‌ای ثبت نشده» → کامپوننت EmptyState با آیکون ChefHat، توضیح، و دکمه CTA «رسپی جدید».
+(۲) **EmptyState در cartable:** div plain «برگه‌ای در انتظار تأیید نیست» → EmptyState با آیکون ClipboardList و توضیح راهنما.
+(۳) **کارت‌های اقدام موجودی (hover/active):** `transition-colors` → `transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97]` + `cursor-pointer`.
+(۴) **دکمه «افزودن قلم» — ۴ جا:** استایل `text-muted hover:text-text py-1` → `w-full border border-dashed border-border rounded-lg py-2.5 justify-center hover:bg-bg hover:border-text/30` — الان secondary و visible است نه گم‌شده.
+**فایل‌ها:** `app/(app)/inventory/recipes/page.tsx`، `app/(app)/inventory/cartable/page.tsx`، `app/(app)/inventory/page.tsx`، `app/(app)/inventory/receive/page.tsx` (۲ جا)، `app/(app)/purchase-orders/page.tsx`، `app/(app)/purchase-orders/[id]/page.tsx`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** دیپلوی روی Liara + تنظیم `CUSTOMER_JWT_SECRET`.
 
 ## 📓 2026-06-18 — v0.9.23: PageHeader + RTL wizard arrows — اکانت ۲
 **چه شد:**

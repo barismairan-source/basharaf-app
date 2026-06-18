@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Check, X, Loader2, Trash2, ChevronDown, ChevronLeft, RotateCcw } from 'lucide-react';
+import { Check, X, Loader2, Trash2, ChevronDown, ChevronLeft, RotateCcw, ClipboardList } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
 import { fmt } from '@/lib/utils';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, EmptyState } from '@/components/ui';
 import type { InventoryItem, InventoryVoucher, Account } from '@/types';
 
 const repos = createRepos(null as never);
@@ -150,9 +150,12 @@ export default function CartablePage() {
               {vouchers.length > 0 && <span className="mr-1.5 text-accent">({vouchers.length})</span>}
             </div>
             {vouchers.length === 0 ? (
-              <div className="text-center text-muted py-8 text-[13px] border border-border rounded-lg bg-surface">
-                برگه‌ای در انتظار تأیید نیست
-              </div>
+              <EmptyState
+                icon={ClipboardList}
+                title="برگه‌ای در انتظار تأیید نیست"
+                description="وقتی برگه‌ی ورود، خروج یا ضایعات ثبت شود اینجا برای تأیید نمایش داده می‌شود."
+                className="min-h-[200px] border border-border rounded-xl bg-surface"
+              />
             ) : vouchers.map((v) => {
               const isOpen = expanded === v.id;
               const showPrices = canSeePrices && v.kind === 'in';

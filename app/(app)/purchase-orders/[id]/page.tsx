@@ -359,8 +359,9 @@ export default function PurchaseOrderDetailPage() {
                       )}
                     </div>
                   ))}
-                  <button onClick={() => setEditRows(prev => [...prev, { ...emptyRow }])} className="text-[12px] text-stone-500 flex items-center gap-1">
-                    <Plus size={13} />افزودن قلم
+                  <button onClick={() => setEditRows(prev => [...prev, { ...emptyRow }])} className="flex items-center justify-center gap-1.5 w-full py-2.5 text-[12.5px] text-muted border border-dashed border-border rounded-lg hover:bg-bg hover:text-text hover:border-text/30 transition-colors mt-1">
+                    <Plus size={13} />
+                    افزودن قلم
                   </button>
                   <div className="text-[12.5px] text-stone-700 text-end pt-1 border-t border-stone-100">
                     جمع برآوردی: <span className="tabular-nums font-medium">{fmt(editEstTotal)}</span> تومان

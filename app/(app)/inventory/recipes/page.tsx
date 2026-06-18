@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Loader2, Plus, Trash2, Calculator, Printer, AlertTriangle, X, Check, Search,
-  ArrowLeft, ArrowRight,
+  ArrowLeft, ArrowRight, ChefHat,
 } from 'lucide-react';
 import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt, formatNumericInputValue } from '@/lib/utils';
+import { EmptyState } from '@/components/ui';
 import type { InventoryItem, InventoryRecipe, RecipeCosting } from '@/types';
 
 const repos = createRepos(null as never);
@@ -80,7 +81,20 @@ export default function RecipesPage() {
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="animate-spin text-muted" size={24} /></div>
       ) : recipes.length === 0 ? (
-        <div className="text-center text-muted py-12 text-[13px]">هنوز رسپی‌ای ثبت نشده</div>
+        <EmptyState
+          icon={ChefHat}
+          title="هنوز رسپی‌ای ثبت نشده"
+          description="اولین رسپی را بسازید تا هزینه‌ی پخت و قیمت هر پرس محاسبه شود."
+          action={
+            <button
+              onClick={() => setShowAdd(true)}
+              className="flex items-center gap-1.5 bg-text text-surface px-4 py-2.5 rounded-lg text-[12.5px] min-h-[44px]"
+            >
+              <Plus size={14} />
+              رسپی جدید
+            </button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {recipes.map((r) => (

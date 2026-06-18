@@ -238,9 +238,10 @@ function VoucherForm({
         ))}
         <button
           onClick={() => setLines((prev) => [...prev, { itemId: '', qty: '', cost: '' }])}
-          className="flex items-center gap-1 text-[12px] text-muted hover:text-text py-1"
+          className="flex items-center justify-center gap-1.5 w-full py-2.5 text-[12.5px] text-muted border border-dashed border-border rounded-lg hover:bg-bg hover:text-text hover:border-text/30 transition-colors mt-1"
         >
-          <Plus size={13} />افزودن قلم
+          <Plus size={13} />
+          افزودن قلم
         </button>
       </div>
 
@@ -380,9 +381,10 @@ function QuickBuyForm({
         ))}
         <button
           onClick={() => setRows((prev) => [...prev, { itemId: '', qty: '' }])}
-          className="flex items-center gap-1 text-[12px] text-muted hover:text-text py-1"
+          className="flex items-center justify-center gap-1.5 w-full py-2.5 text-[12.5px] text-muted border border-dashed border-border rounded-lg hover:bg-bg hover:text-text hover:border-text/30 transition-colors mt-1"
         >
-          <Plus size={13} />افزودن قلم
+          <Plus size={13} />
+          افزودن قلم
         </button>
       </div>
 

@@ -159,7 +159,8 @@ export default function InventoryPage() {
               key={card.href}
               href={card.href}
               className={cn(
-                'relative flex flex-col items-start gap-3 p-4 rounded-xl border transition-colors',
+                'relative flex flex-col items-start gap-3 p-4 rounded-xl border cursor-pointer',
+                'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.97]',
                 card.accent
                   ? 'bg-accent border-accent text-white hover:bg-blue-700'
                   : 'bg-surface border-border hover:bg-bg',
