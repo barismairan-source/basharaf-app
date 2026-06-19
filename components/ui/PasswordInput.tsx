@@ -27,11 +27,11 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
     return (
       <div
         className={cn(
-          'relative rounded-md border bg-white transition-colors',
+          'relative rounded-lg border bg-surface transition-colors',
           hasError
-            ? 'border-rose-300'
-            : 'border-stone-200 focus-within:border-stone-500',
-          disabled && 'bg-stone-50/60',
+            ? 'border-danger'
+            : 'border-border focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20',
+          disabled && 'bg-bg opacity-60',
           className
         )}
       >
@@ -43,14 +43,14 @@ export const PasswordInput = React.forwardRef<HTMLInputElement, PasswordInputPro
           type={show ? 'text' : 'password'}
           dir="ltr"
           disabled={disabled}
-          className="w-full h-11 pr-10 pl-10 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none rounded-md"
+          className="w-full h-12 pr-10 pl-10 bg-transparent text-[13.5px] text-text placeholder:text-muted/60 focus:outline-none rounded-lg"
           {...props}
         />
         <button
           type="button"
           onClick={() => setShow((s) => !s)}
           aria-label={show ? 'مخفی کردن رمز عبور' : 'نمایش رمز عبور'}
-          className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded text-muted hover:text-stone-700 hover:bg-stone-50 flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
+          className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded text-muted hover:text-text hover:bg-bg flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
         >
           {show ? (
             <EyeOff size={14} strokeWidth={1.5} />

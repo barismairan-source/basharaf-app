@@ -5,14 +5,6 @@ export interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextArea
   hasError?: boolean;
 }
 
-/**
- * Textarea — multi-line input.
- *
- * leading-7 و resize-none عمدی هستند:
- * - leading-7: متن فارسی فاصله سطر بیشتری نیاز دارد چون ascender/descender بلندتری دارد
- * - resize-none: کاربر نمی‌تواند drag کند و layout را بشکند؛ اگر متن طولانی شد،
- *   rows را افزایش بدهید یا اجازه auto-resize با onChange بدهید
- */
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, hasError, rows = 3, ...props }, ref) => {
     return (
@@ -20,10 +12,12 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         ref={ref}
         rows={rows}
         className={cn(
-          'w-full px-3 py-2.5 rounded-md border bg-white text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none resize-none leading-7 transition-colors',
+          'w-full px-3 py-2.5 rounded-lg border bg-surface',
+          'text-[13.5px] text-text placeholder:text-muted/60',
+          'focus:outline-none focus:ring-2 resize-none leading-7 transition-colors',
           hasError
-            ? 'border-rose-300 focus:border-rose-400'
-            : 'border-stone-200 focus:border-stone-400',
+            ? 'border-danger focus:border-danger focus:ring-danger/20'
+            : 'border-border focus:border-accent focus:ring-accent/20',
           className
         )}
         {...props}

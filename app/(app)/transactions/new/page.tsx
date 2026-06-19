@@ -163,7 +163,7 @@ export default function NewTransactionPage() {
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* ─── Error ─── */}
               {txError && (
-                <div className="p-3 rounded-md bg-rose-50 border border-rose-100 text-rose-700 text-[12.5px]">
+                <div className="p-3 rounded-lg bg-danger-subtle border border-danger/20 text-danger text-[12.5px]">
                   {txError}
                 </div>
               )}
@@ -264,7 +264,7 @@ export default function NewTransactionPage() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-stone-300 accent-stone-900"
+                      className="w-4 h-4 rounded border-border accent-accent"
                       checked={includeVat}
                       onChange={e => setIncludeVat(e.target.checked)}
                     />
@@ -292,7 +292,7 @@ export default function NewTransactionPage() {
                     <label className="flex items-center gap-2 cursor-pointer pr-1">
                       <input
                         type="checkbox"
-                        className="w-4 h-4 rounded border-stone-300 accent-stone-900"
+                        className="w-4 h-4 rounded border-border accent-accent"
                         checked={isCredit}
                         onChange={e => setIsCredit(e.target.checked)}
                       />
