@@ -91,6 +91,8 @@ export const users = pgTable(
     initials: text('initials').notNull(),
     lastSeen: text('last_seen').notNull().default('هم اکنون'),
     joined: text('joined').notNull(),
+    /** آیا حساب کاربری فعال است؟ false = suspended (نمی‌تواند وارد شود) */
+    isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

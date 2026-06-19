@@ -1,5 +1,8 @@
 import { cookies } from 'next/headers';
 import { signToken, verifyToken, type JWTPayload } from './jwt';
+import { getImpersonationSession, IMP_COOKIE } from './impersonation';
+import type { CapabilityKey } from './permissions';
+import { canDo } from './permissions';
 
 /**
  * Server-side session management.
@@ -69,9 +72,30 @@ export function clearServerSession(): void {
 
 /**
  * خواندن و verify session فعلی.
- * در صورت عدم وجود یا invalid → null
+ * اگر basharaf-imp موجود و معتبر باشد، آن را برمی‌گرداند (جعل هویت فعال).
+ * در غیر این صورت basharaf-session اصلی.
  */
 export async function getServerSession(): Promise<JWTPayload | null> {
+  const imp = await getImpersonationSession();
+  if (imp) {
+    return {
+      sub: imp.sub,
+      role: imp.role,
+      branchId: imp.branchId,
+      permissions: imp.permissions,
+      impersonatedBy: imp.impersonatedBy,
+    };
+  }
+  const token = cookies().get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return verifyToken(token);
+}
+
+/**
+ * مستقیماً basharaf-session را می‌خواند — برای requireAdmin که نباید از
+ * جعل هویت عبور کند (ادمین باید در حین جعل هویت هم به /admin دسترسی داشته باشد).
+ */
+export async function getRealAdminSession(): Promise<JWTPayload | null> {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return verifyToken(token);
@@ -104,11 +128,21 @@ export async function requireSession(): Promise<JWTPayload> {
   return session;
 }
 
+/**
+ * requireAdmin — همیشه token اصلی (basharaf-session) را بررسی می‌کند.
+ * در حین جعل هویت هم ادمین می‌تواند به /admin دسترسی داشته باشد.
+ */
 export async function requireAdmin(): Promise<JWTPayload> {
+  const real = await getRealAdminSession();
+  if (!real) throw new UnauthorizedError();
+  if (real.role !== 'SuperAdmin') throw new ForbiddenError();
+  return real;
+}
+
+/** بررسی قابلیت (capability) برای کاربر جاری (با در نظر گرفتن جعل هویت). */
+export async function requirePermission(cap: CapabilityKey): Promise<JWTPayload> {
   const session = await requireSession();
-  if (session.role !== 'SuperAdmin') {
-    throw new ForbiddenError();
-  }
+  if (!canDo(session, cap)) throw new ForbiddenError();
   return session;
 }
 

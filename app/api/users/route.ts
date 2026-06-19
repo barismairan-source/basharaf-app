@@ -34,6 +34,7 @@ export async function GET() {
         lastSeen: u.lastSeen,
         joined: u.joined,
         permissions: u.permissions ?? null,
+        isActive: u.isActive,
       })),
     });
   } catch (e) {

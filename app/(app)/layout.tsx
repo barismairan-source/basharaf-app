@@ -1,5 +1,6 @@
 import { Header, Sidebar, ToastContainer, BottomTabBar } from '@/components/layout';
 import { BootstrapGuard } from '@/components/auth/BootstrapGuard';
+import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
 
 /**
  * App Shell — fixed-height viewport container.
@@ -8,7 +9,9 @@ import { BootstrapGuard } from '@/components/auth/BootstrapGuard';
  */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen flex overflow-hidden bg-bg">
+    <div className="h-screen flex flex-col overflow-hidden bg-bg">
+      <ImpersonationBanner />
+      <div className="flex flex-1 overflow-hidden">
       <Sidebar />
       {/* Content column: Header pinned at top, main scrolls below */}
       <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
@@ -22,6 +25,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <BottomTabBar />
       <ToastContainer />
+      </div>
     </div>
   );
 }

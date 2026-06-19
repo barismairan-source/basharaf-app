@@ -46,7 +46,13 @@ export type AuditAction =
   | 'task.generated'
   | 'task.completed'
   | 'task.skipped'
-  | 'task.assigned';
+  | 'task.assigned'
+  | 'admin.impersonation.started'
+  | 'admin.impersonation.ended'
+  | 'admin.user.suspended'
+  | 'admin.user.activated'
+  | 'admin.user.roleChanged'
+  | 'admin.user.branchChanged';
 
 export async function audit(params: {
   action: AuditAction;

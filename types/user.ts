@@ -25,6 +25,7 @@ export type User =
       lastSeen: string;
       joined: string;
       permissions?: string[] | null;
+      isActive?: boolean;
     }
   | {
       id: string;
@@ -36,6 +37,7 @@ export type User =
       lastSeen: string;
       joined: string;
       permissions?: string[] | null;
+      isActive?: boolean;
     }
   | {
       id: string;
@@ -47,6 +49,7 @@ export type User =
       lastSeen: string;
       joined: string;
       permissions?: string[] | null;
+      isActive?: boolean;
     }
   | {
       id: string;
@@ -58,4 +61,5 @@ export type User =
       lastSeen: string;
       joined: string;
       permissions?: string[] | null;
+      isActive?: boolean;
     };

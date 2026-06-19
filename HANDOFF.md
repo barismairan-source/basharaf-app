@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.28-accounting-v1` |
-| **آخرین به‌روزرسانی** | 2026-06-19 — اکانت: ۲ |
+| **نسخه** | `0.9.29-admin-panel-v1` |
+| **آخرین به‌روزرسانی** | 2026-06-20 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
-| **دیپلوی** | 🟡 migration لازم دارد. `db-accounting-v1-migration.sql` باید در pgAdmin روی Liara اجرا شود قبل از دیپلوی. |
+| **دیپلوی** | 🟡 دو migration لازم دارد: `db-accounting-v1-migration.sql` و `db-admin-migration.sql` — هر دو باید در pgAdmin روی Liara اجرا شوند قبل از دیپلوی. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای `db-accounting-v1-migration.sql` در pgAdmin روی Liara. (۲) دیپلوی zip روی Liara. (۳) اضافه کردن فیلد `invoiceCode` به فرم ثبت تراکنش (اختیاری، برای پیش‌فاکتورها). |
+| **کار بعدی پیشنهادی** | (۱) اجرای هر دو migration در pgAdmin. (۲) دیپلوی zip روی Liara. (۳) ورود با SuperAdmin و تست `/admin`. |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-20 — v0.9.29: Super Admin Panel v1 (RBAC + Impersonation + Audit) — اکانت ۲
+**چه شد:**
+(۱) **Schema:** فیلد `is_active BOOLEAN DEFAULT TRUE` به جدول `users` اضافه شد (`lib/db/schema.ts`). Migration idempotent: `db-admin-migration.sql`.
+(۲) **Auth Layer:** `lib/auth/jwt.ts` — `impersonatedBy?` به `JWTPayload` اضافه شد. `lib/auth/impersonation.ts` ساخته شد: `signImpersonationToken`، `verifyImpersonationToken`، `getImpersonationSession`، `setImpersonationSession`، `clearImpersonationSession` با کوکی `basharaf-imp` (4h, httpOnly). `lib/auth/session.ts` — `getServerSession()` حالا `basharaf-imp` را اول بررسی می‌کند؛ `requireAdmin()` به `getRealAdminSession()` مستقیم می‌رود (ادمین در حین جعل هویت هم به `/admin` دسترسی دارد)؛ `requirePermission()` اضافه شد.
+(۳) **Middleware:** `/admin` به `PROTECTED_PREFIXES` اضافه شد؛ گارد اضافه: فقط `role === 'SuperAdmin'` می‌تواند `/admin` را ببیند.
+(۴) **API Routes:** `POST /api/admin/impersonate` (start — AuditLog می‌نویسد)؛ `POST /api/admin/impersonate/end` (end — AuditLog می‌نویسد)؛ `GET /api/admin/users` (لیست کامل با isActive)؛ `PATCH /api/admin/users/[id]` (تغییر isActive/role/branch + AuditLog)؛ `GET /api/admin/audit` (pagination + filter).
+(۵) **UI:** پنل تاریک (`bg-stone-950`) با layout مستقل `app/(admin)/`. صفحات: داشبورد ادمین، مدیریت کاربران (تعلیق + جعل هویت)، لاگ ادیت. بنر قرمز ثابت `z-50` روی تمام صفحات اپ در حین جعل هویت (`ImpersonationBanner` server component).
+(۶) **تضمین‌های امنیتی:** فقط SuperAdmin می‌تواند جعل هویت کند؛ هر شروع/پایان در AuditLog ثبت می‌شود؛ `basharaf-session` اصلی هرگز دست نمی‌خورد؛ token جعل هویت ۴ ساعته است.
+**فایل‌ها:** `lib/db/schema.ts`، `lib/auth/jwt.ts`، `lib/auth/audit.ts`، `lib/auth/impersonation.ts`، `lib/auth/session.ts`، `middleware.ts`، `types/user.ts`، `app/api/users/route.ts`، `app/api/admin/users/route.ts`، `app/api/admin/users/[id]/route.ts`، `app/api/admin/impersonate/route.ts`، `app/api/admin/impersonate/end/route.ts`، `app/api/admin/audit/route.ts`، `components/admin/AdminTable.tsx`، `components/admin/AdminSidebar.tsx`، `components/admin/ImpersonationBanner.tsx`، `components/admin/ImpersonationBannerClient.tsx`، `app/(admin)/layout.tsx`، `app/(admin)/admin/page.tsx`، `app/(admin)/admin/users/page.tsx`، `app/(admin)/admin/audit/page.tsx`، `app/(app)/layout.tsx`، `db-admin-migration.sql`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای `db-admin-migration.sql` در pgAdmin. (۲) دیپلوی. (۳) ورود SuperAdmin → `/admin` → تست جعل هویت و لاگ.
 
 ## 📓 2026-06-19 — v0.9.28: Accounting Overhaul v1 (proforma + invoiceCode + contact ledger) — اکانت ۲
 **چه شد:**

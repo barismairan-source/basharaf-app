@@ -48,8 +48,9 @@ async function fetchFreshAccess(
  */
 
 const SESSION_COOKIE = 'basharaf-session';
+const IMP_COOKIE = 'basharaf-imp';
 
-const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/orders', '/logs', '/employees', '/payroll', '/inventory', '/recruitment', '/customers', '/reservations', '/coupons', '/purchase-orders', '/equipment', '/tasks'];
+const PROTECTED_PREFIXES = ['/dashboard', '/transactions', '/settings', '/reports', '/accounts', '/contacts', '/menu', '/orders', '/logs', '/employees', '/payroll', '/inventory', '/recruitment', '/customers', '/reservations', '/coupons', '/purchase-orders', '/equipment', '/tasks', '/admin'];
 const AUTH_ROUTES = ['/login', '/signup', '/forgot'];
 
 export async function middleware(request: NextRequest) {
@@ -66,12 +67,18 @@ export async function middleware(request: NextRequest) {
   if (isProtected && !isAuthed) {
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname);
-    // اگر token موجود ولی invalid بود، آن را حذف کن
     const response = NextResponse.redirect(loginUrl);
     if (token && !session) {
       response.cookies.delete(SESSION_COOKIE);
     }
     return response;
+  }
+
+  // گارد ویژه /admin — فقط SuperAdmin (token اصلی، نه جعل هویت)
+  if (pathname.startsWith('/admin') && isAuthed) {
+    if (session!.role !== 'SuperAdmin') {
+      return NextResponse.redirect(new URL('/dashboard', request.url));
+    }
   }
 
   if (isAuthRoute && isAuthed) {

@@ -24,6 +24,8 @@ export interface JWTPayload {
   branchId: string | null;
   /** لیست بخش‌های مجاز (granular). اگر null/خالی → پیش‌فرض نقش. */
   permissions?: string[] | null;
+  /** فقط در توکن جعل هویت — id ادمین واقعی */
+  impersonatedBy?: string;
   /** issued at (epoch seconds) */
   iat?: number;
   /** expires at (epoch seconds) */
