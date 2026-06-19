@@ -13,7 +13,7 @@ export type TransactionType = 'income' | 'expense' | 'transfer';
  * - rejected: رد شده توسط SuperAdmin → روی موجودی اثر ندارد،
  *             با `rejectionReason` همراه است
  */
-export type TransactionStatus = 'pending' | 'approved' | 'rejected';
+export type TransactionStatus = 'pending' | 'approved' | 'rejected' | 'proforma';
 
 /**
  * یک دسته‌بندی درآمد یا هزینه
@@ -83,6 +83,8 @@ interface TransactionBase extends AuditFields {
   note: string;
   /** آیا فایل پیوست دارد؟ */
   hasReceipt: boolean;
+  /** شماره فاکتور/پیش‌فاکتور — null اگر وارد نشده باشد */
+  invoiceCode?: string | null;
 }
 
 /**
@@ -98,6 +100,7 @@ interface TransactionBase extends AuditFields {
  */
 export type Transaction =
   | (TransactionBase & { status: 'pending' })
+  | (TransactionBase & { status: 'proforma' })
   | (TransactionBase & {
       status: 'approved';
       /** user.id کسی که تایید کرد */

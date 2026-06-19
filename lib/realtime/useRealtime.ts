@@ -161,6 +161,7 @@ function dbRowToTransaction(row: Record<string, unknown>): Transaction | null {
       date: row.date as string,
       note: (row.note as string) ?? '',
       hasReceipt: Boolean(row.has_receipt),
+      invoiceCode: (row.invoice_code as string) ?? null,
       createdBy: row.created_by as string,
       createdAt: String(row.created_at),
       updatedAt: String(row.updated_at),
@@ -172,6 +173,9 @@ function dbRowToTransaction(row: Record<string, unknown>): Transaction | null {
     }
     if (status === 'rejected') {
       return { ...base, status: 'rejected', rejectedBy: (row.rejected_by as string) ?? '', rejectedAt: String(row.rejected_at ?? row.updated_at), rejectionReason: (row.rejection_reason as string) ?? 'بدون دلیل' };
+    }
+    if (status === 'proforma') {
+      return { ...base, status: 'proforma' };
     }
     return { ...base, status: 'pending' };
   } catch {

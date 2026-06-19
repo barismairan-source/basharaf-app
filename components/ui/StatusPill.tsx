@@ -13,6 +13,7 @@ const STATUS_MAP: Record<string, StatusConfig> = {
   approved:  { label: 'تأیید شده',    tone: 'green'   },
   pending:   { label: 'در انتظار',    tone: 'amber'   },
   rejected:  { label: 'رد شده',       tone: 'red'     },
+  proforma:  { label: 'پیش‌فاکتور',   tone: 'amber'   },
 
   // پرداخت آنلاین
   paid:      { label: 'پرداخت شده',   tone: 'green'   },

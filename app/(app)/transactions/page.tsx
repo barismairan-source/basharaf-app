@@ -151,7 +151,10 @@ export default function TransactionsPage() {
             <Icon size={13} strokeWidth={1.5} className={cn('flex-shrink-0', typeM.color)} aria-hidden />
             <div className="min-w-0">
               <div className="text-[12.5px] text-text truncate max-w-[180px]">{tx.title}</div>
-              <div className="text-[10.5px] text-muted truncate">{tx.payee}</div>
+              <div className="text-[10.5px] text-muted truncate">
+                {tx.payee}
+                {tx.invoiceCode && <span className="mr-1.5 text-muted/70">· {tx.invoiceCode}</span>}
+              </div>
             </div>
           </div>
         );
@@ -314,6 +317,7 @@ export default function TransactionsPage() {
               <option value="approved">تایید شده</option>
               <option value="pending">در انتظار</option>
               <option value="rejected">رد شده</option>
+              <option value="proforma">پیش‌فاکتور</option>
             </Select>
             {isAdmin && (
               <Select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="h-9 text-[12px] min-w-[110px]">
@@ -362,14 +366,17 @@ export default function TransactionsPage() {
             <tbody>
               {filtered.map(tx => (
                 <tr key={tx.id} className="border-b border-gray-200">
-                  <td className="px-3 py-1.5">{tx.title}</td>
+                  <td className="px-3 py-1.5">
+                    {tx.title}
+                    {tx.invoiceCode && <span className="text-gray-400 text-[9pt] mr-1.5">({tx.invoiceCode})</span>}
+                  </td>
                   <td className="px-3 py-1.5 text-gray-500">{tx.categoryName || '—'}</td>
                   <td className="px-3 py-1.5 text-left tabular-nums">
                     {tx.type === 'expense' ? '−' : tx.type === 'income' ? '+' : '⇄'}{fmt(tx.amount)} تومان
                   </td>
                   <td className="px-3 py-1.5 text-gray-500">{tx.date}</td>
                   <td className="px-3 py-1.5">
-                    {tx.status === 'approved' ? 'تأیید شده' : tx.status === 'pending' ? 'در انتظار' : 'رد شده'}
+                    {tx.status === 'approved' ? 'تأیید شده' : tx.status === 'pending' ? 'در انتظار' : tx.status === 'proforma' ? 'پیش‌فاکتور' : 'رد شده'}
                   </td>
                 </tr>
               ))}

@@ -95,14 +95,15 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
 
   // ─── Permission flags ───
   const isPending = tx.status === 'pending';
+  const isProforma = tx.status === 'proforma';
   const isAdmin = user.role === 'SuperAdmin';
   const isOwnPending =
     user.role === 'BranchUser' &&
     isPending &&
     tx.createdBy === user.id;
 
-  const canApprove = isAdmin && isPending;
-  const canReject = isAdmin && isPending;
+  const canApprove = isAdmin && (isPending || isProforma);
+  const canReject = isAdmin && (isPending || isProforma);
   const canEdit = isAdmin || isOwnPending;
   const canDelete = can(user, 'delete:transaction');
 
@@ -391,6 +392,14 @@ function ViewBody({
           value={tx.receipt}
           monospace
         />
+        {tx.invoiceCode && (
+          <DetailRow
+            icon={ReceiptIcon}
+            label="شماره فاکتور"
+            value={tx.invoiceCode}
+            monospace
+          />
+        )}
       </div>
 
       {/* Receipt uploader */}

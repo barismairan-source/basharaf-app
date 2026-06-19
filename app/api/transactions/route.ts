@@ -24,6 +24,8 @@ const createBodySchema = z.object({
   contactId: z.string().uuid().optional().nullable(),
   vatAmount: z.number().min(0).max(999_999_999_999).optional().default(0),
   isCredit: z.boolean().optional().default(false),
+  invoiceCode: z.string().max(60).optional().nullable(),
+  status: z.enum(['pending', 'proforma']).optional(),
 });
 
 export async function GET() {
@@ -92,6 +94,8 @@ export async function POST(req: Request) {
       contactId: input.contactId ?? null,
       vatAmount: input.vatAmount ?? 0,
       isCredit: input.isCredit ?? false,
+      invoiceCode: input.invoiceCode ?? null,
+      initialStatus: input.status,
       createdBy: session.sub,
       role: session.role,
     }));

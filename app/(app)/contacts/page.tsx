@@ -8,6 +8,7 @@ import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import type { Contact } from '@/types/transaction';
+import { ContactLedgerDrawer } from '@/components/contacts/ContactLedgerDrawer';
 
 const TYPE_LABELS: Record<string, string> = {
   customer: 'مشتری',
@@ -40,6 +41,8 @@ export default function ContactsPage() {
   const [editType, setEditType] = useState('');
   const [editPhone, setEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const [ledgerId, setLedgerId] = useState<string | null>(null);
 
   useEffect(() => { setHydrated(true); loadContacts(); }, [loadContacts]);
 
@@ -309,9 +312,15 @@ export default function ContactsPage() {
           columns={columns}
           data={contacts}
           keyExtractor={c => c.id}
+          onRowClick={c => { if (editId === null) setLedgerId(c.id); }}
           empty={<Empty title="طرف‌حسابی ثبت نشده" icon={Users} />}
         />
       </div>
+
+      <ContactLedgerDrawer
+        contactId={ledgerId}
+        onClose={() => setLedgerId(null)}
+      />
     </div>
   );
 }

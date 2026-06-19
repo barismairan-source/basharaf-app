@@ -38,9 +38,10 @@ const STATUS_META: Record<
   Transaction['status'],
   { icon: LucideIcon; chipTone: 'amber' | 'green' | 'red'; label: string }
 > = {
-  pending: { icon: Clock, chipTone: 'amber', label: 'در انتظار' },
-  approved: { icon: CheckCircle2, chipTone: 'green', label: 'تایید شده' },
-  rejected: { icon: XCircle, chipTone: 'red', label: 'رد شده' },
+  pending:  { icon: Clock,         chipTone: 'amber', label: 'در انتظار' },
+  approved: { icon: CheckCircle2,  chipTone: 'green', label: 'تایید شده' },
+  rejected: { icon: XCircle,       chipTone: 'red',   label: 'رد شده' },
+  proforma: { icon: Clock,         chipTone: 'amber', label: 'پیش‌فاکتور' },
 };
 
 interface RecentListProps {

@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.27-app-shell` |
+| **نسخه** | `0.9.28-accounting-v1` |
 | **آخرین به‌روزرسانی** | 2026-06-19 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
-| **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
+| **دیپلوی** | 🟡 migration لازم دارد. `db-accounting-v1-migration.sql` باید در pgAdmin روی Liara اجرا شود قبل از دیپلوی. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) دیپلوی روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
-| **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
+| **کار بعدی پیشنهادی** | (۱) اجرای `db-accounting-v1-migration.sql` در pgAdmin روی Liara. (۲) دیپلوی zip روی Liara. (۳) اضافه کردن فیلد `invoiceCode` به فرم ثبت تراکنش (اختیاری، برای پیش‌فاکتورها). |
+| **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -49,6 +49,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-19 — v0.9.28: Accounting Overhaul v1 (proforma + invoiceCode + contact ledger) — اکانت ۲
+**چه شد:**
+(۱) **Phase 1 — Schema:** `proforma` به `txStatusEnum` اضافه شد. فیلد `invoice_code TEXT` به جدول `transactions` اضافه شد. فایل `db-accounting-v1-migration.sql` برای pgAdmin/Liara آماده شد (idempotent). `serializers.ts`، `types/transaction.ts`، `lib/colors.ts`، `RecentList.tsx` به‌روز شدند تا `proforma` را بشناسند.
+(۲) **Phase 2 — Ledger Utility:** `lib/db/contactLedger.ts` ساخته شد: `calculateContactBalance(id)` (dynamic از approved txها) و `getContactLedger(id)` (تمام تراکنش‌های نسیه). API endpoint جدید: `GET /api/contacts/[id]/ledger`.
+(۳) **Phase 3 — Contacts UI:** ردیف‌های صفحه طرف‌حساب‌ها کلیک‌پذیر شدند. `ContactLedgerDrawer` ساخته شد: drawer سمت راست با مانده‌ی پویا + تاریخچه تراکنش‌ها + دکمه چاپ.
+(۴) **Phase 4 — Transactions UI:** `StatusPill` برای `proforma` (amber) به‌روز شد. `invoiceCode` در زیر عنوان هر تراکنش نمایش داده می‌شود. فیلتر وضعیت «پیش‌فاکتور» اضافه شد.
+(۵) **نکته حیاتی:** پیش‌فاکتور هیچ اثری روی موجودی صندوق یا طرف‌حساب ندارد — حتی اگر SuperAdmin آن را ثبت کند. فقط approve صریح از `pending/proforma` → `approved` اثر مالی می‌گذارد.
+**فایل‌ها:** `lib/db/schema.ts`, `lib/db/serializers.ts`, `lib/db/createExpenseTx.ts`, `lib/db/contactLedger.ts`, `lib/colors.ts`, `types/transaction.ts`, `lib/realtime/useRealtime.ts`, `components/ui/StatusPill.tsx`, `components/dashboard/RecentList.tsx`, `components/transactions/TxDetailPanel.tsx`, `components/contacts/ContactLedgerDrawer.tsx`, `app/(app)/contacts/page.tsx`, `app/(app)/transactions/page.tsx`, `app/api/transactions/route.ts`, `app/api/transactions/[id]/approve/route.ts`, `app/api/contacts/[id]/ledger/route.ts`, `db-accounting-v1-migration.sql`, `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** فیلد `invoiceCode` در فرم ثبت تراکنش جدید (`transactions/new`) نمایش داده نمی‌شود — می‌توان بعداً اضافه کرد.
+**برای جلسه‌ی بعد:** (۱) اجرای `db-accounting-v1-migration.sql` در pgAdmin. (۲) دیپلوی. (۳) تست ledger drawer روی طرف‌حساب‌های واقعی.
 
 ## 📓 2026-06-19 — v0.9.27: App Shell + Enterprise Header + Sidebar resize — اکانت ۲
 **چه شد:**

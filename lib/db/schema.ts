@@ -49,6 +49,7 @@ export const txStatusEnum = pgEnum('tx_status', [
   'pending',
   'approved',
   'rejected',
+  'proforma',
 ]);
 export const notifTypeEnum = pgEnum('notif_type', [
   'pending',
@@ -159,6 +160,9 @@ export const transactions = pgTable(
     date: text('date').notNull(), // Jalali string
     note: text('note').notNull().default(''),
     hasReceipt: boolean('has_receipt').notNull().default(false),
+
+    /** شماره فاکتور/پیش‌فاکتور — اختیاری، برای ارجاع به سند کاغذی */
+    invoiceCode: text('invoice_code'),
 
     /**
      * متادیتای فروش منو (فقط type=income، فروش‌های ثبت‌شده از طریق منو):

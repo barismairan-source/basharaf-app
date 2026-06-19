@@ -28,6 +28,9 @@ export interface CreateExpenseTxInput {
   contactId?: string | null;
   vatAmount?: number;
   isCredit?: boolean;
+  invoiceCode?: string | null;
+  /** اگر 'proforma' باشد، تراکنش هیچ اثری روی موجودی یا طرف‌حساب ندارد */
+  initialStatus?: 'pending' | 'proforma';
   createdBy: string;
   role: 'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef';
 }
@@ -39,8 +42,13 @@ export type CreatedExpenseTx = typeof schema.transactions.$inferSelect;
  * در غیر این صورت → pending (بدون اثر مالی تا زمان approve).
  */
 export async function createExpenseTx(dbTx: any, input: CreateExpenseTxInput): Promise<CreatedExpenseTx> {
+  const isProforma = input.initialStatus === 'proforma';
   const isAdmin = input.role === 'SuperAdmin';
   const now = new Date();
+
+  // پیش‌فاکتور هیچ اثری روی موجودی/طرف‌حساب ندارد — حتی برای admin
+  const finalStatus = isProforma ? 'proforma' : (isAdmin ? 'approved' : 'pending');
+  const shouldApprove = !isProforma && isAdmin;
 
   const [row] = await dbTx.insert(schema.transactions).values({
     type: input.type,
@@ -56,10 +64,11 @@ export async function createExpenseTx(dbTx: any, input: CreateExpenseTxInput): P
     date: input.date,
     note: input.note ?? '',
     hasReceipt: input.hasReceipt ?? false,
-    status: isAdmin ? 'approved' : 'pending',
+    invoiceCode: input.invoiceCode ?? null,
+    status: finalStatus,
     createdBy: input.createdBy,
-    approvedBy: isAdmin ? input.createdBy : null,
-    approvedAt: isAdmin ? now : null,
+    approvedBy: shouldApprove ? input.createdBy : null,
+    approvedAt: shouldApprove ? now : null,
     accountId: input.accountId ?? null,
     destinationAccountId: input.destinationAccountId ?? null,
     contactId: input.contactId ?? null,
@@ -70,11 +79,11 @@ export async function createExpenseTx(dbTx: any, input: CreateExpenseTxInput): P
   if (!row) throw new ApiError(500, 'خطا در ثبت تراکنش', 'INSERT_FAILED');
 
   // اگر approved فوری و account دارد، balance را اعمال کن
-  if (isAdmin && row.accountId) {
+  if (shouldApprove && row.accountId) {
     await applyBalance(dbTx, row);
   }
   // اگر نسیه است، balance طرف‌حساب را آپدیت کن
-  if (isAdmin && row.contactId && row.isCredit) {
+  if (shouldApprove && row.contactId && row.isCredit) {
     await applyContactBalance(dbTx, row);
   }
 

@@ -13,6 +13,7 @@ export const COLORS = {
 
 export const STATUS_COLORS: Record<TransactionStatus, { bg: string; text: string; border: string }> = {
   approved: { bg: '#f0fdf4', text: '#15803d', border: '#bbf7d0' },
-  pending: { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
+  pending:  { bg: '#fffbeb', text: '#b45309', border: '#fde68a' },
   rejected: { bg: '#fff1f2', text: '#be123c', border: '#fecdd3' },
+  proforma: { bg: '#fffbeb', text: '#92400e', border: '#fde68a' },
 };

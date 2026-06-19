@@ -35,6 +35,7 @@ export function rowToTransaction(row: TransactionRow) {
     date: row.date,
     note: row.note,
     hasReceipt: row.hasReceipt,
+    invoiceCode: row.invoiceCode ?? null,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     createdBy: row.createdBy,
@@ -56,6 +57,9 @@ export function rowToTransaction(row: TransactionRow) {
       rejectedAt: row.rejectedAt?.toISOString() ?? row.updatedAt.toISOString(),
       rejectionReason: row.rejectionReason ?? 'بدون دلیل ذکرشده',
     };
+  }
+  if (row.status === 'proforma') {
+    return { ...base, status: 'proforma' as const };
   }
   return { ...base, status: 'pending' as const };
 }

@@ -19,8 +19,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       .where(eq(schema.transactions.id, params.id)).limit(1);
 
     if (!current) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
-    if (current.status !== 'pending') {
-      throw new ApiError(409, 'فقط تراکنش‌های در انتظار قابل تایید هستند', 'INVALID_STATE');
+    if (current.status !== 'pending' && current.status !== 'proforma') {
+      throw new ApiError(409, 'فقط تراکنش‌های در انتظار یا پیش‌فاکتور قابل تایید هستند', 'INVALID_STATE');
     }
 
     const now = new Date();
