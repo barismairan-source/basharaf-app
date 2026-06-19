@@ -449,16 +449,22 @@ function SettingsTab({ settings, onUpdate, showToast }: any) {
     <div className="space-y-4">
       <Card>
         <CardHeader title="تنظیمات منو" />
-        <CardBody className="space-y-4">
-          <Field label="فونت فارسی منو">
-            <Select value={form.faFont} onChange={e => setForm({ ...form, faFont: e.target.value })}>
-              {FA_FONTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
-            </Select>
-          </Field>
-          <Field label="تلفن"><Input dir="ltr" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></Field>
-          <Field label="آدرس فارسی"><Textarea rows={2} value={form.addressFa} onChange={e => setForm({ ...form, addressFa: e.target.value })} /></Field>
-          <Field label="آدرس انگلیسی"><Textarea rows={2} dir="ltr" value={form.addressEn} onChange={e => setForm({ ...form, addressEn: e.target.value })} /></Field>
-          <Field label="اینستاگرام (بدون @)"><Input dir="ltr" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
+        <CardBody>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <Field label="فونت فارسی منو">
+              <Select value={form.faFont} onChange={e => setForm({ ...form, faFont: e.target.value })}>
+                {FA_FONTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+              </Select>
+            </Field>
+            <Field label="تلفن"><Input dir="ltr" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></Field>
+            <Field label="اینستاگرام (بدون @)"><Input dir="ltr" value={form.instagram} onChange={e => setForm({ ...form, instagram: e.target.value })} /></Field>
+            <div className="sm:col-span-2">
+              <Field label="آدرس فارسی"><Textarea rows={2} value={form.addressFa} onChange={e => setForm({ ...form, addressFa: e.target.value })} /></Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="آدرس انگلیسی"><Textarea rows={2} dir="ltr" value={form.addressEn} onChange={e => setForm({ ...form, addressEn: e.target.value })} /></Field>
+            </div>
+          </div>
         </CardBody>
       </Card>
 
@@ -490,8 +496,8 @@ function SettingsTab({ settings, onUpdate, showToast }: any) {
         </CardBody>
       </Card>
 
-      <div className="flex justify-end">
-        <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSave}>ذخیره</Button>
+      <div className="flex justify-end items-center gap-3 mt-2 pt-4 border-t border-border">
+        <Button variant="primary" icon={Check} loading={saving} onClick={handleSave}>ذخیره تنظیمات</Button>
       </div>
     </div>
   );

@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.24-ui-polish` |
-| **آخرین به‌روزرسانی** | 2026-06-18 — اکانت: ۲ |
+| **نسخه** | `0.9.25-form-grid` |
+| **آخرین به‌روزرسانی** | 2026-06-19 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) zip برای تست: `git archive HEAD --output=basharaf-v0.9.21.zip`. (۲) دیپلوی روی Liara. (۳) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
+| **کار بعدی پیشنهادی** | (۱) دیپلوی روی Liara. (۲) تنظیم `CUSTOMER_JWT_SECRET` در env Liara. |
 | **بلاک‌شده/منتظر کاربر** | دیپلوی zip جدید روی Liara |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,15 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-19 — v0.9.25: grid layout فرم تراکنش + تنظیمات منو — اکانت ۲
+**چه شد:**
+(۱) **فرم ثبت تراکنش (`transactions/new`):** `max-w-2xl` → `max-w-3xl`؛ تمام فیلدها از `space-y-5` (ستون واحد) به sectional grid تبدیل شدند: عنوان+مبلغ، دسته+شعبه، رسید+تاریخ هر کدام در `grid grid-cols-1 md:grid-cols-2`؛ فیلدهای پهن (نوع، صندوق، VAT، طرف‌حساب، توضیحات) کل عرض را می‌گیرند. دکمه submit از `w-full` به footer `flex justify-end + border-t border-border` با دکمه «انصراف» کنار آن تبدیل شد.
+(۲) **SettingsTab منو (`menu/page.tsx`):** اولین Card از `space-y-4` (ستون واحد) به `grid grid-cols-1 sm:grid-cols-2` شد. فونت+تلفن در یک ردیف، اینستاگرام در ردیف بعد، آدرس فارسی و انگلیسی با `sm:col-span-2` (full width — textarea). دکمه ذخیره از `flex justify-end` ساده به footer با `border-t border-border pt-4 mt-2` ارتقا یافت و عنوان «ذخیره تنظیمات» گرفت.
+**فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/menu/page.tsx`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** دیپلوی روی Liara + تنظیم `CUSTOMER_JWT_SECRET`.
 
 ## 📓 2026-06-18 — v0.9.24: UI polish (EmptyState + card hover + add-row button) — اکانت ۲
 **چه شد:**

@@ -150,7 +150,7 @@ export default function NewTransactionPage() {
 
   return (
     <div className="p-4 lg:p-6">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">ثبت تراکنش</h1>
           <div className="text-[12px] text-stone-500 mt-1">
@@ -161,14 +161,14 @@ export default function NewTransactionPage() {
         <Card>
           <CardBody>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              {/* Error */}
+              {/* ─── Error ─── */}
               {txError && (
                 <div className="p-3 rounded-md bg-rose-50 border border-rose-100 text-rose-700 text-[12.5px]">
                   {txError}
                 </div>
               )}
 
-              {/* Type */}
+              {/* ─── نوع تراکنش (full width) ─── */}
               <div>
                 <Label>نوع تراکنش</Label>
                 <Toggle
@@ -183,47 +183,46 @@ export default function NewTransactionPage() {
                 />
               </div>
 
-              {/* Title */}
-              <Field label="عنوان تراکنش" error={errors.title?.message}>
-                <Input placeholder="مثلاً: خرید گوشت" hasError={!!errors.title} {...register('title')} />
-              </Field>
+              {/* ─── عنوان + مبلغ ─── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <Field label="عنوان تراکنش" error={errors.title?.message}>
+                  <Input placeholder="مثلاً: خرید گوشت" hasError={!!errors.title} {...register('title')} />
+                </Field>
+                <Field label="مبلغ (تومان)" error={errors.amount?.message}>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    dir="ltr"
+                    placeholder="۰"
+                    value={amountDisplay}
+                    hasError={!!errors.amount}
+                    onChange={e => {
+                      const formatted = formatAmountInput(e.target.value);
+                      setAmountDisplay(formatted);
+                      setValue('amount', parseAmount(formatted), { shouldValidate: true });
+                    }}
+                  />
+                </Field>
+              </div>
 
-              {/* Amount */}
-              <Field label="مبلغ (تومان)" error={errors.amount?.message}>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  dir="ltr"
-                  placeholder="۰"
-                  value={amountDisplay}
-                  hasError={!!errors.amount}
-                  onChange={e => {
-                    const formatted = formatAmountInput(e.target.value);
-                    setAmountDisplay(formatted);
-                    setValue('amount', parseAmount(formatted), { shouldValidate: true });
-                  }}
-                />
-              </Field>
-
-
-              {/* Category (فقط برای غیر transfer) */}
-              {!isTransfer && (
-                <Field label="دسته‌بندی" error={errors.category?.message}>
-                  <Select hasError={!!errors.category} {...register('category')}>
-                    <option value="">— انتخاب دسته —</option>
-                    {visibleCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {/* ─── دسته + شعبه ─── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                {!isTransfer && (
+                  <Field label="دسته‌بندی" error={errors.category?.message}>
+                    <Select hasError={!!errors.category} {...register('category')}>
+                      <option value="">— انتخاب دسته —</option>
+                      {visibleCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </Select>
+                  </Field>
+                )}
+                <Field label="شعبه" error={errors.branchId?.message}>
+                  <Select {...register('branchId')} disabled={branchLocked}>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </Select>
                 </Field>
-              )}
+              </div>
 
-              {/* Branch */}
-              <Field label="شعبه" error={errors.branchId?.message}>
-                <Select {...register('branchId')} disabled={branchLocked}>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </Select>
-              </Field>
-
-              {/* Account — اجباری برای محاسبه موجودی */}
+              {/* ─── صندوق (full width — placeholder طولانی دارد) ─── */}
               <Field
                 label={isTransfer ? 'صندوق مبدا' : 'صندوق / حساب'}
                 helper={accounts.length === 0 ? 'ابتدا از صفحه صندوق‌ها یک حساب بسازید' : undefined}
@@ -236,7 +235,7 @@ export default function NewTransactionPage() {
                 </Select>
               </Field>
 
-              {/* Destination account (فقط transfer) */}
+              {/* ─── صندوق مقصد (فقط transfer — full width) ─── */}
               {isTransfer && (
                 <Field label="صندوق مقصد">
                   <Select {...register('destinationAccountId' as any)}>
@@ -246,20 +245,22 @@ export default function NewTransactionPage() {
                 </Field>
               )}
 
-              {/* Method */}
-              <Field label="روش پرداخت" error={errors.method?.message}>
-                <Select {...register('method')}>
-                  <option value="نقد">نقد</option>
-                  <option value="کارت به کارت">کارت به کارت</option>
-                  <option value="دستگاه پوز">دستگاه پوز</option>
-                  <option value="حواله بانکی">حواله بانکی</option>
-                  <option value="چک">چک</option>
-                </Select>
-              </Field>
+              {/* ─── روش پرداخت ─── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                <Field label="روش پرداخت" error={errors.method?.message}>
+                  <Select {...register('method')}>
+                    <option value="نقد">نقد</option>
+                    <option value="کارت به کارت">کارت به کارت</option>
+                    <option value="دستگاه پوز">دستگاه پوز</option>
+                    <option value="حواله بانکی">حواله بانکی</option>
+                    <option value="چک">چک</option>
+                  </Select>
+                </Field>
+              </div>
 
-              {/* VAT — فقط برای income/expense */}
+              {/* ─── VAT (full width — conditional) ─── */}
               {!isTransfer && (
-                <div className="p-3 rounded-md border border-stone-200 bg-stone-50/50 space-y-2">
+                <div className="p-3 rounded-md border border-border bg-bg space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -267,18 +268,18 @@ export default function NewTransactionPage() {
                       checked={includeVat}
                       onChange={e => setIncludeVat(e.target.checked)}
                     />
-                    <span className="text-[12.5px] text-stone-700">احتساب مالیات ارزش افزوده ({vatRate}٪)</span>
+                    <span className="text-[12.5px] text-text">احتساب مالیات ارزش افزوده ({vatRate}٪)</span>
                   </label>
                   {includeVat && watch('amount') > 0 && (
-                    <div className="text-[11.5px] text-stone-500 pr-6 space-y-0.5">
-                      <div>مبلغ مالیات: <span className="text-stone-800 tabular-nums">{new Intl.NumberFormat('fa-IR').format(Math.round((watch('amount') * vatRate) / 100))}</span> تومان</div>
-                      <div>جمع کل: <span className="text-stone-900 font-medium tabular-nums">{new Intl.NumberFormat('fa-IR').format(watch('amount') + Math.round((watch('amount') * vatRate) / 100))}</span> تومان</div>
+                    <div className="text-[11.5px] text-muted pr-6 space-y-0.5">
+                      <div>مبلغ مالیات: <span className="text-text tabular-nums">{new Intl.NumberFormat('fa-IR').format(Math.round((watch('amount') * vatRate) / 100))}</span> تومان</div>
+                      <div>جمع کل: <span className="text-text font-medium tabular-nums">{new Intl.NumberFormat('fa-IR').format(watch('amount') + Math.round((watch('amount') * vatRate) / 100))}</span> تومان</div>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* طرف‌حساب + نسیه */}
+              {/* ─── طرف‌حساب + نسیه (full width — conditional) ─── */}
               {!isTransfer && contacts.length > 0 && (
                 <div className="space-y-3">
                   <Field label="طرف‌حساب (اختیاری)">
@@ -295,7 +296,7 @@ export default function NewTransactionPage() {
                         checked={isCredit}
                         onChange={e => setIsCredit(e.target.checked)}
                       />
-                      <span className="text-[12.5px] text-stone-700">
+                      <span className="text-[12.5px] text-text">
                         نسیه است ({type === 'income' ? 'طرف‌حساب بدهکار می‌شود' : 'ما بدهکار می‌شویم'})
                       </span>
                     </label>
@@ -303,34 +304,39 @@ export default function NewTransactionPage() {
                 </div>
               )}
 
-              {/* Receipt */}
-              <Field label="شماره رسید (اختیاری)">
-                <Input placeholder="مثلاً: ۱۲۳۴۵۶" dir="ltr" {...register('receipt')} />
-              </Field>
+              {/* ─── شماره رسید + تاریخ ─── */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                <Field label="شماره رسید (اختیاری)">
+                  <Input placeholder="مثلاً: ۱۲۳۴۵۶" dir="ltr" {...register('receipt')} />
+                </Field>
+                <Field label="تاریخ (شمسی)" error={errors.date?.message}>
+                  <JalaliDatePicker
+                    value={watch('date')}
+                    onChange={v => setValue('date', v, { shouldValidate: true })}
+                    hasError={!!errors.date}
+                  />
+                </Field>
+              </div>
 
-              {/* Date */}
-              <Field label="تاریخ (شمسی)" error={errors.date?.message}>
-                <JalaliDatePicker
-                  value={watch('date')}
-                  onChange={v => setValue('date', v, { shouldValidate: true })}
-                  hasError={!!errors.date}
-                />
-              </Field>
-
-              {/* Note */}
+              {/* ─── توضیحات (full width) ─── */}
               <Field label="توضیحات (اختیاری)">
                 <Textarea rows={2} placeholder="یادداشت..." {...register('note')} />
               </Field>
 
-              {/* Submit */}
-              <div className="pt-2">
+              {/* ─── Footer: دکمه‌های اقدام ─── */}
+              <div className="flex justify-end items-center gap-3 pt-4 mt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => router.back()}
+                  className="h-10 px-4 text-[13px] text-muted border border-border rounded-lg hover:bg-bg transition-colors"
+                >
+                  انصراف
+                </button>
                 <Button
                   type="submit"
                   variant="primary"
-                  size="lg"
                   icon={isAdmin ? Save : Plus}
                   loading={isSubmitting}
-                  className="w-full"
                 >
                   {isAdmin ? 'ثبت و تایید تراکنش' : 'ارسال برای تایید'}
                 </Button>
