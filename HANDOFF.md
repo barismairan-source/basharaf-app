@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.26-input-tokens` |
+| **نسخه** | `0.9.27-app-shell` |
 | **آخرین به‌روزرسانی** | 2026-06-19 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 zip آماده نشده. migration نیاز ندارد. `CUSTOMER_JWT_SECRET` هنوز در env Liara نیست. |
@@ -49,6 +49,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-19 — v0.9.27: App Shell + Enterprise Header + Sidebar resize — اکانت ۲
+**چه شد:**
+(۱) **App Shell (`app/(app)/layout.tsx`):** Wrapper از `min-h-screen flex flex-col` (صفحه بلند = کل سند scroll می‌کرد) → `h-screen flex overflow-hidden` (viewport ثابت). حالا Sidebar و main هر کدام مستقلاً scroll می‌کنند.
+(۲) **Sidebar (`Sidebar.tsx`):** `h-screen sticky top-0` → `h-full` (درون shell کافی است). Width: `w-60`/`w-16` → `w-64`/`w-20`. Duration: `duration-200` → `duration-300`. nav داخلی scrollbar مخفی شد (`[&::-webkit-scrollbar]:w-0 [scrollbar-width:none]`). Brand row از `h-14` → `h-16` (هم‌ارتفاع با Header جدید).
+(۳) **Header (`Header.tsx`):** `h-14 justify-end bg-surface` → `h-16 justify-between bg-surface/95 backdrop-blur-sm shrink-0`. ساختار: سمت راست (start در RTL) = slot خالی برای `GlobalBranchSelector` آینده؛ سمت چپ (end در RTL) = Realtime + Bell + UserMenu.
+(۴) **inventory/items:** Sticky search bar از `top-14` → `top-16` (offset صحیح با Header جدید).
+**فایل‌ها:** `app/(app)/layout.tsx`، `components/layout/Sidebar.tsx`، `components/layout/Header.tsx`، `app/(app)/inventory/items/page.tsx`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ساخت `GlobalBranchSelector` و mount در slot راست Header. دیپلوی روی Liara.
 
 ## 📓 2026-06-19 — v0.9.26: یکپارچه‌سازی design tokens در Input/Select/Textarea — اکانت ۲
 **چه شد:**

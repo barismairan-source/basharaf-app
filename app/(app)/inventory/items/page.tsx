@@ -347,7 +347,7 @@ export default function InventoryItemsPage() {
         />
 
         {/* ─── Sticky search ─── */}
-        <div className="sticky top-14 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2.5 bg-bg/95 backdrop-blur border-b border-border">
+        <div className="sticky top-16 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2.5 bg-bg/95 backdrop-blur border-b border-border">
           <div className="relative max-w-3xl mx-auto">
             <Search
               size={15}

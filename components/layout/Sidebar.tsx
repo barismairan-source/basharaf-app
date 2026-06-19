@@ -117,7 +117,7 @@ export function SidebarContent({
     <div className="flex flex-col h-full overflow-hidden">
 
       {/* ─── Brand + toggle ─── */}
-      <div className="flex items-center h-14 border-b border-border flex-shrink-0 relative">
+      <div className="flex items-center h-16 border-b border-border flex-shrink-0 relative">
         {collapsed ? (
           <div className="flex-1 flex justify-center">
             <BrandMark size={24} />
@@ -148,7 +148,11 @@ export function SidebarContent({
       </div>
 
       {/* ─── Navigation ─── */}
-      <nav className={cn('flex-1 overflow-y-auto py-4', collapsed ? 'px-1' : 'px-3')}>
+      <nav className={cn(
+        'flex-1 overflow-y-auto py-4',
+        '[&::-webkit-scrollbar]:w-0 [scrollbar-width:none]',
+        collapsed ? 'px-1' : 'px-3',
+      )}>
         <div className="space-y-5">
           {visibleGroups.map((group) => {
             const commonItems = group.items.filter((i) => !i.rarely);
@@ -274,9 +278,9 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'hidden md:flex flex-shrink-0 border-l border-border bg-surface flex-col h-screen sticky top-0 print:hidden overflow-hidden',
-        mounted ? 'transition-[width] duration-200 ease-in-out' : '',
-        collapsed ? 'w-16' : 'w-60',
+        'hidden md:flex flex-shrink-0 border-l border-border bg-surface flex-col h-full print:hidden overflow-hidden',
+        mounted ? 'transition-[width] duration-300 ease-in-out' : '',
+        collapsed ? 'w-20' : 'w-64',
       )}
     >
       <SidebarContent
