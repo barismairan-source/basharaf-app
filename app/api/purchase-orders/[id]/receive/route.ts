@@ -202,21 +202,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     if (hasDiscrepancy) {
-      const admins = await db.select({ id: schema.users.id }).from(schema.users)
-        .where(eq(schema.users.role, 'SuperAdmin'));
-      if (admins.length > 0) {
-        await db.insert(schema.notifications).values(
-          admins.map(admin => ({
-            type: 'info' as const,
-            title: 'مغایرت دریافت سفارش خرید',
-            sub: `سفارش ${order.no} — ${branchName}`,
-            time: 'به‌تازگی',
-            read: false,
-            txId: coreTx.id,
-            userId: admin.id,
-          }))
-        );
-      }
+      const { notifyAdmins } = await import('@/lib/notify');
+      await notifyAdmins({
+        type: 'info',
+        title: 'مغایرت دریافت سفارش خرید',
+        sub: `سفارش ${order.no} — ${branchName}`,
+        txId: coreTx.id,
+        actionUrl: `/purchase-orders/${params.id}`,
+        entityId: params.id,
+        ruleKey: 'po_received',
+      });
 
       audit({
         action: 'po.receiveDiscrepancy',

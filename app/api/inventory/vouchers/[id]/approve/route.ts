@@ -248,14 +248,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     // اعلان به ثبت‌کننده
     if (updated && updated.createdBy && updated.createdBy !== session.sub) {
-      await db.insert(schema.notifications).values({
+      const { notify } = await import('@/lib/notify');
+      await notify({
         type: 'approved',
         title: 'برگه انبار تأیید شد ✓',
         sub: `برگه ${updated.no} — مبلغ ${finalTotal.toLocaleString('fa-IR')}`,
-        time: 'به‌تازگی',
-        read: false,
         txId: updated.linkedTransactionId ?? null,
+        actionUrl: `/inventory/cartable`,
+        entityId: updated.id,
         userId: updated.createdBy,
+        ruleKey: 'voucher_pending',
       });
     }
 

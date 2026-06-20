@@ -1,19 +1,16 @@
-import { eq } from 'drizzle-orm';
-import { db, schema } from '@/lib/db/client';
+import { notifyAdmins } from '@/lib/notify';
 
-export async function createPendingNotifications(voucherId: string, title: string, branchId: string) {
-  const admins = await db.select({ id: schema.users.id }).from(schema.users)
-    .where(eq(schema.users.role, 'SuperAdmin'));
-  if (admins.length === 0) return;
-  await db.insert(schema.notifications).values(
-    admins.map(admin => ({
-      type: 'pending' as const,
-      title: 'برگه انبار در انتظار تأیید',
-      sub: title,
-      time: 'به‌تازگی',
-      read: false,
-      txId: null,
-      userId: admin.id,
-    }))
-  );
+export async function createPendingNotifications(
+  voucherId: string,
+  title: string,
+  _branchId: string
+) {
+  await notifyAdmins({
+    type: 'pending',
+    title: 'برگه انبار در انتظار تأیید',
+    sub: title,
+    actionUrl: `/inventory/cartable`,
+    entityId: voucherId,
+    ruleKey: 'voucher_pending',
+  });
 }

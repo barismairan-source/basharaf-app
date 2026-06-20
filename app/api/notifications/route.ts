@@ -35,6 +35,8 @@ export async function GET() {
         time: n.time,
         read: n.read,
         txId: n.txId,
+        actionUrl: n.actionUrl ?? null,
+        entityId: n.entityId ?? null,
       })),
     });
   } catch (e) {

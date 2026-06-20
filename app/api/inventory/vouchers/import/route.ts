@@ -138,19 +138,16 @@ export async function POST(req: Request) {
       }
     });
 
-    // اعلان برای ادمین‌ها (txId باید null باشد چون برگه است نه تراکنش)
-    const admins = await db.select({ id: schema.users.id }).from(schema.users)
-      .where(eq(schema.users.role, 'SuperAdmin'));
-    if (admins.length > 0) {
-      await db.insert(schema.notifications).values(
-        admins.map(admin => ({
-          type: 'pending' as const,
-          title: 'رسیدهای خرید دسته‌ای در انتظار تأیید',
-          sub: `${vouchers} برگه`,
-          time: 'به‌تازگی', read: false, txId: null, userId: admin.id,
-        }))
-      );
-    }
+    // اعلان برای ادمین‌ها
+    const { notifyAdmins } = await import('@/lib/notify');
+    await notifyAdmins({
+      type: 'pending',
+      title: 'رسیدهای خرید دسته‌ای در انتظار تأیید',
+      sub: `${vouchers} برگه`,
+      txId: null,
+      actionUrl: '/inventory/cartable',
+      ruleKey: 'voucher_pending',
+    });
 
     return NextResponse.json({ ok: true, vouchers, imported: lineCount, errors: [] }, { status: 201 });
   } catch (e) {

@@ -56,6 +56,8 @@ export const notifTypeEnum = pgEnum('notif_type', [
   'approved',
   'rejected',
   'info',
+  'warning',
+  'critical',
 ]);
 
 // ─── Branches ───
@@ -224,10 +226,9 @@ export const notifications = pgTable(
     txId: uuid('tx_id').references(() => transactions.id, {
       onDelete: 'cascade',
     }),
+    actionUrl: text('action_url'),
+    entityId: text('entity_id'),
 
-    // برای فیلتر بهتر در فاز ۱۰: notification به‌جای text matching
-    // می‌تواند به user/branch مستقیم ارجاع داده شود.
-    // فعلاً null تا backwards compat با فاز ۹ حفظ شود.
     userId: uuid('user_id').references(() => users.id, {
       onDelete: 'cascade',
     }),
@@ -326,6 +327,23 @@ export const appSettings = pgTable('app_settings', {
 });
 
 export type AppSetting = typeof appSettings.$inferSelect;
+
+// ─── Notification Rules ──────────────────────────────────────────
+/**
+ * جدول notification_rules — کنترل SuperAdmin روی اینکه کدام رویدادها اعلان تولید کنند.
+ * key: شناسه منحصربه‌فرد قانون (e.g. 'low_stock', 'pending_approval')
+ * threshold: برای قوانین عددی مثل مبلغ بالا یا کسری موجودی
+ */
+export const notificationRules = pgTable('notification_rules', {
+  key: text('key').primaryKey(),
+  label: text('label').notNull(),
+  description: text('description'),
+  enabled: boolean('enabled').notNull().default(true),
+  threshold: integer('threshold'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type NotificationRule = typeof notificationRules.$inferSelect;
 
 // ─── Audit Log ───────────────────────────────────────────────────
 /**

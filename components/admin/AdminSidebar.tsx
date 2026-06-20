@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, ClipboardList, ArrowRight } from 'lucide-react';
+import { LayoutDashboard, Users, ClipboardList, Bell, ArrowRight } from 'lucide-react';
 import { APP_VERSION } from '@/lib/version';
 
 const NAV = [
   { href: '/admin', label: 'داشبورد ادمین', icon: LayoutDashboard, exact: true },
   { href: '/admin/users', label: 'مدیریت کاربران', icon: Users },
   { href: '/admin/audit', label: 'لاگ ادیت', icon: ClipboardList },
+  { href: '/admin/settings/notifications', label: 'قوانین اعلان', icon: Bell },
 ];
 
 export function AdminSidebar() {

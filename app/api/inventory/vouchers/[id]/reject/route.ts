@@ -55,13 +55,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       .where(eq(schema.invVoucherLines.voucherId, params.id));
 
     if (updated && updated.createdBy && updated.createdBy !== session.sub) {
-      await db.insert(schema.notifications).values({
+      const { notify } = await import('@/lib/notify');
+      await notify({
         type: 'rejected',
         title: 'برگه انبار ارجاع شد',
         sub: `برگه ${updated.no} — ${reason || 'بدون دلیل'}`,
-        time: 'به‌تازگی',
-        read: false,
-        txId: updated.id,
+        txId: null,
+        actionUrl: `/inventory/cartable`,
+        entityId: updated.id,
         userId: updated.createdBy,
       });
     }

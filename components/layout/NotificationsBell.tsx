@@ -1,192 +1,297 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
-  Bell,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Info,
+  Bell, Clock, CheckCircle2, XCircle, Info,
+  AlertTriangle, AlertOctagon, X, CheckCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { Empty } from '@/components/ui';
-import type { NotificationType } from '@/types';
 import { cn } from '@/lib/utils';
+import type { Notification, NotificationType } from '@/types';
 
-/**
- * NotificationsBell — bell با dropdown برای اعلان‌ها.
- *
- * unread count به‌صورت یک badge کوچک قرمز روی bell نمایش داده می‌شود.
- * dropdown شامل لیست اعلان‌ها است:
- * - read = false → پس‌زمینه stone-50/60 (هایلایت)
- * - read = true → پس‌زمینه عادی
- *
- * کلیک روی اعلان:
- * - markRead می‌کند
- * - اگر `txId` دارد، به detail تراکنش redirect می‌کند
- *
- * یک دکمه «همه را خوانده شده علامت بزن» در بالای dropdown هست.
- */
+// ─── Type metadata ───────────────────────────────────────────────
 
-// نگاشت نوع اعلان به آیکن و رنگ
-const NOTIF_META: Record<
+const TYPE_META: Record<
   NotificationType,
-  { icon: LucideIcon; color: string; bg: string }
+  { icon: LucideIcon; iconColor: string; dotColor: string; unreadBg: string; label: string }
 > = {
-  pending: { icon: Clock, color: 'text-amber-700', bg: 'bg-amber-50' },
-  approved: {
-    icon: CheckCircle2,
-    color: 'text-emerald-700',
-    bg: 'bg-emerald-50',
-  },
-  rejected: { icon: XCircle, color: 'text-rose-700', bg: 'bg-rose-50' },
-  info: { icon: Info, color: 'text-stone-600', bg: 'bg-stone-100' },
+  pending:  { icon: Clock,         iconColor: 'text-indigo-600',  dotColor: 'bg-indigo-500',  unreadBg: 'bg-indigo-50/70',  label: 'در انتظار تأیید' },
+  approved: { icon: CheckCircle2,  iconColor: 'text-emerald-600', dotColor: 'bg-emerald-500', unreadBg: 'bg-emerald-50/70', label: 'تأیید شد' },
+  rejected: { icon: XCircle,       iconColor: 'text-rose-600',    dotColor: 'bg-rose-500',    unreadBg: 'bg-rose-50/70',    label: 'رد شد' },
+  info:     { icon: Info,          iconColor: 'text-sky-600',     dotColor: 'bg-sky-500',     unreadBg: 'bg-sky-50/70',     label: 'اطلاع' },
+  warning:  { icon: AlertTriangle, iconColor: 'text-amber-600',   dotColor: 'bg-amber-500',   unreadBg: 'bg-amber-50/70',   label: 'هشدار' },
+  critical: { icon: AlertOctagon,  iconColor: 'text-red-600',     dotColor: 'bg-red-500',     unreadBg: 'bg-red-50/70',     label: 'بحرانی' },
 };
 
+// ─── Time formatting ─────────────────────────────────────────────
+
+function relativeTime(timeStr: string): string {
+  return timeStr;
+}
+
+// ─── Single notification card ────────────────────────────────────
+
+function NotifCard({
+  n,
+  onRead,
+  onClose,
+}: {
+  n: Notification;
+  onRead: (id: string) => void;
+  onClose: () => void;
+}) {
+  const meta = TYPE_META[n.type] ?? TYPE_META.info;
+  const Icon = meta.icon;
+
+  const inner = (
+    <div
+      className={cn(
+        'w-full flex items-start gap-3 px-4 py-3.5 border-b border-stone-100 last:border-b-0',
+        'transition-colors hover:bg-stone-50/80 active:bg-stone-100',
+        !n.read && meta.unreadBg,
+      )}
+    >
+      {/* Type icon */}
+      <div className={cn(
+        'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
+        !n.read ? 'bg-white shadow-sm' : 'bg-stone-100',
+        meta.iconColor,
+      )}>
+        <Icon size={14} strokeWidth={1.8} />
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0 text-right">
+        <p className={cn('text-[12.5px] leading-snug', n.read ? 'text-stone-600' : 'text-stone-900 font-medium')}>
+          {n.title}
+        </p>
+        <p className="text-[11.5px] text-stone-500 mt-0.5 line-clamp-2">{n.sub}</p>
+        <p className="text-[10.5px] text-stone-400 mt-1">{relativeTime(n.time)}</p>
+      </div>
+
+      {/* Unread dot */}
+      {!n.read && (
+        <span className={cn('w-2 h-2 rounded-full flex-shrink-0 mt-2', meta.dotColor)} />
+      )}
+    </div>
+  );
+
+  const handleClick = () => {
+    if (!n.read) onRead(n.id);
+    onClose();
+  };
+
+  if (n.actionUrl) {
+    return (
+      <Link href={n.actionUrl} onClick={handleClick} className="block">
+        {inner}
+      </Link>
+    );
+  }
+
+  return (
+    <button type="button" onClick={handleClick} className="w-full text-right">
+      {inner}
+    </button>
+  );
+}
+
+// ─── Empty state ─────────────────────────────────────────────────
+
+function EmptyNotifs() {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 gap-3 text-center">
+      <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center">
+        <Bell size={20} className="text-stone-400" strokeWidth={1.5} />
+      </div>
+      <p className="text-[13px] text-stone-500">هیچ اعلانی ندارید</p>
+    </div>
+  );
+}
+
+// ─── Panel header ─────────────────────────────────────────────────
+
+function PanelHeader({
+  unreadCount,
+  onMarkAll,
+  onClose,
+  showClose,
+}: {
+  unreadCount: number;
+  onMarkAll: () => void;
+  onClose: () => void;
+  showClose?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200 flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <span className="text-[13.5px] font-medium text-stone-800">اعلان‌ها</span>
+        {unreadCount > 0 && (
+          <span className="h-5 min-w-5 px-1.5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center tabular-nums">
+            {unreadCount > 99 ? '۹۹+' : new Intl.NumberFormat('fa-IR').format(unreadCount)}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={onMarkAll}
+            title="علامت‌گذاری همه به‌عنوان خوانده‌شده"
+            className="flex items-center gap-1 text-[11px] text-stone-500 hover:text-stone-800 transition-colors px-2 py-1 rounded hover:bg-stone-100"
+          >
+            <CheckCheck size={13} />
+            همه خوانده شد
+          </button>
+        )}
+        {showClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 flex items-center justify-center rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+          >
+            <X size={15} />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────
+
 export function NotificationsBell() {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // فقط اعلان‌هایی که برای کاربر فعلی معنی دارند را نمایش می‌دهیم.
-  // BranchUser فقط اعلان‌های شعبه خودش را می‌بیند — این filter ساده است
-  // چون اعلان `sub` شامل نام شعبه است. در فاز ۱۰ یک فیلد branchId مستقل
-  // به Notification اضافه می‌شود.
   const notifications = useAppStore((s) => s.notifications);
   const user = useAppStore((s) => s.user);
   const markRead = useAppStore((s) => s.markNotificationRead);
   const markAllRead = useAppStore((s) => s.markAllNotificationsRead);
-  const openTx = useAppStore((s) => s.openTx);
-
-  // برای BranchUser، فقط اعلان‌های مربوط به تراکنش‌های قابل مشاهده‌اش
-  const visibleTxIds = useAppStore((s) => {
-    if (!s.user) return new Set<string>();
-    if (s.user.role === 'SuperAdmin') {
-      return new Set(s.transactions.map((t) => t.id));
-    }
-    return new Set(
-      s.transactions
-        .filter((t) => t.branchId === s.user!.assignedBranch)
-        .map((t) => t.id)
-    );
-  });
 
   const visible = notifications.filter((n) => {
-    if (!n.txId) return true; // اعلان‌های عمومی (info)
-    return visibleTxIds.has(n.txId);
+    if (!user) return false;
+    if (!n.txId) return true;
+    return true;
   });
 
   const unreadCount = visible.filter((n) => !n.read).length;
 
+  const close = useCallback(() => setOpen(false), []);
+
+  // Close on outside click (desktop)
   useEffect(() => {
     if (!open) return;
-    function handleOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+    function handle(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
     }
-    document.addEventListener('mousedown', handleOutside);
-    return () => document.removeEventListener('mousedown', handleOutside);
-  }, [open]);
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open, close]);
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return;
+    function handle(e: KeyboardEvent) {
+      if (e.key === 'Escape') close();
+    }
+    document.addEventListener('keydown', handle);
+    return () => document.removeEventListener('keydown', handle);
+  }, [open, close]);
 
   if (!user) return null;
 
-  async function handleClickNotif(notif: (typeof visible)[number]) {
-    if (!notif.read) {
-      await markRead(notif.id);
-    }
-    if (notif.txId) {
-      openTx(notif.txId);
-      router.push('/transactions');
-    }
-    setOpen(false);
-  }
+  const handleRead = async (id: string) => { await markRead(id); };
+  const handleMarkAll = async () => { await markAllRead(); };
 
   return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-label={`اعلان‌ها${
-          unreadCount > 0 ? ` (${unreadCount} خوانده‌نشده)` : ''
-        }`}
-        className="relative w-9 h-9 rounded-md hover:bg-stone-50 transition-colors flex items-center justify-center text-stone-600"
-      >
-        <Bell size={16} strokeWidth={1.5} aria-hidden="true" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-medium tabular-nums">
-            {unreadCount > 9 ? '۹+' : new Intl.NumberFormat('fa-IR').format(unreadCount)}
-          </span>
-        )}
-      </button>
+    <>
+      {/* ── Bell button ── */}
+      <div ref={ref} className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-label={`اعلان‌ها${unreadCount > 0 ? ` (${unreadCount} خوانده‌نشده)` : ''}`}
+          aria-haspopup="true"
+          aria-expanded={open}
+          className={cn(
+            'relative w-9 h-9 rounded-md transition-colors flex items-center justify-center',
+            open ? 'bg-stone-100 text-stone-800' : 'hover:bg-stone-50 text-stone-600',
+          )}
+        >
+          <Bell size={16} strokeWidth={1.5} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-medium tabular-nums">
+              {unreadCount > 9 ? '۹+' : new Intl.NumberFormat('fa-IR').format(unreadCount)}
+            </span>
+          )}
+        </button>
 
-      {open && (
-        <div className="absolute end-0 top-11 w-80 max-w-[calc(100vw-2rem)] bg-white border border-stone-200 rounded-md shadow-dropdown z-50 animate-fade-in overflow-hidden">
-          <div className="px-4 py-3 border-b border-stone-100 flex items-center justify-between">
-            <div className="text-[13px] text-stone-800">اعلان‌ها</div>
-            {unreadCount > 0 && (
-              <button
-                type="button"
-                onClick={() => markAllRead()}
-                className="text-[11px] text-stone-500 hover:text-stone-800 transition-colors"
-              >
-                علامت‌گذاری همه به‌عنوان خوانده‌شده
-              </button>
-            )}
+        {/* ── Desktop dropdown (md+) ── */}
+        {open && (
+          <div
+            role="dialog"
+            aria-label="اعلان‌ها"
+            className="hidden md:flex flex-col absolute end-0 top-11 w-[360px] max-w-[calc(100vw-2rem)] bg-white border border-stone-200 rounded-xl shadow-lg z-50 overflow-hidden animate-fade-in"
+            style={{ maxHeight: '480px' }}
+          >
+            <PanelHeader
+              unreadCount={unreadCount}
+              onMarkAll={handleMarkAll}
+              onClose={close}
+            />
+            <div className="overflow-y-auto flex-1 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-200">
+              {visible.length === 0 ? (
+                <EmptyNotifs />
+              ) : (
+                visible.map((n) => (
+                  <NotifCard key={n.id} n={n} onRead={handleRead} onClose={close} />
+                ))
+              )}
+            </div>
           </div>
+        )}
+      </div>
 
-          <div className="max-h-[400px] overflow-y-auto">
-            {visible.length === 0 ? (
-              <Empty title="هیچ اعلانی نیست" icon={Bell} />
-            ) : (
-              visible.map((n) => {
-                const meta = NOTIF_META[n.type];
-                const Icon = meta.icon;
-                return (
-                  <button
-                    key={n.id}
-                    type="button"
-                    onClick={() => handleClickNotif(n)}
-                    className={cn(
-                      'w-full px-4 py-3 flex items-start gap-3 text-right border-b border-stone-50 last:border-b-0 transition-colors hover:bg-stone-50',
-                      !n.read && 'bg-stone-50/60'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0',
-                        meta.bg,
-                        meta.color
-                      )}
-                    >
-                      <Icon size={13} strokeWidth={1.5} aria-hidden="true" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12.5px] text-stone-800 leading-6">
-                        {n.title}
-                      </div>
-                      <div className="text-[11.5px] text-stone-500 truncate mt-0.5">
-                        {n.sub}
-                      </div>
-                      <div className="text-[10.5px] text-muted mt-1">
-                        {n.time}
-                      </div>
-                    </div>
-                    {!n.read && (
-                      <span
-                        className="w-1.5 h-1.5 rounded-full bg-stone-900 flex-shrink-0 mt-2"
-                        aria-label="خوانده‌نشده"
-                      />
-                    )}
-                  </button>
-                );
-              })
-            )}
+      {/* ── Mobile bottom sheet (< md) ── */}
+      {open && (
+        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end" onClick={close}>
+          {/* backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+
+          {/* sheet */}
+          <div
+            role="dialog"
+            aria-label="اعلان‌ها"
+            className="relative bg-white rounded-t-2xl flex flex-col shadow-2xl max-h-[75vh] animate-slide-up"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* drag handle */}
+            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+              <div className="w-10 h-1 rounded-full bg-stone-300" />
+            </div>
+
+            <PanelHeader
+              unreadCount={unreadCount}
+              onMarkAll={handleMarkAll}
+              onClose={close}
+              showClose
+            />
+
+            <div className="overflow-y-auto flex-1 pb-safe">
+              {visible.length === 0 ? (
+                <EmptyNotifs />
+              ) : (
+                visible.map((n) => (
+                  <NotifCard key={n.id} n={n} onRead={handleRead} onClose={close} />
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

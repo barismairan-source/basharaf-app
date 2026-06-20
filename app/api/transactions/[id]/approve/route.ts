@@ -7,6 +7,7 @@ import { rowToTransaction } from '@/lib/db/serializers';
 import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
 import { applyMenuSaleDeduction, type MenuSaleLine } from '@/lib/inventory/menuSaleDeduction';
 import { audit } from '@/lib/auth/audit';
+import { notify, notifyAdmins } from '@/lib/notify';
 
 /**
  * POST /api/transactions/[id]/approve — Atomic با balance update.
@@ -84,20 +85,15 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
         if (result.warnings.length > 0) {
           audit({ action: 'transaction.menuSaleDeduction.warning', userId: session.sub, meta: { txId: params.id, warnings: result.warnings } });
-          // اعلان به همه‌ی مدیران کل — موجودی ناکافی باید در bell icon دیده شود، نه فقط در audit log
-          const admins = await dbTx.select({ id: schema.users.id })
-            .from(schema.users).where(eq(schema.users.role, 'SuperAdmin'));
-          for (const admin of admins) {
-            await dbTx.insert(schema.notifications).values({
-              type: 'info',
-              title: 'موجودی ناکافی در فروش منو',
-              sub: (result.warnings[0] ?? '').slice(0, 200),
-              time: 'به‌تازگی',
-              read: false,
-              txId: params.id,
-              userId: admin.id,
-            });
-          }
+          await notifyAdmins({
+            type: 'warning',
+            title: 'موجودی ناکافی در فروش منو',
+            sub: (result.warnings[0] ?? '').slice(0, 200),
+            txId: params.id,
+            actionUrl: `/transactions`,
+            entityId: params.id,
+            ruleKey: 'low_stock',
+          }, dbTx);
         }
       }
     });
@@ -107,14 +103,15 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     if (!updated) throw new ApiError(500, 'خطا', 'UPDATE_FAILED');
 
     if (updated.createdBy !== session.sub) {
-      await db.insert(schema.notifications).values({
+      await notify({
         type: 'approved',
         title: 'تراکنش تایید شد ✓',
         sub: `${updated.title} — ${updated.branchName}`,
-        time: 'به‌تازگی',
-        read: false,
         txId: updated.id,
+        actionUrl: `/transactions`,
+        entityId: updated.id,
         userId: updated.createdBy,
+        ruleKey: 'pending_approval',
       });
     }
 

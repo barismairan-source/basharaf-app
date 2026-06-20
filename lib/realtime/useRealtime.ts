@@ -88,6 +88,8 @@ export function useRealtime() {
             time: row.time as string,
             read: row.read as boolean,
             txId: (row.tx_id as string) ?? null,
+            actionUrl: (row.action_url as string) ?? null,
+            entityId: (row.entity_id as string) ?? null,
           };
           const current = useAppStore.getState().notifications;
           if (current.some(n => n.id === notif.id)) return;

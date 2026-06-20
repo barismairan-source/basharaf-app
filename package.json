@@ -1,6 +1,6 @@
 {
   "name": "basharaf-app",
-  "version": "0.9.31-enterprise-ux",
+  "version": "0.9.32-notification-v2",
   "private": true,
   "description": "سامانه حسابداری چندشعبه‌ای با شرف — basharaf demo 0.1",
   "scripts": {

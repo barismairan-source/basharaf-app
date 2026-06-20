@@ -5,6 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
+import { notify } from '@/lib/notify';
 
 const rejectBodySchema = z.object({
   reason: z.string().max(300).optional(),
@@ -62,13 +63,13 @@ export async function POST(
     }
 
     if (updated.createdBy !== session.sub) {
-      await db.insert(schema.notifications).values({
+      await notify({
         type: 'rejected',
         title: 'تراکنش رد شد',
         sub: `${updated.title} — ${updated.branchName}`,
-        time: 'به‌تازگی',
-        read: false,
         txId: updated.id,
+        actionUrl: `/transactions`,
+        entityId: updated.id,
         userId: updated.createdBy,
       });
     }
