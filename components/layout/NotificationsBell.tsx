@@ -25,12 +25,6 @@ const TYPE_META: Record<
   critical: { icon: AlertOctagon,  iconColor: 'text-red-600',     dotColor: 'bg-red-500',     unreadBg: 'bg-red-50/70',     label: 'بحرانی' },
 };
 
-// ─── Time formatting ─────────────────────────────────────────────
-
-function relativeTime(timeStr: string): string {
-  return timeStr;
-}
-
 // ─── Single notification card ────────────────────────────────────
 
 function NotifCard({
@@ -45,6 +39,11 @@ function NotifCard({
   const meta = TYPE_META[n.type] ?? TYPE_META.info;
   const Icon = meta.icon;
 
+  const handleClick = () => {
+    if (!n.read) onRead(n.id);
+    onClose();
+  };
+
   const inner = (
     <div
       className={cn(
@@ -53,7 +52,6 @@ function NotifCard({
         !n.read && meta.unreadBg,
       )}
     >
-      {/* Type icon */}
       <div className={cn(
         'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5',
         !n.read ? 'bg-white shadow-sm' : 'bg-stone-100',
@@ -62,30 +60,23 @@ function NotifCard({
         <Icon size={14} strokeWidth={1.8} />
       </div>
 
-      {/* Content */}
       <div className="flex-1 min-w-0 text-right">
         <p className={cn('text-[12.5px] leading-snug', n.read ? 'text-stone-600' : 'text-stone-900 font-medium')}>
           {n.title}
         </p>
         <p className="text-[11.5px] text-stone-500 mt-0.5 line-clamp-2">{n.sub}</p>
-        <p className="text-[10.5px] text-stone-400 mt-1">{relativeTime(n.time)}</p>
+        <p className="text-[10.5px] text-stone-400 mt-1">{n.time}</p>
       </div>
 
-      {/* Unread dot */}
       {!n.read && (
         <span className={cn('w-2 h-2 rounded-full flex-shrink-0 mt-2', meta.dotColor)} />
       )}
     </div>
   );
 
-  const handleClick = () => {
-    if (!n.read) onRead(n.id);
-    onClose();
-  };
-
   if (n.actionUrl) {
     return (
-      <Link href={n.actionUrl} onClick={handleClick} className="block">
+      <Link href={n.actionUrl} onClick={handleClick} className="block w-full text-right">
         {inner}
       </Link>
     );
@@ -150,9 +141,10 @@ function PanelHeader({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
+            aria-label="بستن اعلان‌ها"
+            className="w-8 h-8 flex items-center justify-center rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
           >
-            <X size={15} />
+            <X size={16} />
           </button>
         )}
       </div>
@@ -164,6 +156,9 @@ function PanelHeader({
 
 export function NotificationsBell() {
   const [open, setOpen] = useState(false);
+  // Single ref wraps bell + desktop dropdown + mobile sheet portal anchor.
+  // The mobile sheet is rendered inside this ref (even though it's fixed-position)
+  // so the outside-click handler doesn't fire on sheet interactions.
   const ref = useRef<HTMLDivElement>(null);
 
   const notifications = useAppStore((s) => s.notifications);
@@ -171,17 +166,13 @@ export function NotificationsBell() {
   const markRead = useAppStore((s) => s.markNotificationRead);
   const markAllRead = useAppStore((s) => s.markAllNotificationsRead);
 
-  const visible = notifications.filter((n) => {
-    if (!user) return false;
-    if (!n.txId) return true;
-    return true;
-  });
-
+  const visible = notifications.filter(() => !!user);
   const unreadCount = visible.filter((n) => !n.read).length;
 
   const close = useCallback(() => setOpen(false), []);
 
-  // Close on outside click (desktop)
+  // Outside click — only fires when click is outside the ref (which includes both
+  // the desktop dropdown AND the mobile sheet since both live inside ref).
   useEffect(() => {
     if (!open) return;
     function handle(e: MouseEvent) {
@@ -191,7 +182,7 @@ export function NotificationsBell() {
     return () => document.removeEventListener('mousedown', handle);
   }, [open, close]);
 
-  // Close on Escape
+  // Escape key
   useEffect(() => {
     if (!open) return;
     function handle(e: KeyboardEvent) {
@@ -201,36 +192,52 @@ export function NotificationsBell() {
     return () => document.removeEventListener('keydown', handle);
   }, [open, close]);
 
+  // Lock body scroll while mobile sheet is open
+  useEffect(() => {
+    const isMobile = window.matchMedia('(max-width: 767px)').matches;
+    if (open && isMobile) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
   if (!user) return null;
 
-  const handleRead = async (id: string) => { await markRead(id); };
-  const handleMarkAll = async () => { await markAllRead(); };
+  // Fire-and-forget: optimistic update is handled in the slice
+  const handleRead = (id: string) => { markRead(id); };
+  const handleMarkAll = () => { markAllRead(); };
 
   return (
-    <>
-      {/* ── Bell button ── */}
-      <div ref={ref} className="relative">
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          aria-label={`اعلان‌ها${unreadCount > 0 ? ` (${unreadCount} خوانده‌نشده)` : ''}`}
-          aria-haspopup="true"
-          aria-expanded={open}
-          className={cn(
-            'relative w-9 h-9 rounded-md transition-colors flex items-center justify-center',
-            open ? 'bg-stone-100 text-stone-800' : 'hover:bg-stone-50 text-stone-600',
-          )}
-        >
-          <Bell size={16} strokeWidth={1.5} />
-          {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-medium tabular-nums">
-              {unreadCount > 9 ? '۹+' : new Intl.NumberFormat('fa-IR').format(unreadCount)}
-            </span>
-          )}
-        </button>
+    // ref wraps everything — bell button + desktop dropdown + mobile sheet.
+    // The mobile sheet uses `fixed inset-0` so its visual position is always
+    // viewport-relative regardless of where it sits in the DOM tree.
+    <div ref={ref} className="relative">
 
-        {/* ── Desktop dropdown (md+) ── */}
-        {open && (
+      {/* ── Bell button ── */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={`اعلان‌ها${unreadCount > 0 ? ` (${unreadCount} خوانده‌نشده)` : ''}`}
+        aria-haspopup="true"
+        aria-expanded={open}
+        className={cn(
+          'relative w-9 h-9 rounded-md transition-colors flex items-center justify-center',
+          open ? 'bg-stone-100 text-stone-800' : 'hover:bg-stone-50 text-stone-600',
+        )}
+      >
+        <Bell size={16} strokeWidth={1.5} />
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -end-0.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center font-medium tabular-nums">
+            {unreadCount > 9 ? '۹+' : new Intl.NumberFormat('fa-IR').format(unreadCount)}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          {/* ── Desktop dropdown (md+) ─────────────────────────── */}
           <div
             role="dialog"
             aria-label="اعلان‌ها"
@@ -252,46 +259,51 @@ export function NotificationsBell() {
               )}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* ── Mobile bottom sheet (< md) ── */}
-      {open && (
-        <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end" onClick={close}>
-          {/* backdrop */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
-
-          {/* sheet */}
+          {/* ── Mobile bottom sheet (< md) ─────────────────────── */}
+          {/* fixed inset-0 means this covers the viewport regardless of DOM position.
+              Being inside ref means outside-click handler won't close it on sheet taps. */}
           <div
-            role="dialog"
-            aria-label="اعلان‌ها"
-            className="relative bg-white rounded-t-2xl flex flex-col shadow-2xl max-h-[75vh] animate-slide-up"
-            onClick={(e) => e.stopPropagation()}
+            className="md:hidden fixed inset-0 z-50 flex flex-col justify-end"
+            onClick={close}          // tap backdrop → close
+            aria-modal="true"
           >
-            {/* drag handle */}
-            <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-              <div className="w-10 h-1 rounded-full bg-stone-300" />
-            </div>
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/50" />
 
-            <PanelHeader
-              unreadCount={unreadCount}
-              onMarkAll={handleMarkAll}
-              onClose={close}
-              showClose
-            />
+            {/* Sheet panel */}
+            <div
+              role="dialog"
+              aria-label="اعلان‌ها"
+              className="relative bg-white rounded-t-2xl flex flex-col shadow-2xl animate-slide-up"
+              style={{ maxHeight: '75dvh' }}
+              onClick={(e) => e.stopPropagation()}  // prevent backdrop close on sheet tap
+            >
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
+                <div className="w-10 h-1 rounded-full bg-stone-300" />
+              </div>
 
-            <div className="overflow-y-auto flex-1 pb-safe">
-              {visible.length === 0 ? (
-                <EmptyNotifs />
-              ) : (
-                visible.map((n) => (
-                  <NotifCard key={n.id} n={n} onRead={handleRead} onClose={close} />
-                ))
-              )}
+              <PanelHeader
+                unreadCount={unreadCount}
+                onMarkAll={handleMarkAll}
+                onClose={close}
+                showClose
+              />
+
+              <div className="overflow-y-auto flex-1" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+                {visible.length === 0 ? (
+                  <EmptyNotifs />
+                ) : (
+                  visible.map((n) => (
+                    <NotifCard key={n.id} n={n} onRead={handleRead} onClose={close} />
+                  ))
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
-    </>
+    </div>
   );
 }

@@ -34,10 +34,20 @@ export const createNotificationsSlice =
     },
 
     async markNotificationRead(id) {
+      // Optimistic: update local state immediately so badge/dot disappear instantly
+      set((s) => ({
+        notifications: s.notifications.map((n) =>
+          n.id === id ? { ...n, read: true } : n
+        ),
+      }));
       await deps.repo.markRead(id);
     },
 
     async markAllNotificationsRead() {
+      // Optimistic: mark all read locally before API round-trip
+      set((s) => ({
+        notifications: s.notifications.map((n) => ({ ...n, read: true })),
+      }));
       await deps.repo.markAllRead();
     },
 
