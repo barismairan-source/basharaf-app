@@ -343,6 +343,7 @@ export default function TransactionsPage() {
             data={filtered}
             keyExtractor={tx => tx.id}
             onRowClick={tx => openTx(tx.id)}
+            rowClassName={tx => tx.status === 'proforma' ? 'bg-amber-50/60 border-amber-200' : undefined}
             empty={
               <Card><CardBody>
                 <Empty title="تراکنشی یافت نشد" sub="فیلترها را تغییر دهید" icon={Receipt} />

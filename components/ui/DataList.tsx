@@ -34,6 +34,8 @@ export interface DataListProps<T extends object> {
   empty?: React.ReactNode;
   /** کلیک روی ردیف/کارت */
   onRowClick?: (row: T) => void;
+  /** کلاس اضافی برای هر ردیف/کارت (برای conditional styling مثل proforma) */
+  rowClassName?: (row: T) => string | undefined;
   className?: string;
 }
 
@@ -58,6 +60,7 @@ function DataList<T extends object>({
   loading,
   empty,
   onRowClick,
+  rowClassName,
   className,
 }: DataListProps<T>): React.JSX.Element | null {
   if (loading) {
@@ -91,7 +94,8 @@ function DataList<T extends object>({
             onClick={onRowClick ? () => onRowClick(row) : undefined}
             className={cn(
               'bg-surface border border-border rounded-lg overflow-hidden',
-              onRowClick && 'cursor-pointer active:bg-bg'
+              onRowClick && 'cursor-pointer active:bg-bg',
+              rowClassName?.(row),
             )}
           >
             {visibleMobile.map((col, ci) => (
@@ -133,7 +137,8 @@ function DataList<T extends object>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={cn(
                   'transition-colors',
-                  onRowClick && 'cursor-pointer hover:bg-bg'
+                  onRowClick && 'cursor-pointer hover:bg-bg',
+                  rowClassName?.(row),
                 )}
               >
                 {visibleDesktop.map((col) => (

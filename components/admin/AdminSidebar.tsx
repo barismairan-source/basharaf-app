@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, ClipboardList, ArrowRight } from 'lucide-react';
+import { APP_VERSION } from '@/lib/version';
 
 const NAV = [
   { href: '/admin', label: 'داشبورد ادمین', icon: LayoutDashboard, exact: true },
@@ -43,6 +44,7 @@ export function AdminSidebar() {
           <ArrowRight size={16} />
           بازگشت به اپ
         </Link>
+        <p className="text-xs text-stone-600 text-center py-2 select-none">v{APP_VERSION}</p>
       </div>
     </aside>
   );

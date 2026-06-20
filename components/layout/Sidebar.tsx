@@ -15,6 +15,7 @@ import {
   NAV_GROUPS, BOTTOM_NAV_HREFS, SETTINGS_NAV_ITEM,
   isNavItemActive, type NavItem,
 } from './nav-config';
+import { APP_VERSION } from '@/lib/version';
 
 function NavLink({
   item, pathname, collapsed, onNavClick,
@@ -216,6 +217,13 @@ export function SidebarContent({
               onNavClick={onNavClick}
             />
           </ul>
+        </div>
+      )}
+
+      {/* ─── نسخه ─── */}
+      {!collapsed && (
+        <div className="px-4 pb-1 text-center">
+          <span className="text-[10px] text-muted/50 select-none">v{APP_VERSION}</span>
         </div>
       )}
 
