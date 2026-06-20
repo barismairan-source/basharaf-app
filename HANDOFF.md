@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.29-admin-panel-v1` |
+| **نسخه** | `0.9.30-phase-a-complete` |
 | **آخرین به‌روزرسانی** | 2026-06-20 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 دو migration لازم دارد: `db-accounting-v1-migration.sql` و `db-admin-migration.sql` — هر دو باید در pgAdmin روی Liara اجرا شوند قبل از دیپلوی. |
@@ -49,6 +49,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-20 — v0.9.30: Phase A کامل (Bug1: SecurityPane labels + Bug2: invoiceCode/proforma در فرم تراکنش) — اکانت ۲
+**چه شد:**
+(۱) **Bug 1 (SecurityPane):** برچسب و آیکون همه‌ی AuditAction‌های جدید (۴۳ ورودی) به `ACTION_META` در `components/settings/SecurityPane.tsx` اضافه شد. آیکون‌های lucide جدید: Package، RefreshCw، RotateCcw، UserX، UserCheck، Users، DollarSign، Wrench، ClipboardCheck، ClipboardList، ShoppingCart، UserCog، Eye، EyeOff، Star، StarOff.
+(۲) **Bug 2 (فرم تراکنش جدید):** فیلد «کد فاکتور» و چک‌باکس «پیش‌فاکتور» (amber، فقط SuperAdmin) به `app/(app)/transactions/new/page.tsx` اضافه شدند. state‌ها `invoiceCode` و `isProforma` اضافه شدند. منطق submit به‌روز شد: `initialStatus` بر اساس نقش و `isProforma` تعیین می‌شود.
+(۳) **TS Fix:** `TransactionInput` در `types/transaction.ts` دو فیلد `invoiceCode?: string | null` و `initialStatus?: 'pending' | 'proforma'` گرفت — خطای `TS2353` برطرف شد.
+(۴) **نکته حیاتی:** پیش‌فاکتور هیچ اثری روی موجودی ندارد — `createExpenseTx.ts` این را تضمین می‌کند.
+**فایل‌ها:** `types/transaction.ts`، `components/settings/SecurityPane.tsx`، `app/(app)/transactions/new/page.tsx`، `package.json`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای هر دو migration در pgAdmin. (۲) ساخت zip و دیپلوی روی Liara. (۳) تست کامل admin panel + فرم تراکنش.
 
 ## 📓 2026-06-20 — v0.9.29: Super Admin Panel v1 (RBAC + Impersonation + Audit) — اکانت ۲
 **چه شد:**

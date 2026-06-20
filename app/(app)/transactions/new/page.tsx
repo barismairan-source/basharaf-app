@@ -35,6 +35,8 @@ export default function NewTransactionPage() {
   const [includeVat, setIncludeVat] = useState(false);
   const [isCredit, setIsCredit] = useState(false);
   const [contactId, setContactId] = useState('');
+  const [invoiceCode, setInvoiceCode] = useState('');
+  const [isProforma, setIsProforma] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -128,6 +130,8 @@ export default function NewTransactionPage() {
         contactId: contactId || undefined,
         vatAmount,
         isCredit,
+        invoiceCode: invoiceCode.trim() || null,
+        initialStatus: isAdmin && isProforma ? 'proforma' : 'pending',
       },
       user,
       cat?.name ?? 'انتقال وجه',
@@ -135,13 +139,19 @@ export default function NewTransactionPage() {
     );
 
     if (tx) {
-      const msg = tx.status === 'approved' ? 'تراکنش ثبت و تایید شد' : 'تراکنش ثبت شد — در انتظار تایید';
+      const msg = tx.status === 'proforma'
+        ? 'پیش‌فاکتور ثبت شد'
+        : tx.status === 'approved'
+          ? 'تراکنش ثبت و تایید شد'
+          : 'تراکنش ثبت شد — در انتظار تایید';
       showToast(msg, 'success', tx.title);
       reset();
       setAmountDisplay('');
       setIncludeVat(false);
       setIsCredit(false);
       setContactId('');
+      setInvoiceCode('');
+      setIsProforma(false);
       router.push('/transactions');
     }
   }
@@ -318,6 +328,39 @@ export default function NewTransactionPage() {
                 </Field>
               </div>
 
+              {/* ─── کد فاکتور (اختیاری) ─── */}
+              {!isTransfer && (
+                <Field label="کد فاکتور / پیش‌فاکتور (اختیاری)" helper="شماره فاکتور یا کد پیگیری را اینجا وارد کنید">
+                  <Input
+                    placeholder="مثلاً: INV-1401-001"
+                    dir="ltr"
+                    value={invoiceCode}
+                    onChange={e => setInvoiceCode(e.target.value)}
+                  />
+                </Field>
+              )}
+
+              {/* ─── وضعیت پیش‌فاکتور (فقط SuperAdmin) ─── */}
+              {isAdmin && !isTransfer && (
+                <div className="p-3 rounded-md border border-amber-200 bg-amber-50/60 space-y-1">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-amber-300 accent-amber-600"
+                      checked={isProforma}
+                      onChange={e => setIsProforma(e.target.checked)}
+                    />
+                    <span className="text-[12.5px] text-amber-800 font-medium">ثبت به‌عنوان پیش‌فاکتور</span>
+                  </label>
+                  {isProforma && (
+                    <p className="text-[11px] text-amber-700 pr-6">
+                      پیش‌فاکتور روی موجودی صندوق یا مانده طرف‌حساب تأثیر نمی‌گذارد.
+                      برای تأثیر مالی باید بعداً تأیید شود.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* ─── توضیحات (full width) ─── */}
               <Field label="توضیحات (اختیاری)">
                 <Textarea rows={2} placeholder="یادداشت..." {...register('note')} />
@@ -334,11 +377,15 @@ export default function NewTransactionPage() {
                 </button>
                 <Button
                   type="submit"
-                  variant="primary"
+                  variant={isAdmin && isProforma ? 'default' : 'primary'}
                   icon={isAdmin ? Save : Plus}
                   loading={isSubmitting}
                 >
-                  {isAdmin ? 'ثبت و تایید تراکنش' : 'ارسال برای تایید'}
+                  {isAdmin && isProforma
+                    ? 'ثبت پیش‌فاکتور'
+                    : isAdmin
+                      ? 'ثبت و تایید تراکنش'
+                      : 'ارسال برای تایید'}
                 </Button>
               </div>
             </form>

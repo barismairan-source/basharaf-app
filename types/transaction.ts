@@ -135,6 +135,8 @@ export type TransactionInput = Omit<
   contactId?: string;
   vatAmount?: number;
   isCredit?: boolean;
+  invoiceCode?: string | null;
+  initialStatus?: 'pending' | 'proforma';
 };
 
 /**

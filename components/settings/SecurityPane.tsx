@@ -12,6 +12,22 @@ import {
   UserPlus,
   AlertTriangle,
   Skull,
+  Package,
+  RefreshCw,
+  RotateCcw,
+  UserX,
+  UserCheck,
+  Users,
+  DollarSign,
+  Wrench,
+  ClipboardCheck,
+  ClipboardList,
+  ShoppingCart,
+  UserCog,
+  Eye,
+  EyeOff,
+  Star,
+  StarOff,
 } from 'lucide-react';
 import { Card, CardBody, CardHeader, Empty, Button, Input } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -32,16 +48,62 @@ interface AuditEntry {
 }
 
 const ACTION_META: Record<string, { icon: typeof Shield; label: string; color: string }> = {
-  'login.success': { icon: LogIn, label: 'ورود موفق', color: 'text-emerald-700' },
-  'login.failed': { icon: AlertTriangle, label: 'ورود ناموفق', color: 'text-amber-700' },
-  'login.blocked': { icon: Shield, label: 'بلاک شد', color: 'text-rose-700' },
-  'logout': { icon: LogOut, label: 'خروج', color: 'text-stone-500' },
-  'password.changed': { icon: Key, label: 'تغییر رمز', color: 'text-blue-700' },
-  'transaction.approved': { icon: CheckCircle2, label: 'تایید تراکنش', color: 'text-emerald-700' },
-  'transaction.rejected': { icon: XCircle, label: 'رد تراکنش', color: 'text-rose-700' },
-  'transaction.deleted': { icon: Trash2, label: 'حذف تراکنش', color: 'text-rose-700' },
-  'user.created': { icon: UserPlus, label: 'کاربر جدید', color: 'text-blue-700' },
-  'user.deleted': { icon: Trash2, label: 'حذف کاربر', color: 'text-rose-700' },
+  // Auth
+  'login.success':             { icon: LogIn,         label: 'ورود موفق',                  color: 'text-emerald-700' },
+  'login.failed':              { icon: AlertTriangle,  label: 'ورود ناموفق',                 color: 'text-amber-700' },
+  'login.blocked':             { icon: Shield,         label: 'بلاک شد',                     color: 'text-rose-700' },
+  'logout':                    { icon: LogOut,         label: 'خروج',                         color: 'text-stone-500' },
+  'password.changed':          { icon: Key,            label: 'تغییر رمز',                   color: 'text-blue-700' },
+  // Transactions
+  'transaction.approved':      { icon: CheckCircle2,   label: 'تایید تراکنش',                color: 'text-emerald-700' },
+  'transaction.rejected':      { icon: XCircle,        label: 'رد تراکنش',                   color: 'text-rose-700' },
+  'transaction.deleted':       { icon: Trash2,         label: 'حذف تراکنش',                  color: 'text-rose-700' },
+  'transaction.nonFinancialEdit': { icon: Key,         label: 'ویرایش غیرمالی تراکنش',       color: 'text-blue-700' },
+  'transaction.menuSaleDeduction.warning': { icon: AlertTriangle, label: 'هشدار کسر منو',   color: 'text-amber-700' },
+  // Users
+  'user.created':              { icon: UserPlus,       label: 'کاربر جدید',                  color: 'text-blue-700' },
+  'user.deleted':              { icon: Trash2,         label: 'حذف کاربر',                   color: 'text-rose-700' },
+  // Admin actions
+  'admin.impersonation.started': { icon: Eye,          label: 'شروع جعل هویت (Admin)',        color: 'text-rose-700' },
+  'admin.impersonation.ended':   { icon: EyeOff,       label: 'پایان جعل هویت (Admin)',       color: 'text-stone-500' },
+  'admin.user.suspended':      { icon: UserX,          label: 'تعلیق کاربر توسط ادمین',      color: 'text-rose-700' },
+  'admin.user.activated':      { icon: UserCheck,      label: 'فعال‌سازی کاربر توسط ادمین',   color: 'text-emerald-700' },
+  'admin.user.roleChanged':    { icon: UserCog,        label: 'تغییر نقش کاربر',             color: 'text-blue-700' },
+  'admin.user.branchChanged':  { icon: Users,          label: 'تغییر شعبه کاربر',            color: 'text-blue-700' },
+  // Inventory
+  'inv.produce':               { icon: Package,        label: 'تولید انبار',                  color: 'text-emerald-700' },
+  'inv.stocktake':             { icon: ClipboardCheck, label: 'انبارگردانی',                  color: 'text-blue-700' },
+  'inv.voucher.approved':      { icon: CheckCircle2,   label: 'تایید برگه انبار',             color: 'text-emerald-700' },
+  'inv.voucher.rejected':      { icon: XCircle,        label: 'رد برگه انبار',                color: 'text-rose-700' },
+  'inv.voucher.created':       { icon: Package,        label: 'ایجاد برگه انبار',             color: 'text-stone-600' },
+  'inv.autoRecost.afterPurchase': { icon: RefreshCw,   label: 'بازمحاسبه بهای تمام‌شده',     color: 'text-blue-700' },
+  'inventory_clamp_warning':   { icon: AlertTriangle,  label: 'هشدار محدودیت موجودی',        color: 'text-amber-700' },
+  // Finance
+  'reversal_created':          { icon: RotateCcw,      label: 'برگشت تراکنش',                color: 'text-amber-700' },
+  'settings.factoryReset':     { icon: Skull,          label: 'بازنشانی کامل سیستم',         color: 'text-rose-700' },
+  // Loyalty
+  'loyalty.earn':              { icon: Star,           label: 'دریافت امتیاز وفاداری',       color: 'text-emerald-700' },
+  'loyalty.redeem':            { icon: StarOff,        label: 'استفاده از امتیاز',           color: 'text-amber-700' },
+  'loyalty.adjust':            { icon: DollarSign,     label: 'تعدیل امتیاز وفاداری',       color: 'text-blue-700' },
+  // Equipment & Maintenance
+  'equipment.created':         { icon: Wrench,         label: 'افزودن تجهیزات',              color: 'text-stone-600' },
+  'equipment.updated':         { icon: Wrench,         label: 'ویرایش تجهیزات',              color: 'text-blue-700' },
+  'equipment.deleted':         { icon: Trash2,         label: 'حذف تجهیزات',                 color: 'text-rose-700' },
+  'maintenance.created':       { icon: Wrench,         label: 'ثبت تعمیر و نگهداری',         color: 'text-stone-600' },
+  // Purchase Orders
+  'po.created':                { icon: ShoppingCart,   label: 'سفارش خرید جدید',             color: 'text-stone-600' },
+  'po.updated':                { icon: ShoppingCart,   label: 'ویرایش سفارش خرید',           color: 'text-blue-700' },
+  'po.received':               { icon: CheckCircle2,   label: 'دریافت سفارش خرید',           color: 'text-emerald-700' },
+  'po.receiveDiscrepancy':     { icon: AlertTriangle,  label: 'مغایرت در دریافت سفارش',      color: 'text-amber-700' },
+  // Tasks
+  'taskTemplate.created':      { icon: ClipboardList,  label: 'الگوی وظیفه جدید',            color: 'text-stone-600' },
+  'taskTemplate.updated':      { icon: ClipboardList,  label: 'ویرایش الگوی وظیفه',          color: 'text-blue-700' },
+  'task.generated':            { icon: ClipboardCheck, label: 'وظایف روز تولید شد',          color: 'text-stone-600' },
+  'task.completed':            { icon: CheckCircle2,   label: 'وظیفه کامل شد',               color: 'text-emerald-700' },
+  'task.skipped':              { icon: XCircle,        label: 'وظیفه رد شد',                 color: 'text-amber-700' },
+  'task.assigned':             { icon: UserCog,        label: 'وظیفه تخصیص داده شد',         color: 'text-blue-700' },
+  // Branches
+  'branch.deleted':            { icon: Trash2,         label: 'حذف شعبه',                    color: 'text-rose-700' },
 };
 
 export function SecurityPane() {
