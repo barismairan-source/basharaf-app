@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireCustomer, CustomerUnauthorizedError } from '@/lib/auth/customerSession';
 import { getWebCustomerAddresses, addWebCustomerAddress } from '@/lib/ordering/webCustomer';
+import { handleError } from '@/lib/api-error';
 
 const addSchema = z.object({
   title: z.string().min(1).max(100),
@@ -18,10 +19,9 @@ export async function GET() {
     return NextResponse.json({ addresses });
   } catch (err) {
     if (err instanceof CustomerUnauthorizedError) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'احراز هویت لازم است', code: 'UNAUTHORIZED' }, { status: 401 });
     }
-    console.error('[customer/addresses GET]', err);
-    return NextResponse.json({ error: 'خطای سرور' }, { status: 500 });
+    return handleError(err);
   }
 }
 
@@ -33,12 +33,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ address }, { status: 201 });
   } catch (err) {
     if (err instanceof CustomerUnauthorizedError) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'احراز هویت لازم است', code: 'UNAUTHORIZED' }, { status: 401 });
     }
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: 'داده‌های ورودی نامعتبر است' }, { status: 422 });
-    }
-    console.error('[customer/addresses POST]', err);
-    return NextResponse.json({ error: 'خطای سرور' }, { status: 500 });
+    return handleError(err);
   }
 }

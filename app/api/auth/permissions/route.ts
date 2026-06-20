@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { verifyToken } from '@/lib/auth/jwt';
+import { handleError } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,7 +50,7 @@ export async function GET(req: Request) {
         'Cache-Control': 'private, max-age=5',
       },
     });
-  } catch {
-    return NextResponse.json({ error: 'INTERNAL' }, { status: 500 });
+  } catch (e) {
+    return handleError(e);
   }
 }

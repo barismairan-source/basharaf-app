@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.30-phase-a-complete` |
+| **نسخه** | `0.9.31-enterprise-ux` |
 | **آخرین به‌روزرسانی** | 2026-06-20 — اکانت: ۲ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز |
 | **دیپلوی** | 🟡 دو migration لازم دارد: `db-accounting-v1-migration.sql` و `db-admin-migration.sql` — هر دو باید در pgAdmin روی Liara اجرا شوند قبل از دیپلوی. |
@@ -49,6 +49,29 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-20 — v0.9.31: Enterprise UX (Skeleton primitive + 11 loading.tsx + API error unification) — اکانت ۲
+**چه شد:**
+(۱) **Skeleton UI Primitive:** `components/ui/Skeleton.tsx` ساخته شد — یک سیستم کامپوزبل با sub-components: `Line`، `Card`، `TableRow`، `Table`، `Toolbar`، `Metric`، `Chart`، `Avatar`، `PageHeader`، `ActionCard`، `Dark`، `DarkTable`. به `components/ui/index.ts` export شد.
+(۲) **11 فایل loading.tsx جدید:** هر صفحه‌ی سنگین یک skeleton دقیق دارد که layout واقعی را mirror می‌کند (CLS = صفر):
+  - `app/(app)/loading.tsx` — ارتقا داده شد (از blob به Skeleton primitive)
+  - `app/(app)/transactions/loading.tsx` — KPI + filter + جدول ۱۰ ردیفی
+  - `app/(app)/contacts/loading.tsx` — toolbar + جدول
+  - `app/(app)/accounts/loading.tsx` — ۳ کارت نوع حساب + جدول
+  - `app/(app)/reports/loading.tsx` — filter card + ۴ KPI + ۲ چارت + جدول
+  - `app/(app)/inventory/loading.tsx` — action cards + more actions list
+  - `app/(app)/purchase-orders/loading.tsx` — toolbar + جدول
+  - `app/(app)/recruitment/loading.tsx` — kanban board با ۴ ستون
+  - `app/(app)/logs/loading.tsx` — level tabs + log entries
+  - `app/(admin)/loading.tsx` — dark theme با DarkTable
+  - `app/(admin)/admin/users/loading.tsx` — dark theme کاربران
+  - `app/(admin)/admin/audit/loading.tsx` — dark theme audit + pagination
+(۳) **API Error Unification (7 route):** customer/addresses، customer/addresses/[id]، customer/auth/send-otp، customer/auth/verify، customer/me، customer/orders، auth/permissions — همه migrate شدند به `handleError()` از `lib/api-error.ts`. دیگر هیچ `console.error + خطای سرور raw` در پروژه نیست.
+(۴) **کدهای اقدامی تمیز شدند:** `ApiError` در جاهایی که response.json مستقیم داشتند جایگزین شد.
+**فایل‌ها:** `components/ui/Skeleton.tsx`، `components/ui/index.ts`، ۱۱ فایل loading.tsx، ۷ API route (customer/*, auth/permissions)، `package.json`، `HANDOFF.md`.
+**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای migration در pgAdmin. (۲) دیپلوی zip روی Liara. (۳) تست skeleton‌ها روی مرورگر.
 
 ## 📓 2026-06-20 — v0.9.30: Phase A کامل (Bug1: SecurityPane labels + Bug2: invoiceCode/proforma در فرم تراکنش) — اکانت ۲
 **چه شد:**

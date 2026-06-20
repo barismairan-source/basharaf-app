@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyWebOtp } from '@/lib/ordering/webCustomer';
 import { setCustomerSession } from '@/lib/auth/customerSession';
+import { ApiError, handleError } from '@/lib/api-error';
 
 const schema = z.object({
   phone: z.string(),
@@ -14,10 +15,7 @@ export async function POST(request: Request) {
 
     const customer = await verifyWebOtp(body.phone, body.code);
     if (!customer) {
-      return NextResponse.json(
-        { error: 'کد نامعتبر یا منقضی شده است' },
-        { status: 422 }
-      );
+      throw new ApiError(422, 'کد نامعتبر یا منقضی شده است', 'INVALID_OTP');
     }
 
     await setCustomerSession(customer.id, customer.phone);
@@ -31,10 +29,6 @@ export async function POST(request: Request) {
       },
     });
   } catch (err) {
-    if (err instanceof z.ZodError) {
-      return NextResponse.json({ error: 'داده‌های ورودی نامعتبر است' }, { status: 422 });
-    }
-    console.error('[verify-otp]', err);
-    return NextResponse.json({ error: 'خطای سرور' }, { status: 500 });
+    return handleError(err);
   }
 }

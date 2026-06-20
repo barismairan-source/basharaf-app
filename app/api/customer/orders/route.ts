@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireCustomer, CustomerUnauthorizedError } from '@/lib/auth/customerSession';
 import { getWebCustomerOrders } from '@/lib/ordering/webCustomer';
+import { handleError } from '@/lib/api-error';
 
 export async function GET() {
   try {
@@ -9,9 +10,8 @@ export async function GET() {
     return NextResponse.json({ orders });
   } catch (err) {
     if (err instanceof CustomerUnauthorizedError) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'احراز هویت لازم است', code: 'UNAUTHORIZED' }, { status: 401 });
     }
-    console.error('[customer/orders]', err);
-    return NextResponse.json({ error: 'خطای سرور' }, { status: 500 });
+    return handleError(err);
   }
 }

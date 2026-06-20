@@ -52,3 +52,4 @@ export {
 } from './Toast';
 export { Toggle, type ToggleOption, type ToggleProps } from './Toggle';
 export { PageHeader, type PageHeaderProps } from './PageHeader';
+export { Skeleton } from './Skeleton';
