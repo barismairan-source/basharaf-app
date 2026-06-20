@@ -33,10 +33,15 @@ export async function GET(req: Request) {
       role: schema.users.role,
       branchId: schema.users.assignedBranchId,
       permissions: schema.users.permissions,
+      isActive: schema.users.isActive,
     }).from(schema.users).where(eq(schema.users.id, payload.sub)).limit(1);
 
     if (!user) {
       return NextResponse.json({ error: 'USER_NOT_FOUND' }, { status: 404 });
+    }
+
+    if (!user.isActive) {
+      return NextResponse.json({ error: 'ACCOUNT_INACTIVE' }, { status: 403 });
     }
 
     return NextResponse.json({

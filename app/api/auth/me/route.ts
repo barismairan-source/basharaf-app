@@ -24,8 +24,11 @@ export async function GET() {
       .limit(1);
 
     if (!user) {
-      // session valid است ولی user حذف شده — این یک edge case است
-      throw new ApiError(404, 'کاربر پیدا نشد', 'USER_NOT_FOUND');
+      throw new ApiError(401, 'کاربر پیدا نشد', 'USER_NOT_FOUND');
+    }
+
+    if (!user.isActive) {
+      throw new ApiError(401, 'حساب کاربری شما غیرفعال شده است', 'ACCOUNT_INACTIVE');
     }
 
     return NextResponse.json({

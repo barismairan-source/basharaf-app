@@ -59,8 +59,17 @@ async function handleSessionExpired(): Promise<void> {
     const { useAppStore } = await import('@/store');
     useAppStore.setState({ user: null, bootstrapped: true });
   } catch {
-    /* اگر store در دسترس نبود، صرفاً redirect کن */
+    /* اگر store در دسترس نبود، صرفاً ادامه بده */
   }
 
-  window.location.href = '/login';
+  // کوکی httpOnly را server-side پاک کن قبل از redirect.
+  // بدون این مرحله middleware کوکی را می‌بیند و دوباره به /dashboard
+  // برمی‌گرداند → حلقه‌ی بی‌نهایت ping-pong.
+  try {
+    await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  } catch {
+    /* اگر logout request fail شد، ادامه بده — redirect مهم‌تر است */
+  }
+
+  window.location.replace('/login');
 }

@@ -11,6 +11,7 @@ export type AuditAction =
   | 'login.success'
   | 'login.failed'
   | 'login.blocked'
+  | 'login.blocked_inactive'
   | 'logout'
   | 'password.changed'
   | 'transaction.approved'

@@ -189,10 +189,12 @@ export const useAppStore = create<AppStore>()(
           const meRes = await fetch('/api/auth/me', { credentials: 'include' });
           if (!meRes.ok) {
             set({ bootstrapped: true });
-            // 401 = session منقضی یا revoke شده — redirect صریح
-            // (middleware فقط روی navigation اجرا می‌شود؛ اگر session
-            // درست روی صفحه منقضی شود، باید خودمان redirect کنیم)
-            if (meRes.status === 401 && typeof window !== 'undefined') {
+            // 401/403 = session منقضی، کاربر حذف‌شده، یا حساب غیرفعال.
+            // مهم: قبل از redirect باید کوکی httpOnly را server-side پاک کنیم،
+            // وگرنه middleware کوکی را می‌بیند و دوباره به /dashboard redirect
+            // می‌کند → حلقه‌ی ping-pong.
+            if ((meRes.status === 401 || meRes.status === 403) && typeof window !== 'undefined') {
+              await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
               window.location.replace('/login');
             }
             return;

@@ -77,9 +77,13 @@ export async function POST(req: Request) {
 
     if (!user || !passwordValid) {
       recordFailedAttempt(ip);
-      // audit: login failed
       audit({ action: 'login.failed', ip, meta: { email } });
       throw new ApiError(401, 'ایمیل یا رمز عبور نادرست است', 'INVALID_CREDENTIALS');
+    }
+
+    if (!user.isActive) {
+      audit({ action: 'login.blocked_inactive', userId: user.id, ip });
+      throw new ApiError(403, 'حساب کاربری شما غیرفعال شده است. با مدیر سیستم تماس بگیرید.', 'ACCOUNT_INACTIVE');
     }
 
     // ─── Success ───
