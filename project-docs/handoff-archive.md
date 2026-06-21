@@ -1,5 +1,18 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-19 — v0.9.26: یکپارچه‌سازی design tokens در Input/Select/Textarea — اکانت ۲
+**چه شد:**
+رنگ‌های hardcoded (`stone-*`, `rose-*`, `bg-white`) در همه primitive های فرم با design tokens جایگزین شدند:
+(۱) **Input.tsx:** `border-stone-200` → `border-border`؛ `focus-within:border-stone-500` → `focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20`؛ `bg-white` → `bg-surface`؛ `text-stone-800` → `text-text`؛ placeholder `text-stone-400` → `text-muted/60`؛ `bg-stone-50/60` → `bg-bg opacity-60`؛ `border-rose-300` → `border-danger`؛ `h-11` → `h-10` (هم‌راستا با Select).
+(۲) **Select.tsx:** همان token‌ها + `focus:ring-2 focus:ring-accent/20`.
+(۳) **Textarea.tsx:** همان + `focus:ring-2 focus:ring-accent/20` / `focus:ring-danger/20` در حالت خطا.
+(۴) **PasswordInput.tsx:** به‌روزرسانی همان‌طور که Input.tsx.
+(۵) **transactions/new:** error banner از `bg-rose-50 border-rose-100 text-rose-700` → `bg-danger-subtle border-danger/20 text-danger`.
+**فایل‌ها:** `components/ui/Input.tsx`، `components/ui/Select.tsx`، `components/ui/Textarea.tsx`، `components/ui/PasswordInput.tsx`، `app/(app)/transactions/new/page.tsx`.
+**Build:** tsc/build ✅ سبز.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (آرشیو شده — resolved)
+
 ## 📓 2026-06-14 — پکیج دیپلوی نسخه‌ی `v0.9.8-order-public` (ماژول سفارش بیرون‌بر: باکس ۰+۱) — اکانت ۲
 **چه شد:** طبق قرارداد انتشار نسخه‌دار، برای کل کار ماژول سفارش بیرون‌بر تا اینجا (باکس ۰: جدول‌ها+تنظیمات+محدوده‌های ارسال، باکس ۱: صفحه‌ی عمومی `/order`) یک نسخه‌ی جدید ساخته شد: `package.json` از `0.9.7-menu-channel-public` به `0.9.8-order-public` ارتقا یافت. پوشه‌ی `v0.9.8-order-public/` ساخته شد شامل `basharaf-deploy.zip` (خروجی `git archive HEAD`، gitignored — فقط روی این دیسک) + کپی `db-ordering-migration.sql`.
 **فایل‌ها:** `package.json` (نسخه)، `v0.9.8-order-public/db-ordering-migration.sql` (جدید، tracked)، `HANDOFF.md`.

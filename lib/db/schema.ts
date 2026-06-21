@@ -1592,3 +1592,25 @@ export type OrdZone = typeof ordZones.$inferSelect;
 export type Order = typeof orders.$inferSelect;
 export type OrderLine = typeof orderLines.$inferSelect;
 export type OrderEvent = typeof orderEvents.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول قفل دوره مالی — Financial Period Close
+// هر ردیف نشان‌دهنده‌ی یک ماه شمسی بسته‌شده است.
+// تراکنش‌های approved در دوره‌ی بسته غیرقابل‌ویرایش و غیرقابل‌حذف هستند.
+// ════════════════════════════════════════════════════════════════
+export const financialPeriods = pgTable(
+  'financial_periods',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    jalaliYear: integer('jalali_year').notNull(),
+    jalaliMonth: integer('jalali_month').notNull(),
+    closedAt: timestamp('closed_at', { withTimezone: true }).notNull().defaultNow(),
+    closedBy: uuid('closed_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+  },
+  (t) => ({
+    yearMonthUniq: uniqueIndex('fp_year_month_uidx').on(t.jalaliYear, t.jalaliMonth),
+    yearIdx: index('fp_year_idx').on(t.jalaliYear),
+  })
+);
+
+export type FinancialPeriod = typeof financialPeriods.$inferSelect;

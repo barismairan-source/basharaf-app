@@ -10,6 +10,7 @@ import {
   reverseSaleDeduction, voidCogsTransaction,
 } from '@/lib/db/balanceHelpers';
 import { audit } from '@/lib/auth/audit';
+import { loadClosedPeriods, isDateInClosedPeriod, PERIOD_CLOSED_MESSAGE } from '@/lib/financial-period';
 
 /**
  * سیاست «ویرایش پس از تأیید» (Edit-After-Approval Policy) — طبق
@@ -94,6 +95,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       });
     }
 
+    // ── قفل دوره‌ی مالی: هر تغییری روی تراکنش approved در دوره‌ی بسته مسدود می‌شود ──
+    if (tx.status === 'approved' && tx.date) {
+      const closedPeriods = await loadClosedPeriods();
+      if (isDateInClosedPeriod(tx.date, closedPeriods)) {
+        throw new ApiError(422, PERIOD_CLOSED_MESSAGE, 'FINANCIAL_PERIOD_CLOSED');
+      }
+    }
+
     // از این نقطه به بعد: یا تراکنش pending است (ویرایش مالی هم آزاد)، یا approved
     // است و فقط فیلدهای غیرمالی در payload حضور دارند — در هر دو حالت یک UPDATE ساده
     // کافی است؛ هیچ چرخه‌ی reverse/apply لازم نیست چون balance/contact/انبار اثری نمی‌خورند.
@@ -142,6 +151,14 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     const [tx] = await db.select().from(schema.transactions)
       .where(eq(schema.transactions.id, params.id)).limit(1);
     if (!tx) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
+
+    // ── قفل دوره‌ی مالی: حذف تراکنش approved در دوره‌ی بسته مسدود می‌شود ──
+    if (tx.status === 'approved' && tx.date) {
+      const closedPeriods = await loadClosedPeriods();
+      if (isDateInClosedPeriod(tx.date, closedPeriods)) {
+        throw new ApiError(422, PERIOD_CLOSED_MESSAGE, 'FINANCIAL_PERIOD_CLOSED');
+      }
+    }
 
     // ── اگر تراکنش approved بود، balance را معکوس کن قبل از حذف ──
     // ── Rollback کامل و اتمیک یک تراکنش approved (می‌بندد Bug #1 از سند صحت مالی) ──
