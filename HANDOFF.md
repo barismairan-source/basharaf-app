@@ -11,11 +11,11 @@
 | | |
 |---|---|
 | **نسخه** | `0.9.33-financial-integrity` |
-| **آخرین به‌روزرسانی** | 2026-06-21 — اکانت: ۲ |
+| **آخرین به‌روزرسانی** | 2026-06-22 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، و **`db-financial-periods-migration.sql` (جدید)** — همه در pgAdmin روی Liara اجرا شوند. |
+| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، و **`db-financial-periods-migration.sql` (جدید)** — همه در pgAdmin روی Liara اجرا شوند. ZIP: `basharaf-v0.9.33-liara.zip` (1.4MB) آماده است. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای هر چهار migration در pgAdmin. (۲) دیپلوی zip روی Liara. (۳) UI برای مدیریت دوره‌های مالی (صفحه‌ی `/settings/financial-periods` یا بخشی از admin panel). |
+| **کار بعدی پیشنهادی** | (۱) اجرای هر چهار migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.33-liara.zip` روی Liara. (۳) UI مدیریت دوره‌های مالی (`/admin/settings/financial-periods`). |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,14 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-22 — مرتب‌سازی root + zip درست برای Liara — اکانت ۱
+**چه شد:**
+root پروژه که بسیار شلوغ شده بود پاکسازی شد: ۳۵ فایل SQL قدیمی (همه‌ی supabase-* و db-* که قبلاً deploy شده بودند) با `git mv` به `project-docs/migrations/` منتقل شدند. ۴ فایل doc سرگردان (`DEPLOY.md`، `DEPLOY-LIARA.md`، `final-status.md`، `deployment-summary.md`) به `project-docs/` رفتند. ۱۹ zip قدیمی در root حذف شدند (در gitignore بودند، tracked نبودند). zip جدید `basharaf-v0.9.33-liara.zip` با exclude کامل ساخته شد (snapshot dirs، tests، .claude، graphify-out، release-artifacts) — حجم از ۴MB به ۱.۴MB کاهش یافت.
+**فایل‌ها:** `project-docs/migrations/` (جدید)، `project-docs/` (4 doc)، `HANDOFF.md`.
+**Build:** tsc ✅ · build ✅ · tests 32/32 ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) آپلود `basharaf-v0.9.33-liara.zip` روی Liara. (۳) UI مدیریت دوره‌های مالی.
 
 ## 📓 2026-06-21 — v0.9.33: Core Financial Integrity Sprint (Phase 1+2+3) — اکانت ۲
 **چه شد:**
