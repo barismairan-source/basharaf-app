@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   Loader2, Plus, Trash2, Calculator, Printer, AlertTriangle, X, Check, Search,
-  ArrowLeft, ArrowRight, ChefHat,
+  ArrowLeft, ArrowRight, ChefHat, Upload, Download, FileSpreadsheet,
 } from 'lucide-react';
 import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
@@ -34,6 +34,7 @@ export default function RecipesPage() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,12 +71,22 @@ export default function RecipesPage() {
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-[17px] font-semibold text-text">رسپی‌ها</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="flex items-center gap-1.5 bg-text text-surface px-3 py-2 rounded-lg text-[12.5px] min-h-[44px]"
-        >
-          <Plus size={14} />رسپی جدید
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-1.5 border border-border text-muted hover:text-text hover:border-text/40 px-3 py-2 rounded-lg text-[12.5px] min-h-[44px] transition-colors"
+            title="ایمپورت از Excel"
+          >
+            <Upload size={14} />
+            <span className="hidden sm:inline">ایمپورت Excel</span>
+          </button>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="flex items-center gap-1.5 bg-text text-surface px-3 py-2 rounded-lg text-[12.5px] min-h-[44px]"
+          >
+            <Plus size={14} />رسپی جدید
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -116,6 +127,14 @@ export default function RecipesPage() {
           canSeePrices={canSeePrices}
           onClose={() => setShowAdd(false)}
           onDone={async () => { setShowAdd(false); await load(); }}
+          showToast={showToast}
+        />
+      )}
+
+      {showImport && (
+        <ImportExcelModal
+          onClose={() => setShowImport(false)}
+          onDone={async () => { setShowImport(false); await load(); }}
           showToast={showToast}
         />
       )}
@@ -322,6 +341,229 @@ function RecipeCard({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Import Excel Modal ──────────────────────────────────────────
+
+type ImportState = 'idle' | 'dragging' | 'uploading' | 'done' | 'error';
+
+interface ImportResult {
+  message: string;
+  rawCount: number;
+  prepCount: number;
+  recipesCreated: number;
+  recipesUpdated: number;
+}
+
+function ImportExcelModal({
+  onClose, onDone, showToast,
+}: {
+  onClose: () => void;
+  onDone: () => void;
+  showToast: (m: string, t?: ToastTone) => void;
+}) {
+  const [state, setState] = useState<ImportState>('idle');
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [fileName, setFileName] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function upload(file: File) {
+    if (!file.name.match(/\.(xlsx|xls|ods)$/i)) {
+      setErrorMsg('فقط فایل‌های Excel (.xlsx / .xls) پذیرفته می‌شوند');
+      setState('error');
+      return;
+    }
+    setFileName(file.name);
+    setState('uploading');
+    setErrorMsg('');
+    setResult(null);
+
+    const form = new FormData();
+    form.append('file', file);
+
+    try {
+      const res = await fetch('/api/inventory/recipes/import', { method: 'POST', body: form });
+      const data = await res.json() as { message?: string; error?: string; details?: unknown } & Partial<ImportResult>;
+      if (!res.ok) {
+        const detail = data.details ? ` (${JSON.stringify(data.details)})` : '';
+        throw new Error((data.error ?? 'خطای ناشناخته') + detail);
+      }
+      setResult({
+        message: data.message ?? 'ایمپورت کامل شد',
+        rawCount: data.rawCount ?? 0,
+        prepCount: data.prepCount ?? 0,
+        recipesCreated: data.recipesCreated ?? 0,
+        recipesUpdated: data.recipesUpdated ?? 0,
+      });
+      setState('done');
+      showToast(data.message ?? 'ایمپورت کامل شد', 'success');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'خطای ناشناخته';
+      setErrorMsg(msg);
+      setState('error');
+      showToast('ایمپورت ناموفق — ' + msg.slice(0, 80), 'danger');
+    }
+  }
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (file) upload(file);
+    e.target.value = '';
+  }
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setState('idle');
+    const file = e.dataTransfer.files[0];
+    if (file) upload(file);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-0 sm:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-surface rounded-t-2xl sm:rounded-xl w-full sm:max-w-md flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="px-5 pt-5 pb-4 border-b border-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet size={18} className="text-ok" />
+            <h2 className="text-[15px] font-semibold text-text">ایمپورت رسپی از Excel</h2>
+          </div>
+          <button onClick={onClose} className="w-10 h-10 flex items-center justify-center text-muted hover:text-text">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="px-5 py-5 space-y-4">
+          {/* Template download */}
+          <a
+            href="/api/inventory/recipes/import/template"
+            download="recipe-import-template.xlsx"
+            className="flex items-center gap-2.5 w-full border border-dashed border-ok/50 bg-ok-subtle text-ok rounded-xl px-4 py-3 text-[12.5px] font-medium hover:bg-ok/10 transition-colors"
+          >
+            <Download size={15} />
+            دانلود فایل الگو (Excel ۳ شیت)
+            <span className="mr-auto text-[11px] opacity-60">recipe-import-template.xlsx</span>
+          </a>
+
+          {/* Drop zone */}
+          {(state === 'idle' || state === 'dragging' || state === 'error') && (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setState('dragging'); }}
+              onDragLeave={() => setState(state === 'dragging' ? 'idle' : state)}
+              onDrop={onDrop}
+              onClick={() => inputRef.current?.click()}
+              className={`
+                relative cursor-pointer rounded-xl border-2 border-dashed transition-all py-10 flex flex-col items-center gap-3
+                ${state === 'dragging'
+                  ? 'border-accent bg-accent/5 scale-[1.01]'
+                  : state === 'error'
+                  ? 'border-danger/40 bg-danger-subtle'
+                  : 'border-border bg-bg hover:border-text/30 hover:bg-surface'}
+              `}
+            >
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".xlsx,.xls,.ods"
+                className="sr-only"
+                onChange={onFileChange}
+              />
+              <Upload
+                size={28}
+                className={state === 'error' ? 'text-danger' : 'text-muted'}
+                strokeWidth={1.5}
+              />
+              <div className="text-center">
+                <p className={`text-[13px] font-medium ${state === 'error' ? 'text-danger' : 'text-text'}`}>
+                  {state === 'dragging' ? 'رها کنید' : 'فایل Excel را اینجا بکشید'}
+                </p>
+                <p className="text-[11.5px] text-muted mt-0.5">
+                  یا کلیک کنید تا انتخاب کنید · .xlsx .xls
+                </p>
+              </div>
+              {state === 'error' && errorMsg && (
+                <div className="mx-4 bg-danger-subtle border border-danger/20 rounded-lg px-3 py-2 text-[11.5px] text-danger text-center leading-relaxed">
+                  {errorMsg}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Uploading */}
+          {state === 'uploading' && (
+            <div className="rounded-xl border border-border bg-bg py-10 flex flex-col items-center gap-3">
+              <Loader2 size={28} className="animate-spin text-accent" />
+              <div className="text-center">
+                <p className="text-[13px] font-medium text-text">در حال پردازش…</p>
+                <p className="text-[11.5px] text-muted mt-0.5 truncate max-w-[240px]">{fileName}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Success */}
+          {state === 'done' && result && (
+            <div className="rounded-xl border border-ok/30 bg-ok-subtle py-6 px-5 space-y-4">
+              <div className="flex items-center gap-2 text-ok">
+                <div className="w-7 h-7 rounded-full bg-ok/15 flex items-center justify-center">
+                  <Check size={14} strokeWidth={2.5} />
+                </div>
+                <span className="text-[13px] font-semibold">ایمپورت موفق</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: 'مواد خام',  value: result.rawCount },
+                  { label: 'نیمه‌آماده', value: result.prepCount },
+                  { label: 'رسپی جدید', value: result.recipesCreated },
+                  { label: 'به‌روزشده',  value: result.recipesUpdated },
+                ].map((stat) => (
+                  <div key={stat.label} className="bg-surface rounded-lg px-3 py-2 text-center">
+                    <div className="text-[18px] font-bold text-ok num">{stat.value}</div>
+                    <div className="text-[10.5px] text-muted">{stat.label}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5 flex gap-2">
+          {state === 'done' ? (
+            <button
+              onClick={onDone}
+              className="flex-1 bg-text text-surface rounded-lg text-[13px] min-h-[44px] flex items-center justify-center gap-1.5"
+            >
+              <Check size={14} />
+              بستن و بارگذاری مجدد
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-lg text-[13px] border border-border text-muted min-h-[44px]"
+              >
+                لغو
+              </button>
+              {state === 'error' && (
+                <button
+                  onClick={() => { setState('idle'); setErrorMsg(''); }}
+                  className="flex-1 border border-border rounded-lg text-[13px] min-h-[44px] text-text hover:bg-bg transition-colors"
+                >
+                  تلاش دوباره
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

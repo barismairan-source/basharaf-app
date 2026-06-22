@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.33-financial-integrity` |
-| **آخرین به‌روزرسانی** | 2026-06-22 — اکانت: ۱ |
+| **نسخه** | `0.9.34-excel-import` |
+| **آخرین به‌روزرسانی** | 2026-06-23 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، و **`db-financial-periods-migration.sql` (جدید)** — همه در pgAdmin روی Liara اجرا شوند. ZIP: `basharaf-v0.9.33-liara.zip` (1.4MB) آماده است. |
+| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql` — همه در pgAdmin روی Liara. ZIP: `basharaf-v0.9.34-liara.zip` (1.4MB) آماده است. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای هر چهار migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.33-liara.zip` روی Liara. (۳) UI مدیریت دوره‌های مالی (`/admin/settings/financial-periods`). |
+| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.34-liara.zip`. (۳) UI مدیریت دوره‌های مالی (`/admin/settings/financial-periods`). |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-23 — v0.9.34: Excel Bulk Import + 3-Tier BOM — اکانت ۱
+**چه شد:**
+فیچر «ایمپورت رسپی از Excel» با معماری ۳ لایه‌ی BOM پیاده‌سازی شد:
+(۱) **API — `POST /api/inventory/recipes/import`:** فایل `.xlsx/.xls` را در `multipart/form-data` می‌گیرد. سه شیت الزامی (`۱_مواد خام`، `۲_زیررسپی`، `۳_پرس نهایی`) را parse می‌کند. تمام عملیات درون یک `db.transaction` اتمیک است. شیت ۱ مواد خام را در `invItems (kind='raw')` upsert می‌کند و `avgCostPerBase` را از «قیمت خرید ÷ basePerUnit» محاسبه می‌کند. شیت ۲ نیمه‌آماده‌ها را در `invItems (kind='prep')` upsert می‌کند و `prepRecipe` JSON و `batchYieldBase` را می‌نویسد. شیت ۳ رسپی‌های نهایی را در `invRecipes + invRecipeLines` upsert می‌کند و به‌صورت خودکار با `menuItems.titleFa` لینک می‌زند. خطاهای validation (واحد نامعتبر، ماده ناشناخته، رسپی بدون ماده) با row/sheet دقیق برمی‌گرداند.
+(۲) **Template — `GET /api/inventory/recipes/import/template`:** فایل Excel الگو را با سه شیت و ردیف‌های نمونه on-the-fly تولید می‌کند.
+(۳) **UI — `ImportExcelModal`:** دکمه «ایمپورت Excel» در header صفحه رسپی‌ها. Modal با drag-and-drop dropzone، دانلود template، نمایش progress، و خلاصه‌ی نتیجه (۴ کارت).
+**فایل‌ها:** `app/api/inventory/recipes/import/route.ts` (جدید)، `app/api/inventory/recipes/import/template/route.ts` (جدید)، `app/(app)/inventory/recipes/page.tsx` (ImportExcelModal + دکمه جدید).
+**Build:** tsc ✅ · build ✅ · tests 32/32 ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.34-liara.zip`. (۳) تست import با فایل Excel واقعی. (۴) UI مدیریت دوره‌های مالی.
 
 ## 📓 2026-06-22 — مرتب‌سازی root + zip درست برای Liara — اکانت ۱
 **چه شد:**
