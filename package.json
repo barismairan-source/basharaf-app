@@ -43,7 +43,6 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
-    "@rolldown/binding-darwin-arm64": "^1.1.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.16.11",
     "@types/qrcode": "^1.5.6",
