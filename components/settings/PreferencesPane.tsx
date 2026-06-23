@@ -1,8 +1,8 @@
 'use client';
 
-import { Card, CardBody, CardHeader, Switch, Select } from '@/components/ui';
+import { Card, CardBody, CardHeader, Switch, Select, ACCENT_PRESETS } from '@/components/ui';
 import { useAppStore } from '@/store';
-import type { Preferences } from '@/types';
+import type { Preferences, AccentColor } from '@/types';
 
 /**
  * PreferencesPane — تنظیمات سامانه.
@@ -107,6 +107,49 @@ export function PreferencesPane() {
 
   return (
     <div className="space-y-6">
+      {/* ─── Accent Color ─── */}
+      <Card>
+        <CardHeader title="رنگ جانبی" />
+        <CardBody>
+          <p className="text-[11.5px] text-stone-500 mb-4 leading-6">
+            رنگ دکمه‌ها، لینک‌های فعال، و حالت انتخاب‌شده در منوی کناری.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {(Object.entries(ACCENT_PRESETS) as [AccentColor, typeof ACCENT_PRESETS[AccentColor]][]).map(
+              ([key, preset]) => {
+                const isActive = preferences.accentColor === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      set('accentColor', key);
+                      notifyChange(`رنگ ${preset.label}`);
+                    }}
+                    title={preset.label}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-[12.5px] transition-all ${
+                      isActive
+                        ? 'border-stone-400 bg-stone-50 font-medium text-stone-800 ring-2 ring-stone-300 ring-offset-1'
+                        : 'border-stone-200 hover:border-stone-300 text-stone-600 hover:bg-stone-50'
+                    }`}
+                  >
+                    <span
+                      className="w-4 h-4 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: preset.accent }}
+                    />
+                    {preset.label}
+                    {isActive && (
+                      <svg className="w-3 h-3 text-stone-600 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                  </button>
+                );
+              }
+            )}
+          </div>
+        </CardBody>
+      </Card>
+
       {/* ─── Display ─── */}
       <Card>
         <CardHeader title="نمایش" />

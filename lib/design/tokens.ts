@@ -31,9 +31,9 @@ export const colors = {
   text:           '#1c1917',   // stone-900 — متن اصلی
   muted:          '#57534e',   // stone-600 — تست ثانوی/label (WCAG AA ≥4.5:1)
 
-  // accent — آبی برای تعامل‌پذیری، لینک، state فعال
-  accent:         '#2563eb',   // blue-600
-  'accent-subtle':'#eff6ff',   // blue-50
+  // accent — رنگ جانبی قابل تغییر از تنظیمات (CSS variable)
+  accent:         'var(--accent)',
+  'accent-subtle':'var(--accent-subtle)',
 
   // ok — عملکرد موفق
   ok:             '#15803d',   // emerald-700

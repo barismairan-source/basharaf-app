@@ -22,7 +22,7 @@ const buttonVariants = cva(
         // همان default — نام معنادار برای کدهای جدید
         secondary:   'bg-surface border-border text-text hover:bg-bg',
         // accent آبی — اقدام اصلی صفحه
-        primary:     'bg-accent border-accent text-white hover:bg-blue-700',
+        primary:     'bg-accent border-accent text-white hover:bg-[var(--accent-hover)]',
         ghost:       'bg-transparent border-transparent text-muted hover:bg-bg',
         danger:      'bg-surface border-border text-danger hover:bg-danger-subtle hover:border-danger/20',
         success:     'bg-ok border-ok text-white hover:bg-emerald-800',

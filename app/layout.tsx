@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { SessionSync } from '@/components/auth/SessionSync';
+import { ThemeProvider } from '@/components/ui';
 import './globals.css';
 
 /**
@@ -67,6 +68,7 @@ export default function RootLayout({
   return (
     <html lang="fa" dir="rtl" className={vazirmatn.variable}>
       <body className="font-sans antialiased bg-background text-foreground min-h-screen">
+        <ThemeProvider />
         <SessionSync />
         {children}
       </body>

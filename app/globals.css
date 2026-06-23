@@ -39,6 +39,11 @@
     --warning-subtle: 48 100% 96%;     /* amber-50 */
 
     --radius: 0.5rem;
+
+    /* Accent — رنگ جانبی (قابل تغییر از تنظیمات) */
+    --accent:        #2563eb;   /* blue-600 — پیش‌فرض */
+    --accent-subtle: #eff6ff;   /* blue-50  */
+    --accent-hover:  #1d4ed8;   /* blue-700 — hover */
   }
 
   /* Dark mode is set up but not enabled by default — preferences toggle controls it. */

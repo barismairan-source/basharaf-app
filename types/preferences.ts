@@ -1,6 +1,8 @@
 /**
  * تنظیمات کاربر — قابل ویرایش از Settings > تنظیمات سامانه
  */
+export type AccentColor = 'blue' | 'violet' | 'emerald' | 'orange' | 'pink' | 'teal';
+
 export interface Preferences {
   darkMode: boolean;
   compact: boolean;
@@ -10,6 +12,7 @@ export interface Preferences {
   notifyPending: boolean;
   weeklyEmail: boolean;
   sidebarCollapsed: boolean;
+  accentColor: AccentColor;
 }
 
 export const DEFAULT_PREFERENCES: Preferences = {
@@ -21,4 +24,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   notifyPending: true,
   weeklyEmail: false,
   sidebarCollapsed: false,
+  accentColor: 'blue',
 };

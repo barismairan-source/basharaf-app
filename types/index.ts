@@ -11,7 +11,7 @@ export type {
   PaymentMethod,
 } from './transaction';
 export type { Notification, NotificationType } from './notification';
-export type { Preferences } from './preferences';
+export type { Preferences, AccentColor } from './preferences';
 export { DEFAULT_PREFERENCES } from './preferences';
 export type { Account } from './transaction';
 export type { Contact } from './transaction';

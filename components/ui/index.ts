@@ -53,3 +53,4 @@ export {
 export { Toggle, type ToggleOption, type ToggleProps } from './Toggle';
 export { PageHeader, type PageHeaderProps } from './PageHeader';
 export { Skeleton } from './Skeleton';
+export { ThemeProvider, ACCENT_PRESETS } from './ThemeProvider';
