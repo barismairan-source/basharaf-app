@@ -1,7 +1,7 @@
 /**
  * تنظیمات کاربر — قابل ویرایش از Settings > تنظیمات سامانه
  */
-export type AccentColor = 'blue' | 'violet' | 'emerald' | 'orange' | 'pink' | 'teal';
+export type AccentColor = string; // hex مانند '#2563eb'، یا یکی از نام‌های preset قدیمی
 
 export interface Preferences {
   darkMode: boolean;
@@ -24,5 +24,5 @@ export const DEFAULT_PREFERENCES: Preferences = {
   notifyPending: true,
   weeklyEmail: false,
   sidebarCollapsed: false,
-  accentColor: 'blue',
+  accentColor: '#2563eb',
 };
