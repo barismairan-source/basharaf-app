@@ -193,7 +193,13 @@ export const useAppStore = create<AppStore>()(
             // مهم: قبل از redirect باید کوکی httpOnly را server-side پاک کنیم،
             // وگرنه middleware کوکی را می‌بیند و دوباره به /dashboard redirect
             // می‌کند → حلقه‌ی ping-pong.
-            if ((meRes.status === 401 || meRes.status === 403) && typeof window !== 'undefined') {
+            if (
+              (meRes.status === 401 || meRes.status === 403) &&
+              typeof window !== 'undefined' &&
+              !['/login', '/signup', '/forgot'].some(
+                (p) => window.location.pathname === p || window.location.pathname.startsWith(`${p}/`)
+              )
+            ) {
               await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
               window.location.replace('/login');
             }
