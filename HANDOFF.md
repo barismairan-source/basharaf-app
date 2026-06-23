@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.34-excel-import` |
+| **نسخه** | `0.9.35-financial-periods-ui` |
 | **آخرین به‌روزرسانی** | 2026-06-23 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql` — همه در pgAdmin روی Liara. ZIP: `basharaf-v0.9.34-liara.zip` (1.4MB) آماده است. |
+| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql` — همه در pgAdmin روی Liara. ZIP: `basharaf-v0.9.35-liara.zip` (1.4MB) آماده است. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.34-liara.zip`. (۳) UI مدیریت دوره‌های مالی (`/admin/settings/financial-periods`). |
+| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.35-liara.zip`. (۳) تست Excel import با فایل واقعی. |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-23 — v0.9.35: UI مدیریت دوره‌های مالی — اکانت ۱
+**چه شد:**
+صفحه‌ی `/admin/settings/financial-periods` برای SuperAdmin ساخته شد. این صفحه API از پیش موجود `GET/POST/DELETE /api/financial-periods` را مصرف می‌کند.
+قابلیت‌ها: (۱) لیست دوره‌های بسته‌شده به‌صورت معکوس زمانی با تاریخ بستن. (۲) فرم بستن دوره جدید (سال ۱۴۰۰–۱۴۱۰ + ماه dropdown + دکمه‌ی قرمز). (۳) دکمه‌ی «بازگشایی» با confirm dialog که DELETE می‌زند. (۴) کارت هشدار amber توضیح اثر قفل. (۵) تشخیص خودکار ماه/سال جاری از `getTodayJalali()` با تبدیل ارقام فارسی: `c.charCodeAt(0) - 0x06F0`. تم dark admin (stone-950/900/800/700). همچنین `AdminSidebar.tsx` با آیکون `CalendarDays` به‌روز شد.
+ZIP نیز rebuild شد: `basharaf-v0.9.35-liara.zip` (1.4MB).
+**فایل‌ها:** `app/(admin)/admin/settings/financial-periods/page.tsx` (جدید)، `components/admin/AdminSidebar.tsx` (ویرایش).
+**Build:** tsc ✅ · build ✅ · tests 32/32 ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.35-liara.zip`. (۳) تست Excel import با فایل واقعی پس از deploy.
 
 ## 📓 2026-06-23 — v0.9.34: Excel Bulk Import + 3-Tier BOM — اکانت ۱
 **چه شد:**
