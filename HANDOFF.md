@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.35-financial-periods-ui` |
+| **نسخه** | `0.9.36-theme-accent` |
 | **آخرین به‌روزرسانی** | 2026-06-23 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql` — همه در pgAdmin روی Liara. ZIP: `basharaf-v0.9.35-liara.zip` (1.4MB) آماده است. |
+| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql` — همه در pgAdmin روی Liara. ZIP: `basharaf-v0.9.36-liara.zip` (1.4MB) آماده است. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.35-liara.zip`. (۳) تست Excel import با فایل واقعی. |
+| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.36-liara.zip`. (۳) تست Excel import با فایل واقعی پس از deploy. |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -49,6 +49,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-23 — v0.9.36: رنگ جانبی دینامیک + فیکس login loop + فیکس rolldown — اکانت ۱
+**چه شد:**
+(۱) **فیکس deploy (rolldown):** `@rolldown/binding-darwin-arm64` اشتباهاً به عنوان devDependency صریح در `package.json` ثبت شده بود. روی Linux x64 لیارا با `EBADPLATFORM` fail می‌کرد. حذف شد + lockfile rebuild.
+(۲) **فیکس login reload loop:** `SessionSync` در root layout روی همه صفحات اجرا می‌شود. وقتی `bootstrap()` روی `/login` اجرا می‌شد، 401 از `/api/auth/me` می‌گرفت و بدون چک pathname، `window.location.replace('/login')` صدا می‌زد → reload بی‌نهایت. فیکس: guard مشابه `apiFetch` و `installSessionExpiryInterceptor` اضافه شد (`!isAuthRoute` چک).
+(۳) **فیچر رنگ جانبی دینامیک:** `AccentColor` از union ثابت به `string` (hex) تغییر کرد. `ThemeProvider` هر hex رو می‌گیره و `--accent`/`--accent-subtle`/`--accent-hover` رو روی `:root` set می‌کنه. hover/subtle خودکار از luminance محاسبه می‌شوند (رنگ‌های تیره مثل مشکی → روشن‌تر hover؛ بقیه → تیره‌تر). Tailwind tokens.ts به `var(--accent)` و `var(--accent-subtle)` تبدیل شد. تنظیمات > تنظیمات نمایش: ۱۰ preset رنگ + چرخ رنگ بومی + ورودی hex + پیش‌نمایش زنده.
+**فایل‌ها:** `package.json`، `package-lock.json`، `store/index.ts` (login loop fix)، `types/preferences.ts`، `types/index.ts`، `lib/design/tokens.ts`، `app/globals.css`، `app/layout.tsx`، `components/ui/Button.tsx`، `components/ui/ThemeProvider.tsx` (جدید)، `components/ui/index.ts`، `components/settings/PreferencesPane.tsx`.
+**Build:** tsc ✅ · build ✅ · tests 32/32 ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.36-liara.zip`. (۳) تست رنگ جانبی در تنظیمات > تنظیمات نمایش. (۴) تست Excel import با فایل واقعی.
 
 ## 📓 2026-06-23 — v0.9.35: UI مدیریت دوره‌های مالی — اکانت ۱
 **چه شد:**
