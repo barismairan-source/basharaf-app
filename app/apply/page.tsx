@@ -63,12 +63,14 @@ export default function ApplyPage() {
     try {
       let resumeUrl: string | null = null, resumePath: string | null = null;
       if (hasResume && file) {
-        const fd = new FormData();
-        fd.append('file', file);
-        const up = await fetch('/api/recruitment/upload', { method: 'POST', body: fd });
-        if (!up.ok) throw new Error('آپلود رزومه ناموفق بود');
-        const u = await up.json() as { url: string; path: string };
-        resumeUrl = u.url; resumePath = u.path;
+        // تبدیل فایل به base64 روی client — بدون round-trip جداگانه
+        resumeUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve(reader.result as string);
+          reader.onerror = () => reject(new Error('خطا در خواندن فایل'));
+          reader.readAsDataURL(file);
+        });
+        resumePath = `base64:${file.name}`;
       }
       const res = await fetch('/api/recruitment', {
         method: 'POST',

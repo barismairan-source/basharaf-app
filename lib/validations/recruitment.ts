@@ -18,7 +18,7 @@ export const applicationCreateSchema = z.object({
   gender: z.enum(['male', 'female'], { required_error: 'جنسیت را انتخاب کنید' }),
   city: z.string().min(2, 'محل سکونت را وارد کنید').max(80).transform((v) => v.trim()),
   hasResume: z.boolean().default(false),
-  resumeUrl: z.string().url().max(500).optional().nullable(),
+  resumeUrl: z.string().max(8_000_000).optional().nullable(), // base64 data URI — تا ۶MB فایل
   resumePath: z.string().max(300).optional().nullable(),
   manualInfo: z.string().max(2000).optional().nullable(),
   answers: z.record(z.string(), z.string().max(2000)).default({}),

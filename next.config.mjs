@@ -41,6 +41,9 @@ const nextConfig = {
 
   experimental: {
     serverComponentsExternalPackages: ['postgres', 'bcryptjs'],
+    serverActions: {
+      bodySizeLimit: '10mb',
+    },
   },
 
   webpack: (config, { isServer }) => {
