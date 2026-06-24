@@ -94,35 +94,35 @@ export default function ApplyPage() {
   // ── Success ────────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl px-10 pt-8 pb-10 max-w-sm w-full text-center">
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl px-10 pt-10 pb-12 max-w-sm w-full text-center">
           {/* Logo */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-8">
             <Image
               src="/logo.jpg"
               alt="باشرف"
-              width={90}
-              height={45}
+              width={150}
+              height={75}
               className="object-contain"
             />
           </div>
 
           {/* Illustration */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-center mb-8">
             <Image
               src="/success-illustration.png"
               alt="ثبت موفق"
-              width={160}
-              height={160}
+              width={200}
+              height={200}
               className="rounded-2xl object-cover"
             />
           </div>
 
           {/* Text */}
-          <h1 className="text-xl font-bold text-gray-900 mb-3">
+          <h1 className="text-[22px] font-bold text-gray-900 mb-4">
             درخواستت با موفقیت ثبت شد!
           </h1>
-          <p className="text-sm text-gray-400 leading-7">
+          <p className="text-sm text-gray-600 leading-[1.9]">
             دمت گرم که وقت گذاشتی و این فرم رو پر کردی. سوابقت رو با دقت بررسی می‌کنیم و خیلی زود برای مراحل بعدی باهات تماس می‌گیریم. منتظرمون باش!
           </p>
         </div>
@@ -181,7 +181,18 @@ export default function ApplyPage() {
 
       {/* ── Form column ────────────────────────────────────────────── */}
       <main className="bg-white min-h-screen flex items-center justify-center pt-8 pb-12 lg:pt-0 lg:pb-0">
-        <div className="max-w-md w-full px-8 py-12">
+        <div className="max-w-md w-full px-8 py-8">
+
+          {/* Logo — ثابت در بالای همه مراحل */}
+          <div className="flex justify-center mb-8">
+            <Image
+              src="/logo.jpg"
+              alt="باشرف"
+              width={150}
+              height={75}
+              className="object-contain"
+            />
+          </div>
 
           {/* ────────────────── STEP 0: area ────────────────────── */}
           {step === 0 && (
