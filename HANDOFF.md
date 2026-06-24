@@ -13,7 +13,7 @@
 | **نسخه** | `0.9.36-theme-accent` |
 | **آخرین به‌روزرسانی** | 2026-06-23 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | 🟡 **چهار migration** لازم دارد: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql` — همه در pgAdmin روی Liara. ZIP: `basharaf-v0.9.36-liara.zip` (1.4MB) آماده است. |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 ولی **۴ migration** هنوز باید دستی در pgAdmin اجرا شود: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
 | **کار نیمه‌تمام (in-progress)** | — |
 | **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) دیپلوی `basharaf-v0.9.36-liara.zip`. (۳) تست Excel import با فایل واقعی پس از deploy. |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
@@ -35,6 +35,7 @@
 2. بخش ۰ را به‌روز کن (نسخه، تاریخ، اکانت، کار نیمه‌تمام، کار بعدی).
 3. اگر ژورنال بیش از **۷ ورودی** شد، قدیمی‌ها را به `project-docs/handoff-archive.md` منتقل کن.
 4. `git add -A && git commit -m "..." && git push` — **بدون push جلسه را نبند.**
+5. ⛔ **دیگر ZIP نساز** — GitHub Actions خودکار deploy می‌کند (از 2026-06-24).
 
 ### قالب اجباری ورودی ژورنال
 ```markdown
@@ -49,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-24 — CI/CD + بازطراحی apply + فیکس ThemeProvider crash — اکانت ۱
+**چه شد:**
+(۱) **GitHub Actions راه‌اندازی شد:** کاربر `.github/workflows/liara.yml` و `LIARA_API_TOKEN` secret را تنظیم کرد. از این به بعد هر push به main → لیارا خودکار deploy می‌کند (نام اپ: `basharaff`). دیگر ZIP لازم نیست.
+(۲) **بازطراحی `app/apply/page.tsx`:** تمام منطق/state/validation/API حفظ شد، فقط JSX بازنویسی شد. Layout جدید: دو ستون (sidebar مشکی ۲۶۰px + فرم سفید) روی دسکتاپ، progress bar 3px روی موبایل. مرحله ۰: کارت‌های کلیک‌مستقیم. موفقیت: صفحه‌ی کامل مشکی با کارت سفید.
+(۳) **فیکس ThemeProvider crash:** کاربرانی که localStorage قدیمی (بدون `accentColor`) داشتند، خطای `Cannot read properties of undefined (reading 'trim')` می‌گرفتند. guard `typeof` اضافه شد با fallback به `'#2563eb'`.
+**فایل‌ها:** `app/apply/page.tsx`، `components/ui/ThemeProvider.tsx`، `components/settings/PreferencesPane.tsx`، `HANDOFF.md`.
+**Build:** tsc ✅ · build ✅ · tests 32/32 ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin (اگر هنوز نشده). (۲) تست Excel import با فایل واقعی. دیگر zip نساز — فقط push.
 
 ## 📓 2026-06-23 — v0.9.36: رنگ جانبی دینامیک + فیکس login loop + فیکس rolldown — اکانت ۱
 **چه شد:**
