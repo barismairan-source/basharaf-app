@@ -1,37 +1,46 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Upload, FileText, CheckCircle2, Loader2, X, ChevronRight, ChevronLeft, UtensilsCrossed, Users } from 'lucide-react';
-import { Button, Card, CardBody, Field, Input, Select, Textarea } from '@/components/ui';
+import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users } from 'lucide-react';
 import type { ScreeningQuestion } from '@/lib/recruitment/questions';
-import { cn } from '@/lib/utils';
 
 type Area = 'hall' | 'kitchen';
 
+const STEPS = ['انتخاب بخش', 'اطلاعات شخصی', 'سوال‌ها', 'مرور نهایی'];
+
+const AREA_CARDS: Array<{ key: Area; icon: typeof ChefHat; label: string; sub: string }> = [
+  { key: 'kitchen', icon: ChefHat, label: 'آشپزخانه', sub: 'آشپز، سرآشپز، کمک‌آشپز' },
+  { key: 'hall',    icon: Users,   label: 'سالن',     sub: 'گارسون، مسئول سالن'      },
+];
+
+// ── shared input class ────────────────────────────────────────────────────
+const INP = 'w-full h-11 border border-gray-200 rounded-xl px-4 text-sm bg-white focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors';
+const LBL = 'block text-xs font-medium text-gray-500 mb-1.5';
+
 export default function ApplyPage() {
-  const [step, setStep] = useState(0);          // 0=بخش 1=اطلاعات+رزومه 2=سوالات 3=مرور
-  const [done, setDone] = useState(false);
+  const [step,       setStep]       = useState(0);
+  const [done,       setDone]       = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
+  const [error,      setError]      = useState('');
 
-  // داده‌ها
-  const [area, setArea] = useState<Area | null>(null);
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
-  const [city, setCity] = useState('');
-  const [hasResume, setHasResume] = useState(true);
-  const [file, setFile] = useState<File | null>(null);
+  const [area,       setArea]       = useState<Area | null>(null);
+  const [firstName,  setFirstName]  = useState('');
+  const [lastName,   setLastName]   = useState('');
+  const [phone,      setPhone]      = useState('');
+  const [age,        setAge]        = useState('');
+  const [gender,     setGender]     = useState('');
+  const [city,       setCity]       = useState('');
+  const [hasResume,  setHasResume]  = useState(true);
+  const [file,       setFile]       = useState<File | null>(null);
   const [manualInfo, setManualInfo] = useState('');
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers,    setAnswers]    = useState<Record<string, string>>({});
+  const [questions,  setQuestions]  = useState<ScreeningQuestion[]>([]);
 
-  // سوالات پویا
-  const [questions, setQuestions] = useState<ScreeningQuestion[]>([]);
   useEffect(() => {
     fetch('/api/recruitment/questions', { cache: 'no-store' })
-      .then(r => r.json()).then(d => setQuestions(d.questions ?? [])).catch(() => setQuestions([]));
+      .then(r => r.json())
+      .then(d => setQuestions(d.questions ?? []))
+      .catch(() => setQuestions([]));
   }, []);
 
   function next() { setError(''); setStep(s => s + 1); }
@@ -39,12 +48,12 @@ export default function ApplyPage() {
 
   function validateStep1(): boolean {
     if (firstName.trim().length < 2 || lastName.trim().length < 2) { setError('نام و نام خانوادگی را کامل وارد کنید'); return false; }
-    if (!/^09\d{9}$/.test(phone.replace(/\D/g, ''))) { setError('شماره موبایل معتبر نیست (مثل 09123456789)'); return false; }
-    if (!age || +age < 14 || +age > 80) { setError('سن معتبر نیست'); return false; }
-    if (!gender) { setError('جنسیت را انتخاب کنید'); return false; }
-    if (city.trim().length < 2) { setError('محل سکونت را وارد کنید'); return false; }
-    if (!hasResume && manualInfo.trim().length < 10) { setError('اطلاعات خودتان را بنویسید (حداقل یک خط)'); return false; }
-    if (hasResume && !file) { setError('فایل رزومه را انتخاب کنید یا «رزومه ندارم» را بزنید'); return false; }
+    if (!/^09\d{9}$/.test(phone.replace(/\D/g, '')))               { setError('شماره موبایل معتبر نیست (مثل 09123456789)'); return false; }
+    if (!age || +age < 14 || +age > 80)                            { setError('سن معتبر نیست'); return false; }
+    if (!gender)                                                    { setError('جنسیت را انتخاب کنید'); return false; }
+    if (city.trim().length < 2)                                     { setError('محل سکونت را وارد کنید'); return false; }
+    if (!hasResume && manualInfo.trim().length < 10)                { setError('اطلاعات خودتان را بنویسید (حداقل یک خط)'); return false; }
+    if (hasResume && !file)                                         { setError('فایل رزومه را انتخاب کنید یا «رزومه ندارم» را بزنید'); return false; }
     return true;
   }
 
@@ -57,11 +66,12 @@ export default function ApplyPage() {
         fd.append('file', file);
         const up = await fetch('/api/recruitment/upload', { method: 'POST', body: fd });
         if (!up.ok) throw new Error('آپلود رزومه ناموفق بود');
-        const u = await up.json();
+        const u = await up.json() as { url: string; path: string };
         resumeUrl = u.url; resumePath = u.path;
       }
       const res = await fetch('/api/recruitment', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           firstName, lastName, phone: phone.replace(/\D/g, ''),
           age: +age, gender, city, area,
@@ -71,7 +81,7 @@ export default function ApplyPage() {
         }),
       });
       if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
+        const e = await res.json().catch(() => ({})) as { error?: string };
         throw new Error(e.error ?? 'ثبت درخواست ناموفق بود');
       }
       setDone(true);
@@ -80,148 +90,311 @@ export default function ApplyPage() {
     } finally { setSubmitting(false); }
   }
 
+  // ── Success ────────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="max-w-sm w-full"><CardBody>
-          <div className="text-center py-6">
-            <CheckCircle2 size={48} className="text-emerald-500 mx-auto mb-3" strokeWidth={1.5} />
-            <h1 className="text-[18px] font-medium text-stone-900">درخواستت ثبت شد</h1>
-            <p className="text-[13px] text-stone-500 mt-2">ممنون که وقت گذاشتی. اگر مناسب باشی، باهات تماس می‌گیریم.</p>
+      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl p-12 max-w-sm w-full text-center">
+          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle2 size={32} className="text-emerald-500" strokeWidth={1.5} />
           </div>
-        </CardBody></Card>
+          <h1 className="text-xl font-bold text-gray-900 mt-5 mb-2">درخواست ثبت شد</h1>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            ممنون که وقت گذاشتی. اگر مناسب باشی، باهات تماس می‌گیریم.
+          </p>
+        </div>
       </div>
     );
   }
 
-  const STEPS = ['بخش', 'اطلاعات', 'سوال‌ها', 'مرور'];
+  const progressPct = (step / (STEPS.length - 1)) * 100;
 
   return (
-    <div className="min-h-screen p-4 flex items-start justify-center">
-      <div className="w-full max-w-md mt-6">
-        {/* progress */}
-        <div className="flex items-center gap-1.5 mb-5">
-          {STEPS.map((label, i) => (
-            <div key={i} className="flex-1">
-              <div className={cn('h-1 rounded-full transition-colors', i <= step ? 'bg-stone-900' : 'bg-stone-200')} />
-              <div className={cn('text-[10px] mt-1 text-center', i === step ? 'text-stone-900 font-medium' : 'text-muted')}>{label}</div>
-            </div>
-          ))}
-        </div>
+    <div dir="rtl" className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
 
-        <Card><CardBody>
-          {/* ── قدم ۰: انتخاب بخش ── */}
+      {/* ── Mobile: thin progress bar ──────────────────────────────── */}
+      <div className="lg:hidden fixed top-0 inset-x-0 h-[3px] bg-gray-100 z-50">
+        <div
+          className="h-full bg-[#1a1a1a] transition-all duration-500 ease-out"
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+
+      {/* ── Sidebar ────────────────────────────────────────────────── */}
+      <aside className="hidden lg:flex flex-col bg-[#1a1a1a] px-6 py-10 justify-between">
+        <nav className="space-y-1">
+          {STEPS.map((label, i) => {
+            const isDone   = step > i;
+            const isActive = step === i;
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive ? 'bg-white/10' : ''}`}
+              >
+                {/* step circle */}
+                <div className={`w-[22px] h-[22px] rounded-full flex-shrink-0 flex items-center justify-center text-[11px] font-semibold ${
+                  isDone || isActive ? 'bg-white text-[#1a1a1a]' : 'bg-white/15 text-white/50'
+                }`}>
+                  {isDone ? (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                      <path d="M1.5 5L4 7.5L8.5 2.5" stroke="#1a1a1a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  ) : i + 1}
+                </div>
+                {/* label */}
+                <span className={`text-[13px] ${
+                  isDone   ? 'text-white opacity-40 line-through' :
+                  isActive ? 'text-white' :
+                             'text-white opacity-30'
+                }`}>
+                  {label}
+                </span>
+              </div>
+            );
+          })}
+        </nav>
+        <p className="text-[11px] text-white opacity-25">اطلاعات شما محرمانه است</p>
+      </aside>
+
+      {/* ── Form column ────────────────────────────────────────────── */}
+      <main className="bg-white min-h-screen flex items-center justify-center pt-8 pb-12 lg:pt-0 lg:pb-0">
+        <div className="max-w-md w-full px-8 py-12">
+
+          {/* ────────────────── STEP 0: area ────────────────────── */}
           {step === 0 && (
             <div>
-              <h2 className="text-[16px] font-medium text-stone-900 mb-1">برای کدام بخش درخواست می‌دهی؟</h2>
-              <p className="text-[12px] text-stone-500 mb-4">یکی را انتخاب کن تا ادامه دهیم.</p>
-              <div className="grid grid-cols-2 gap-3">
-                <button onClick={() => { setArea('hall'); setStep(1); }}
-                  className={cn('border rounded-xl p-5 flex flex-col items-center gap-2 transition-colors', area === 'hall' ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300')}>
-                  <Users size={28} strokeWidth={1.5} className="text-stone-700" />
-                  <span className="text-[14px] font-medium text-stone-800">سالن</span>
-                </button>
-                <button onClick={() => { setArea('kitchen'); setStep(1); }}
-                  className={cn('border rounded-xl p-5 flex flex-col items-center gap-2 transition-colors', area === 'kitchen' ? 'border-stone-900 bg-stone-50' : 'border-stone-200 hover:border-stone-300')}>
-                  <UtensilsCrossed size={28} strokeWidth={1.5} className="text-stone-700" />
-                  <span className="text-[14px] font-medium text-stone-800">آشپزخانه</span>
-                </button>
+              <h2 className="text-2xl font-bold text-gray-900">برای کدام بخش درخواست می‌دی؟</h2>
+              <p className="text-sm text-gray-400 mt-1 mb-8">یکی را انتخاب کن تا ادامه بدهیم</p>
+              <div className="grid grid-cols-2 gap-4">
+                {AREA_CARDS.map(({ key, icon: Icon, label, sub }) => {
+                  const selected = area === key;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => { setArea(key); next(); }}
+                      className={`border-2 rounded-2xl p-6 text-right cursor-pointer transition-all ${
+                        selected
+                          ? 'border-[#1a1a1a] bg-[#1a1a1a]'
+                          : 'border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm'
+                      }`}
+                    >
+                      <Icon size={24} strokeWidth={1.5} className={selected ? 'text-white' : 'text-gray-800'} />
+                      <p className={`text-base font-semibold mt-3 mb-1 ${selected ? 'text-white' : 'text-gray-800'}`}>{label}</p>
+                      <p className={`text-xs leading-relaxed ${selected ? 'text-white/70' : 'text-gray-400'}`}>{sub}</p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
 
-          {/* ── قدم ۱: اطلاعات + رزومه ── */}
+          {/* ────────────────── STEP 1: personal info ───────────── */}
           {step === 1 && (
-            <div className="space-y-3">
-              <h2 className="text-[16px] font-medium text-stone-900 mb-1">اطلاعات شما</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="نام"><Input value={firstName} onChange={e => setFirstName(e.target.value)} /></Field>
-                <Field label="نام خانوادگی"><Input value={lastName} onChange={e => setLastName(e.target.value)} /></Field>
-              </div>
-              <Field label="موبایل"><Input value={phone} onChange={e => setPhone(e.target.value)} dir="ltr" placeholder="09123456789" /></Field>
-              <div className="grid grid-cols-3 gap-3">
-                <Field label="سن"><Input value={age} onChange={e => setAge(e.target.value.replace(/\D/g, ''))} dir="ltr" /></Field>
-                <Field label="جنسیت">
-                  <Select value={gender} onChange={e => setGender(e.target.value)}>
-                    <option value="">—</option><option value="male">آقا</option><option value="female">خانم</option>
-                  </Select>
-                </Field>
-                <Field label="شهر"><Input value={city} onChange={e => setCity(e.target.value)} /></Field>
-              </div>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">اطلاعات شما</h2>
+              <p className="text-sm text-gray-400 mt-1 mb-8">لطفاً اطلاعات خود را کامل وارد کنید</p>
 
-              {/* رزومه */}
-              <div className="border-t border-stone-100 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[12.5px] font-medium text-stone-700">رزومه</span>
-                  <button onClick={() => { setHasResume(!hasResume); setFile(null); }} className="text-[11.5px] text-stone-500 underline">
-                    {hasResume ? 'رزومه ندارم' : 'رزومه دارم'}
+              <div className="space-y-5">
+                {/* name */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={LBL}>نام</label>
+                    <input value={firstName} onChange={e => setFirstName(e.target.value)} className={INP} />
+                  </div>
+                  <div>
+                    <label className={LBL}>نام خانوادگی</label>
+                    <input value={lastName} onChange={e => setLastName(e.target.value)} className={INP} />
+                  </div>
+                </div>
+
+                {/* phone */}
+                <div>
+                  <label className={LBL}>موبایل</label>
+                  <input value={phone} onChange={e => setPhone(e.target.value)}
+                    dir="ltr" placeholder="09123456789"
+                    className={`${INP} text-left`} />
+                </div>
+
+                {/* age + gender + city */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className={LBL}>سن</label>
+                    <input value={age} onChange={e => setAge(e.target.value.replace(/\D/g, ''))}
+                      dir="ltr" className={INP} />
+                  </div>
+                  <div>
+                    <label className={LBL}>جنسیت</label>
+                    <select value={gender} onChange={e => setGender(e.target.value)}
+                      className={`${INP} appearance-none`}>
+                      <option value="">—</option>
+                      <option value="male">آقا</option>
+                      <option value="female">خانم</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={LBL}>شهر</label>
+                    <input value={city} onChange={e => setCity(e.target.value)} className={INP} />
+                  </div>
+                </div>
+
+                {/* resume block */}
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium text-gray-700">رزومه</span>
+                    <button
+                      onClick={() => { setHasResume(!hasResume); setFile(null); }}
+                      className="text-xs text-gray-500 underline hover:text-gray-800 transition-colors"
+                    >
+                      {hasResume ? 'رزومه ندارم' : 'رزومه دارم'}
+                    </button>
+                  </div>
+                  {hasResume ? (
+                    <label className={`flex items-center gap-3 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors ${
+                      file ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                    }`}>
+                      <Upload size={18} strokeWidth={1.5} className={file ? 'text-emerald-500' : 'text-gray-400'} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-gray-700 truncate">{file ? file.name : 'انتخاب فایل رزومه'}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">PDF، Word، یا عکس</p>
+                      </div>
+                      {file && (
+                        <span onClick={e => { e.preventDefault(); setFile(null); }} className="cursor-pointer">
+                          <X size={14} className="text-gray-400 hover:text-gray-600" />
+                        </span>
+                      )}
+                      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                        onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                    </label>
+                  ) : (
+                    <textarea
+                      value={manualInfo} onChange={e => setManualInfo(e.target.value)} rows={4}
+                      placeholder="سابقه کاری، مهارت‌ها، و هر چیزی که فکر می‌کنی مهم است را بنویس..."
+                      className="w-full border border-gray-200 rounded-xl p-3.5 text-sm resize-none focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors"
+                    />
+                  )}
+                </div>
+
+                {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600">{error}</div>}
+
+                <div className="flex justify-between mt-8">
+                  <button onClick={back} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1.5 transition-colors">
+                    <ArrowRight size={16} strokeWidth={1.5} />
+                    قبلی
+                  </button>
+                  <button onClick={() => { if (validateStep1()) next(); }}
+                    className="bg-[#1a1a1a] text-white text-sm font-medium px-8 py-2.5 rounded-xl hover:bg-black/80 transition-colors">
+                    بعدی
                   </button>
                 </div>
-                {hasResume ? (
-                  <label className="flex items-center gap-2 border border-dashed border-stone-300 rounded-lg p-3 cursor-pointer hover:border-stone-400">
-                    <Upload size={16} className="text-muted" />
-                    <span className="text-[12px] text-stone-500 flex-1 truncate">{file ? file.name : 'فایل PDF، عکس یا Word'}</span>
-                    {file && <X size={14} className="text-muted" onClick={e => { e.preventDefault(); setFile(null); }} />}
-                    <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                      onChange={e => setFile(e.target.files?.[0] ?? null)} />
-                  </label>
-                ) : (
-                  <Textarea value={manualInfo} onChange={e => setManualInfo(e.target.value)} rows={4}
-                    placeholder="سابقه کاری، مهارت‌ها، و هر چیزی که فکر می‌کنی مهم است را بنویس..." />
-                )}
-              </div>
-
-              {error && <div className="text-[12px] text-rose-600">{error}</div>}
-              <div className="flex justify-between pt-2">
-                <Button variant="default" icon={ChevronRight} onClick={back}>قبلی</Button>
-                <Button variant="primary" onClick={() => { if (validateStep1()) next(); }}>بعدی</Button>
               </div>
             </div>
           )}
 
-          {/* ── قدم ۲: سوال‌ها ── */}
+          {/* ────────────────── STEP 2: questions ───────────────── */}
           {step === 2 && (
-            <div className="space-y-3">
-              <h2 className="text-[16px] font-medium text-stone-900 mb-1">چند سوال کوتاه</h2>
-              {questions.map(q => (
-                <Field key={q.id} label={q.title}>
-                  <div className="text-[11.5px] text-stone-500 mb-1.5">{q.prompt}</div>
-                  <Textarea value={answers[q.id] ?? ''} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))} rows={3} />
-                </Field>
-              ))}
-              {error && <div className="text-[12px] text-rose-600">{error}</div>}
-              <div className="flex justify-between pt-2">
-                <Button variant="default" icon={ChevronRight} onClick={back}>قبلی</Button>
-                <Button variant="primary" onClick={next}>بعدی</Button>
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">چند سوال کوتاه</h2>
+              <p className="text-sm text-gray-400 mt-1 mb-8">پاسخ‌های صادقانه بهتر از پاسخ‌های «درست» است</p>
+
+              {questions.length === 0 ? (
+                <div className="bg-gray-50 rounded-2xl p-8 text-center text-sm text-gray-400">سوالی تنظیم نشده</div>
+              ) : (
+                <div className="space-y-6">
+                  {questions.map((q, qi) => (
+                    <div key={q.id}>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="w-6 h-6 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold text-gray-600">
+                          {qi + 1}
+                        </div>
+                        <span className="text-sm font-medium text-gray-800">{q.title}</span>
+                      </div>
+                      {q.prompt && <p className="text-xs text-gray-400 mb-2 mr-8">{q.prompt}</p>}
+                      <textarea
+                        value={answers[q.id] ?? ''} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
+                        rows={3}
+                        className="w-full border border-gray-200 rounded-xl p-3.5 text-sm resize-none focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600 mt-4">{error}</div>}
+
+              <div className="flex justify-between mt-8">
+                <button onClick={back} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1.5 transition-colors">
+                  <ArrowRight size={16} strokeWidth={1.5} />
+                  قبلی
+                </button>
+                <button onClick={next}
+                  className="bg-[#1a1a1a] text-white text-sm font-medium px-8 py-2.5 rounded-xl hover:bg-black/80 transition-colors">
+                  بعدی
+                </button>
               </div>
             </div>
           )}
 
-          {/* ── قدم ۳: مرور و نهایی ── */}
+          {/* ────────────────── STEP 3: review ──────────────────── */}
           {step === 3 && (
-            <div className="space-y-3">
-              <h2 className="text-[16px] font-medium text-stone-900 mb-1">مرور و ثبت</h2>
-              <div className="bg-stone-50 rounded-lg p-3 text-[12.5px] space-y-1.5">
-                <Row k="بخش" v={area === 'hall' ? 'سالن' : 'آشپزخانه'} />
-                <Row k="نام" v={`${firstName} ${lastName}`} />
-                <Row k="موبایل" v={phone} />
-                <Row k="سن / جنسیت" v={`${age} · ${gender === 'male' ? 'آقا' : 'خانم'}`} />
-                <Row k="شهر" v={city} />
-                <Row k="رزومه" v={hasResume ? (file?.name ?? '—') : 'اطلاعات دستی'} />
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">مرور نهایی</h2>
+              <p className="text-sm text-gray-400 mt-1 mb-8">اطلاعات را بررسی کن و ثبت کن</p>
+
+              <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                {/* job info */}
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">اطلاعات شغلی</p>
+                  <ReviewRow label="بخش" value={area === 'hall' ? 'سالن' : 'آشپزخانه'} />
+                </div>
+                {/* personal info */}
+                <div className="px-5 py-4 border-b border-gray-100">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">اطلاعات شخصی</p>
+                  <div className="space-y-2">
+                    <ReviewRow label="نام"      value={`${firstName} ${lastName}`} />
+                    <ReviewRow label="موبایل"   value={phone} />
+                    <ReviewRow label="سن"        value={age} />
+                    <ReviewRow label="جنسیت"    value={gender === 'male' ? 'آقا' : 'خانم'} />
+                    <ReviewRow label="شهر"      value={city} />
+                  </div>
+                </div>
+                {/* resume */}
+                <div className="px-5 py-4">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-3">رزومه</p>
+                  <ReviewRow label="نوع" value={hasResume ? (file?.name ?? '—') : 'اطلاعات دستی'} />
+                </div>
               </div>
-              {error && <div className="text-[12px] text-rose-600">{error}</div>}
-              <div className="flex justify-between pt-2">
-                <Button variant="default" icon={ChevronRight} onClick={back}>قبلی</Button>
-                <Button variant="primary" onClick={submit} loading={submitting} icon={CheckCircle2}>ثبت نهایی</Button>
+
+              {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600 mt-4">{error}</div>}
+
+              <div className="flex justify-between mt-8">
+                <button onClick={back} className="text-sm text-gray-400 hover:text-gray-700 flex items-center gap-1.5 transition-colors">
+                  <ArrowRight size={16} strokeWidth={1.5} />
+                  قبلی
+                </button>
+                <button
+                  onClick={submit} disabled={submitting}
+                  className="bg-[#1a1a1a] text-white text-sm font-medium px-8 py-2.5 rounded-xl hover:bg-black/80 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                >
+                  {submitting
+                    ? <Loader2 size={15} className="animate-spin" />
+                    : <CheckCircle2 size={15} strokeWidth={1.5} />}
+                  ثبت درخواست
+                </button>
               </div>
             </div>
           )}
-        </CardBody></Card>
-      </div>
+
+        </div>
+      </main>
     </div>
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
-  return <div className="flex justify-between"><span className="text-muted">{k}</span><span className="text-stone-800">{v}</span></div>;
+function ReviewRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-xs text-gray-400">{label}</span>
+      <span className="text-sm font-medium text-gray-800">{value}</span>
+    </div>
+  );
 }
