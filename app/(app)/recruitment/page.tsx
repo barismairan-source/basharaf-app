@@ -286,8 +286,13 @@ export default function RecruitmentPage() {
                     </div>
 
                     {a.resumeUrl ? (
-                      <a href={a.resumeUrl} target="_blank" rel="noreferrer">
-                        <Button variant="default" size="sm" icon={FileText}>مشاهدهٔ رزومه</Button>
+                      <a
+                        href={a.resumeUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={a.resumeUrl.startsWith('data:') ? 'resume' : undefined}
+                      >
+                        <Button variant="default" size="sm" icon={FileText}>دانلود رزومه</Button>
                       </a>
                     ) : a.manualInfo ? (
                       <div className="rounded-md bg-stone-50 p-3 text-[12px] leading-6 text-stone-700">
