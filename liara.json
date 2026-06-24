@@ -6,9 +6,6 @@
     "location": "iran",
     "dockerfile": null
   },
-  "next": {
-    "timezone": "Asia/Tehran"
-  },
   "scripts": {
     "start": "npm start"
   }
