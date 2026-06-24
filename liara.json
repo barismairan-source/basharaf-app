@@ -3,8 +3,7 @@
   "port": 3000,
   "node": "20",
   "build": {
-    "location": "iran",
-    "dockerfile": null
+    "location": "iran"
   },
   "scripts": {
     "start": "npm start"
