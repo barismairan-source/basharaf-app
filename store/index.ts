@@ -196,7 +196,7 @@ export const useAppStore = create<AppStore>()(
             if (
               (meRes.status === 401 || meRes.status === 403) &&
               typeof window !== 'undefined' &&
-              !['/login', '/signup', '/forgot'].some(
+              !['/login', '/signup', '/forgot', '/apply', '/m', '/order'].some(
                 (p) => window.location.pathname === p || window.location.pathname.startsWith(`${p}/`)
               )
             ) {
