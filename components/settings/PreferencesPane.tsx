@@ -99,10 +99,11 @@ export function PreferencesPane() {
   const showToast = useAppStore((s) => s.showToast);
   const colorInputRef = useRef<HTMLInputElement>(null);
 
-  // hex text field state — separate from stored value so user can type freely
-  const currentHex = preferences.accentColor.startsWith('#')
+  // hex text field state — accentColor ممکن است در store قدیمی وجود نداشته باشد
+  const rawAccent = (typeof preferences.accentColor === 'string' && preferences.accentColor)
     ? preferences.accentColor
     : '#2563eb';
+  const currentHex = rawAccent.startsWith('#') ? rawAccent : '#2563eb';
   const [hexDraft, setHexDraft] = useState(currentHex);
 
   function set<K extends keyof Preferences>(key: K, value: Preferences[K]) {

@@ -72,8 +72,9 @@ export function ThemeProvider() {
   const lastApplied = useRef<string>('');
 
   useEffect(() => {
-    // backwards compat: اگر مقدار ذخیره‌شده نام قدیمی است (مثل 'blue')، به hex تبدیل کن
-    const hex = LEGACY_NAMES[accentColor] ?? accentColor;
+    // accentColor ممکن است undefined باشد (store قدیمی بدون این فیلد)
+    const raw = (typeof accentColor === 'string' && accentColor) ? accentColor : '#2563eb';
+    const hex = LEGACY_NAMES[raw] ?? (raw.startsWith('#') ? raw : '#2563eb');
     if (hex === lastApplied.current) return;
     lastApplied.current = hex;
 
