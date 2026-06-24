@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users } from 'lucide-react';
+import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users, PenLine } from 'lucide-react';
 import type { ScreeningQuestion } from '@/lib/recruitment/questions';
 
 type Area = 'hall' | 'kitchen';
@@ -164,7 +164,7 @@ export default function ApplyPage() {
           {step === 0 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">برای کدام بخش درخواست می‌دی؟</h2>
-              <p className="text-sm text-gray-400 mt-1 mb-8">یکی را انتخاب کن تا ادامه بدهیم</p>
+              <p className="text-sm text-gray-400 mt-3 mb-8">یکی را انتخاب کن تا ادامه بدهیم</p>
               <div className="grid grid-cols-2 gap-4">
                 {AREA_CARDS.map(({ key, icon: Icon, label, sub }) => {
                   const selected = area === key;
@@ -192,7 +192,7 @@ export default function ApplyPage() {
           {step === 1 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">اطلاعات شما</h2>
-              <p className="text-sm text-gray-400 mt-1 mb-8">لطفاً اطلاعات خود را کامل وارد کنید</p>
+              <p className="text-sm text-gray-400 mt-3 mb-8">لطفاً اطلاعات خود را کامل وارد کنید</p>
 
               <div className="space-y-5">
                 {/* name */}
@@ -238,40 +238,67 @@ export default function ApplyPage() {
                 </div>
 
                 {/* resume block */}
-                <div className="bg-gray-50 rounded-2xl p-4">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                  {/* header */}
+                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
                     <span className="text-sm font-medium text-gray-700">رزومه</span>
-                    <button
-                      onClick={() => { setHasResume(!hasResume); setFile(null); }}
-                      className="text-xs text-gray-500 underline hover:text-gray-800 transition-colors"
-                    >
-                      {hasResume ? 'رزومه ندارم' : 'رزومه دارم'}
-                    </button>
                   </div>
-                  {hasResume ? (
-                    <label className={`flex items-center gap-3 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors ${
-                      file ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                    }`}>
-                      <Upload size={18} strokeWidth={1.5} className={file ? 'text-emerald-500' : 'text-gray-400'} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-700 truncate">{file ? file.name : 'انتخاب فایل رزومه'}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">PDF، Word، یا عکس</p>
+
+                  {/* uploader — slide in when hasResume */}
+                  <div className={`grid transition-all duration-300 ease-in-out ${hasResume ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
+                    <div className="overflow-hidden">
+                      <div className="p-4 space-y-3">
+                        <label className={`flex items-center gap-3 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors ${
+                          file ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}>
+                          <Upload size={18} strokeWidth={1.5} className={file ? 'text-emerald-500' : 'text-gray-400'} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-gray-700 truncate">{file ? file.name : 'انتخاب فایل رزومه'}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">PDF، Word، یا عکس</p>
+                          </div>
+                          {file && (
+                            <span onClick={e => { e.preventDefault(); setFile(null); }} className="cursor-pointer">
+                              <X size={14} className="text-gray-400 hover:text-gray-600" />
+                            </span>
+                          )}
+                          <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                            onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => { setHasResume(false); setFile(null); }}
+                          className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 py-2 rounded-xl border border-dashed border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
+                        >
+                          <PenLine size={12} strokeWidth={2} />
+                          رزومه ندارم، خودم توضیح می‌دهم
+                        </button>
                       </div>
-                      {file && (
-                        <span onClick={e => { e.preventDefault(); setFile(null); }} className="cursor-pointer">
-                          <X size={14} className="text-gray-400 hover:text-gray-600" />
-                        </span>
-                      )}
-                      <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                        onChange={e => setFile(e.target.files?.[0] ?? null)} />
-                    </label>
-                  ) : (
-                    <textarea
-                      value={manualInfo} onChange={e => setManualInfo(e.target.value)} rows={4}
-                      placeholder="سابقه کاری، مهارت‌ها، و هر چیزی که فکر می‌کنی مهم است را بنویس..."
-                      className="w-full border border-gray-200 rounded-xl p-3.5 text-sm resize-none focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors"
-                    />
-                  )}
+                    </div>
+                  </div>
+
+                  {/* manual textarea — slide in when !hasResume */}
+                  <div className={`grid transition-all duration-300 ease-in-out ${!hasResume ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
+                    <div className="overflow-hidden">
+                      <div className="p-4 space-y-3">
+                        <button
+                          type="button"
+                          onClick={() => { setHasResume(true); setManualInfo(''); }}
+                          className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                        >
+                          <ArrowRight size={12} strokeWidth={2} />
+                          بازگشت به آپلود فایل
+                        </button>
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 mb-2">توضیحات و سوابق کاری شما</p>
+                          <textarea
+                            value={manualInfo} onChange={e => setManualInfo(e.target.value)} rows={4}
+                            placeholder="سابقه کاری، مهارت‌ها، و هر چیزی که فکر می‌کنی مهم است را بنویس..."
+                            className="w-full border border-gray-200 rounded-xl p-3.5 text-sm resize-none focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600">{error}</div>}
@@ -294,21 +321,21 @@ export default function ApplyPage() {
           {step === 2 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">چند سوال کوتاه</h2>
-              <p className="text-sm text-gray-400 mt-1 mb-8">پاسخ‌های صادقانه بهتر از پاسخ‌های «درست» است</p>
+              <p className="text-sm text-gray-400 mt-3 mb-8">پاسخ‌های صادقانه بهتر از پاسخ‌های «درست» است</p>
 
               {questions.length === 0 ? (
                 <div className="bg-gray-50 rounded-2xl p-8 text-center text-sm text-gray-400">سوالی تنظیم نشده</div>
               ) : (
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {questions.map((q, qi) => (
                     <div key={q.id}>
-                      <div className="flex items-center gap-2 mb-1.5">
+                      <div className="flex items-center gap-2 mb-2">
                         <div className="w-6 h-6 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold text-gray-600">
                           {qi + 1}
                         </div>
                         <span className="text-sm font-medium text-gray-800">{q.title}</span>
                       </div>
-                      {q.prompt && <p className="text-xs text-gray-400 mb-2 mr-8">{q.prompt}</p>}
+                      {q.prompt && <p className="text-xs text-gray-400 mb-4 mr-8">{q.prompt}</p>}
                       <textarea
                         value={answers[q.id] ?? ''} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
                         rows={3}
@@ -338,7 +365,7 @@ export default function ApplyPage() {
           {step === 3 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">مرور نهایی</h2>
-              <p className="text-sm text-gray-400 mt-1 mb-8">اطلاعات را بررسی کن و ثبت کن</p>
+              <p className="text-sm text-gray-400 mt-3 mb-8">اطلاعات را بررسی کن و ثبت کن</p>
 
               <div className="border border-gray-100 rounded-2xl overflow-hidden">
                 {/* job info */}
