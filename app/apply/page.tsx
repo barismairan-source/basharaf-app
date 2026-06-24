@@ -96,10 +96,10 @@ export default function ApplyPage() {
   // ── Success ────────────────────────────────────────────────────────────
   if (done) {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl px-10 pt-10 pb-12 max-w-sm w-full text-center">
+      <div className="min-h-screen backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
+        <div className="bg-white rounded-3xl px-10 pt-10 pb-12 max-w-sm w-full text-center shadow-2xl">
           {/* Logo */}
-          <div className="flex justify-center mb-8">
+          <div className="flex justify-center mb-7">
             <Image
               src="/logo.jpg"
               alt="باشرف"
@@ -109,21 +109,12 @@ export default function ApplyPage() {
             />
           </div>
 
-          {/* Illustration */}
-          <div className="flex justify-center mb-8">
-            <Image
-              src="/success-illustration.png"
-              alt="ثبت موفق"
-              width={200}
-              height={200}
-              className="rounded-2xl object-cover"
-            />
-          </div>
-
-          {/* Text */}
+          {/* Title */}
           <h1 className="text-[22px] font-bold text-gray-900 mb-4">
             درخواستت با موفقیت ثبت شد!
           </h1>
+
+          {/* Body */}
           <p className="text-sm text-gray-600 leading-[1.9]">
             دمت گرم که وقت گذاشتی و این فرم رو پر کردی. سوابقت رو با دقت بررسی می‌کنیم و خیلی زود برای مراحل بعدی باهات تماس می‌گیریم. منتظرمون باش!
           </p>
