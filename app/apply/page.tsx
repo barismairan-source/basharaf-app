@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users, PenLine } from 'lucide-react';
 import type { ScreeningQuestion } from '@/lib/recruitment/questions';
 
@@ -94,13 +95,35 @@ export default function ApplyPage() {
   if (done) {
     return (
       <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-12 max-w-sm w-full text-center">
-          <div className="w-16 h-16 bg-emerald-50 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle2 size={32} className="text-emerald-500" strokeWidth={1.5} />
+        <div className="bg-white rounded-3xl px-10 pt-8 pb-10 max-w-sm w-full text-center">
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/logo.jpg"
+              alt="باشرف"
+              width={90}
+              height={45}
+              className="object-contain"
+            />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mt-5 mb-2">درخواست ثبت شد</h1>
-          <p className="text-sm text-gray-400 leading-relaxed">
-            ممنون که وقت گذاشتی. اگر مناسب باشی، باهات تماس می‌گیریم.
+
+          {/* Illustration */}
+          <div className="flex justify-center mb-6">
+            <Image
+              src="/success-illustration.png"
+              alt="ثبت موفق"
+              width={160}
+              height={160}
+              className="rounded-2xl object-cover"
+            />
+          </div>
+
+          {/* Text */}
+          <h1 className="text-xl font-bold text-gray-900 mb-3">
+            درخواستت با موفقیت ثبت شد!
+          </h1>
+          <p className="text-sm text-gray-400 leading-7">
+            دمت گرم که وقت گذاشتی و این فرم رو پر کردی. سوابقت رو با دقت بررسی می‌کنیم و خیلی زود برای مراحل بعدی باهات تماس می‌گیریم. منتظرمون باش!
           </p>
         </div>
       </div>
