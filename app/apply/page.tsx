@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users, PenLine } from 'lucide-react';
+import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users } from 'lucide-react';
+import { normalizeDigits } from '@/lib/utils';
 import type { ScreeningQuestion } from '@/lib/recruitment/questions';
 
 type Area = 'hall' | 'kitchen';
@@ -237,7 +238,7 @@ export default function ApplyPage() {
                 {/* phone */}
                 <div>
                   <label className={LBL}>موبایل</label>
-                  <input value={phone} onChange={e => setPhone(e.target.value)}
+                  <input value={phone} onChange={e => setPhone(normalizeDigits(e.target.value))}
                     dir="ltr" placeholder="09123456789"
                     className={`${INP} text-left`} />
                 </div>
@@ -246,7 +247,7 @@ export default function ApplyPage() {
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className={LBL}>سن</label>
-                    <input value={age} onChange={e => setAge(e.target.value.replace(/\D/g, ''))}
+                    <input value={age} onChange={e => setAge(normalizeDigits(e.target.value).replace(/\D/g, ''))}
                       dir="ltr" className={INP} />
                   </div>
                   <div>
@@ -265,67 +266,62 @@ export default function ApplyPage() {
                 </div>
 
                 {/* resume block */}
-                <div className="border border-gray-100 rounded-2xl overflow-hidden">
-                  {/* header */}
-                  <div className="bg-gray-50 px-4 py-3 border-b border-gray-100">
-                    <span className="text-sm font-medium text-gray-700">رزومه</span>
+                <div className="border border-gray-200 rounded-2xl overflow-hidden">
+                  {/* toggle tabs */}
+                  <div className="flex">
+                    <button
+                      type="button"
+                      onClick={() => { setHasResume(true); setManualInfo(''); }}
+                      className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                        hasResume ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+                      }`}
+                    >
+                      آپلود رزومه
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setHasResume(false); setFile(null); }}
+                      className={`flex-1 py-3 text-sm font-medium transition-colors ${
+                        !hasResume ? 'bg-[#1a1a1a] text-white' : 'bg-gray-50 text-gray-500 hover:text-gray-800 hover:bg-gray-100'
+                      }`}
+                    >
+                      رزومه ندارم
+                    </button>
                   </div>
 
-                  {/* uploader — slide in when hasResume */}
-                  <div className={`grid transition-all duration-300 ease-in-out ${hasResume ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
-                    <div className="overflow-hidden">
-                      <div className="p-4 space-y-3">
-                        <label className={`flex items-center gap-3 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors ${
-                          file ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
-                        }`}>
-                          <Upload size={18} strokeWidth={1.5} className={file ? 'text-emerald-500' : 'text-gray-400'} />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm text-gray-700 truncate">{file ? file.name : 'انتخاب فایل رزومه'}</p>
-                            <p className="text-xs text-gray-400 mt-0.5">PDF، Word، یا عکس</p>
-                          </div>
-                          {file && (
-                            <span onClick={e => { e.preventDefault(); setFile(null); }} className="cursor-pointer">
-                              <X size={14} className="text-gray-400 hover:text-gray-600" />
-                            </span>
-                          )}
-                          <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
-                            onChange={e => setFile(e.target.files?.[0] ?? null)} />
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => { setHasResume(false); setFile(null); }}
-                          className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 hover:text-gray-700 py-2 rounded-xl border border-dashed border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all"
-                        >
-                          <PenLine size={12} strokeWidth={2} />
-                          رزومه ندارم، خودم توضیح می‌دهم
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* manual textarea — slide in when !hasResume */}
-                  <div className={`grid transition-all duration-300 ease-in-out ${!hasResume ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0 pointer-events-none'}`}>
-                    <div className="overflow-hidden">
-                      <div className="p-4 space-y-3">
-                        <button
-                          type="button"
-                          onClick={() => { setHasResume(true); setManualInfo(''); }}
-                          className="flex items-center gap-1.5 text-xs text-blue-500 hover:text-blue-700 transition-colors"
-                        >
-                          <ArrowRight size={12} strokeWidth={2} />
-                          بازگشت به آپلود فایل
-                        </button>
-                        <div>
-                          <p className="text-xs font-medium text-gray-500 mb-2">توضیحات و سوابق کاری شما</p>
-                          <textarea
-                            value={manualInfo} onChange={e => setManualInfo(e.target.value)} rows={4}
-                            placeholder="سابقه کاری، مهارت‌ها، و هر چیزی که فکر می‌کنی مهم است را بنویس..."
-                            className="w-full border border-gray-200 rounded-xl p-3.5 text-sm resize-none focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors"
-                          />
+                  {/* upload area */}
+                  {hasResume && (
+                    <div className="p-4">
+                      <label className={`flex items-center gap-3 border-2 border-dashed rounded-xl p-4 cursor-pointer transition-colors ${
+                        file ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <Upload size={18} strokeWidth={1.5} className={file ? 'text-emerald-500' : 'text-gray-400'} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 truncate">{file ? file.name : 'انتخاب فایل رزومه'}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">PDF، Word، یا عکس</p>
                         </div>
-                      </div>
+                        {file && (
+                          <span onClick={e => { e.preventDefault(); setFile(null); }} className="cursor-pointer">
+                            <X size={14} className="text-gray-400 hover:text-gray-600" />
+                          </span>
+                        )}
+                        <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx"
+                          onChange={e => setFile(e.target.files?.[0] ?? null)} />
+                      </label>
                     </div>
-                  </div>
+                  )}
+
+                  {/* manual textarea */}
+                  {!hasResume && (
+                    <div className="p-4">
+                      <p className="text-xs font-medium text-gray-500 mb-2">توضیحات و سوابق کاری شما</p>
+                      <textarea
+                        value={manualInfo} onChange={e => setManualInfo(e.target.value)} rows={4}
+                        placeholder="سابقه کاری، مهارت‌ها، و هر چیزی که فکر می‌کنی مهم است را بنویس..."
+                        className="w-full border border-gray-200 rounded-xl p-3.5 text-sm resize-none focus:outline-none focus:border-gray-400 focus:ring-2 focus:ring-gray-100 transition-colors"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {error && <div className="bg-red-50 border border-red-100 rounded-xl p-3 text-xs text-red-600">{error}</div>}
@@ -360,9 +356,9 @@ export default function ApplyPage() {
                         <div className="w-6 h-6 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-semibold text-gray-600">
                           {qi + 1}
                         </div>
-                        <span className="text-sm font-medium text-gray-800">{q.title}</span>
+                        <span className="text-sm font-medium text-gray-900">{q.title || `سوال ${qi + 1}`}</span>
                       </div>
-                      {q.prompt && <p className="text-xs text-gray-400 mb-4 mr-8">{q.prompt}</p>}
+                      {q.prompt && <p className="text-xs text-gray-600 mb-4 mr-8">{q.prompt}</p>}
                       <textarea
                         value={answers[q.id] ?? ''} onChange={e => setAnswers(a => ({ ...a, [q.id]: e.target.value }))}
                         rows={3}

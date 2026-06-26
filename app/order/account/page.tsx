@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { MapPin, Package, Plus, Trash2, Star, Phone, User, LogOut, ChevronRight, Map as MapIcon } from 'lucide-react';
 import { customerRepo } from '@/lib/repos/customer.api';
 import { publicOrderRepo } from '@/lib/repos/publicOrder.api';
-import { fmt, toFa } from '@/lib/utils';
+import { fmt, toFa, normalizeDigits } from '@/lib/utils';
 import type { WebCustomer, WebCustomerAddress, WebCustomerOrder } from '@/types/webCustomer';
 
 // dynamic import — Leaflet به window نیاز دارد و SSR را تحمل نمی‌کند
@@ -101,7 +101,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
               dir="ltr"
               inputMode="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => setPhone(normalizeDigits(e.target.value))}
               placeholder="09xxxxxxxxx"
               className="w-full rounded-xl border border-stone-200 px-4 py-3 text-center text-[14px] tracking-widest placeholder:text-stone-400 focus:border-stone-400 focus:outline-none"
             />
@@ -130,7 +130,7 @@ function OtpLoginForm({ onLogin }: { onLogin: (c: WebCustomer) => void }) {
               inputMode="numeric"
               maxLength={6}
               value={code}
-              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+              onChange={(e) => setCode(normalizeDigits(e.target.value).replace(/\D/g, ''))}
               placeholder="------"
               className="w-full rounded-xl border border-stone-200 px-4 py-3 text-center text-[18px] tracking-[0.4em] placeholder:text-stone-400 focus:border-stone-400 focus:outline-none"
             />

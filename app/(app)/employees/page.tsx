@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker } from '@/components/ui';
 import { useAppStore } from '@/store';
-import { fmt, cn } from '@/lib/utils';
+import { fmt, cn, normalizeDigits } from '@/lib/utils';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
 import { EMPLOYEE_ROLE_LABELS, INSURANCE_STATUS_LABELS, DEFAULT_ROLES, type EmployeeRole, type InsuranceStatus } from '@/types';
 
@@ -221,7 +221,7 @@ export default function EmployeesPage() {
                 <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="مثلاً: علی رضایی" />
               </Field>
               <Field label="تلفن">
-                <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="۰۹۱۲..." dir="ltr" />
+                <Input value={phone} onChange={e => setPhone(normalizeDigits(e.target.value))} placeholder="۰۹۱۲..." dir="ltr" />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="سمت">

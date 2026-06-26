@@ -75,6 +75,16 @@ export function formatAmountInput(input: string): string {
 }
 
 /**
+ * تبدیل ارقام فارسی (۰–۹) و عربی (٠–٩) به ارقام لاتین (0–9).
+ * در onChange هر input عددی فراخوانی شود تا کیبورد فارسی هم کار کند.
+ */
+export function normalizeDigits(str: string): string {
+  return str
+    .replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 0x06F0))
+    .replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 0x0660));
+}
+
+/**
  * onChange هندلر برای input عددیِ لاتین با جداکننده هزارگان (toLocaleString('en-US')).
  *
  * مشکل بدون این تابع: با هر کلیدی که زده می‌شود، رشته از نو فرمت می‌شود

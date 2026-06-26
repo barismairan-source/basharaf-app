@@ -370,11 +370,16 @@ export default function RecruitmentPage() {
                   {questions.map((q, i) => (
                     <div key={q.id} className="border border-stone-200 rounded-lg p-3 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] text-muted w-5">{i + 1}</span>
-                        <Input value={q.title} onChange={e => updateQuestion(i, { title: e.target.value })} placeholder="عنوان کوتاه" />
-                        <button onClick={() => removeQuestion(i)} className="text-muted hover:text-rose-600 p-1"><Trash2 size={15} /></button>
+                        <span className="text-[11px] font-medium text-muted w-5 flex-shrink-0 text-center">{i + 1}</span>
+                        <Input className="flex-1" value={q.title} onChange={e => updateQuestion(i, { title: e.target.value })} placeholder="عنوان کوتاه سوال" />
+                        <button
+                          onClick={() => removeQuestion(i)}
+                          className="flex-shrink-0 p-1.5 rounded-md text-muted hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
-                      <Textarea value={q.prompt} onChange={e => updateQuestion(i, { prompt: e.target.value })} rows={2} placeholder="متن کامل سوال" />
+                      <Textarea className="mr-7" value={q.prompt} onChange={e => updateQuestion(i, { prompt: e.target.value })} rows={2} placeholder="متن کامل سوال که متقاضی می‌بیند" />
                     </div>
                   ))}
                   <button onClick={addQuestion} className="flex items-center gap-1.5 text-[12.5px] text-stone-600 hover:text-stone-900">

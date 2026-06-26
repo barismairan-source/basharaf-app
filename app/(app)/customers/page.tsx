@@ -15,7 +15,7 @@ import {
   Chip,
 } from '@/components/ui';
 import { useAppStore } from '@/store';
-import { fmt } from '@/lib/utils';
+import { fmt, normalizeDigits } from '@/lib/utils';
 import { tierLabel } from '@/lib/loyalty';
 import { FeedbackSummaryCard } from '@/components/customers/FeedbackSummaryCard';
 
@@ -133,7 +133,7 @@ export default function CustomersPage() {
                     placeholder="۰۹…"
                     dir="ltr"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
+                    onChange={(e) => setPhone(normalizeDigits(e.target.value))}
                   />
                 </Field>
                 {isAdmin && (

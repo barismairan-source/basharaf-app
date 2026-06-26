@@ -25,7 +25,7 @@ import {
   Chip,
 } from '@/components/ui';
 import { useAppStore } from '@/store';
-import { fmt } from '@/lib/utils';
+import { fmt, normalizeDigits } from '@/lib/utils';
 import { tierLabel } from '@/lib/loyalty';
 import type { CustomerDetail } from '@/types';
 
@@ -174,7 +174,7 @@ export default function CustomerProfilePage() {
                     <Input value={name} onChange={(e) => setName(e.target.value)} />
                   </Field>
                   <Field label="تلفن">
-                    <Input dir="ltr" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    <Input dir="ltr" value={phone} onChange={(e) => setPhone(normalizeDigits(e.target.value))} />
                   </Field>
                 </div>
                 <Field label="یادداشت">

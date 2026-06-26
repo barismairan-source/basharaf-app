@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-21 — v0.9.33: Core Financial Integrity Sprint (Phase 1+2+3) — اکانت ۲
+**چه شد:** سپرینت یکپارچگی مالی کامل شد: (۱) `lib/db/migrate.ts` برای migration خودکار. (۲) جدول `financial_periods` + API + guard مسدودکننده در تراکنش‌های دوره بسته. (۳) Vitest + 32/32 unit tests (balance, costing, vat).
+**فایل‌ها:** `lib/db/schema.ts`، `lib/db/migrate.ts`، `lib/financial-period.ts`، `lib/financial/balance.ts`، `lib/financial/vat.ts`، `app/api/financial-periods/route.ts`، `db-financial-periods-migration.sql`، `tests/unit/*.test.ts`، `vitest.config.ts`.
+**Build:** tsc ✅ · build ✅ · tests 32/32 ✅
+
 ## 📓 2026-06-20 — v0.9.32: سیستم اعلان نسل ۲ — اکانت ۲
 **چه شد:**
 بازسازی کامل سیستم اعلان در ۴ فاز:

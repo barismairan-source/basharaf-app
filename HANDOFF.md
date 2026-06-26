@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.36-theme-accent` |
+| **نسخه** | `0.9.37-ui-bugfix` |
 | **آخرین به‌روزرسانی** | 2026-06-26 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 ولی **۴ migration** هنوز باید دستی در pgAdmin اجرا شود: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) تست Excel import با فایل واقعی پس از deploy. |
+| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) تست فرم /apply روی موبایل با کیبورد فارسی (ارقام، موبایل، رزومه toggle). (۳) تست Excel import با فایل واقعی پس از deploy. |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -50,6 +50,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-26 — v0.9.37: فیکس ۴ باگ UI (apply + recruitment) — اکانت ۱
+**چه شد:**
+(۱) **باگ ۱ — تاگل رزومه:** بخش رزومه در مرحله ۲ فرم /apply از دکمه‌ی مبهم به یک تاگل دو حالته واضح (آپلود رزومه | رزومه ندارم) با پس‌زمینه مشکی برای حالت انتخاب‌شده تبدیل شد. وضعیت toggle همیشه visible است و محتوای داخل بر اساس انتخاب نمایش داده می‌شود.
+(۲) **باگ ۲ — ارقام فارسی:** تابع `normalizeDigits()` به `lib/utils.ts` اضافه شد (تبدیل ۰-۹ فارسی و ٠-٩ عربی به 0-9 لاتین). روی تمام inputهای عددی پروژه اعمال شد: `/apply` (phone, age)، employees (phone)، contacts (phone×2)، customers (phone)، customers/[id] (phone)، order/account (phone, code OTP).
+(۳) **باگ ۳ — مدیریت سوالات:** در modal مدیریت سوالات در /recruitment، `Input` ویژگی `flex-1` گرفت، دکمه Trash2 به `flex-shrink-0` و hover واضح‌تر (rose bg) تبدیل شد، `Textarea` با `mr-7` زیر Input تراز شد.
+(۴) **باگ ۴ — سوالات در /apply:** کنتراست متن سوال (prompt) از `text-gray-400` به `text-gray-600` و عنوان از `text-gray-800` به `text-gray-900` ارتقا یافت. fallback برای عنوان خالی (`سوال N`) اضافه شد.
+**فایل‌ها:** `lib/utils.ts`، `app/apply/page.tsx`، `app/(app)/recruitment/page.tsx`، `app/(app)/employees/page.tsx`، `app/(app)/contacts/page.tsx`، `app/(app)/customers/page.tsx`، `app/(app)/customers/[id]/page.tsx`، `app/order/account/page.tsx`.
+**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) تست /apply روی موبایل با کیبورد فارسی. (۳) تست Excel import با فایل واقعی.
 
 ## 📓 2026-06-26 — فیکس db-admin-migration.sql — اکانت ۱
 **چه شد:** در شروع جلسه مشخص شد `db-admin-migration.sql` به‌اشتباه با محتوای `db-financial-periods-migration.sql` جایگزین شده بود (محتوای تکراری جدول financial_periods). migration اصلی (اضافه‌کردن ستون `is_active` به جدول `users` — Super Admin Panel v1) حذف شده بود. با `git checkout -- db-admin-migration.sql` فایل به وضعیت committed صحیح برگشت.
@@ -107,16 +118,5 @@ root پروژه که بسیار شلوغ شده بود پاکسازی شد: ۳۵
 **ناتمام:** —
 **برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) آپلود `basharaf-v0.9.33-liara.zip` روی Liara. (۳) UI مدیریت دوره‌های مالی.
 
-## 📓 2026-06-21 — v0.9.33: Core Financial Integrity Sprint (Phase 1+2+3) — اکانت ۲
-**چه شد:**
-سپرینت یکپارچگی مالی در سه فاز کامل شد:
-(۱) **Phase 1 — Migration Infrastructure:** `lib/db/migrate.ts` ساخته شد — اجرای خودکار Drizzle migration‌ها روی production (دستور `npm run db:migrate`).
-(۲) **Phase 2 — Financial Period Close (قفل دوره مالی):** جدول `financial_periods` به `schema.ts` اضافه شد (jalali_year + jalali_month، UNIQUE constraint). `lib/financial-period.ts` helper ساخته شد با `parseJalaliYearMonth()` و `isDateInClosedPeriod()` (از ارقام فارسی/ASCII پشتیبانی می‌کند). API `GET/POST/DELETE /api/financial-periods` برای SuperAdmin. گارد مسدودکننده در `PATCH` و `DELETE` تراکنش‌ها: هر تغییر/حذف تراکنش approved در دوره‌ی بسته → خطای 422 غیرقابل‌عبور. Migration: `db-financial-periods-migration.sql`.
-(۳) **Phase 3 — Unit Tests:** Vitest نصب شد (v2.1.9 + `vitest.config.ts`). دو ماژول pure math استخراج شد: `lib/financial/balance.ts` (applyDelta/reverseDelta) و `lib/financial/vat.ts` (lineVat/orderVat). سه مجموعه تست: `tests/unit/balance.test.ts` (11 test)، `tests/unit/costing.test.ts` (11 test)، `tests/unit/vat.test.ts` (10 test) — جمعاً 32/32 پاس.
-همچنین `db-admin-migration.sql` که اتفاقاً خالی شده بود بازیابی شد.
-**فایل‌ها:** `lib/db/schema.ts` (financialPeriods table)، `lib/db/migrate.ts` (جدید)، `lib/financial-period.ts` (جدید)، `lib/financial/balance.ts` (جدید)، `lib/financial/vat.ts` (جدید)، `app/api/financial-periods/route.ts` (جدید)، `app/api/transactions/[id]/route.ts` (guard اضافه شد)، `db-financial-periods-migration.sql` (جدید)، `tests/unit/*.test.ts` (جدید)، `vitest.config.ts` (جدید)، `package.json`.
-**Build:** `npx tsc --noEmit` ✅ ۰ خطا. `npm run build` ✅ سبز. `npm test` ✅ 32/32.
-**ناتمام:** —
-**برای جلسه‌ی بعد:** (۱) اجرای `db-financial-periods-migration.sql` (+ سه migration قبلی اگر نشده) در pgAdmin. (۲) دیپلوی zip. (۳) UI مدیریت دوره‌های مالی در settings یا admin panel.
 
 

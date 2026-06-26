@@ -5,7 +5,7 @@ import { Users, Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Pencil, Check, X }
 import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Chip } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore } from '@/store';
-import { fmt, cn } from '@/lib/utils';
+import { fmt, cn, normalizeDigits } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import type { Contact } from '@/types/transaction';
 import { ContactLedgerDrawer } from '@/components/contacts/ContactLedgerDrawer';
@@ -107,7 +107,7 @@ export default function ContactsPage() {
               />
               <input
                 value={editPhone}
-                onChange={e => setEditPhone(e.target.value)}
+                onChange={e => setEditPhone(normalizeDigits(e.target.value))}
                 placeholder="تلفن"
                 dir="ltr"
                 className="w-full h-7 px-2 rounded border border-stone-200 text-[11px] focus:outline-none bg-white"
@@ -296,7 +296,7 @@ export default function ContactsPage() {
                   </datalist>
                 </Field>
                 <Field label="تلفن (اختیاری)">
-                  <Input placeholder="۰۹..." dir="ltr" value={phone} onChange={e => setPhone(e.target.value)} />
+                  <Input placeholder="۰۹..." dir="ltr" value={phone} onChange={e => setPhone(normalizeDigits(e.target.value))} />
                 </Field>
               </div>
               <div className="flex gap-2 justify-end">
