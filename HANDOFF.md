@@ -15,7 +15,7 @@
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 ولی **۴ migration** هنوز باید دستی در pgAdmin اجرا شود: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) تست فرم /apply روی موبایل با کیبورد فارسی (ارقام، موبایل، رزومه toggle). (۳) تست Excel import با فایل واقعی پس از deploy. |
+| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) تست فرم /apply روی موبایل با کیبورد فارسی. (۳) SMS provider واقعی جایگزین OTP mock (`lib/ordering/webCustomer.ts:71`). (۴) تکمیل Recipe Costing UI. |
 | **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -50,6 +50,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-26 — گزارش وضعیت کامل (STATE-SNAPSHOT) — اکانت ۱
+**چه شد:** بدون تغییر کد، یک گزارش جامع وضعیت پروژه ساخته شد: درخت app/ تا عمق ۳، تمام ۱۱۱ API endpoint با HTTP method، ۵۱ جدول دیتابیس از schema.ts، ارزیابی تکمیل ۱۰ ماژول، تمام TODO/mock/hardcode در کد.
+**فایل‌ها:** `project-docs/STATE-SNAPSHOT.md` (ایجاد)، `HANDOFF.md`.
+**Build:** بدون تغییر کد — tsc/build/tests همچنان ✅ 32/32.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** (۱) اجرای ۴ migration در pgAdmin. (۲) تست /apply روی موبایل با کیبورد فارسی. (۳) SMS provider واقعی جایگزین OTP mock در `lib/ordering/webCustomer.ts:71`.
 
 ## 📓 2026-06-26 — v0.9.37: فیکس ۴ باگ UI (apply + recruitment) — اکانت ۱
 **چه شد:**
