@@ -1,5 +1,45 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-20 — v0.9.32: سیستم اعلان نسل ۲ — اکانت ۲
+**چه شد:**
+بازسازی کامل سیستم اعلان در ۴ فاز:
+(۱) **فاز ۱ — Schema/DB:** `notifTypeEnum` به `warning` و `critical` گسترش یافت. ستون‌های `action_url` و `entity_id` به جدول `notifications` اضافه شد. جدول `notification_rules` (key/label/enabled/threshold) برای کنترل ادمین ساخته شد. Migration: `db-notifications-v2-migration.sql`. `lib/notify.ts` helper مرکزی با `notify()`, `notifyAdmins()`, `getRuleThreshold()` ساخته شد.
+(۲) **فاز ۲ — UI Bell:** `NotificationsBell.tsx` کاملاً بازنویسی شد. Desktop: dropdown 360px با TYPE_META برای ۶ نوع. Mobile: bottom sheet (max-h-75vh، animate-slide-up، backdrop-blur). Deep linking: کارت‌های با `actionUrl` به `<Link>` تبدیل شدند.
+(۳) **فاز ۳ — Admin Config:** صفحه‌ی `/admin/settings/notifications` با toggle سوئیچ برای ۶ قانون. API `GET/PATCH /api/admin/notification-rules`. آیتم جدید در `AdminSidebar`.
+(۴) **فاز ۴ — Wire-up:** همه ۶ call-site به `notify()`/`notifyAdmins()` migrate شدند.
+**فایل‌ها:** `lib/db/schema.ts`، `lib/notify.ts` (جدید)، `db-notifications-v2-migration.sql` (جدید)، `types/notification.ts`، `components/layout/NotificationsBell.tsx`، `components/admin/AdminSidebar.tsx`، `app/api/admin/notification-rules/route.ts` (جدید)، `app/(admin)/admin/settings/notifications/page.tsx` (جدید)، و چند route دیگر.
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-06-20 — v0.9.31: Enterprise UX (Skeleton primitive + 11 loading.tsx + API error unification) — اکانت ۲
+**چه شد:**
+(۱) `components/ui/Skeleton.tsx` با sub-components کامپوزبل ساخته شد. (۲) ۱۱ فایل `loading.tsx` با skeleton دقیق برای هر صفحه‌ی سنگین. (۳) API Error Unification برای ۷ route (customer/* و auth/permissions) به `handleError()`.
+**فایل‌ها:** `components/ui/Skeleton.tsx`، `components/ui/index.ts`، ۱۱ فایل loading.tsx، ۷ API route.
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-06-20 — v0.9.30: Phase A کامل (Bug1: SecurityPane labels + Bug2: invoiceCode/proforma در فرم تراکنش) — اکانت ۲
+**چه شد:**
+(۱) برچسب و آیکون ۴۳ AuditAction جدید به `ACTION_META` در SecurityPane.tsx اضافه شد. (۲) فیلد «کد فاکتور» و چک‌باکس «پیش‌فاکتور» به فرم تراکنش جدید اضافه شد. (۳) TS Fix: `TransactionInput` دو فیلد `invoiceCode?` و `initialStatus?` گرفت.
+**فایل‌ها:** `types/transaction.ts`، `components/settings/SecurityPane.tsx`، `app/(app)/transactions/new/page.tsx`.
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-06-20 — v0.9.29: Super Admin Panel v1 (RBAC + Impersonation + Audit) — اکانت ۲
+**چه شد:**
+(۱) فیلد `is_active` به جدول `users` اضافه شد. (۲) سیستم جعل هویت (impersonation) با کوکی `basharaf-imp` (4h) و AuditLog کامل. (۳) پنل ادمین تاریک با صفحات داشبورد، مدیریت کاربران، و لاگ ادیت. (۴) `ImpersonationBanner` بنر قرمز z-50 در حین جعل هویت.
+**فایل‌ها:** `lib/auth/impersonation.ts` (جدید)، `lib/auth/session.ts`، `middleware.ts`، `app/(admin)/` (layout + 3 page)، `db-admin-migration.sql`.
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-06-19 — v0.9.28: Accounting Overhaul v1 (proforma + invoiceCode + contact ledger) — اکانت ۲
+**چه شد:**
+(۱) `proforma` به `txStatusEnum` + فیلد `invoice_code` به جدول transactions اضافه شد. (۲) `lib/db/contactLedger.ts` + API `GET /api/contacts/[id]/ledger`. (۳) `ContactLedgerDrawer` — drawer سمت راست با مانده‌ی پویا + تاریخچه تراکنش‌ها.
+**فایل‌ها:** `lib/db/schema.ts`، `lib/db/contactLedger.ts` (جدید)، `components/contacts/ContactLedgerDrawer.tsx` (جدید)، `db-accounting-v1-migration.sql`.
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-06-19 — v0.9.27: App Shell + Enterprise Header + Sidebar resize — اکانت ۲
+**چه شد:**
+App Shell به `h-screen overflow-hidden` تبدیل شد (scroll مستقل sidebar و main). Header به `h-16 backdrop-blur-sm` ارتقا یافت. Sidebar به `w-64`/`w-20` رفت.
+**فایل‌ها:** `app/(app)/layout.tsx`، `components/layout/Sidebar.tsx`، `components/layout/Header.tsx`.
+**Build:** tsc ✅ · build ✅
+
 ## 📓 2026-06-19 — v0.9.26: یکپارچه‌سازی design tokens در Input/Select/Textarea — اکانت ۲
 **چه شد:**
 رنگ‌های hardcoded (`stone-*`, `rose-*`, `bg-white`) در همه primitive های فرم با design tokens جایگزین شدند:
