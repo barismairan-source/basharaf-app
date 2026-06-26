@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.37-ui-bugfix` |
-| **آخرین به‌روزرسانی** | 2026-06-26 — اکانت: ۱ |
+| **نسخه** | `0.9.38-recipe-prep-chain` |
+| **آخرین به‌روزرسانی** | 2026-06-27 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 ولی **۴ migration** هنوز باید دستی در pgAdmin اجرا شود: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
-| **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) اجرای ۴ migration در pgAdmin. (۲) تست فرم /apply روی موبایل با کیبورد فارسی. (۳) SMS provider واقعی جایگزین OTP mock (`lib/ordering/webCustomer.ts:71`). (۴) تکمیل Recipe Costing UI. |
-| **بلاک‌شده/منتظر کاربر** | تأیید migration و دیپلوی |
+| **کار نیمه‌تمام (in-progress)** | منتظر تأیید کاربر برای شکاف ۲ (prep chain) — بعد شکاف ۱ (sync قیمت) |
+| **کار بعدی پیشنهادی** | (۱) تأیید UI نمایش زنجیره prep در /inventory/recipes. (۲) شکاف ۱: sync قیمت (Option B). (۳) شکاف ۳: variance — ابتدا grep inv_stock_tx.jalali_date. |
+| **بلاک‌شده/منتظر کاربر** | تأیید UI شکاف ۲ + تأیید migration |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-27 — v0.9.38: نمایش زنجیره prep در costing panel (شکاف ۲) — اکانت ۱
+**چه شد:** سه تغییر additive برای نمایش مواد تشکیل‌دهنده‌ی آیتم‌های نیمه‌آماده در پنل bhosting رسپی:
+(۱) `LineCost` در `costing.ts` فیلد اختیاری `subLines?: LineCost[]` گرفت — بدون تغییر توابع موجود.
+(۲) `RecipeLineCost` در `types/inventory.ts` فیلد `subLines?: RecipeLineCost[]` گرفت — backward-compatible.
+(۳) `costing/route.ts` بازنویسی: بعد از `costRecipe()` برای هر line با `kind='prep'`، `prepRecipe` JSONB آن item را fetch و با scale factor (qtyUsed / batchYieldBase) expand می‌کند. یک DB fetch اضافه فقط برای sub-items.
+(۴) `recipes/page.tsx` RecipeCard: اگر `subLines` موجود بود، با indent و border-r نمایش می‌دهد + badge «نیمه‌آماده».
+**فایل‌ها:** `lib/inventory/costing.ts`، `types/inventory.ts`، `app/api/inventory/recipes/[id]/costing/route.ts`، `app/(app)/inventory/recipes/page.tsx`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** منتظر تأیید کاربر
+**برای جلسه‌ی بعد:** شکاف ۱ (sync قیمت، Option B) — فایل‌های اصلی: `recipes/page.tsx` wizard step 1 + `costing/route.ts`.
 
 ## 📓 2026-06-26 — گزارش وضعیت کامل (STATE-SNAPSHOT) — اکانت ۱
 **چه شد:** بدون تغییر کد، یک گزارش جامع وضعیت پروژه ساخته شد: درخت app/ تا عمق ۳، تمام ۱۱۱ API endpoint با HTTP method، ۵۱ جدول دیتابیس از schema.ts، ارزیابی تکمیل ۱۰ ماژول، تمام TODO/mock/hardcode در کد.

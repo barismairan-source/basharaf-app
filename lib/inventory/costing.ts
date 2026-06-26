@@ -38,6 +38,7 @@ export interface LineCost {
   yieldUsed: number;
   lineCost: number; // تومان (کل این خط برای یک پخت)
   missingCost: boolean; // اگر قیمت قلم صفر است
+  subLines?: LineCost[]; // فقط برای kind='prep' — مواد تشکیل‌دهنده‌ی نیمه‌آماده
 }
 
 export interface RecipeCosting {

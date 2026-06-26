@@ -153,6 +153,7 @@ export interface RecipeLineCost {
   yieldUsed: number;
   lineCost: number;
   missingCost: boolean;
+  subLines?: RecipeLineCost[]; // فقط برای آیتم‌های نیمه‌آماده — مواد تشکیل‌دهنده
 }
 
 export interface RecipeCosting {

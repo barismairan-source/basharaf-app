@@ -327,11 +327,29 @@ function RecipeCard({
             </div>
           )}
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {costing.lines.map((l, i) => (
-              <div key={i} className="flex justify-between text-[11.5px] text-muted">
-                <span className="text-text">{l.name} <span className="text-muted">({fmt(l.qtyBase)} {l.unit})</span></span>
-                <span className="num">{fmt(l.lineCost)}</span>
+              <div key={i}>
+                <div className="flex justify-between text-[11.5px]">
+                  <span className="text-text">
+                    {l.name}
+                    {l.subLines && l.subLines.length > 0 && (
+                      <span className="mr-1.5 text-[9.5px] bg-accent/10 text-accent px-1 py-0.5 rounded">نیمه‌آماده</span>
+                    )}
+                    <span className="text-muted"> ({fmt(l.qtyBase)} {l.unit})</span>
+                  </span>
+                  <span className="num text-muted">{fmt(l.lineCost)}</span>
+                </div>
+                {l.subLines && l.subLines.length > 0 && (
+                  <div className="mt-0.5 mr-3 pr-2 border-r-2 border-border/50 space-y-0.5">
+                    {l.subLines.map((s, j) => (
+                      <div key={j} className="flex justify-between text-[10.5px] text-muted">
+                        <span>{s.name} <span className="opacity-60">({fmt(Math.round(s.qtyBase))} {s.unit})</span></span>
+                        <span className="num opacity-70">{fmt(s.lineCost)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>
