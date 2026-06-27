@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.39-prep-item-ui` |
+| **نسخه** | `0.9.40-kitchen-section-phase01` |
 | **آخرین به‌روزرسانی** | 2026-06-27 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 ولی **۴ migration** هنوز باید دستی در pgAdmin اجرا شود: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
-| **کار نیمه‌تمام (in-progress)** | منتظر تصمیم کاربر روی بررسی جداسازی انبار/آشپزخانه (سند: `project-docs/INVESTIGATION-inventory-kitchen-split.md`) |
-| **کار بعدی پیشنهادی** | (۱) تصمیم درباره‌ی جداسازی انبار/آشپزخانه (فاز ۰+۱ کم‌ریسک). (۲) شکاف ۱: sync قیمت. (۳) شکاف ۳: variance. |
-| **بلاک‌شده/منتظر کاربر** | تأیید معماری split + تأیید migration |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۵ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`، **`db-kitchen-section-migration.sql` (جدید — فاز ۱ جداسازی آشپزخانه)**. |
+| **کار نیمه‌تمام (in-progress)** | جداسازی انبار/آشپزخانه — فاز ۰+۱ انجام شد. **منتظر کاربر**: تست + اجرای migration، بعد فاز ۲. |
+| **کار بعدی پیشنهادی** | (۱) [بعد از تأیید کاربر] فاز ۲: تفکیک sectionForPath + nav + defaultRoles. (۲) شکاف ۱: sync قیمت. (۳) شکاف ۳: variance. |
+| **بلاک‌شده/منتظر کاربر** | اجرای `db-kitchen-section-migration.sql` + تأیید برای فاز ۲ |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-27 — v0.9.40: جداسازی انبار/آشپزخانه فاز ۰+۱ — اکانت ۱
+**چه شد:**
+(فاز ۰ — صفر ریسک) بخش `kitchen` به `SectionKey` و `SECTIONS` در `permissions.ts` اضافه شد با `defaultRoles: ['SuperAdmin','Chef']`. `sectionForPath` و `nav-config` **دست‌نخورده** ماندند — هیچ مسیری هنوز به kitchen نگاشت نمی‌شود، پس رفتار فعلی هیچ کاربری عوض نشده. تنها اثر مرئی: یک تیک جدید «آشپزخانه» در پنل دسترسی TeamPane (که خودکار روی SECTIONS map می‌کند).
+(فاز ۱ — migration محافظتی) فایل `db-kitchen-section-migration.sql` ساخته شد: به هر کاربری که permission صریح `'inventory'` دارد و `'kitchen'` ندارد، `'kitchen'` اضافه می‌کند (JSONB `||`). idempotent. **اجرا نشد — منتظر کاربر برای pgAdmin.**
+بررسی شد که `ALL_SECTION_KEYS` هیچ‌جا مصرف نمی‌شود و تنها مصرف‌کننده‌ی SECTIONS، `canAccessSection` (بدون مسیر kitchen) و TeamPane است → صفر تغییر رفتار تأیید شد.
+**فایل‌ها:** `lib/auth/permissions.ts`، `db-kitchen-section-migration.sql` (جدید)، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** فاز ۲ و ۳ عمداً زده نشدند. منتظر تست کاربر + اجرای migration.
+**برای جلسه‌ی بعد:** فقط بعد از تأیید کاربر → فاز ۲ (تفکیک sectionForPath: recipes/plan → kitchen، تغییر defaultRoles بخش inventory به حذف Chef، افزودن آیتم nav «آشپزخانه»، شرطی‌کردن کارت‌های hub).
 
 ## 📓 2026-06-27 — بررسی جداسازی انبار/آشپزخانه (بدون تغییر کد) — اکانت ۱
 **چه شد:** بررسی کامل سیستم نقش/دسترسی برای تقسیم «انبار و آشپزخانه» به دو حوزه‌ی جدا. یافته‌ی کلیدی: نقش‌های `Warehouse` (انباردار) و `Chef` (سرآشپز) از قبل وجود دارند؛ مشکل اینجاست که هر دو به یک بخش واحد `inventory` نگاشت می‌شوند و `sectionForPath` همه‌ی `/inventory/*` را یکی می‌بیند. راه‌حل پیشنهادی: افزودن بخش `kitchen`، تفکیک در `sectionForPath`، بدون جابجایی فایل. نقشه‌ی ۵ فازی از صفر-ریسک تا پرریسک نوشته شد. ریسک اصلی: کاربران با permission صریح `'inventory'` نیاز به migration محافظتی (افزودن `'kitchen'`) دارند.

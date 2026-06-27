@@ -20,6 +20,7 @@ export type SectionKey =
   | 'employees'
   | 'payroll'
   | 'inventory'
+  | 'kitchen'
   | 'menu'
   | 'orders'
   | 'recruitment'
@@ -43,6 +44,9 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   { key: 'employees',    label: 'پرسنل',             defaultRoles: ['SuperAdmin'] },
   { key: 'payroll',      label: 'حقوق و دستمزد',     defaultRoles: ['SuperAdmin'] },
   { key: 'inventory',    label: 'انبار و آشپزخانه',  defaultRoles: ['SuperAdmin', 'Warehouse', 'Chef'] },
+  // فاز ۰ جداسازی انبار/آشپزخانه: بخش kitchen اضافه شد اما هنوز به هیچ مسیری نگاشت نشده
+  // (sectionForPath و nav دست‌نخورده‌اند) — رفتار فعلی عوض نمی‌شود. فعال‌سازی در فاز ۲.
+  { key: 'kitchen',      label: 'آشپزخانه',          defaultRoles: ['SuperAdmin', 'Chef'] },
   { key: 'menu',         label: 'مدیریت منو',        defaultRoles: ['SuperAdmin', 'Chef'] },
   { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
   { key: 'recruitment',  label: 'استخدام',           defaultRoles: ['SuperAdmin'] },
