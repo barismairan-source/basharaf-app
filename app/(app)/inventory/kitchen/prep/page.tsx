@@ -1,0 +1,701 @@
+'use client';
+
+import { useEffect, useState, useCallback } from 'react';
+import { Search, Info, ChevronDown, MoreVertical, Trash2, Plus } from 'lucide-react';
+import { createRepos } from '@/lib/repos';
+import { useAppStore } from '@/store';
+import { canDo, canAccessSection } from '@/lib/auth/permissions';
+import { fmt, toFa, normalizeDigits } from '@/lib/utils';
+import { Button, DataList, EmptyState, Sheet, PageHeader } from '@/components/ui';
+import type { DataColumn } from '@/components/ui/DataList';
+import type { InventoryItem, NewInventoryItemInput, InvUnit } from '@/types';
+
+const repos = createRepos(null as never);
+
+// ── ثوابت ──────────────────────────────────────────────────────────
+
+const UNIT_LABELS: Record<InvUnit, string> = {
+  kg: 'کیلوگرم', g: 'گرم', L: 'لیتر', ml: 'میلی‌لیتر',
+  pcs: 'عدد', can: 'قوطی', pack: 'بسته',
+};
+
+const UNIT_BASE: Record<InvUnit, string> = {
+  kg: 'گرم', g: 'گرم', L: 'میلی‌لیتر', ml: 'میلی‌لیتر',
+  pcs: 'عدد', can: 'عدد', pack: 'عدد',
+};
+
+const DEFAULT_BPU: Record<InvUnit, number> = {
+  kg: 1000, g: 1, L: 1000, ml: 1, pcs: 1, can: 1, pack: 1,
+};
+
+// ── helpers ─────────────────────────────────────────────────────────
+
+function nextCode(items: InventoryItem[]): string {
+  let max = 0;
+  for (const it of items) {
+    const n = parseInt(it.code, 10);
+    if (!isNaN(n) && n > max) max = n;
+  }
+  return String(max + 1).padStart(3, '0');
+}
+
+function errMsg(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message && !/^HTTP \d+$/.test(e.message)) return e.message;
+  return fallback;
+}
+
+// ── form state ──────────────────────────────────────────────────────
+
+interface PrepForm {
+  code: string;
+  name: string;
+  unit: InvUnit;
+  branchId: string;
+  basePerUnit: string;
+  yieldPct: string;
+  minBase: string;
+  batchYieldBase: string;
+}
+
+interface PrepLine { itemId: string; qty: string; }
+
+const EMPTY_FORM: PrepForm = {
+  code: '', name: '', unit: 'g', branchId: '',
+  basePerUnit: '1', yieldPct: '100', minBase: '0', batchYieldBase: '',
+};
+
+/** تشخیص حلقه در زنجیره‌ی prep با BFS روی items لود‌شده‌ی کلاینت.
+ *  برمی‌گرداند true اگر افزودن candidateId به prepRecipe itemId=currentId یک حلقه می‌سازد. */
+function wouldCreateCycle(
+  candidateId: string,
+  currentItemId: string | null,
+  allItems: InventoryItem[],
+): boolean {
+  if (!currentItemId) return false;
+  if (candidateId === currentItemId) return true; // self-reference مستقیم
+
+  const byId = new Map(allItems.map(it => [it.id, it]));
+  const visited = new Set<string>();
+  const queue = [candidateId];
+
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const it = byId.get(id);
+    if (!it?.prepRecipe) continue;
+    for (const sub of it.prepRecipe) {
+      if (sub.itemId === currentItemId) return true;
+      if (!visited.has(sub.itemId)) queue.push(sub.itemId);
+    }
+  }
+  return false;
+}
+
+// ── sub-components ──────────────────────────────────────────────────
+
+function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
+  return (
+    <label className="block text-[12px] text-muted mb-1">
+      {children}
+      {required && <span className="text-danger mr-0.5">*</span>}
+    </label>
+  );
+}
+
+function TextInput({
+  value, onChange, placeholder, className, type = 'text',
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  className?: string;
+  type?: string;
+}) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      className={`w-full h-11 px-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent${className ? ` ${className}` : ''}`}
+    />
+  );
+}
+
+// ── main component ──────────────────────────────────────────────────
+
+export default function KitchenPrepPage() {
+  const user = useAppStore((s) => s.user);
+  const branches = useAppStore((s) => s.branches);
+  const showToast = useAppStore((s) => s.showToast);
+
+  const [items, setItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [editItem, setEditItem] = useState<InventoryItem | null>(null);
+  const [form, setForm] = useState<PrepForm>(EMPTY_FORM);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [prepLines, setPrepLines] = useState<PrepLine[]>([]);
+  const [prepSearch, setPrepSearch] = useState('');
+
+  const canSeePrices = canDo(user, 'inventory.viewCosts');
+  const canManage = canAccessSection(user, 'kitchen');
+
+  // ── data loading ──────────────────────────────────────────────────
+  // endpoint مشترک — لیست کامل (raw + prep) را می‌گیریم؛ فیلتر سمت کلاینت.
+  // raw برای انتخاب در mini-builder لازم است، prep برای نمایش لیست.
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const its = await repos.inventory.listItems();
+      setItems(its);
+    } catch {
+      showToast('خطا در بارگذاری اقلام', 'danger');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // ── form helpers ──────────────────────────────────────────────────
+
+  function openAdd() {
+    setEditItem(null);
+    setForm({ ...EMPTY_FORM, code: nextCode(items) });
+    setPrepLines([]);
+    setPrepSearch('');
+    setShowAdvanced(false);
+    setSheetOpen(true);
+  }
+
+  function openEdit(item: InventoryItem) {
+    setOpenMenuId(null);
+    setEditItem(item);
+    setForm({
+      code: item.code,
+      name: item.name,
+      unit: item.unit,
+      branchId: item.branchId ?? '',
+      basePerUnit: String(item.basePerUnit),
+      yieldPct: String(item.yieldPct),
+      minBase: String(item.minBase),
+      batchYieldBase: item.batchYieldBase != null ? String(item.batchYieldBase) : '',
+    });
+    setPrepLines(
+      (item.prepRecipe ?? []).map(l => ({ itemId: l.itemId, qty: String(l.qtyBase) }))
+    );
+    setPrepSearch('');
+    setShowAdvanced(false);
+    setSheetOpen(true);
+  }
+
+  async function handleDelete(item: InventoryItem) {
+    setOpenMenuId(null);
+    if (!confirm(`حذف «${item.name}»؟`)) return;
+    try {
+      await repos.inventory.deleteItem(item.id);
+      showToast('نیمه‌آماده حذف شد', 'success');
+      await load();
+    } catch (e) {
+      showToast(errMsg(e, 'خطا در حذف'), 'danger');
+    }
+  }
+
+  async function handleSave() {
+    if (!form.branchId || !form.name.trim()) return;
+    if (prepLines.some(l => !l.qty || parseFloat(l.qty) <= 0)) {
+      showToast('مقدار همه‌ی مواد را وارد کنید', 'danger');
+      return;
+    }
+    setSaving(true);
+    try {
+      const validPrepLines = prepLines
+        .filter(l => l.itemId && parseFloat(l.qty) > 0)
+        .map(l => ({ itemId: l.itemId, qtyBase: parseFloat(l.qty) }));
+
+      const input: NewInventoryItemInput = {
+        code: form.code.trim(),
+        name: form.name.trim(),
+        branchId: form.branchId,
+        kind: 'prep',
+        unit: form.unit,
+        basePerUnit: parseFloat(form.basePerUnit) || 1,
+        yieldPct: parseFloat(form.yieldPct) || 100,
+        minBase: parseFloat(form.minBase) || 0,
+        batchYieldBase: form.batchYieldBase ? parseFloat(form.batchYieldBase) || null : null,
+        prepRecipe: validPrepLines.length ? validPrepLines : null,
+      };
+      if (editItem) {
+        await repos.inventory.updateItem(editItem.id, input);
+        showToast('نیمه‌آماده به‌روز شد', 'success');
+      } else {
+        await repos.inventory.createItem(input);
+        showToast('نیمه‌آماده افزوده شد', 'success');
+      }
+      setSheetOpen(false);
+      await load();
+    } catch (e) {
+      showToast(errMsg(e, 'خطا در ذخیره'), 'danger');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // ── filtering — فقط نیمه‌آماده‌ها (kind='prep') ────────────────────
+
+  const q = search.trim();
+  const prepItems = items.filter((it) => it.kind === 'prep');
+  const filtered = q
+    ? prepItems.filter((it) => it.name.includes(q) || it.code.includes(q) || it.category.includes(q))
+    : prepItems;
+
+  // ── live preview ──────────────────────────────────────────────────
+
+  const bpu = parseFloat(form.basePerUnit);
+  const bpuPreview =
+    !isNaN(bpu) && bpu > 0
+      ? `۱ ${UNIT_LABELS[form.unit]} = ${toFa(bpu)} ${UNIT_BASE[form.unit]}`
+      : '';
+
+  function handleUnitChange(u: InvUnit) {
+    setForm((f) => ({ ...f, unit: u, basePerUnit: String(DEFAULT_BPU[u]) }));
+  }
+
+  // ── columns ───────────────────────────────────────────────────────
+
+  const columns: DataColumn<InventoryItem>[] = [
+    {
+      key: 'name',
+      label: 'نام نیمه‌آماده',
+      render: (row) => (
+        <div>
+          <div className="text-[13px] font-medium text-text leading-snug">{row.name}</div>
+          <div className="text-[11px] text-muted mt-0.5 num">
+            {row.code} · {UNIT_LABELS[row.unit]}
+            {row.prepRecipe && row.prepRecipe.length > 0 && (
+              <span className="mr-1.5">· {toFa(row.prepRecipe.length)} ماده</span>
+            )}
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'qty',
+      label: 'موجودی',
+      headerClassName: 'text-left',
+      cellClassName: 'text-left',
+      render: (row) => (
+        <div className="flex items-center justify-end gap-1.5">
+          <span className="num text-[13px]">
+            {toFa(row.qtyPhysical)} {UNIT_LABELS[row.unit]}
+          </span>
+          {row.qtyPhysical === 0 && row.avgCostPerBase > 0 && (
+            <span
+              title="آخرین میانگین موجود است — قلم صفر شده اما بها تاریخچه دارد"
+              className="text-muted/60 cursor-help flex-shrink-0"
+              aria-label="آخرین میانگین"
+            >
+              <Info size={13} strokeWidth={1.5} />
+            </span>
+          )}
+        </div>
+      ),
+    },
+    ...(canSeePrices
+      ? ([{
+          key: 'cost',
+          label: 'میانگین بها',
+          mobileLabel: 'میانگین بها',
+          headerClassName: 'text-left',
+          cellClassName: 'text-left',
+          render: (row: InventoryItem) => (
+            <span className="num text-[13px]">
+              {row.avgCostPerBase > 0 ? `${fmt(Math.round(row.avgCostPerBase))} ت` : '—'}
+            </span>
+          ),
+        }] as DataColumn<InventoryItem>[])
+      : []),
+    ...(canManage
+      ? ([{
+          key: 'actions',
+          label: '',
+          mobileLabel: '',
+          render: (row: InventoryItem) => {
+            const isOpen = openMenuId === row.id;
+            return (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(isOpen ? null : row.id);
+                  }}
+                  aria-label="عملیات"
+                  aria-expanded={isOpen}
+                  className="w-11 h-11 flex items-center justify-center text-muted hover:text-text hover:bg-bg rounded-lg transition-colors"
+                >
+                  <MoreVertical size={16} strokeWidth={1.5} />
+                </button>
+                {isOpen && (
+                  <div className="absolute left-0 top-full mt-1 z-50 w-32 bg-surface border border-border rounded-lg shadow-modal py-1">
+                    <button
+                      type="button"
+                      onClick={() => openEdit(row)}
+                      className="w-full text-right px-4 py-2.5 text-[13px] text-text hover:bg-bg transition-colors"
+                    >
+                      ویرایش
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(row)}
+                      className="w-full text-right px-4 py-2.5 text-[13px] text-danger hover:bg-danger-subtle transition-colors"
+                    >
+                      حذف
+                    </button>
+                  </div>
+                )}
+              </div>
+            );
+          },
+          cellClassName: 'w-12 p-0',
+          headerClassName: 'w-12',
+        }] as DataColumn<InventoryItem>[])
+      : []),
+  ];
+
+  if (!user) return null;
+  if (!canAccessSection(user, 'kitchen')) {
+    return <div className="p-6 text-center text-muted">دسترسی ندارید</div>;
+  }
+
+  // ── builder candidate items (هر قلم raw یا prep، بدون حلقه) ────────
+  const selectedIds = new Set(prepLines.map(l => l.itemId));
+  const prepSearchTerm = prepSearch.trim();
+  const candidateItems = prepSearchTerm
+    ? items.filter(it =>
+        it.isActive &&
+        !selectedIds.has(it.id) &&
+        !wouldCreateCycle(it.id, editItem?.id ?? null, items) &&
+        (it.name.includes(prepSearchTerm) || it.code.includes(prepSearchTerm))
+      ).slice(0, 10)
+    : [];
+  const byId = new Map(items.map(it => [it.id, it]));
+
+  return (
+    <>
+      {openMenuId && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setOpenMenuId(null)}
+          aria-hidden="true"
+        />
+      )}
+
+      <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
+        {/* ─── Header ─── */}
+        <PageHeader
+          title="نیمه‌آماده‌ها"
+          backHref="/inventory/kitchen"
+          actions={canManage ? <Button size="sm" onClick={openAdd}>+ نیمه‌آماده جدید</Button> : undefined}
+        />
+
+        {/* ─── Sticky search ─── */}
+        <div className="sticky top-16 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-2.5 bg-bg/95 backdrop-blur border-b border-border">
+          <div className="relative max-w-3xl mx-auto">
+            <Search
+              size={15}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              placeholder="جستجو در نام، کد، دسته..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full h-11 pr-9 pl-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent"
+              aria-label="جستجوی نیمه‌آماده‌ها"
+            />
+          </div>
+        </div>
+
+        {/* ─── List ─── */}
+        <DataList<InventoryItem>
+          columns={columns}
+          data={filtered}
+          keyExtractor={(r) => r.id}
+          loading={loading}
+          empty={
+            <EmptyState
+              title={q ? 'نتیجه‌ای یافت نشد' : 'هنوز نیمه‌آماده‌ای ندارید'}
+              description={
+                q
+                  ? 'عبارت جستجو را تغییر دهید'
+                  : 'نیمه‌آماده‌هایی مثل سس‌ها، خمیرها و مواد آماده‌سازی را اینجا تعریف کنید'
+              }
+              action={
+                canManage && !q ? (
+                  <Button size="sm" onClick={openAdd}>+ نیمه‌آماده جدید</Button>
+                ) : undefined
+              }
+            />
+          }
+        />
+      </div>
+
+      {/* ─── Add / Edit Sheet ─── */}
+      <Sheet
+        open={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        title={editItem ? `ویرایش: ${editItem.name}` : 'نیمه‌آماده‌ی جدید'}
+        maxHeight="90vh"
+      >
+        <div className="space-y-4 pb-6">
+
+          {/* Row: کد + واحد */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <FieldLabel>کد (پیشنهادی)</FieldLabel>
+              <TextInput
+                value={form.code}
+                onChange={(v) => setForm((f) => ({ ...f, code: v }))}
+                placeholder="مثلاً ۰۰۱"
+              />
+            </div>
+            <div>
+              <FieldLabel>واحد</FieldLabel>
+              <select
+                value={form.unit}
+                onChange={(e) => handleUnitChange(e.target.value as InvUnit)}
+                className="w-full h-11 px-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent"
+              >
+                {(Object.entries(UNIT_LABELS) as [InvUnit, string][]).map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* نام */}
+          <div>
+            <FieldLabel>نام نیمه‌آماده</FieldLabel>
+            <TextInput
+              value={form.name}
+              onChange={(v) => setForm((f) => ({ ...f, name: v }))}
+              placeholder="مثلاً سس مخصوص"
+            />
+          </div>
+
+          {/* شعبه — اجباری */}
+          <div>
+            <FieldLabel required>شعبه</FieldLabel>
+            <select
+              value={form.branchId}
+              onChange={(e) => setForm((f) => ({ ...f, branchId: e.target.value }))}
+              className="w-full h-11 px-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent"
+            >
+              <option value="">انتخاب شعبه...</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+            {!form.branchId && (
+              <p className="mt-1 text-[11px] text-danger">
+                انتخاب شعبه الزامی است
+              </p>
+            )}
+          </div>
+
+          {/* ─── تعریف نیمه‌آماده: بازده بچ + مواد ─── */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <div className="px-4 py-3 bg-bg/50 border-b border-border">
+              <span className="text-[12.5px] font-medium text-text">دستور تولید</span>
+            </div>
+            <div className="px-4 py-3 space-y-3">
+              {/* بازده یک بچ */}
+              <div>
+                <FieldLabel>بازده یک بچ (واحد پایه)</FieldLabel>
+                <TextInput
+                  value={form.batchYieldBase}
+                  onChange={(v) => setForm((f) => ({ ...f, batchYieldBase: normalizeDigits(v).replace(/[^0-9.]/g, '') }))}
+                  placeholder="مثلاً 500 (گرم)"
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  مقداری که یک پخت از این نیمه‌آماده تولید می‌کند (به واحد پایه: گرم/میلی‌لیتر/عدد)
+                </p>
+              </div>
+
+              {/* جستجوی مواد */}
+              <div>
+                <FieldLabel>مواد تشکیل‌دهنده</FieldLabel>
+                <div className="relative">
+                  <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                  <input
+                    value={prepSearch}
+                    onChange={(e) => setPrepSearch(e.target.value)}
+                    placeholder="جستجوی ماده خام یا نیمه‌آماده..."
+                    className="w-full h-10 pr-8 pl-3 text-[12.5px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent"
+                  />
+                </div>
+
+                {/* نتایج جستجو */}
+                {candidateItems.length > 0 && (
+                  <div className="mt-1 border border-border rounded-lg divide-y divide-border overflow-hidden">
+                    {candidateItems.map(it => (
+                      <button
+                        key={it.id}
+                        type="button"
+                        onClick={() => {
+                          setPrepLines(prev => [...prev, { itemId: it.id, qty: '' }]);
+                          setPrepSearch('');
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2 text-right hover:bg-bg transition-colors"
+                      >
+                        <span className="text-[12.5px] text-text">{it.name}</span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                            it.kind === 'prep' ? 'bg-accent/10 text-accent' : 'bg-bg text-muted border border-border'
+                          }`}>
+                            {it.kind === 'prep' ? 'نیمه‌آماده' : 'خام'}
+                          </span>
+                          <Plus size={12} className="text-muted" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* مواد انتخاب‌شده */}
+                {prepLines.length > 0 && (
+                  <div className="mt-2 space-y-1.5">
+                    {prepLines.map((line, i) => {
+                      const it = byId.get(line.itemId);
+                      return (
+                        <div key={line.itemId} className="flex items-center gap-2 bg-bg rounded-lg px-3 py-2">
+                          <span className="flex-1 text-[12.5px] text-text truncate min-w-0">
+                            {it?.name ?? line.itemId}
+                          </span>
+                          <input
+                            value={line.qty}
+                            onChange={(e) => {
+                              const v = normalizeDigits(e.target.value).replace(/[^0-9.]/g, '');
+                              setPrepLines(prev => prev.map((l, j) => j === i ? { ...l, qty: v } : l));
+                            }}
+                            dir="ltr"
+                            inputMode="decimal"
+                            placeholder="مقدار"
+                            className="w-20 border border-border rounded-md px-2 py-1 text-[12px] text-center focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text shrink-0"
+                          />
+                          <span className="text-[10.5px] text-muted w-8 text-center shrink-0">
+                            {it?.unit ?? ''}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setPrepLines(prev => prev.filter((_, j) => j !== i))}
+                            className="w-7 h-7 flex items-center justify-center text-muted hover:text-danger shrink-0"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {prepLines.length === 0 && !prepSearch && (
+                  <p className="mt-2 text-[11.5px] text-muted text-center py-3 bg-bg rounded-lg">
+                    نام ماده را جستجو کنید تا اضافه شود
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ─── تنظیمات پیشرفته (آکاردئون) ─── */}
+          <div className="border border-border rounded-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 text-[13px] text-text hover:bg-bg transition-colors"
+              aria-expanded={showAdvanced}
+            >
+              <span>تنظیمات پیشرفته</span>
+              <ChevronDown
+                size={15}
+                strokeWidth={1.5}
+                className={`text-muted transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {showAdvanced && (
+              <div className="px-4 pt-3 pb-4 space-y-3 border-t border-border bg-bg/40">
+                {/* ضریب تبدیل */}
+                <div>
+                  <FieldLabel>ضریب تبدیل به واحد پایه</FieldLabel>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.basePerUnit}
+                    onChange={(e) => setForm((f) => ({ ...f, basePerUnit: e.target.value }))}
+                    className="w-full h-11 px-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent num"
+                  />
+                  {bpuPreview && (
+                    <p className="mt-1.5 text-[11px] text-muted bg-accent-subtle rounded px-2 py-1">
+                      {bpuPreview}
+                    </p>
+                  )}
+                </div>
+
+                {/* راندمان */}
+                <div>
+                  <FieldLabel>راندمان (%)</FieldLabel>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="any"
+                    value={form.yieldPct}
+                    onChange={(e) => setForm((f) => ({ ...f, yieldPct: e.target.value }))}
+                    className="w-full h-11 px-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent num"
+                  />
+                </div>
+
+                {/* حداقل موجودی */}
+                <div>
+                  <FieldLabel>حداقل موجودی (واحد پایه)</FieldLabel>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={form.minBase}
+                    onChange={(e) => setForm((f) => ({ ...f, minBase: e.target.value }))}
+                    className="w-full h-11 px-3 text-[13px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent num"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ─── Submit ─── */}
+          <Button
+            onClick={handleSave}
+            disabled={!form.branchId || !form.name.trim() || saving}
+            className="w-full"
+          >
+            {saving
+              ? 'در حال ذخیره...'
+              : editItem
+                ? 'ذخیره تغییرات'
+                : 'افزودن نیمه‌آماده'}
+          </Button>
+        </div>
+      </Sheet>
+    </>
+  );
+}

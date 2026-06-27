@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { ChefHat, CalendarClock, ChevronLeft, type LucideIcon } from 'lucide-react';
+import { ChefHat, CalendarClock, ChevronLeft, Soup, type LucideIcon } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { canAccessSection } from '@/lib/auth/permissions';
-import { Card } from '@/components/ui';
 
 interface KitchenCard {
   href: string;
@@ -14,8 +13,9 @@ interface KitchenCard {
 }
 
 const KITCHEN_CARDS: KitchenCard[] = [
-  { href: '/inventory/recipes', label: 'دستور پخت', sub: 'رسپی‌ها، نیمه‌آماده و بهای تمام‌شده', icon: ChefHat },
-  { href: '/inventory/plan',    label: 'برنامه تولید', sub: 'پیش‌بینی و برنامه‌ریزی پخت',      icon: CalendarClock },
+  { href: '/inventory/recipes',      label: 'دستور پخت',    sub: 'رسپی‌ها و بهای تمام‌شده',         icon: ChefHat },
+  { href: '/inventory/kitchen/prep', label: 'نیمه‌آماده‌ها', sub: 'سس‌ها، خمیرها و مواد آماده‌سازی', icon: Soup },
+  { href: '/inventory/plan',         label: 'برنامه تولید', sub: 'پیش‌بینی و برنامه‌ریزی پخت',      icon: CalendarClock },
 ];
 
 export default function KitchenHubPage() {
