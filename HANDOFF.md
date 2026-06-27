@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.40-kitchen-section-phase01` |
+| **نسخه** | `0.9.41-kitchen-split-phase2` |
 | **آخرین به‌روزرسانی** | 2026-06-27 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۵ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`، **`db-kitchen-section-migration.sql` (جدید — فاز ۱ جداسازی آشپزخانه)**. |
-| **کار نیمه‌تمام (in-progress)** | جداسازی انبار/آشپزخانه — فاز ۰+۱ انجام شد. **منتظر کاربر**: تست + اجرای migration، بعد فاز ۲. |
-| **کار بعدی پیشنهادی** | (۱) [بعد از تأیید کاربر] فاز ۲: تفکیک sectionForPath + nav + defaultRoles. (۲) شکاف ۱: sync قیمت. (۳) شکاف ۳: variance. |
-| **بلاک‌شده/منتظر کاربر** | اجرای `db-kitchen-section-migration.sql` + تأیید برای فاز ۲ |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (migration فاز ۱ آشپزخانه توسط کاربر اجرا شد ✅) |
+| **کار نیمه‌تمام (in-progress)** | جداسازی انبار/آشپزخانه — فاز ۲ انجام شد. **منتظر کاربر**: تست با نقش آشپز/انباردار، بعد تصمیم فاز ۳ (موارد مرزی items/variance/sales). |
+| **کار بعدی پیشنهادی** | (۱) [بعد از تست کاربر] فاز ۳: تصمیم محصول برای items/variance/sales. (۲) شکاف ۱: sync قیمت. (۳) شکاف ۳: variance. |
+| **بلاک‌شده/منتظر کاربر** | تست فاز ۲ + تصمیم فاز ۳ |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,21 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-27 — v0.9.41: جداسازی انبار/آشپزخانه فاز ۲ — اکانت ۱
+**چه شد:** تفکیک واقعی حوزه‌ی انبار از آشپزخانه:
+(۱) `sectionForPath`: `/inventory/kitchen`، `/inventory/recipes`، `/inventory/plan` → `'kitchen'` (قبل از قاعده‌ی عام `/inventory` → `'inventory'`، ترتیب حیاتی).
+(۲) `defaultRoles`: بخش `inventory` → `['SuperAdmin','Warehouse','BranchUser']` (Chef حذف، BranchUser اضافه طبق دستور کاربر — هم‌راستا با گارد صفحه‌ی hub که از قبل BranchUser را مجاز می‌دانست). بخش `kitchen` → `['SuperAdmin','Chef']`.
+(۳) `nav-config`: آیتم `/inventory` به برچسب «انبار» تغییر کرد + آیتم جدید «آشپزخانه» (ChefHat) → `/inventory/kitchen`. `isNavItemActive` ویژه‌ی kitchen اضافه شد تا روی recipes/plan/kitchen هم highlight شود.
+(۴) hub جدید `app/(app)/inventory/kitchen/page.tsx`: دو کارت (دستور پخت، برنامه تولید) با گارد `canAccessSection(user,'kitchen')`.
+(۵) hub انبار `/inventory/page.tsx`: کارت‌های recipes/plan با فلگ `kitchen:true` شرطی به `canAccessSection(user,'kitchen')` شدند (SuperAdmin هنوز می‌بیند، Warehouse نه).
+(۶) `plan/page.tsx`: backHref از `/inventory` به `/inventory/kitchen`.
+موارد مرزی (items/variance/sales) عمداً دست‌نخورده ماندند (فاز ۳).
+**فایل‌ها:** `lib/auth/permissions.ts`، `components/layout/nav-config.ts`، `app/(app)/inventory/page.tsx`، `app/(app)/inventory/kitchen/page.tsx` (جدید)، `app/(app)/inventory/plan/page.tsx`، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · build ✅ (route /inventory/kitchen ساخته شد) · tests ✅ 32/32
+**⚠️ تغییر رفتار:** BranchUser حالا به بخش انبار دسترسی دارد (طبق دستور کاربر). فعلاً فقط SuperAdmin کاربر واقعی است، پس اثر زنده ندارد.
+**ناتمام:** فاز ۳ (موارد مرزی) — نیاز به تصمیم محصول.
+**برای جلسه‌ی بعد:** بعد از تست کاربر، تصمیم درباره‌ی `items` (هم raw هم prep)، `variance`، `sales` — هرکدام زیر کدام حوزه.
 
 ## 📓 2026-06-27 — v0.9.40: جداسازی انبار/آشپزخانه فاز ۰+۱ — اکانت ۱
 **چه شد:**

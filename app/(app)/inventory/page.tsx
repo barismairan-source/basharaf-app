@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
+import { canAccessSection } from '@/lib/auth/permissions';
 import { Card } from '@/components/ui';
 
 interface ExceptionsData {
@@ -33,14 +34,16 @@ interface MoreAction {
   label: string;
   sub: string;
   icon: LucideIcon;
+  /** فاز ۲ جداسازی: این کارت متعلق به حوزه‌ی آشپزخانه است — فقط برای کاربری که بخش kitchen دارد نمایش داده شود. */
+  kitchen?: boolean;
 }
 
 const MORE_ACTIONS: MoreAction[] = [
   { href: '/inventory/items',    label: 'اقلام انبار',      sub: 'مدیریت کالاها و مواد اولیه',   icon: Package },
   { href: '/inventory/cartable', label: 'کارتابل برگه‌ها', sub: 'تأیید و رد برگه‌های در انتظار', icon: ClipboardCheck },
-  { href: '/inventory/recipes',  label: 'دستور پخت',        sub: 'رکوردهای آشپزخانه',            icon: ChefHat },
+  { href: '/inventory/recipes',  label: 'دستور پخت',        sub: 'رکوردهای آشپزخانه',            icon: ChefHat,        kitchen: true },
   { href: '/inventory/variance', label: 'گزارش مغایرت',    sub: 'اختلاف تئوری و واقعی',         icon: BarChart2 },
-  { href: '/inventory/plan',     label: 'برنامه تولید',     sub: 'پیش‌بینی و برنامه‌ریزی',       icon: CalendarClock },
+  { href: '/inventory/plan',     label: 'برنامه تولید',     sub: 'پیش‌بینی و برنامه‌ریزی',       icon: CalendarClock, kitchen: true },
 ];
 
 export default function InventoryPage() {
@@ -260,7 +263,7 @@ export default function InventoryPage() {
           <div className="text-[13.5px] font-medium text-text">کارهای بیشتر</div>
         </div>
         <ul className="divide-y divide-border">
-          {MORE_ACTIONS.map((action) => {
+          {MORE_ACTIONS.filter((a) => !a.kitchen || canAccessSection(user, 'kitchen')).map((action) => {
             const Icon = action.icon;
             return (
               <li key={action.href}>

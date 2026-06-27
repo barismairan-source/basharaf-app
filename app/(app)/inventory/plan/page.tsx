@@ -34,7 +34,7 @@ export default function PlanPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      <PageHeader title="برنامه‌ریزی پخت" backHref="/inventory" />
+      <PageHeader title="برنامه‌ریزی پخت" backHref="/inventory/kitchen" />
 
       <div className="bg-surface border border-border rounded-lg p-4 flex items-end gap-3">
         <div className="flex-1">

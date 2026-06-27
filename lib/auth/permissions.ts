@@ -43,9 +43,9 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   { key: 'reports',      label: 'گزارش مالی',        defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'employees',    label: 'پرسنل',             defaultRoles: ['SuperAdmin'] },
   { key: 'payroll',      label: 'حقوق و دستمزد',     defaultRoles: ['SuperAdmin'] },
-  { key: 'inventory',    label: 'انبار و آشپزخانه',  defaultRoles: ['SuperAdmin', 'Warehouse', 'Chef'] },
-  // فاز ۰ جداسازی انبار/آشپزخانه: بخش kitchen اضافه شد اما هنوز به هیچ مسیری نگاشت نشده
-  // (sectionForPath و nav دست‌نخورده‌اند) — رفتار فعلی عوض نمی‌شود. فعال‌سازی در فاز ۲.
+  // فاز ۲ جداسازی: Chef حذف شد — آشپز فقط بخش kitchen را می‌بیند، نه انبار.
+  { key: 'inventory',    label: 'انبار',             defaultRoles: ['SuperAdmin', 'Warehouse', 'BranchUser'] },
+  // بخش kitchen (recipes/plan). sectionForPath این مسیرها را به اینجا نگاشت می‌کند.
   { key: 'kitchen',      label: 'آشپزخانه',          defaultRoles: ['SuperAdmin', 'Chef'] },
   { key: 'menu',         label: 'مدیریت منو',        defaultRoles: ['SuperAdmin', 'Chef'] },
   { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
@@ -122,6 +122,11 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (pathname.startsWith('/reports')) return 'reports';
   if (pathname.startsWith('/employees')) return 'employees';
   if (pathname.startsWith('/payroll')) return 'payroll';
+  // جداسازی آشپزخانه (فاز ۲): مسیرهای آشپزخانه باید قبل از قاعده‌ی عام /inventory بیایند
+  // تا به بخش kitchen نگاشت شوند، نه inventory. ترتیب اینجا حیاتی است.
+  if (pathname.startsWith('/inventory/kitchen')) return 'kitchen';
+  if (pathname.startsWith('/inventory/recipes')) return 'kitchen';
+  if (pathname.startsWith('/inventory/plan')) return 'kitchen';
   if (pathname.startsWith('/inventory')) return 'inventory';
   if (pathname.startsWith('/menu')) return 'menu';
   if (pathname.startsWith('/orders')) return 'orders';
