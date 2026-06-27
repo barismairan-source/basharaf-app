@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.38-recipe-prep-chain` |
+| **نسخه** | `0.9.39-prep-item-ui` |
 | **آخرین به‌روزرسانی** | 2026-06-27 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 ولی **۴ migration** هنوز باید دستی در pgAdmin اجرا شود: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
-| **کار نیمه‌تمام (in-progress)** | منتظر تأیید کاربر برای شکاف ۲ (prep chain) — بعد شکاف ۱ (sync قیمت) |
-| **کار بعدی پیشنهادی** | (۱) تأیید UI نمایش زنجیره prep در /inventory/recipes. (۲) شکاف ۱: sync قیمت (Option B). (۳) شکاف ۳: variance — ابتدا grep inv_stock_tx.jalali_date. |
-| **بلاک‌شده/منتظر کاربر** | تأیید UI شکاف ۲ + تأیید migration |
+| **کار نیمه‌تمام (in-progress)** | منتظر تأیید کاربر (شکاف ۴: ساخت/ویرایش نیمه‌آماده + شکاف ۲: subLines در costing) |
+| **کار بعدی پیشنهادی** | (۱) تأیید جریان: ساخت prep → ساخت رسپی → مشاهده subLines در costing panel. (۲) شکاف ۱: sync قیمت (Option B). (۳) شکاف ۳: variance. |
+| **بلاک‌شده/منتظر کاربر** | تأیید UI + تأیید migration |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-27 — v0.9.39: ساخت/ویرایش نیمه‌آماده از UI (شکاف ۴) — اکانت ۱
+**چه شد:**
+(۱) PATCH `/api/inventory/items/[id]` کامل شد: `batchYieldBase` و `prepRecipe` به `patchSchema` اضافه شدند (قبلاً در PATCH ناموجود بود — فقط POST).
+(۲) فرم اقلام انبار (`items/page.tsx`) بازطراحی: toggle «ماده خام / نیمه‌آماده» اضافه شد. وقتی prep انتخاب شود: فیلد «بازده یک بچ» + mini ingredient builder (جستجو + مقدار + حذف) ظاهر می‌شود.
+(۳) cycle detection با BFS روی items لود‌شده کلاینت: self-reference و هر حلقه‌ی دلخواه عمق جلوگیری می‌شود — آیتم‌هایی که حلقه می‌سازند از نتایج جستجو فیلتر می‌شوند.
+(۴) ویرایش نیمه‌آماده‌ی موجود: toggle روی «نیمه‌آماده» باز می‌شود و مواد از DB پر می‌شوند.
+(۵) ارقام فارسی/عربی با `normalizeDigits` در هر دو input مقدار handle می‌شود.
+**فایل‌ها:** `app/api/inventory/items/[id]/route.ts`، `app/(app)/inventory/items/page.tsx`، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** منتظر تأیید کاربر
+**برای جلسه‌ی بعد:** (۱) شکاف ۱: sync قیمت. (۲) شکاف ۳: variance + grep inv_stock_tx columns.
 
 ## 📓 2026-06-27 — v0.9.38: نمایش زنجیره prep در costing panel (شکاف ۲) — اکانت ۱
 **چه شد:** سه تغییر additive برای نمایش مواد تشکیل‌دهنده‌ی آیتم‌های نیمه‌آماده در پنل bhosting رسپی:

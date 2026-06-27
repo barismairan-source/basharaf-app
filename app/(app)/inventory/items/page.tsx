@@ -1,11 +1,11 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Info, ChevronDown, MoreVertical } from 'lucide-react';
+import { Search, Info, ChevronDown, MoreVertical, Trash2, Plus } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
-import { fmt, toFa } from '@/lib/utils';
+import { fmt, toFa, normalizeDigits } from '@/lib/utils';
 import { Button, DataList, EmptyState, Sheet, PageHeader } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import type { InventoryItem, NewInventoryItemInput, InvUnit, InvItemKind } from '@/types';
@@ -55,12 +55,43 @@ interface ItemForm {
   basePerUnit: string;
   yieldPct: string;
   minBase: string;
+  batchYieldBase: string; // فقط برای prep
 }
+
+interface PrepLine { itemId: string; qty: string; }
 
 const EMPTY_FORM: ItemForm = {
   code: '', name: '', unit: 'kg', branchId: '', kind: 'raw',
-  basePerUnit: '1000', yieldPct: '100', minBase: '0',
+  basePerUnit: '1000', yieldPct: '100', minBase: '0', batchYieldBase: '',
 };
+
+/** تشخیص حلقه در زنجیره‌ی prep با BFS روی items لود‌شده‌ی کلاینت.
+ *  برمی‌گرداند true اگر افزودن candidateId به prepRecipe itemId=currentId یک حلقه می‌سازد. */
+function wouldCreateCycle(
+  candidateId: string,
+  currentItemId: string | null,
+  allItems: InventoryItem[],
+): boolean {
+  if (!currentItemId) return false;
+  if (candidateId === currentItemId) return true; // self-reference مستقیم
+
+  const byId = new Map(allItems.map(it => [it.id, it]));
+  const visited = new Set<string>();
+  const queue = [candidateId];
+
+  while (queue.length > 0) {
+    const id = queue.shift()!;
+    if (visited.has(id)) continue;
+    visited.add(id);
+    const it = byId.get(id);
+    if (!it?.prepRecipe) continue;
+    for (const sub of it.prepRecipe) {
+      if (sub.itemId === currentItemId) return true;
+      if (!visited.has(sub.itemId)) queue.push(sub.itemId);
+    }
+  }
+  return false;
+}
 
 // ── sub-components ──────────────────────────────────────────────────
 
@@ -109,6 +140,8 @@ export default function InventoryItemsPage() {
   const [form, setForm] = useState<ItemForm>(EMPTY_FORM);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [prepLines, setPrepLines] = useState<PrepLine[]>([]);
+  const [prepSearch, setPrepSearch] = useState('');
 
   const canSeePrices = canDo(user, 'inventory.viewCosts');
   const isSuperAdmin = user?.role === 'SuperAdmin';
@@ -134,6 +167,8 @@ export default function InventoryItemsPage() {
   function openAdd() {
     setEditItem(null);
     setForm({ ...EMPTY_FORM, code: nextCode(items) });
+    setPrepLines([]);
+    setPrepSearch('');
     setShowAdvanced(false);
     setSheetOpen(true);
   }
@@ -150,7 +185,12 @@ export default function InventoryItemsPage() {
       basePerUnit: String(item.basePerUnit),
       yieldPct: String(item.yieldPct),
       minBase: String(item.minBase),
+      batchYieldBase: item.batchYieldBase != null ? String(item.batchYieldBase) : '',
     });
+    setPrepLines(
+      (item.prepRecipe ?? []).map(l => ({ itemId: l.itemId, qty: String(l.qtyBase) }))
+    );
+    setPrepSearch('');
     setShowAdvanced(false);
     setSheetOpen(true);
   }
@@ -169,8 +209,18 @@ export default function InventoryItemsPage() {
 
   async function handleSave() {
     if (!form.branchId || !form.name.trim()) return;
+    if (form.kind === 'prep' && prepLines.some(l => !l.qty || parseFloat(l.qty) <= 0)) {
+      showToast('مقدار همه‌ی مواد نیمه‌آماده را وارد کنید', 'danger');
+      return;
+    }
     setSaving(true);
     try {
+      const validPrepLines = form.kind === 'prep'
+        ? prepLines
+            .filter(l => l.itemId && parseFloat(l.qty) > 0)
+            .map(l => ({ itemId: l.itemId, qtyBase: parseFloat(l.qty) }))
+        : null;
+
       const input: NewInventoryItemInput = {
         code: form.code.trim(),
         name: form.name.trim(),
@@ -180,6 +230,10 @@ export default function InventoryItemsPage() {
         basePerUnit: parseFloat(form.basePerUnit) || 1,
         yieldPct: parseFloat(form.yieldPct) || 100,
         minBase: parseFloat(form.minBase) || 0,
+        batchYieldBase: form.kind === 'prep' && form.batchYieldBase
+          ? parseFloat(form.batchYieldBase) || null
+          : null,
+        prepRecipe: validPrepLines?.length ? validPrepLines : null,
       };
       if (editItem) {
         await repos.inventory.updateItem(editItem.id, input);
@@ -432,6 +486,27 @@ export default function InventoryItemsPage() {
             />
           </div>
 
+          {/* نوع قلم — ماده خام / نیمه‌آماده */}
+          <div>
+            <FieldLabel>نوع قلم</FieldLabel>
+            <div className="grid grid-cols-2 gap-0 border border-border rounded-lg overflow-hidden">
+              {(['raw', 'prep'] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, kind: k }))}
+                  className={`py-2.5 text-[12.5px] font-medium transition-colors ${
+                    form.kind === k
+                      ? 'bg-text text-surface'
+                      : 'bg-surface text-muted hover:text-text hover:bg-bg'
+                  }`}
+                >
+                  {k === 'raw' ? 'ماده خام' : 'نیمه‌آماده'}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* شعبه — اجباری */}
           <div>
             <FieldLabel required>شعبه</FieldLabel>
@@ -451,6 +526,127 @@ export default function InventoryItemsPage() {
               </p>
             )}
           </div>
+
+          {/* ─── فیلدهای نیمه‌آماده (فقط وقتی kind='prep') ─── */}
+          {form.kind === 'prep' && (() => {
+            const selectedIds = new Set(prepLines.map(l => l.itemId));
+            const prepSearchTerm = prepSearch.trim();
+            const candidateItems = prepSearchTerm
+              ? items.filter(it =>
+                  it.isActive &&
+                  !selectedIds.has(it.id) &&
+                  !wouldCreateCycle(it.id, editItem?.id ?? null, items) &&
+                  (it.name.includes(prepSearchTerm) || it.code.includes(prepSearchTerm))
+                ).slice(0, 10)
+              : [];
+            const byId = new Map(items.map(it => [it.id, it]));
+
+            return (
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-bg/50 border-b border-border">
+                  <span className="text-[12.5px] font-medium text-text">تعریف نیمه‌آماده</span>
+                </div>
+                <div className="px-4 py-3 space-y-3">
+                  {/* بازده یک بچ */}
+                  <div>
+                    <FieldLabel>بازده یک بچ (واحد پایه)</FieldLabel>
+                    <TextInput
+                      value={form.batchYieldBase}
+                      onChange={(v) => setForm((f) => ({ ...f, batchYieldBase: normalizeDigits(v).replace(/[^0-9.]/g, '') }))}
+                      placeholder="مثلاً 500 (گرم)"
+                    />
+                    <p className="mt-1 text-[11px] text-muted">
+                      مقداری که یک پخت از این نیمه‌آماده تولید می‌کند (به واحد پایه: گرم/میلی‌لیتر/عدد)
+                    </p>
+                  </div>
+
+                  {/* جستجوی مواد */}
+                  <div>
+                    <FieldLabel>مواد این نیمه‌آماده</FieldLabel>
+                    <div className="relative">
+                      <Search size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                      <input
+                        value={prepSearch}
+                        onChange={(e) => setPrepSearch(e.target.value)}
+                        placeholder="جستجوی قلم..."
+                        className="w-full h-10 pr-8 pl-3 text-[12.5px] border border-border rounded-lg bg-surface focus:outline-none focus:ring-1 focus:ring-accent"
+                      />
+                    </div>
+
+                    {/* نتایج جستجو */}
+                    {candidateItems.length > 0 && (
+                      <div className="mt-1 border border-border rounded-lg divide-y divide-border overflow-hidden">
+                        {candidateItems.map(it => (
+                          <button
+                            key={it.id}
+                            type="button"
+                            onClick={() => {
+                              setPrepLines(prev => [...prev, { itemId: it.id, qty: '' }]);
+                              setPrepSearch('');
+                            }}
+                            className="w-full flex items-center justify-between px-3 py-2 text-right hover:bg-bg transition-colors"
+                          >
+                            <span className="text-[12.5px] text-text">{it.name}</span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                it.kind === 'prep' ? 'bg-accent/10 text-accent' : 'bg-bg text-muted border border-border'
+                              }`}>
+                                {it.kind === 'prep' ? 'نیمه‌آماده' : 'خام'}
+                              </span>
+                              <Plus size={12} className="text-muted" />
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* مواد انتخاب‌شده */}
+                    {prepLines.length > 0 && (
+                      <div className="mt-2 space-y-1.5">
+                        {prepLines.map((line, i) => {
+                          const it = byId.get(line.itemId);
+                          return (
+                            <div key={line.itemId} className="flex items-center gap-2 bg-bg rounded-lg px-3 py-2">
+                              <span className="flex-1 text-[12.5px] text-text truncate min-w-0">
+                                {it?.name ?? line.itemId}
+                              </span>
+                              <input
+                                value={line.qty}
+                                onChange={(e) => {
+                                  const v = normalizeDigits(e.target.value).replace(/[^0-9.]/g, '');
+                                  setPrepLines(prev => prev.map((l, j) => j === i ? { ...l, qty: v } : l));
+                                }}
+                                dir="ltr"
+                                inputMode="decimal"
+                                placeholder="مقدار"
+                                className="w-20 border border-border rounded-md px-2 py-1 text-[12px] text-center focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text shrink-0"
+                              />
+                              <span className="text-[10.5px] text-muted w-8 text-center shrink-0">
+                                {it?.unit ?? ''}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setPrepLines(prev => prev.filter((_, j) => j !== i))}
+                                className="w-7 h-7 flex items-center justify-center text-muted hover:text-danger shrink-0"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {prepLines.length === 0 && !prepSearch && (
+                      <p className="mt-2 text-[11.5px] text-muted text-center py-3 bg-bg rounded-lg">
+                        نام ماده را جستجو کنید تا اضافه شود
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ─── تنظیمات پیشرفته (آکاردئون) ─── */}
           <div className="border border-border rounded-lg overflow-hidden">
