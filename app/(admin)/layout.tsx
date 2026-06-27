@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { getRealAdminSession } from '@/lib/auth/session';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 
-export const metadata = { title: 'Super Admin — با شرف' };
+export const metadata = { title: 'مدیریت کل' };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getRealAdminSession();
