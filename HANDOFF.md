@@ -13,10 +13,10 @@
 | **نسخه** | `0.9.41-kitchen-split-phase2` |
 | **آخرین به‌روزرسانی** | 2026-06-27 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (migration فاز ۱ آشپزخانه توسط کاربر اجرا شد ✅) |
-| **کار نیمه‌تمام (in-progress)** | جداسازی انبار/آشپزخانه — فاز ۲ انجام شد. **منتظر کاربر**: تست با نقش آشپز/انباردار، بعد تصمیم فاز ۳ (موارد مرزی items/variance/sales). |
-| **کار بعدی پیشنهادی** | (۱) [بعد از تست کاربر] فاز ۳: تصمیم محصول برای items/variance/sales. (۲) شکاف ۱: sync قیمت. (۳) شکاف ۳: variance. |
-| **بلاک‌شده/منتظر کاربر** | تست فاز ۲ + تصمیم فاز ۳ |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۵ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`، **`db-user-roles-migration.sql` (جدید — افزودن Warehouse+Chef به enum؛ ⚠️ خارج از transaction، هر دستور جدا)**. (migration فاز ۱ آشپزخانه اجرا شد ✅) |
+| **کار نیمه‌تمام (in-progress)** | جداسازی فاز ۲ انجام شد. **بلاکر:** ساخت کاربر Chef/Warehouse تا اجرای `db-user-roles-migration.sql` ۵۰۰ می‌دهد (enum دیتابیس این مقادیر را ندارد). بعد از migration: تست نقش‌ها، بعد تصمیم فاز ۳. |
+| **کار بعدی پیشنهادی** | (۱) اجرای `db-user-roles-migration.sql` بعد تست نقش آشپز/انباردار. (۲) فاز ۳: items/variance/sales. (۳) شکاف ۱: sync قیمت. |
+| **بلاک‌شده/منتظر کاربر** | اجرای `db-user-roles-migration.sql` (پیش‌نیاز تست فاز ۲) |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,14 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-27 — رفع باگ ۵۰۰ ساخت کاربر Chef/Warehouse (migration enum) — اکانت ۱
+**چه شد:** بعد از فاز ۲، ساخت کاربر Chef خطای ۵۰۰ «خطای داخلی سرور» می‌داد. علت‌یابی: **باگ کد نبود** — enum واقعی Postgres `user_role` فقط `('SuperAdmin','BranchUser')` دارد (drizzle 0000). نقش‌های Warehouse/Chef در schema.ts (TS) هستند ولی هرگز به enum دیتابیس اضافه نشدند (`db-chef-role-migration.sql` در project-docs اجرا نشده بود؛ برای Warehouse اصلاً migration وجود نداشت). insert با role='Chef' خطای `invalid input value for enum` می‌دهد که در `api-error.ts` به ۵۰۰ عام می‌افتد. فاز ۲ فقط نقش‌ها را معنادار کرد و باگ نهفته را رو کرد.
+**راه‌حل:** فایل `db-user-roles-migration.sql` ساخته شد — `ALTER TYPE user_role ADD VALUE IF NOT EXISTS` برای هر دو Warehouse و Chef. idempotent. **اجرا نشد — منتظر کاربر در pgAdmin (خارج از transaction، هر دستور جدا).** هیچ کدی تغییر نکرد.
+**فایل‌ها:** `db-user-roles-migration.sql` (جدید)، `HANDOFF.md`.
+**Build:** بدون تغییر کد — tsc/build/tests دست‌نخورده ✅ 32/32.
+**ناتمام:** اجرای migration توسط کاربر، سپس تست نقش‌ها.
+**برای جلسه‌ی بعد:** بعد از تأیید تست نقش‌ها → فاز ۳.
 
 ## 📓 2026-06-27 — v0.9.41: جداسازی انبار/آشپزخانه فاز ۲ — اکانت ۱
 **چه شد:** تفکیک واقعی حوزه‌ی انبار از آشپزخانه:
