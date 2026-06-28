@@ -23,14 +23,8 @@ export default function HomePage() {
         </Link>
       </header>
 
-      {/* مرکز — برند + دکمه‌ی درخواست همکاری */}
-      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center -mt-10">
-        <h1 className="text-[34px] font-bold text-stone-900 tracking-tight mb-3">
-          با شرف
-        </h1>
-        <p className="text-[15px] text-stone-500 mb-10 max-w-xs leading-8">
-          به تیم ما بپیوند
-        </p>
+      {/* مرکز — فقط دکمه‌ی درخواست همکاری */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 text-center">
         <Link
           href="/apply"
           className="inline-flex items-center justify-center bg-stone-900 text-white text-[15px] font-medium px-8 py-4 rounded-2xl hover:bg-stone-800 transition-colors active:scale-[0.98]"

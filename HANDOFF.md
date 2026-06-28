@@ -51,6 +51,15 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-06-28 — فیکس باگ لینک «ورود کارکنان» + ساده‌سازی روت — اکانت ۱
+**چه شد:**
+(۱) **علت باگ لینک:** دیشب فقط allowlist bootstrap در `store/index.ts` با `'/'` به‌روز شد، اما allowlist **دومِ مستقل** در `lib/auth/sessionExpiry.ts` (interceptor سراسری `window.fetch`) از قلم افتاد. روی روت، `bootstrap()` یک `GET /api/auth/me` می‌زند که برای ناشناس ۴۰۱ می‌دهد؛ interceptor چون `/` در `PUBLIC_PATH_PREFIXES` نبود، `handleSessionExpired()` → `window.location.replace('/login')` را اجرا می‌کرد و روت/لینک را خراب می‌کرد. فیکس: `'/'` به `PUBLIC_PATH_PREFIXES` اضافه شد (فقط مسیر دقیق روت match می‌شود؛ همگام با store).
+رفتار هوشمند لینک رایگان حاصل شد: `href="/login"` → ناشناس به login، لاگین‌شده با middleware (`isAuthRoute && isAuthed`) به /dashboard.
+(۲) **ساده‌سازی روت:** عنوان «با شرف» و زیرنویس «به تیم ما بپیوند» از مرکز حذف شد؛ فقط دکمه‌ی «درخواست همکاری» ماند. footer و لینک «ورود کارکنان» سر جایشان.
+**فایل‌ها:** `app/page.tsx`، `lib/auth/sessionExpiry.ts`.
+**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
+**ناتمام:** —
+
 ## 📓 2026-06-28 — صفحه‌ی login کاملاً بدون برند — اکانت ۱
 **چه شد:** طبق درخواست کاربر، صفحه‌ی login هیچ برند/اسمی نشان ندهد. `app/(auth)/layout.tsx` بازنویسی شد: حذف `BrandMark` (لوگو)، حذف همه‌ی «با شرف»‌ها (هدر aside، هدر موبایل، دو footer «© ۱۴۰۵ با شرف»). aside حالا خنثی: h1 «ورود به حساب کاربری» + p «برای ادامه، اطلاعات خود را وارد کنید». importهای بلااستفاده (BrandMark, Link) پاک شد. عملکرد فرم دست‌نخورده (children = login page که خودش heading خنثی «ورود به حساب» دارد). signup/forgot هم چون از همین layout استفاده می‌کنند خنثی شدند.
 **فایل‌ها:** `app/(auth)/layout.tsx`.
