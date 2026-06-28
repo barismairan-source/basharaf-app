@@ -1,5 +1,60 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-27 — v0.9.41: جداسازی انبار/آشپزخانه فاز ۲ — اکانت ۱
+**چه شد:** تفکیک واقعی حوزه‌ی انبار از آشپزخانه:
+(۱) `sectionForPath`: `/inventory/kitchen`، `/inventory/recipes`، `/inventory/plan` → `'kitchen'` (قبل از قاعده‌ی عام `/inventory` → `'inventory'`، ترتیب حیاتی).
+(۲) `defaultRoles`: بخش `inventory` → `['SuperAdmin','Warehouse','BranchUser']` (Chef حذف، BranchUser اضافه طبق دستور کاربر — هم‌راستا با گارد صفحه‌ی hub که از قبل BranchUser را مجاز می‌دانست). بخش `kitchen` → `['SuperAdmin','Chef']`.
+(۳) `nav-config`: آیتم `/inventory` به برچسب «انبار» تغییر کرد + آیتم جدید «آشپزخانه» (ChefHat) → `/inventory/kitchen`. `isNavItemActive` ویژه‌ی kitchen اضافه شد تا روی recipes/plan/kitchen هم highlight شود.
+(۴) hub جدید `app/(app)/inventory/kitchen/page.tsx`: دو کارت (دستور پخت، برنامه تولید) با گارد `canAccessSection(user,'kitchen')`.
+(۵) hub انبار `/inventory/page.tsx`: کارت‌های recipes/plan با فلگ `kitchen:true` شرطی به `canAccessSection(user,'kitchen')` شدند (SuperAdmin هنوز می‌بیند، Warehouse نه).
+(۶) `plan/page.tsx`: backHref از `/inventory` به `/inventory/kitchen`.
+موارد مرزی (items/variance/sales) عمداً دست‌نخورده ماندند (فاز ۳).
+**فایل‌ها:** `lib/auth/permissions.ts`، `components/layout/nav-config.ts`، `app/(app)/inventory/page.tsx`، `app/(app)/inventory/kitchen/page.tsx` (جدید)، `app/(app)/inventory/plan/page.tsx`، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · build ✅ (route /inventory/kitchen ساخته شد) · tests ✅ 32/32
+**⚠️ تغییر رفتار:** BranchUser حالا به بخش انبار دسترسی دارد (طبق دستور کاربر). فعلاً فقط SuperAdmin کاربر واقعی است، پس اثر زنده ندارد.
+**ناتمام:** فاز ۳ (موارد مرزی) — نیاز به تصمیم محصول.
+**برای جلسه‌ی بعد:** بعد از تست کاربر، تصمیم درباره‌ی `items` (هم raw هم prep)، `variance`، `sales` — هرکدام زیر کدام حوزه.
+
+## 📓 2026-06-27 — v0.9.40: جداسازی انبار/آشپزخانه فاز ۰+۱ — اکانت ۱
+**چه شد:**
+(فاز ۰ — صفر ریسک) بخش `kitchen` به `SectionKey` و `SECTIONS` در `permissions.ts` اضافه شد با `defaultRoles: ['SuperAdmin','Chef']`. `sectionForPath` و `nav-config` **دست‌نخورده** ماندند — هیچ مسیری هنوز به kitchen نگاشت نمی‌شود، پس رفتار فعلی هیچ کاربری عوض نشده. تنها اثر مرئی: یک تیک جدید «آشپزخانه» در پنل دسترسی TeamPane (که خودکار روی SECTIONS map می‌کند).
+(فاز ۱ — migration محافظتی) فایل `db-kitchen-section-migration.sql` ساخته شد: به هر کاربری که permission صریح `'inventory'` دارد و `'kitchen'` ندارد، `'kitchen'` اضافه می‌کند (JSONB `||`). idempotent. **اجرا نشد — منتظر کاربر برای pgAdmin.**
+بررسی شد که `ALL_SECTION_KEYS` هیچ‌جا مصرف نمی‌شود و تنها مصرف‌کننده‌ی SECTIONS، `canAccessSection` (بدون مسیر kitchen) و TeamPane است → صفر تغییر رفتار تأیید شد.
+**فایل‌ها:** `lib/auth/permissions.ts`، `db-kitchen-section-migration.sql` (جدید)، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** فاز ۲ و ۳ عمداً زده نشدند. منتظر تست کاربر + اجرای migration.
+**برای جلسه‌ی بعد:** فقط بعد از تأیید کاربر → فاز ۲ (تفکیک sectionForPath: recipes/plan → kitchen، تغییر defaultRoles بخش inventory به حذف Chef، افزودن آیتم nav «آشپزخانه»، شرطی‌کردن کارت‌های hub).
+
+## 📓 2026-06-27 — بررسی جداسازی انبار/آشپزخانه (بدون تغییر کد) — اکانت ۱
+**چه شد:** بررسی کامل سیستم نقش/دسترسی برای تقسیم «انبار و آشپزخانه» به دو حوزه‌ی جدا. یافته‌ی کلیدی: نقش‌های `Warehouse` (انباردار) و `Chef` (سرآشپز) از قبل وجود دارند؛ مشکل اینجاست که هر دو به یک بخش واحد `inventory` نگاشت می‌شوند و `sectionForPath` همه‌ی `/inventory/*` را یکی می‌بیند. راه‌حل پیشنهادی: افزودن بخش `kitchen`، تفکیک در `sectionForPath`، بدون جابجایی فایل. نقشه‌ی ۵ فازی از صفر-ریسک تا پرریسک نوشته شد. ریسک اصلی: کاربران با permission صریح `'inventory'` نیاز به migration محافظتی (افزودن `'kitchen'`) دارند.
+**فایل‌ها:** `project-docs/INVESTIGATION-inventory-kitchen-split.md` (ایجاد)، `HANDOFF.md`. هیچ کد اجرایی تغییر نکرد.
+**Build:** بدون تغییر کد — tsc/build/tests دست‌نخورده ✅ 32/32.
+**ناتمام:** منتظر تصمیم کاربر برای شروع پیاده‌سازی.
+**برای جلسه‌ی بعد:** اگر کاربر تأیید کرد، فاز ۰+۱ (افزودن بخش kitchen + migration محافظتی) را با هم بزن.
+
+## 📓 2026-06-27 — v0.9.39: ساخت/ویرایش نیمه‌آماده از UI (شکاف ۴) — اکانت ۱
+**چه شد:**
+(۱) PATCH `/api/inventory/items/[id]` کامل شد: `batchYieldBase` و `prepRecipe` به `patchSchema` اضافه شدند (قبلاً در PATCH ناموجود بود — فقط POST).
+(۲) فرم اقلام انبار (`items/page.tsx`) بازطراحی: toggle «ماده خام / نیمه‌آماده» اضافه شد. وقتی prep انتخاب شود: فیلد «بازده یک بچ» + mini ingredient builder (جستجو + مقدار + حذف) ظاهر می‌شود.
+(۳) cycle detection با BFS روی items لود‌شده کلاینت: self-reference و هر حلقه‌ی دلخواه عمق جلوگیری می‌شود — آیتم‌هایی که حلقه می‌سازند از نتایج جستجو فیلتر می‌شوند.
+(۴) ویرایش نیمه‌آماده‌ی موجود: toggle روی «نیمه‌آماده» باز می‌شود و مواد از DB پر می‌شوند.
+(۵) ارقام فارسی/عربی با `normalizeDigits` در هر دو input مقدار handle می‌شود.
+**فایل‌ها:** `app/api/inventory/items/[id]/route.ts`، `app/(app)/inventory/items/page.tsx`، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** منتظر تأیید کاربر
+**برای جلسه‌ی بعد:** (۱) شکاف ۱: sync قیمت. (۲) شکاف ۳: variance + grep inv_stock_tx columns.
+
+## 📓 2026-06-27 — v0.9.38: نمایش زنجیره prep در costing panel (شکاف ۲) — اکانت ۱
+**چه شد:** سه تغییر additive برای نمایش مواد تشکیل‌دهنده‌ی آیتم‌های نیمه‌آماده در پنل bhosting رسپی:
+(۱) `LineCost` در `costing.ts` فیلد اختیاری `subLines?: LineCost[]` گرفت — بدون تغییر توابع موجود.
+(۲) `RecipeLineCost` در `types/inventory.ts` فیلد `subLines?: RecipeLineCost[]` گرفت — backward-compatible.
+(۳) `costing/route.ts` بازنویسی: بعد از `costRecipe()` برای هر line با `kind='prep'`، `prepRecipe` JSONB آن item را fetch و با scale factor (qtyUsed / batchYieldBase) expand می‌کند. یک DB fetch اضافه فقط برای sub-items.
+(۴) `recipes/page.tsx` RecipeCard: اگر `subLines` موجود بود، با indent و border-r نمایش می‌دهد + badge «نیمه‌آماده».
+**فایل‌ها:** `lib/inventory/costing.ts`، `types/inventory.ts`، `app/api/inventory/recipes/[id]/costing/route.ts`، `app/(app)/inventory/recipes/page.tsx`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** منتظر تأیید کاربر
+**برای جلسه‌ی بعد:** شکاف ۱ (sync قیمت، Option B) — فایل‌های اصلی: `recipes/page.tsx` wizard step 1 + `costing/route.ts`.
+
 ## 📓 2026-06-26 — گزارش وضعیت کامل (STATE-SNAPSHOT) — اکانت ۱
 **چه شد:** بدون تغییر کد، یک گزارش جامع وضعیت پروژه ساخته شد: درخت app/ تا عمق ۳، تمام ۱۱۱ API endpoint با HTTP method، ۵۱ جدول دیتابیس از schema.ts، ارزیابی تکمیل ۱۰ ماژول، تمام TODO/mock/hardcode در کد.
 **فایل‌ها:** `project-docs/STATE-SNAPSHOT.md` (ایجاد)، `HANDOFF.md`.
