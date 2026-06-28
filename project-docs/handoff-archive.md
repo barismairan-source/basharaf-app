@@ -1,5 +1,20 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-27 — بررسی جداسازی نیمه‌آماده از انبار (بدون تغییر کد) — اکانت ۱
+**چه شد:** فاز ۲ جداسازی توسط کاربر تست شد و درست کار کرد (آشپز فقط آشپزخانه، انباردار فقط انبار) — یعنی `db-user-roles-migration.sql` هم اجرا شد. سپس بررسی کامل برای انتقال نیمه‌آماده (`kind='prep'`) از صفحه‌ی اقلام انبار به یک صفحه‌ی مستقل زیر آشپزخانه نوشته شد. یافته‌های کلیدی: (۱) endpoint مشترک `listItems()` را ۵+ مصرف‌کننده (stocktake/receive/recipes/cartable/PO) به‌صورت کامل لازم دارند → فیلتر باید سمت‌کلاینت باشد نه سرور. (۲) نقطه‌ی ظریف permission حل است: GET items برای هر session باز است، پس Chef مواد خام را برای builder می‌بیند؛ POST هم گیت SuperAdmin سمت‌سرور ندارد. (۳) مسیر `/inventory/kitchen/prep` خودکار زیر بخش kitchen می‌افتد (sectionForPath دست‌نخورده). نقشه‌ی ۳ فازی: فاز۱ صفحه‌ی جدید (افزایشی)، فاز۲ محدودکردن items به raw، فاز۳ پولیش.
+**فایل‌ها:** `project-docs/INVESTIGATION-prep-item-separation.md` (ایجاد)، `HANDOFF.md`. هیچ کد اجرایی تغییر نکرد.
+**Build:** بدون تغییر کد — tsc/build/tests دست‌نخورده ✅ 32/32.
+**ناتمام:** منتظر تأیید کاربر برای پیاده‌سازی فاز ۱.
+**برای جلسه‌ی بعد:** بعد از تأیید → فاز ۱: ساخت `app/(app)/inventory/kitchen/prep/page.tsx` + کارت hub، بدون دست‌زدن به items.
+
+## 📓 2026-06-27 — رفع باگ ۵۰۰ ساخت کاربر Chef/Warehouse (migration enum) — اکانت ۱
+**چه شد:** بعد از فاز ۲، ساخت کاربر Chef خطای ۵۰۰ «خطای داخلی سرور» می‌داد. علت‌یابی: **باگ کد نبود** — enum واقعی Postgres `user_role` فقط `('SuperAdmin','BranchUser')` دارد (drizzle 0000). نقش‌های Warehouse/Chef در schema.ts (TS) هستند ولی هرگز به enum دیتابیس اضافه نشدند (`db-chef-role-migration.sql` در project-docs اجرا نشده بود؛ برای Warehouse اصلاً migration وجود نداشت). insert با role='Chef' خطای `invalid input value for enum` می‌دهد که در `api-error.ts` به ۵۰۰ عام می‌افتد. فاز ۲ فقط نقش‌ها را معنادار کرد و باگ نهفته را رو کرد.
+**راه‌حل:** فایل `db-user-roles-migration.sql` ساخته شد — `ALTER TYPE user_role ADD VALUE IF NOT EXISTS` برای هر دو Warehouse و Chef. idempotent. **اجرا نشد — منتظر کاربر در pgAdmin (خارج از transaction، هر دستور جدا).** هیچ کدی تغییر نکرد.
+**فایل‌ها:** `db-user-roles-migration.sql` (جدید)، `HANDOFF.md`.
+**Build:** بدون تغییر کد — tsc/build/tests دست‌نخورده ✅ 32/32.
+**ناتمام:** اجرای migration توسط کاربر، سپس تست نقش‌ها.
+**برای جلسه‌ی بعد:** بعد از تأیید تست نقش‌ها → فاز ۳.
+
 ## 📓 2026-06-27 — v0.9.41: جداسازی انبار/آشپزخانه فاز ۲ — اکانت ۱
 **چه شد:** تفکیک واقعی حوزه‌ی انبار از آشپزخانه:
 (۱) `sectionForPath`: `/inventory/kitchen`، `/inventory/recipes`، `/inventory/plan` → `'kitchen'` (قبل از قاعده‌ی عام `/inventory` → `'inventory'`، ترتیب حیاتی).
