@@ -51,6 +51,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-06-28 — تأیید فرضیات شکاف ۱ و ۳ رسپی (فاز بررسی) — اکانت ۱
+**چه شد:** قبل از پیاده‌سازی دو شکاف قدیمی رسپی‌ساز، فرضیات با کد فعلی تطبیق داده شد (بعد از جداسازی انبار/آشپزخانه و prep page). نتیجه: **هر دو فرضیه هنوز معتبرند.** شکاف ۱: costing از `inv_recipes.price` می‌خواند، wizard `menuItemId` نمی‌نویسد، هیچ sync نیست. شکاف ۳: variance theoretical از voucher_lines kind=sale با فیلتر `updatedAt`؛ مسیر ۲/۳ نامرئی. **پیش‌نیاز چک‌نشده‌ی شکاف ۳ حل شد:** `inv_stock_tx.jalali_date` موجود و notNull است (`schema.ts:1025`) → بازسازی actual بدون migration ممکن. نکات جدید: inv_stock_tx ستون branchId ندارد (فیلتر via join به inv_items)، ایندکس روی jalali_date ندارد (migration اختیاری perf). inv_daily_sales.lines دو شکل دارد (count/qty).
+**فایل‌ها:** `project-docs/INVESTIGATION-recipe-costing-gaps-1-3.md` (جدید). هیچ کد اجرایی تغییر نکرد.
+**Build:** بدون تغییر کد — tsc/tests دست‌نخورده ✅ 32/32.
+**ناتمام:** منتظر تأیید کاربر برای شروع شکاف ۱ (گزینه‌ی B).
+**نکته:** git status یک حذف `components/notifications/.gitkeep` دارد که کار من نیست — دست نزدم، در commitهایم نیاوردم.
+
 ## 📓 2026-06-28 — فیکس timeout دیپلوی Liara — اکانت ۱
 **چه شد:** دیپلوی Liara بعد از «✓ Compiled successfully» در مرحله‌ی «Linting and checking validity of types» بیش از ۲۰ دقیقه گیر می‌کرد و timeout (exit 2). علت: `next build` روی builder محدود Liara هم ESLint هم type-check را اجرا می‌کرد. راه‌حل (الگوی استاندارد):
 (۱) `next.config.mjs`: `eslint.ignoreDuringBuilds: true` + `typescript.ignoreBuildErrors: true` → build حالا «Skipping validation of types / Skipping linting» می‌زند و سریع تمام می‌شود.
