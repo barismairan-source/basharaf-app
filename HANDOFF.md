@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.46-root-link-fix` |
+| **نسخه** | `0.9.47-liara-build-fix` |
 | **آخرین به‌روزرسانی** | 2026-06-28 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
@@ -50,6 +50,14 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-28 — فیکس timeout دیپلوی Liara — اکانت ۱
+**چه شد:** دیپلوی Liara بعد از «✓ Compiled successfully» در مرحله‌ی «Linting and checking validity of types» بیش از ۲۰ دقیقه گیر می‌کرد و timeout (exit 2). علت: `next build` روی builder محدود Liara هم ESLint هم type-check را اجرا می‌کرد. راه‌حل (الگوی استاندارد):
+(۱) `next.config.mjs`: `eslint.ignoreDuringBuilds: true` + `typescript.ignoreBuildErrors: true` → build حالا «Skipping validation of types / Skipping linting» می‌زند و سریع تمام می‌شود.
+(۲) برای حفظ گیت type-safety، به `.github/workflows/liara.yml` مراحل `npm ci` → `npm run type-check` → `npm test` **قبل از** deploy اضافه شد. اگر tsc یا tests fail شود، deploy اجرا نمی‌شود. پس چک‌ها از Liara به GitHub Actions (با زمان سخاوتمند) منتقل شدند، نه حذف.
+**فایل‌ها:** `next.config.mjs`، `.github/workflows/liara.yml`.
+**Build:** محلی ✅ سبز (Skipping validation/linting) · tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** — (دیپلوی بعدی باید سبز شود؛ بعد از push نتیجه‌ی Actions را چک کن.)
 
 ## 📓 2026-06-28 — فیکس باگ لینک «ورود کارکنان» + ساده‌سازی روت — اکانت ۱
 **چه شد:**

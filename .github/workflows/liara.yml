@@ -13,6 +13,17 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: "22"
+
+      # گیت کیفیت — قبل از deploy. چون next.config چک‌های داخل build را خاموش
+      # کرده (تا Liara timeout نشود)، type-check و tests اینجا اجرا می‌شوند.
+      # اگر هرکدام fail شود، deploy اجرا نمی‌شود.
+      - name: Install dependencies
+        run: npm ci
+      - name: Type check
+        run: npm run type-check
+      - name: Unit tests
+        run: npm test
+
       - name: Deploy to Liara
         env:
           LIARA_TOKEN: ${{ secrets.LIARA_API_TOKEN }}

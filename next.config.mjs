@@ -29,6 +29,13 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
 
+  // ⛔ مرحله‌ی «Linting and checking validity of types» داخل `next build` روی
+  // builder محدود Liara بیش از ۲۰ دقیقه طول می‌کشد و timeout می‌شود.
+  // این چک‌ها در GitHub Actions (قبل از deploy) با `tsc --noEmit` + `vitest`
+  // اجرا می‌شوند — پس داخل build تکراری و حذف‌شدنی هستند.
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+
   // Security headers روی همه routes
   async headers() {
     return [
