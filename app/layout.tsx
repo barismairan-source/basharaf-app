@@ -28,10 +28,10 @@ const vazirmatn = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: 'با شرف — سامانه حسابداری شعب',
+    default: 'با شرف',
     template: '%s | با شرف',
   },
-  description: 'سامانه حسابداری ساده برای رستوران‌های چندشعبه‌ای',
+  description: 'با شرف',
   applicationName: 'با شرف',
   manifest: '/manifest.json',
   appleWebApp: {

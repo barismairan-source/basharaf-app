@@ -1,7 +1,7 @@
 {
-  "name": "با شرف — مدیریت شعب",
+  "name": "با شرف",
   "short_name": "با شرف",
-  "description": "سامانه حسابداری چندشعبه‌ای با شرف",
+  "description": "با شرف",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#fafaf9",

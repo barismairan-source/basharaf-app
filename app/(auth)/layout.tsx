@@ -27,13 +27,12 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
 
         <div>
           <h1 className="text-[26px] leading-[1.6] font-medium mb-4">
-            حسابداری شعب،
+            به با شرف
             <br />
-            ساده و یک‌جا.
+            خوش آمدید.
           </h1>
           <p className="text-muted text-[13px] leading-7 max-w-sm">
-            ثبت تراکنش‌ها، تایید توسط مدیر کل، گزارش‌گیری
-            شفاف برای همه شعب — بدون پیچیدگی.
+            برای ورود به حساب کاربری، اطلاعات خود را وارد کنید.
           </p>
         </div>
 
