@@ -106,9 +106,3 @@
 **فایل‌ها:** `app/layout.tsx`، `public/manifest.json`، `app/apply/layout.tsx`، `app/m/layout.tsx`، `app/(auth)/layout.tsx`، `project-docs/INVESTIGATION-public-system-traces.md` (جدید).
 **Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
 **ناتمام:** بخش ۴ (صفحه‌ی روت عمومی) — نیاز به بررسی مسیر ورود.
-
-## 📓 2026-06-27 — عنوان صفحات (page titles) — اکانت ۱
-**چه شد:** همه‌ی صفحات panel کلاینت‌اند و metadata ندارند → همه عنوان پیش‌فرض «با شرف — سامانه حسابداری شعب» را می‌گرفتند. برای هر مسیر سطح‌اول panel یک `layout.tsx` سرور افزوده شد که فقط `metadata.title` را ست می‌کند و children را پاس می‌دهد (۲۱ فایل). template ریشه «نام صفحه | با شرف» می‌سازد. صفحات فرزند ([id]/new/زیرصفحه‌ها) عنوان والد را ارث می‌برند. عنوان admin از «Super Admin — با شرف» (که با template تکراری می‌شد) به «مدیریت کل» اصلاح شد.
-**فایل‌ها:** ۲۱ `app/(app)/*/layout.tsx` جدید، `app/(admin)/layout.tsx`، `project-docs/INVESTIGATION-page-titles.md` (جدید).
-**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32 (build نهایی در انتهای شب)
-**ناتمام:** عناوین/نشت صفحات عمومی → بخش ۳.
