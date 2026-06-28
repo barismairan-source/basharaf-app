@@ -1,5 +1,16 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-27 — v0.9.42: صفحه‌ی نیمه‌آماده در آشپزخانه (فاز ۱ جداسازی prep) — اکانت ۱
+**چه شد:** فاز ۱ افزایشی جداسازی نیمه‌آماده:
+(۱) صفحه‌ی جدید `app/(app)/inventory/kitchen/prep/page.tsx` — لیست فقط `kind==='prep'` (فیلتر سمت‌کلاینت، endpoint مشترک `listItems` دست‌نخورده)، ساخت/ویرایش با همان mini-builder شکاف ۴ (batchYieldBase + prepRecipe + تشخیص حلقه BFS). در builder هم raw و هم prep قابل انتخاب‌اند (آشپز از مواد خام می‌سازد). گارد صفحه `canAccessSection(user,'kitchen')`؛ ساخت/ویرایش/حذف با `canManage = canAccessSection(kitchen)` (آشپز + مدیرکل، نه فقط SuperAdmin مثل items).
+(۲) کارت سوم «نیمه‌آماده‌ها» (آیکون Soup) به hub آشپزخانه اضافه شد، کنار دستور پخت و برنامه تولید. import بلااستفاده‌ی `Card` هم پاک شد.
+(۳) `/inventory/items` **اصلاً دست‌نخورد** — prep موقتاً از هر دو جا مدیریت‌پذیر است (عمدی برای تست). فاز ۲: محدودکردن items به raw.
+مسیر `/inventory/kitchen/prep` خودکار زیر بخش kitchen می‌افتد (sectionForPath دست‌نخورده) و آیتم nav «آشپزخانه» روی آن highlight می‌شود.
+**فایل‌ها:** `app/(app)/inventory/kitchen/prep/page.tsx` (جدید)، `app/(app)/inventory/kitchen/page.tsx`، `HANDOFF.md`.
+**Build:** tsc ✅ ۰ خطا · build ✅ (route /inventory/kitchen/prep ساخته شد) · tests ✅ 32/32
+**ناتمام:** فاز ۲ (items فقط raw) — منتظر تست کاربر.
+**برای جلسه‌ی بعد:** بعد از تأیید تست → فاز ۲: فیلتر items به raw + حذف toggle/prep-builder/wouldCreateCycle از items page.
+
 ## 📓 2026-06-27 — بررسی جداسازی نیمه‌آماده از انبار (بدون تغییر کد) — اکانت ۱
 **چه شد:** فاز ۲ جداسازی توسط کاربر تست شد و درست کار کرد (آشپز فقط آشپزخانه، انباردار فقط انبار) — یعنی `db-user-roles-migration.sql` هم اجرا شد. سپس بررسی کامل برای انتقال نیمه‌آماده (`kind='prep'`) از صفحه‌ی اقلام انبار به یک صفحه‌ی مستقل زیر آشپزخانه نوشته شد. یافته‌های کلیدی: (۱) endpoint مشترک `listItems()` را ۵+ مصرف‌کننده (stocktake/receive/recipes/cartable/PO) به‌صورت کامل لازم دارند → فیلتر باید سمت‌کلاینت باشد نه سرور. (۲) نقطه‌ی ظریف permission حل است: GET items برای هر session باز است، پس Chef مواد خام را برای builder می‌بیند؛ POST هم گیت SuperAdmin سمت‌سرور ندارد. (۳) مسیر `/inventory/kitchen/prep` خودکار زیر بخش kitchen می‌افتد (sectionForPath دست‌نخورده). نقشه‌ی ۳ فازی: فاز۱ صفحه‌ی جدید (افزایشی)، فاز۲ محدودکردن items به raw، فاز۳ پولیش.
 **فایل‌ها:** `project-docs/INVESTIGATION-prep-item-separation.md` (ایجاد)، `HANDOFF.md`. هیچ کد اجرایی تغییر نکرد.
