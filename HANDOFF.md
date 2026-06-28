@@ -105,13 +105,3 @@
 **فایل‌ها:** ۲۱ `app/(app)/*/layout.tsx` جدید، `app/(admin)/layout.tsx`، `project-docs/INVESTIGATION-page-titles.md` (جدید).
 **Build:** tsc ✅ ۰ خطا · tests ✅ 32/32 (build نهایی در انتهای شب)
 **ناتمام:** عناوین/نشت صفحات عمومی → بخش ۳.
-
-## 📓 2026-06-27 — v0.9.43: items فقط raw (فاز ۲ جداسازی prep) — اکانت ۱
-**چه شد:** صفحه‌ی `/inventory/items` به فقط مواد خام محدود شد:
-(۱) لیست با `it.kind === 'raw'` فیلتر شد (سمت‌کلاینت؛ endpoint مشترک `listItems` دست‌نخورده).
-(۲) toggle «ماده خام / نیمه‌آماده» + کل بلوک UI تعریف نیمه‌آماده (بازده بچ، mini-builder، `wouldCreateCycle`) از این صفحه حذف شد.
-(۳) `handleSave` همیشه `kind: 'raw'` می‌فرستد؛ state و importهای بلااستفاده (PrepLine, prepLines, prepSearch, Trash2, Plus, normalizeDigits, InvItemKind) پاک شد.
-نیمه‌آماده‌ها حالا فقط از `/inventory/kitchen/prep` (فاز ۱) مدیریت می‌شوند. ساخت نیمه‌آماده از items دیگر ممکن نیست.
-**فایل‌ها:** `app/(app)/inventory/items/page.tsx`.
-**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
-**ناتمام:** —

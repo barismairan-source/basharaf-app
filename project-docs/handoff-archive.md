@@ -1,5 +1,15 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-27 — v0.9.43: items فقط raw (فاز ۲ جداسازی prep) — اکانت ۱
+**چه شد:** صفحه‌ی `/inventory/items` به فقط مواد خام محدود شد:
+(۱) لیست با `it.kind === 'raw'` فیلتر شد (سمت‌کلاینت؛ endpoint مشترک `listItems` دست‌نخورده).
+(۲) toggle «ماده خام / نیمه‌آماده» + کل بلوک UI تعریف نیمه‌آماده (بازده بچ، mini-builder، `wouldCreateCycle`) از این صفحه حذف شد.
+(۳) `handleSave` همیشه `kind: 'raw'` می‌فرستد؛ state و importهای بلااستفاده (PrepLine, prepLines, prepSearch, Trash2, Plus, normalizeDigits, InvItemKind) پاک شد.
+نیمه‌آماده‌ها حالا فقط از `/inventory/kitchen/prep` (فاز ۱) مدیریت می‌شوند. ساخت نیمه‌آماده از items دیگر ممکن نیست.
+**فایل‌ها:** `app/(app)/inventory/items/page.tsx`.
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
+**ناتمام:** —
+
 ## 📓 2026-06-27 — v0.9.42: صفحه‌ی نیمه‌آماده در آشپزخانه (فاز ۱ جداسازی prep) — اکانت ۱
 **چه شد:** فاز ۱ افزایشی جداسازی نیمه‌آماده:
 (۱) صفحه‌ی جدید `app/(app)/inventory/kitchen/prep/page.tsx` — لیست فقط `kind==='prep'` (فیلتر سمت‌کلاینت، endpoint مشترک `listItems` دست‌نخورده)، ساخت/ویرایش با همان mini-builder شکاف ۴ (batchYieldBase + prepRecipe + تشخیص حلقه BFS). در builder هم raw و هم prep قابل انتخاب‌اند (آشپز از مواد خام می‌سازد). گارد صفحه `canAccessSection(user,'kitchen')`؛ ساخت/ویرایش/حذف با `canManage = canAccessSection(kitchen)` (آشپز + مدیرکل، نه فقط SuperAdmin مثل items).
