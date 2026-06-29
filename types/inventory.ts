@@ -166,6 +166,8 @@ export interface RecipeCosting {
   targetFcPct: number;
   suggestedPrice: number;
   hasMissingCosts: boolean;
+  menuPrice?: number | null;
+  menuPriceTakeaway?: number | null;
 }
 
 export interface ExpiryWarning {

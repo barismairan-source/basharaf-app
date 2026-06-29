@@ -327,6 +327,13 @@ function RecipeCard({
             </div>
           )}
 
+          {costing.menuPrice != null && costing.menuPrice !== costing.price && (
+            <div className="text-[11px] text-warn flex items-center gap-1">
+              <AlertTriangle size={12} />
+              قیمت منو {fmt(costing.menuPrice)} با قیمت رسپی {costing.price > 0 ? fmt(costing.price) : '(بدون قیمت)'} فرق دارد.
+            </div>
+          )}
+
           <div className="space-y-1.5">
             {costing.lines.map((l, i) => (
               <div key={i}>
@@ -590,6 +597,7 @@ function ImportExcelModal({
 
 type WizardStep = 1 | 2 | 3;
 interface WizardLine { itemId: string; qty: string; }
+interface FlatMenuItem { id: string; titleFa: string; price: number | null; }
 
 function AddRecipeWizard({
   items, branches, canSeePrices, onClose, onDone, showToast,
@@ -615,10 +623,20 @@ function AddRecipeWizard({
 
   // Step 3
   const [price, setPrice] = useState('');
+  const [menuItemId, setMenuItemId] = useState('');
+  const [menuItemsList, setMenuItemsList] = useState<FlatMenuItem[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/menu')
+      .then((r) => r.json() as Promise<{ sections: Array<{ items: FlatMenuItem[] }> }>)
+      .then((data) => setMenuItemsList(data.sections.flatMap((s) => s.items)))
+      .catch(() => { /* silent */ });
+  }, []);
 
   const portionsNum = parseInt(portions, 10) || 1;
   const priceNum = parseInt(price.replace(/[^0-9]/g, ''), 10) || 0;
+  const selectedMenuItem = menuItemsList.find((m) => m.id === menuItemId) ?? null;
 
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
 
@@ -709,6 +727,7 @@ function AddRecipeWizard({
         price: priceNum,
         cookMode,
         shelfLifeDays: 1,
+        menuItemId: menuItemId || null,
         lines: validLines.map((l) => ({
           itemId: l.itemId,
           qtyBase: parseInt(l.qty, 10),
@@ -931,6 +950,33 @@ function AddRecipeWizard({
                   <p className="text-[11px] text-muted mt-1">
                     اگر قیمت هنوز مشخص نیست، می‌توانید بدون قیمت ذخیره کنید.
                   </p>
+                </div>
+              )}
+
+              {menuItemsList.length > 0 && (
+                <div>
+                  <label className="text-[11.5px] text-muted block mb-1">لینک به آیتم منو (اختیاری)</label>
+                  <select
+                    value={menuItemId}
+                    onChange={(e) => setMenuItemId(e.target.value)}
+                    className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  >
+                    <option value="">— بدون لینک —</option>
+                    {menuItemsList.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.titleFa}{m.price != null ? ` — ${fmt(m.price)} تومان` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {selectedMenuItem?.price != null && canSeePrices && (
+                    <button
+                      type="button"
+                      onClick={() => setPrice((selectedMenuItem.price!).toLocaleString('en-US'))}
+                      className="mt-1.5 text-[11.5px] text-accent hover:underline"
+                    >
+                      استفاده از قیمت منو: {fmt(selectedMenuItem.price)} تومان
+                    </button>
+                  )}
                 </div>
               )}
 

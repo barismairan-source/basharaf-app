@@ -5,6 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvRecipe } from '@/lib/db/inventory.serializers';
+import { audit } from '@/lib/auth/audit';
 
 /**
  * /api/inventory/recipes
@@ -27,6 +28,7 @@ const saveSchema = z.object({
   price: z.number().int().min(0).default(0),
   cookMode: z.enum(['daily', 'batch']).default('daily'),
   shelfLifeDays: z.number().int().min(0).default(1),
+  menuItemId: z.string().uuid().nullable().optional(),
   lines: z.array(lineSchema).min(1, 'حداقل یک ماده لازم است'),
 });
 
@@ -48,27 +50,35 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    await requireRole('SuperAdmin', 'Chef');
+    const session = await requireRole('SuperAdmin', 'Chef');
     const input = saveSchema.parse(await req.json());
+
+    // برای audit: قیمت قبلی را قبل از تراکنش بگیر
+    let oldPrice: number | null = null;
+    if (input.id) {
+      const [existing] = await db.select({ price: schema.invRecipes.price })
+        .from(schema.invRecipes).where(eq(schema.invRecipes.id, input.id)).limit(1);
+      oldPrice = existing != null ? Number(existing.price) : null;
+    }
 
     const result = await db.transaction(async (dbTx) => {
       let recipeId = input.id ?? null;
 
       if (recipeId) {
-        // به‌روزرسانی
         await dbTx.update(schema.invRecipes).set({
           name: input.name, branchId: input.branchId ?? null,
           portions: input.portions, targetFcPct: String(input.targetFcPct),
           price: input.price, cookMode: input.cookMode, shelfLifeDays: input.shelfLifeDays,
+          menuItemId: input.menuItemId ?? null,
           updatedAt: new Date(),
         }).where(eq(schema.invRecipes.id, recipeId));
-        // خطوط قدیمی را پاک و دوباره بساز
         await dbTx.delete(schema.invRecipeLines).where(eq(schema.invRecipeLines.recipeId, recipeId));
       } else {
         const [r] = await dbTx.insert(schema.invRecipes).values({
           name: input.name, branchId: input.branchId ?? null,
           portions: input.portions, targetFcPct: String(input.targetFcPct),
           price: input.price, cookMode: input.cookMode, shelfLifeDays: input.shelfLifeDays,
+          menuItemId: input.menuItemId ?? null,
         }).returning();
         if (!r) throw new ApiError(500, 'خطا در ساخت رسپی', 'INSERT_FAILED');
         recipeId = r.id;
@@ -87,6 +97,15 @@ export async function POST(req: Request) {
       if (!row) throw new ApiError(500, 'خطا', 'FETCH_FAILED');
       return rowToInvRecipe(row, lines);
     });
+
+    // audit فقط برای تغییر قیمت در به‌روزرسانی
+    if (input.id && oldPrice !== null && input.price !== oldPrice) {
+      audit({
+        action: 'inv.recipe.priceChanged',
+        userId: session.sub,
+        meta: { recipeId: result.id, oldPrice, newPrice: input.price, menuItemId: input.menuItemId ?? null },
+      });
+    }
 
     return NextResponse.json({ recipe: result }, { status: 201 });
   } catch (e) {

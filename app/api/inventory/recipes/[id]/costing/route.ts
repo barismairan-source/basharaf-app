@@ -23,6 +23,18 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       .where(eq(schema.invRecipes.id, params.id)).limit(1);
     if (!recipe) throw new ApiError(404, 'رسپی پیدا نشد', 'NOT_FOUND');
 
+    // قیمت آیتم منوی لینک‌شده (برای نمایش اختلاف قیمت)
+    let menuPrice: number | null = null;
+    let menuPriceTakeaway: number | null = null;
+    if (recipe.menuItemId) {
+      const [mi] = await db.select({
+        price: schema.menuItems.price,
+        priceTakeaway: schema.menuItems.priceTakeaway,
+      }).from(schema.menuItems).where(eq(schema.menuItems.id, recipe.menuItemId)).limit(1);
+      menuPrice = mi?.price ?? null;
+      menuPriceTakeaway = mi?.priceTakeaway ?? null;
+    }
+
     const lineRows = await db.select().from(schema.invRecipeLines)
       .where(eq(schema.invRecipeLines.recipeId, params.id));
 
@@ -111,7 +123,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       return { ...l, subLines };
     });
 
-    return NextResponse.json({ costing: { ...costing, lines: enrichedLines } });
+    return NextResponse.json({ costing: { ...costing, lines: enrichedLines, menuPrice, menuPriceTakeaway } });
   } catch (e) {
     return handleError(e);
   }

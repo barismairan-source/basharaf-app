@@ -53,7 +53,8 @@ export type AuditAction =
   | 'admin.user.suspended'
   | 'admin.user.activated'
   | 'admin.user.roleChanged'
-  | 'admin.user.branchChanged';
+  | 'admin.user.branchChanged'
+  | 'inv.recipe.priceChanged';
 
 export async function audit(params: {
   action: AuditAction;

@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.47-liara-build-fix` |
-| **آخرین به‌روزرسانی** | 2026-06-28 — اکانت: ۱ |
+| **نسخه** | `0.9.48-recipe-menu-link` |
+| **آخرین به‌روزرسانی** | 2026-06-29 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) تست صفحه‌ی نیمه‌آماده (فاز ۱)→رسپی→subLines. (۲) شکاف ۱ sync قیمت. (۳) شکاف ۳ variance. |
-| **بلاک‌شده/منتظر کاربر** | تست نیمه‌آماده · (اختیاری) تست زنده‌ی روت/login روی موبایل |
+| **کار بعدی پیشنهادی** | تست شکاف ۱ توسط کاربر؛ بعد از تأیید شکاف ۳ variance. |
+| **بلاک‌شده/منتظر کاربر** | تست شکاف ۱: رسپی → لینک به آیتم منو → عوض کردن قیمت منو → بررسی هشدار |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-29 — شکاف ۱: لینک رسپی به آیتم منو + هشدار اختلاف قیمت — اکانت ۱
+**چه شد:** شکاف ۱ (sync قیمت رسپی ↔ منو) پیاده شد — گزینه‌ی B (دو قیمت مستقل + هشدار اختلاف):
+(۱) `recipes/route.ts`: `menuItemId` به `saveSchema` اضافه شد (nullable/optional) + در insert/update نوشته می‌شود. audit برای تغییر قیمت رسپی (`inv.recipe.priceChanged`) با مقایسه‌ی قیمت قبل/بعد.
+(۲) wizard (step 3): سلکتور اختیاری «لینک به آیتم منو» — آیتم‌های منو از `/api/menu` fetch می‌شوند. دکمه‌ی «استفاده از قیمت منو: X تومان» قیمت رسپی را پر می‌کند (دستی، نه sync خودکار).
+(۳) `costing/route.ts`: اگر `menuItemId` ست بود، join به `menu_items` و `menuPrice`/`menuPriceTakeaway` در خروجی costing برگشت داده می‌شود.
+(۴) `RecipeCard`: اگر costing باز باشد و `menuPrice` با `recipe.price` فرق داشته باشد، هشدار warn نشان داده می‌شود.
+(۵) `lib/auth/audit.ts`: `inv.recipe.priceChanged` به union اضافه شد.
+**فایل‌ها:** `lib/auth/audit.ts`, `app/api/inventory/recipes/route.ts`, `app/api/inventory/recipes/[id]/costing/route.ts`, `types/inventory.ts`, `app/(app)/inventory/recipes/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست شکاف ۱ توسط کاربر. بعد از تأیید، شکاف ۳ variance.
 
 ## 📓 2026-06-28 — تأیید فرضیات شکاف ۱ و ۳ رسپی (فاز بررسی) — اکانت ۱
 **چه شد:** قبل از پیاده‌سازی دو شکاف قدیمی رسپی‌ساز، فرضیات با کد فعلی تطبیق داده شد (بعد از جداسازی انبار/آشپزخانه و prep page). نتیجه: **هر دو فرضیه هنوز معتبرند.** شکاف ۱: costing از `inv_recipes.price` می‌خواند، wizard `menuItemId` نمی‌نویسد، هیچ sync نیست. شکاف ۳: variance theoretical از voucher_lines kind=sale با فیلتر `updatedAt`؛ مسیر ۲/۳ نامرئی. **پیش‌نیاز چک‌نشده‌ی شکاف ۳ حل شد:** `inv_stock_tx.jalali_date` موجود و notNull است (`schema.ts:1025`) → بازسازی actual بدون migration ممکن. نکات جدید: inv_stock_tx ستون branchId ندارد (فیلتر via join به inv_items)، ایندکس روی jalali_date ندارد (migration اختیاری perf). inv_daily_sales.lines دو شکل دارد (count/qty).
@@ -96,13 +108,3 @@
 **Build:** بدون تغییر کد — tsc/tests دست‌نخورده ✅ 32/32.
 **ناتمام:** منتظر تصمیم کاربر برای ساخت روت عمومی (کد آماده در سند).
 
-## 📓 2026-06-27 — حذف نشانه‌های سیستم از صفحات عمومی (بخش ۳) — اکانت ۱
-**چه شد:** نشت ماهیت «سامانه حسابداری/پنل» در سطوح عمومی پاک شد:
-(۱) `app/layout.tsx`: title.default «با شرف — سامانه حسابداری شعب» → «با شرف»؛ description «سامانه حسابداری...» → «با شرف».
-(۲) `public/manifest.json`: name «با شرف — مدیریت شعب» → «با شرف»؛ description «سامانه حسابداری چندشعبه‌ای» → «با شرف».
-(۳) عناوین عمومی: `/apply` → «فرم همکاری»، `/m` → «منو» (layoutها).
-(۴) ⚠️ **مورد قضاوتی:** متن بازاریابی صفحه‌ی login (که عمومی است) از «حسابداری شعب... گزارش‌گیری شفاف برای همه شعب» به متن خنثی «به با شرف خوش آمدید / برای ورود اطلاعات خود را وارد کنید» تغییر کرد. عملکرد login دست‌نخورده. **اگر متن قبلی را می‌خواهی صبح بگو — revert یک‌خطی.**
-بدنه‌ی apply/m/order نشتی نداشت (تأیید شد). نسخه فقط در Sidebar پشت لاگین است.
-**فایل‌ها:** `app/layout.tsx`، `public/manifest.json`، `app/apply/layout.tsx`، `app/m/layout.tsx`، `app/(auth)/layout.tsx`، `project-docs/INVESTIGATION-public-system-traces.md` (جدید).
-**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32
-**ناتمام:** بخش ۴ (صفحه‌ی روت عمومی) — نیاز به بررسی مسیر ورود.
