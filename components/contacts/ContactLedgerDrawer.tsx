@@ -129,25 +129,55 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
 
         {/* balance summary */}
         {!loading && contact && (
-          <div className="px-5 py-3 border-b border-border shrink-0 bg-bg/60">
-            <div className="text-[10.5px] text-muted mb-0.5">مانده‌ی حساب (تأییدشده)</div>
-            {balance === 0 ? (
-              <div className="text-[15px] font-medium text-muted">تسویه</div>
-            ) : balance > 0 ? (
-              <div>
-                <span className="text-[15px] font-medium text-emerald-700 num" title={`${fmt(balance)} تومان`}>
-                  {formatMoneyShort(balance)}
-                </span>
-                <span className="text-[10.5px] text-muted mr-1.5">بدهکار به ما</span>
-              </div>
-            ) : (
-              <div>
-                <span className="text-[15px] font-medium text-rose-700 num" title={`${fmt(Math.abs(balance))} تومان`}>
-                  {formatMoneyShort(Math.abs(balance))}
-                </span>
-                <span className="text-[10.5px] text-muted mr-1.5">طلبکار از ما</span>
-              </div>
-            )}
+          <div className="px-5 py-3 border-b border-border shrink-0 bg-bg/60 space-y-2">
+            {/* مانده خالص */}
+            <div>
+              <div className="text-[10.5px] text-muted mb-0.5">مانده‌ی حساب (تأییدشده)</div>
+              {balance === 0 ? (
+                <div className="text-[15px] font-medium text-muted">تسویه</div>
+              ) : balance > 0 ? (
+                <div>
+                  <span className="text-[15px] font-medium text-emerald-700 num" title={`${fmt(balance)} تومان`}>
+                    {formatMoneyShort(balance)}
+                  </span>
+                  <span className="text-[10.5px] text-muted mr-1.5">بدهکار به ما</span>
+                </div>
+              ) : (
+                <div>
+                  <span className="text-[15px] font-medium text-rose-700 num" title={`${fmt(Math.abs(balance))} تومان`}>
+                    {formatMoneyShort(Math.abs(balance))}
+                  </span>
+                  <span className="text-[10.5px] text-muted mr-1.5">طلبکار از ما</span>
+                </div>
+              )}
+            </div>
+            {/* تفکیک دریافتی / پرداختی (فقط تراکنش‌های تأییدشده) */}
+            {entries.length > 0 && (() => {
+              const approvedEntries = entries.filter(e => e.status === 'approved');
+              const totalIncome  = approvedEntries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+              const totalExpense = approvedEntries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+              if (totalIncome === 0 && totalExpense === 0) return null;
+              return (
+                <div className="flex gap-4 pt-1 border-t border-border/60">
+                  {totalIncome > 0 && (
+                    <div>
+                      <div className="text-[9.5px] text-muted mb-0.5">جمع دریافتی</div>
+                      <span className="text-[12.5px] font-medium text-emerald-700 num" title={`${fmt(totalIncome)} تومان`}>
+                        {formatMoneyShort(totalIncome)}
+                      </span>
+                    </div>
+                  )}
+                  {totalExpense > 0 && (
+                    <div>
+                      <div className="text-[9.5px] text-muted mb-0.5">جمع پرداختی</div>
+                      <span className="text-[12.5px] font-medium text-rose-700 num" title={`${fmt(totalExpense)} تومان`}>
+                        {formatMoneyShort(totalExpense)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
