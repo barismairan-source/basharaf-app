@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Ticket, Plus, Trash2, Power } from 'lucide-react';
+import { Ticket, Plus, Trash2, Power, Pencil, X, Check } from 'lucide-react';
 import {
   Button,
   Card,
@@ -41,6 +41,14 @@ export default function CouponsPage() {
 
   const [hydrated, setHydrated] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCode, setEditCode] = useState('');
+  const [editDiscountType, setEditDiscountType] = useState<'percent' | 'fixed'>('percent');
+  const [editValue, setEditValue] = useState('');
+  const [editValidFrom, setEditValidFrom] = useState('');
+  const [editValidTo, setEditValidTo] = useState('');
+  const [editUsageLimit, setEditUsageLimit] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const [code, setCode] = useState('');
   const [discountType, setDiscountType] = useState<'percent' | 'fixed'>('percent');
@@ -107,6 +115,33 @@ export default function CouponsPage() {
     } else {
       showToast('خطا در ساخت کوپن (کد تکراری؟)', 'danger');
     }
+  }
+
+  function startEdit(c: typeof coupons[number]) {
+    setEditCode(c.code);
+    setEditDiscountType(c.discountType as 'percent' | 'fixed');
+    setEditValue(String(c.value));
+    setEditValidFrom(c.validFrom);
+    setEditValidTo(c.validTo);
+    setEditUsageLimit(c.usageLimit != null ? String(c.usageLimit) : '');
+    setEditingId(c.id);
+  }
+
+  async function handleEditSave() {
+    const v = num(editValue);
+    if (!editCode.trim() || v <= 0) { showToast('کد و مقدار را درست وارد کنید', 'danger'); return; }
+    setEditSaving(true);
+    const ok = await updateCoupon(editingId!, {
+      code: editCode.trim(),
+      discountType: editDiscountType,
+      value: v,
+      validFrom: editValidFrom,
+      validTo: editValidTo,
+      usageLimit: editUsageLimit ? num(editUsageLimit) : null,
+    });
+    setEditSaving(false);
+    if (ok) { showToast('کوپن ویرایش شد', 'success'); setEditingId(null); }
+    else showToast('خطا در ویرایش (کد تکراری؟)', 'danger');
   }
 
   async function toggleActive(id: string, isActive: boolean) {
@@ -292,6 +327,10 @@ export default function CouponsPage() {
                       </td>
                       <td className="px-3 py-3">
                         <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => startEdit(c)} title="ویرایش"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
+                            <Pencil size={13} strokeWidth={1.5} />
+                          </button>
                           <button
                             onClick={() => toggleActive(c.id, c.isActive)}
                             title={c.isActive ? 'غیرفعال‌سازی' : 'فعال‌سازی'}
@@ -317,6 +356,46 @@ export default function CouponsPage() {
           </Card>
         )}
       </div>
+
+      {/* Modal ویرایش کوپن */}
+      {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setEditingId(null)}>
+          <div className="bg-white rounded-xl w-full max-w-md p-5" onClick={e => e.stopPropagation()}>
+            <h2 className="text-[15px] font-medium text-stone-900 mb-4">ویرایش کوپن</h2>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="کد">
+                  <Input dir="ltr" value={editCode} onChange={e => setEditCode(e.target.value)} />
+                </Field>
+                <Field label="نوع">
+                  <Select value={editDiscountType} onChange={e => setEditDiscountType(e.target.value as 'percent' | 'fixed')}>
+                    <option value="percent">درصدی</option>
+                    <option value="fixed">مبلغ ثابت</option>
+                  </Select>
+                </Field>
+              </div>
+              <Field label={editDiscountType === 'percent' ? 'درصد (۰–۱۰۰)' : 'مبلغ (تومان)'}>
+                <Input dir="ltr" inputMode="numeric" value={editValue} onChange={e => setEditValue(e.target.value)} />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="معتبر از">
+                  <JalaliDatePicker value={editValidFrom} onChange={setEditValidFrom} />
+                </Field>
+                <Field label="معتبر تا">
+                  <JalaliDatePicker value={editValidTo} onChange={setEditValidTo} />
+                </Field>
+              </div>
+              <Field label="سقف تعداد مصرف (اختیاری)">
+                <Input dir="ltr" inputMode="numeric" placeholder="نامحدود" value={editUsageLimit} onChange={e => setEditUsageLimit(e.target.value)} />
+              </Field>
+            </div>
+            <div className="flex gap-2 justify-end mt-5">
+              <Button variant="default" size="sm" icon={X} onClick={() => setEditingId(null)}>لغو</Button>
+              <Button variant="primary" size="sm" icon={Check} loading={editSaving} onClick={handleEditSave}>ذخیره</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
