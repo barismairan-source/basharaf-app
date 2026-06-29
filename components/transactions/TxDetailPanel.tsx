@@ -24,6 +24,7 @@ import {
   Input,
   Label,
   Select,
+  StatusPill,
   Textarea,
 } from '@/components/ui';
 import { useAppStore } from '@/store';
@@ -177,23 +178,17 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
         <div className="sticky top-0 bg-white border-b border-stone-100 px-6 py-4 flex items-start justify-between gap-3 z-10">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-1">
+              <StatusPill status={tx.status} />
               <Chip
                 tone={
-                  tx.status === 'approved'
-                    ? 'green'
-                    : tx.status === 'pending'
-                      ? 'amber'
-                      : 'red'
+                  tx.type === 'income' ? 'green'
+                  : tx.type === 'transfer' ? 'neutral'
+                  : 'red'
                 }
               >
-                {tx.status === 'approved'
-                  ? 'تایید شده'
-                  : tx.status === 'pending'
-                    ? 'در انتظار'
-                    : 'رد شده'}
-              </Chip>
-              <Chip tone={tx.type === 'income' ? 'green' : 'red'}>
-                {tx.type === 'income' ? 'درآمد' : 'هزینه'}
+                {tx.type === 'income' ? 'درآمد'
+                  : tx.type === 'transfer' ? 'انتقال'
+                  : 'هزینه'}
               </Chip>
             </div>
             <h2
