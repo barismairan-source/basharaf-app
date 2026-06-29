@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.49-ux-wave1-fixes` |
+| **نسخه** | `0.9.50-ux-wave2-fixes` |
 | **آخرین به‌روزرسانی** | 2026-06-29 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ سبز · tests ✅ 32/32 |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | (۱) تست شکاف ۱ رسپی توسط کاربر. (۲) موج ۲ UX audit (🟠 متوسط): A5, A6, B2, B3, C1, D12-D14. |
-| **بلاک‌شده/منتظر کاربر** | تست شکاف ۱ رسپی + تأیید اولویت موج ۲ فیکس‌ها. |
+| **کار بعدی پیشنهادی** | موج ۳: مورد‌های 🟡 از audit + شکاف ۳ variance رسپی. |
+| **بلاک‌شده/منتظر کاربر** | تست موج ۲ (C1/C2/D12/D13/D14/A2) توسط کاربر. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-29 — موج ۲ فیکس‌های UX (شش مورد آماده) — اکانت ۱
+**چه شد:** شش مورد 🟠 از audit که API آماده داشتند پیاده شدند:
+(C1) reverse دوره‌ی posted حقوق: endpoint جدید `POST /api/payroll/runs/[id]/reverse` + دکمه‌ی «برگشت ثبت» با confirm dialog (تراکنش هزینه حذف، وضعیت → approved).
+(C2) حذف دوره‌ی draft حقوق: endpoint `DELETE /api/payroll/runs/[id]` فقط برای draft + دکمه‌ی Trash2 با confirm.
+(D12) ویرایش inline نام/ترتیب دسته‌ی منو: CategoryRow جدید با Edit3 → expand به فرم labelFa/labelEn/sortOrder.
+(D13) ویرایش رزرو: `updateReservation` به store اضافه شد + Pencil روی pending/confirmed → فرم inline تاریخ/ساعت/نفرات/میز/یادداشت.
+(D14) ویرایش کوپن: Pencil → modal ویرایش code/type/value/validFrom/validTo/usageLimit.
+(A2) ویرایش حواله pending: `PATCH /api/inventory/vouchers/[id]` (اتمیک: reverse فیزیکی قدیم → apply جدید → update DB) + Pencil + modal qty/قیمت/یادداشت در کارتابل.
+**فایل‌ها:** `app/api/payroll/runs/[id]/reverse/route.ts` (جدید), `app/api/payroll/runs/[id]/route.ts`, `store/slices/payrollSlice.ts`, `app/(app)/payroll/page.tsx`, `app/(app)/menu/page.tsx`, `store/slices/reservationsSlice.ts`, `app/(app)/reservations/page.tsx`, `app/(app)/coupons/page.tsx`, `app/api/inventory/vouchers/[id]/route.ts`, `app/(app)/inventory/cartable/page.tsx`
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32. Commits: ce9c503, 3005e45, fa662c5, fa763d4, 8dc26be
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست موج ۲ توسط کاربر. بعد: موج ۳ (🟡 مورد‌های جزئی) + شکاف ۳ variance رسپی.
 
 ## 📓 2026-06-29 — موج ۱ فیکس‌های UX (پنج باگ بحرانی) — اکانت ۱
 **چه شد:** پنج باگ 🔴 بحرانی از audit نتیجه گرفته از INVESTIGATION-ux-consistency-audit.md پیاده و commit شدند:
@@ -102,12 +115,6 @@
 رفتار هوشمند لینک رایگان حاصل شد: `href="/login"` → ناشناس به login، لاگین‌شده با middleware (`isAuthRoute && isAuthed`) به /dashboard.
 (۲) **ساده‌سازی روت:** عنوان «با شرف» و زیرنویس «به تیم ما بپیوند» از مرکز حذف شد؛ فقط دکمه‌ی «درخواست همکاری» ماند. footer و لینک «ورود کارکنان» سر جایشان.
 **فایل‌ها:** `app/page.tsx`، `lib/auth/sessionExpiry.ts`.
-**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
-**ناتمام:** —
-
-## 📓 2026-06-28 — صفحه‌ی login کاملاً بدون برند — اکانت ۱
-**چه شد:** طبق درخواست کاربر، صفحه‌ی login هیچ برند/اسمی نشان ندهد. `app/(auth)/layout.tsx` بازنویسی شد: حذف `BrandMark` (لوگو)، حذف همه‌ی «با شرف»‌ها (هدر aside، هدر موبایل، دو footer «© ۱۴۰۵ با شرف»). aside حالا خنثی: h1 «ورود به حساب کاربری» + p «برای ادامه، اطلاعات خود را وارد کنید». importهای بلااستفاده (BrandMark, Link) پاک شد. عملکرد فرم دست‌نخورده (children = login page که خودش heading خنثی «ورود به حساب» دارد). signup/forgot هم چون از همین layout استفاده می‌کنند خنثی شدند.
-**فایل‌ها:** `app/(auth)/layout.tsx`.
 **Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
 **ناتمام:** —
 
