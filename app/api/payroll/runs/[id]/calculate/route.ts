@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, and, isNull, sql } from 'drizzle-orm';
+import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
@@ -61,12 +61,25 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       standardMonthlyHours: Number(p.standardMonthlyHours),
     };
 
-    // پرسنل فعال این شعبه (یا همه اگر شعبه ندارد)
-    const empWhere = run.branchId
-      ? and(eq(schema.employees.isActive, true), eq(schema.employees.branchId, run.branchId))
-      : eq(schema.employees.isActive, true);
-    const emps = await db.select().from(schema.employees).where(empWhere);
-    if (emps.length === 0) throw new ApiError(400, 'هیچ پرسنل فعالی برای این اجرا نیست', 'NO_EMPLOYEES');
+    // اگر این اجرا قبلاً محاسبه شده (payslips دارد)، همان کارمندان را استفاده کن
+    // تا soft-delete بعدی باعث fail شدن محاسبه‌ی مجدد نشود.
+    const prevPayslips = await db
+      .select({ employeeId: schema.payslips.employeeId })
+      .from(schema.payslips)
+      .where(eq(schema.payslips.payrollRunId, params.id));
+
+    let emps: (typeof schema.employees.$inferSelect)[];
+    if (prevPayslips.length > 0) {
+      const empIds = prevPayslips.map((p) => p.employeeId);
+      emps = await db.select().from(schema.employees).where(inArray(schema.employees.id, empIds));
+    } else {
+      // اولین محاسبه: از کارمندان فعال این شعبه استفاده کن
+      const empWhere = run.branchId
+        ? and(eq(schema.employees.isActive, true), eq(schema.employees.branchId, run.branchId))
+        : eq(schema.employees.isActive, true);
+      emps = await db.select().from(schema.employees).where(empWhere);
+      if (emps.length === 0) throw new ApiError(400, 'هیچ پرسنل فعالی برای این اجرا نیست', 'NO_EMPLOYEES');
+    }
 
     // رویدادهای این دوره (مساعده/پاداش/کسری) — غیر void
     const events = await db.select().from(schema.payrollEvents).where(
