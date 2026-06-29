@@ -307,6 +307,67 @@ function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
   );
 }
 
+// ─── CategoryRow (ویرایش inline دسته) ──────────────────────────
+function CategoryRow({ s, onUpdate, onDelete, showToast }: any) {
+  const [editing, setEditing] = useState(false);
+  const [labelFa, setLabelFa] = useState(s.labelFa);
+  const [labelEn, setLabelEn] = useState(s.labelEn);
+  const [sortOrder, setSortOrder] = useState(String(s.sortOrder ?? 0));
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave() {
+    if (!labelFa.trim()) { showToast('نام فارسی الزامی است', 'danger'); return; }
+    setSaving(true);
+    const ok = await onUpdate(s.id, { labelFa: labelFa.trim(), labelEn: labelEn.trim() || labelFa.trim(), sortOrder: parseInt(sortOrder || '0', 10) });
+    setSaving(false);
+    if (ok) { showToast('ذخیره شد', 'success'); setEditing(false); }
+    else showToast('خطا', 'danger');
+  }
+
+  if (editing) {
+    return (
+      <tr className="border-b border-stone-50 last:border-b-0 bg-stone-50/50">
+        <td colSpan={4} className="px-5 py-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <Field label="نام فارسی"><Input value={labelFa} onChange={e => setLabelFa(e.target.value)} /></Field>
+            <Field label="نام انگلیسی"><Input dir="ltr" value={labelEn} onChange={e => setLabelEn(e.target.value)} /></Field>
+            <Field label="ترتیب"><Input type="text" inputMode="numeric" dir="ltr" value={sortOrder} onChange={e => setSortOrder(e.target.value.replace(/\D/g, ''))} /></Field>
+          </div>
+          <div className="flex gap-2 justify-end mt-2">
+            <Button variant="default" size="sm" icon={X} onClick={() => { setEditing(false); setLabelFa(s.labelFa); setLabelEn(s.labelEn); setSortOrder(String(s.sortOrder ?? 0)); }}>لغو</Button>
+            <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleSave}>ذخیره</Button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  return (
+    <tr className="border-b border-stone-50 last:border-b-0">
+      <td className="px-5 py-3">
+        <div className="text-[12.5px] text-stone-800">{s.labelFa}</div>
+        <div className="text-[10.5px] text-muted" dir="ltr">{s.slug}</div>
+      </td>
+      <td className="px-3 py-3 text-center"><span className="text-[12px] text-stone-500 tabular-nums">{s.items.length}</span></td>
+      <td className="px-3 py-3 text-center">
+        <VatRateCell category={s} onUpdate={onUpdate} showToast={showToast} />
+      </td>
+      <td className="px-3 py-3 text-center">
+        <div className="flex items-center justify-center gap-1">
+          <button onClick={() => setEditing(true)}
+            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
+            <Edit3 size={13} strokeWidth={1.5} />
+          </button>
+          <button onClick={async () => { const r = await onDelete(s.id); if (r.ok) showToast('حذف شد', 'success'); else showToast(r.error ?? 'خطا', 'danger'); }}
+            className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
+            <Trash2 size={13} strokeWidth={1.5} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 // ─── Categories Tab ──────────────────────────────────────────────
 function CategoriesTab({ sections, onCreate, onUpdate, onDelete, showToast }: any) {
   const [showForm, setShowForm] = useState(false);
@@ -356,27 +417,12 @@ function CategoriesTab({ sections, onCreate, onUpdate, onDelete, showToast }: an
                 <th className="text-right text-[11px] text-stone-500 font-normal px-5 py-3">نام</th>
                 <th className="text-center text-[11px] text-stone-500 font-normal px-3 py-3">آیتم‌ها</th>
                 <th className="text-center text-[11px] text-stone-500 font-normal px-3 py-3">مالیات ٪</th>
-                <th className="w-12"></th>
+                <th className="w-20"></th>
               </tr>
             </thead>
             <tbody>
               {sections.map((s: any) => (
-                <tr key={s.id} className="border-b border-stone-50 last:border-b-0">
-                  <td className="px-5 py-3">
-                    <div className="text-[12.5px] text-stone-800">{s.labelFa}</div>
-                    <div className="text-[10.5px] text-muted" dir="ltr">{s.slug}</div>
-                  </td>
-                  <td className="px-3 py-3 text-center"><span className="text-[12px] text-stone-500 tabular-nums">{s.items.length}</span></td>
-                  <td className="px-3 py-3 text-center">
-                    <VatRateCell category={s} onUpdate={onUpdate} showToast={showToast} />
-                  </td>
-                  <td className="px-3 py-3 text-center">
-                    <button onClick={async () => { const r = await onDelete(s.id); if (r.ok) showToast('حذف شد', 'success'); else showToast(r.error ?? 'خطا', 'danger'); }}
-                      className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
-                      <Trash2 size={13} strokeWidth={1.5} />
-                    </button>
-                  </td>
-                </tr>
+                <CategoryRow key={s.id} s={s} onUpdate={onUpdate} onDelete={onDelete} showToast={showToast} />
               ))}
             </tbody>
           </table>
