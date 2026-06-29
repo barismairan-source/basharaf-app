@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Calculator, Plus, ShieldX, Check, Calculator as CalcIcon, Send, ChevronDown, Loader2, Wallet, Trash2 } from 'lucide-react';
+import { Calculator, Plus, ShieldX, Check, Calculator as CalcIcon, Send, ChevronDown, Loader2, Wallet, Trash2, RotateCcw } from 'lucide-react';
 import { Button, Card, CardBody, Field, Input, Select, Empty, Chip } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
@@ -39,6 +39,8 @@ export default function PayrollPage() {
   const loadEvents = useAppStore(s => s.loadEvents);
   const createEvent = useAppStore(s => s.createEvent);
   const voidEvent = useAppStore(s => s.voidEvent);
+  const reverseRun = useAppStore(s => s.reverseRun);
+  const deleteRun = useAppStore(s => s.deleteRun);
   const showToast = useAppStore(s => s.showToast);
 
   const [hydrated, setHydrated] = useState(false);
@@ -130,6 +132,22 @@ export default function PayrollPage() {
     showToast(ok ? 'تأیید شد' : 'خطا در تأیید', ok ? 'success' : 'danger');
   }
 
+  async function handleReverse(id: string) {
+    if (!confirm('این عملیات ثبت حقوق را برمی‌گرداند و تراکنش هزینه‌ی مرتبط حذف می‌شود. ادامه می‌دهید؟')) return;
+    setBusy(id);
+    const ok = await reverseRun(id);
+    setBusy(null);
+    showToast(ok ? 'ثبت برگشت داده شد' : 'خطا در برگشت', ok ? 'success' : 'danger');
+  }
+
+  async function handleDeleteRun(id: string) {
+    if (!confirm('این اجرای پیش‌نویس کامل حذف شود؟')) return;
+    setBusy(id);
+    const ok = await deleteRun(id);
+    setBusy(null);
+    if (!ok) showToast('خطا در حذف', 'danger');
+  }
+
   async function handlePost(id: string) {
     const activeAccounts = accounts.filter(a => a.isActive);
     if (activeAccounts.length === 0) { showToast('هیچ صندوقی فعال نیست', 'danger'); return; }
@@ -207,7 +225,13 @@ export default function PayrollPage() {
                     {isBusy && <Loader2 size={15} className="animate-spin text-muted" />}
                     {/* اکشن‌ها بر اساس وضعیت */}
                     {!isBusy && run.status === 'draft' && (
-                      <Button variant="default" size="sm" icon={CalcIcon} onClick={() => handleCalculate(run.id)}>محاسبه</Button>
+                      <>
+                        <Button variant="default" size="sm" icon={CalcIcon} onClick={() => handleCalculate(run.id)}>محاسبه</Button>
+                        <button onClick={() => handleDeleteRun(run.id)} title="حذف اجرای پیش‌نویس"
+                          className="w-9 h-9 flex items-center justify-center text-muted hover:text-rose-600 rounded-lg">
+                          <Trash2 size={14} strokeWidth={1.5} />
+                        </button>
+                      </>
                     )}
                     {!isBusy && run.status === 'calculated' && (
                       <>
@@ -218,6 +242,13 @@ export default function PayrollPage() {
                     )}
                     {!isBusy && run.status === 'approved' && (
                       <Button variant="primary" size="sm" icon={Send} onClick={() => handlePost(run.id)}>ثبت در حسابداری</Button>
+                    )}
+                    {!isBusy && run.status === 'posted' && (
+                      <button onClick={() => handleReverse(run.id)} title="بازگشت به حالت تأییدشده"
+                        className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-stone-200 text-[12px] text-stone-500 hover:text-rose-600 hover:border-rose-200">
+                        <RotateCcw size={13} strokeWidth={1.5} />
+                        <span>برگشت ثبت</span>
+                      </button>
                     )}
                     <button onClick={() => openDetail(run.id)} className="text-muted p-1">
                       <ChevronDown size={16} className={cn('transition-transform', isOpen && 'rotate-180')} />

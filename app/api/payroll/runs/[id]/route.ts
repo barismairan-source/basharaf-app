@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
-import { requireSession } from '@/lib/auth/session';
+import { requireSession, requireRole } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
@@ -53,6 +53,23 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         };
       }),
     });
+  } catch (e) {
+    return await handleErrorLogged(e, undefined, { category: 'payroll' });
+  }
+}
+
+export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+  try {
+    await requireRole('SuperAdmin');
+    const [run] = await db.select().from(schema.payrollRuns)
+      .where(eq(schema.payrollRuns.id, params.id)).limit(1);
+    if (!run) throw new ApiError(404, 'اجرا پیدا نشد', 'NOT_FOUND');
+    if (run.status !== 'draft') throw new ApiError(409, 'فقط اجرای پیش‌نویس قابل حذف است', 'NOT_DRAFT');
+    await db.transaction(async (tx) => {
+      await tx.delete(schema.payslips).where(eq(schema.payslips.payrollRunId, params.id));
+      await tx.delete(schema.payrollRuns).where(eq(schema.payrollRuns.id, params.id));
+    });
+    return NextResponse.json({ ok: true });
   } catch (e) {
     return await handleErrorLogged(e, undefined, { category: 'payroll' });
   }
