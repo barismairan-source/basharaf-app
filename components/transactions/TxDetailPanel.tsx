@@ -96,6 +96,7 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
   // ─── Permission flags ───
   const isPending = tx.status === 'pending';
   const isProforma = tx.status === 'proforma';
+  const isApproved = tx.status === 'approved';
   const isAdmin = user.role === 'SuperAdmin';
   const isOwnPending =
     user.role === 'BranchUser' &&
@@ -229,6 +230,7 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
               categories={
                 tx.type === 'income' ? categories.income : categories.expense
               }
+              isApproved={isApproved}
               onCancel={() => setEditMode(false)}
               onSave={async (patch) => {
                 setActionLoading(true);
@@ -237,6 +239,8 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
                 if (ok) {
                   showToast('تراکنش ویرایش شد', 'success', tx.title);
                   setEditMode(false);
+                } else {
+                  showToast('خطا در ویرایش تراکنش', 'danger');
                 }
               }}
               loading={actionLoading}
@@ -544,12 +548,13 @@ function TimelineRow({ icon: Icon, label, by, at, tone }: TimelineRowProps) {
 interface EditFormProps {
   tx: Transaction;
   categories: ReadonlyArray<{ id: string; name: string }>;
+  isApproved?: boolean;
   onCancel: () => void;
   onSave: (patch: TransactionPatch) => Promise<void>;
   loading: boolean;
 }
 
-function EditForm({ tx, categories, onCancel, onSave, loading }: EditFormProps) {
+function EditForm({ tx, categories, isApproved, onCancel, onSave, loading }: EditFormProps) {
   const [title, setTitle] = useState(tx.title);
   const [category, setCategory] = useState(tx.category);
   const [amount, setAmount] = useState(tx.amount);
@@ -562,18 +567,26 @@ function EditForm({ tx, categories, onCancel, onSave, loading }: EditFormProps) 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const cat = categories.find((c) => c.id === category);
-    onSave({
+    const patch: TransactionPatch = {
       title: title.trim(),
-      category,
-      categoryName: cat?.name ?? tx.categoryName,
-      amount,
       payee: payee.trim(),
       method,
       receipt: receipt.trim() || '—',
-      date,
       note: note.trim(),
-    });
+    };
+    // فیلدهای مالی فقط برای تراکنش‌های غیرتأییدشده patch می‌شوند
+    if (!isApproved) {
+      patch.category = category;
+      patch.categoryName = cat?.name ?? tx.categoryName;
+      patch.amount = amount;
+      patch.date = date;
+    }
+    onSave(patch);
   }
+
+  const lockedHint = isApproved ? (
+    <p className="text-[11px] text-muted mt-1">تراکنش تأییدشده — این فیلد قابل تغییر نیست</p>
+  ) : null;
 
   const methods = ['نقد', 'کارت به کارت', 'دستگاه پوز', 'چک', 'حواله بانکی'];
 
@@ -584,13 +597,18 @@ function EditForm({ tx, categories, onCancel, onSave, loading }: EditFormProps) 
       </Field>
 
       <Field label="دسته">
-        <Select value={category} onChange={(e) => setCategory(e.target.value)}>
+        <Select
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          disabled={isApproved}
+        >
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
         </Select>
+        {lockedHint}
       </Field>
 
       <Field label="مبلغ (تومان)">
@@ -600,7 +618,9 @@ function EditForm({ tx, categories, onCancel, onSave, loading }: EditFormProps) 
           dir="ltr"
           value={amount > 0 ? formatAmountInput(String(amount)) : ''}
           onChange={(e) => setAmount(parseAmount(e.target.value))}
+          disabled={isApproved}
         />
+        {lockedHint}
       </Field>
 
       <Field label="طرف معامله">
@@ -626,7 +646,12 @@ function EditForm({ tx, categories, onCancel, onSave, loading }: EditFormProps) 
       </Field>
 
       <Field label="تاریخ (شمسی)">
-        <Input value={date} onChange={(e) => setDate(e.target.value)} />
+        <Input
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          disabled={isApproved}
+        />
+        {lockedHint}
       </Field>
 
       <Field label="یادداشت">
