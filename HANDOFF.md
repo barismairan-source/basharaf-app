@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.50-ux-wave2-fixes` |
+| **نسخه** | `0.9.51-payroll-contacts-fixes` |
 | **آخرین به‌روزرسانی** | 2026-06-29 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
-| **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | موج ۳: مورد‌های 🟡 از audit + شکاف ۳ variance رسپی. |
-| **بلاک‌شده/منتظر کاربر** | تست موج ۲ (C1/C2/D12/D13/D14/A2) توسط کاربر. |
+| **کار نیمه‌تمام (in-progress)** | منتظر نتیجه‌ی endpoint تشخیصی `/api/admin/diag` از کاربر (مشکل ۲ و ۳). |
+| **کار بعدی پیشنهادی** | (۱) کاربر `/api/admin/diag` را باز کند و نتیجه را بدهد. (۲) بعد: فیکس ۲ (reverse payroll) + فیکس ۳ (contact balance) بسته به داده. |
+| **بلاک‌شده/منتظر کاربر** | نتیجه‌ی `GET /api/admin/diag` (SuperAdmin) — برای تشخیص مشکل ۲ و ۳. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-29 — فیکس ۱ + تفکیک drawer + endpoint تشخیصی — اکانت ۱
+**چه شد:**
+(فیکس ۱) route محاسبه مجدد حقوق: اگر دوره قبلاً payslips داشته باشد، از همان employee IDs (نه re-query کارمندان فعال) محاسبه می‌کند → soft-delete بعدی دیگر NO_EMPLOYEES نمی‌دهد.
+(نیاز جدید) `ContactLedgerDrawer`: دو ردیف «جمع دریافتی» و «جمع پرداختی» (approved) در بالای drawer اضافه شد — کاملاً client-side از entries موجود.
+(تشخیص) `GET /api/admin/diag` (موقت، SuperAdmin) ساخته شد: isCredit distribution روی تراکنش‌های با contactId + audit دوره‌های posted بدون journal_voucher. **بعد از دریافت نتیجه از کاربر → فایل حذف شود.**
+**فایل‌ها:** `app/api/payroll/runs/[id]/calculate/route.ts`, `components/contacts/ContactLedgerDrawer.tsx`, `app/api/admin/diag/route.ts` (موقت)
+**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32. Commits: 97ffe5f, 7aa00d6, bf0721a
+**ناتمام:** منتظر نتیجه‌ی `/api/admin/diag` برای تشخیص مشکل ۲ (reverse posted) و مشکل ۳ (contact balance).
+**برای جلسه‌ی بعد:** کاربر `/api/admin/diag` را باز می‌کند → نتیجه → فیکس ۲ و ۳ طراحی می‌شوند.
 
 ## 📓 2026-06-29 — موج ۲ فیکس‌های UX (شش مورد آماده) — اکانت ۱
 **چه شد:** شش مورد 🟠 از audit که API آماده داشتند پیاده شدند:
@@ -108,14 +118,5 @@
 **فایل‌ها:** `next.config.mjs`، `.github/workflows/liara.yml`.
 **Build:** محلی ✅ سبز (Skipping validation/linting) · tsc ✅ ۰ خطا · tests ✅ 32/32
 **ناتمام:** — (دیپلوی بعدی باید سبز شود؛ بعد از push نتیجه‌ی Actions را چک کن.)
-
-## 📓 2026-06-28 — فیکس باگ لینک «ورود کارکنان» + ساده‌سازی روت — اکانت ۱
-**چه شد:**
-(۱) **علت باگ لینک:** دیشب فقط allowlist bootstrap در `store/index.ts` با `'/'` به‌روز شد، اما allowlist **دومِ مستقل** در `lib/auth/sessionExpiry.ts` (interceptor سراسری `window.fetch`) از قلم افتاد. روی روت، `bootstrap()` یک `GET /api/auth/me` می‌زند که برای ناشناس ۴۰۱ می‌دهد؛ interceptor چون `/` در `PUBLIC_PATH_PREFIXES` نبود، `handleSessionExpired()` → `window.location.replace('/login')` را اجرا می‌کرد و روت/لینک را خراب می‌کرد. فیکس: `'/'` به `PUBLIC_PATH_PREFIXES` اضافه شد (فقط مسیر دقیق روت match می‌شود؛ همگام با store).
-رفتار هوشمند لینک رایگان حاصل شد: `href="/login"` → ناشناس به login، لاگین‌شده با middleware (`isAuthRoute && isAuthed`) به /dashboard.
-(۲) **ساده‌سازی روت:** عنوان «با شرف» و زیرنویس «به تیم ما بپیوند» از مرکز حذف شد؛ فقط دکمه‌ی «درخواست همکاری» ماند. footer و لینک «ورود کارکنان» سر جایشان.
-**فایل‌ها:** `app/page.tsx`، `lib/auth/sessionExpiry.ts`.
-**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
-**ناتمام:** —
 
 
