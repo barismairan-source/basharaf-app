@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { CalendarClock, Plus, Trash2, Table2, X } from 'lucide-react';
+import { CalendarClock, Plus, Trash2, Table2, X, Pencil, Check } from 'lucide-react';
 import {
   Button,
   Card,
@@ -63,6 +63,7 @@ export default function ReservationsPage() {
   const loadTables = useAppStore((s) => s.loadTables);
   const loadCustomers = useAppStore((s) => s.loadCustomers);
   const createReservation = useAppStore((s) => s.createReservation);
+  const updateReservation = useAppStore((s) => s.updateReservation);
   const setReservationStatus = useAppStore((s) => s.setReservationStatus);
   const deleteReservation = useAppStore((s) => s.deleteReservation);
   const createTable = useAppStore((s) => s.createTable);
@@ -72,6 +73,9 @@ export default function ReservationsPage() {
   const [hydrated, setHydrated] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [showTables, setShowTables] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editFields, setEditFields] = useState({ tableId: '', date: '', time: '', partySize: '', note: '' });
+  const [editSaving, setEditSaving] = useState(false);
 
   // filters
   const [dateFilter, setDateFilter] = useState('');
@@ -151,6 +155,31 @@ export default function ReservationsPage() {
     } else {
       showToast('خطا در ثبت رزرو', 'danger');
     }
+  }
+
+  function startEdit(r: typeof filtered[number]) {
+    setEditFields({
+      tableId: r.tableId ?? '',
+      date: r.date,
+      time: r.time,
+      partySize: String(r.partySize),
+      note: r.note ?? '',
+    });
+    setEditingId(r.id);
+  }
+
+  async function handleEditSave(id: string) {
+    setEditSaving(true);
+    const ok = await updateReservation(id, {
+      tableId: editFields.tableId || null,
+      date: editFields.date,
+      time: editFields.time.trim(),
+      partySize: editFields.partySize ? num(editFields.partySize) : 1,
+      note: editFields.note.trim() || null,
+    });
+    setEditSaving(false);
+    if (ok) { showToast('رزرو ویرایش شد', 'success'); setEditingId(null); }
+    else showToast('خطا در ویرایش', 'danger');
   }
 
   async function changeStatus(id: string, status: ReservationStatus) {
@@ -404,38 +433,74 @@ export default function ReservationsPage() {
           <div className="space-y-2">
             {filtered.map((r) => (
               <Card key={r.id}>
-                <CardBody className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] text-stone-800">{customerName(r.customerId)}</span>
-                      <Chip tone={STATUS_TONE[r.status] ?? 'neutral'}>
-                        {STATUS_LABELS[r.status] ?? r.status}
-                      </Chip>
+                <CardBody className="flex flex-col gap-3">
+                  {editingId === r.id ? (
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <Field label="تاریخ">
+                          <JalaliDatePicker value={editFields.date} onChange={v => setEditFields(f => ({ ...f, date: v }))} />
+                        </Field>
+                        <Field label="ساعت">
+                          <Input dir="ltr" placeholder="۱۹:۳۰" value={editFields.time} onChange={e => setEditFields(f => ({ ...f, time: e.target.value }))} />
+                        </Field>
+                        <Field label="تعداد نفرات">
+                          <Input dir="ltr" inputMode="numeric" value={editFields.partySize} onChange={e => setEditFields(f => ({ ...f, partySize: e.target.value }))} />
+                        </Field>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Field label="میز">
+                          <Select value={editFields.tableId} onChange={e => setEditFields(f => ({ ...f, tableId: e.target.value }))}>
+                            <option value="">بدون میز</option>
+                            {tables.filter(t => !r.branchId || t.branchId === r.branchId).map(t => (
+                              <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                          </Select>
+                        </Field>
+                        <Field label="یادداشت">
+                          <Input value={editFields.note} onChange={e => setEditFields(f => ({ ...f, note: e.target.value }))} />
+                        </Field>
+                      </div>
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="default" size="sm" icon={X} onClick={() => setEditingId(null)}>لغو</Button>
+                        <Button variant="primary" size="sm" icon={Check} loading={editSaving} onClick={() => handleEditSave(r.id)}>ذخیره</Button>
+                      </div>
                     </div>
-                    <div className="text-[11px] text-stone-500 mt-1">
-                      {r.date} — <span dir="ltr">{r.time}</span> · {fmt(r.partySize)} نفر
-                      {r.tableId ? ` · میز ${tableName(r.tableId)}` : ''}
-                      {isAdmin ? ` · ${branchName(r.branchId)}` : ''}
+                  ) : (
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[13px] text-stone-800">{customerName(r.customerId)}</span>
+                          <Chip tone={STATUS_TONE[r.status] ?? 'neutral'}>
+                            {STATUS_LABELS[r.status] ?? r.status}
+                          </Chip>
+                        </div>
+                        <div className="text-[11px] text-stone-500 mt-1">
+                          {r.date} — <span dir="ltr">{r.time}</span> · {fmt(r.partySize)} نفر
+                          {r.tableId ? ` · میز ${tableName(r.tableId)}` : ''}
+                          {isAdmin ? ` · ${branchName(r.branchId)}` : ''}
+                        </div>
+                        {r.note && <div className="text-[11px] text-muted mt-1">{r.note}</div>}
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {(NEXT_STATES[r.status] ?? []).map((ns) => (
+                          <button key={ns} onClick={() => changeStatus(r.id, ns)}
+                            className="px-2.5 py-1 rounded-md text-[11px] bg-stone-50 text-stone-600 hover:bg-stone-100">
+                            {STATUS_LABELS[ns]}
+                          </button>
+                        ))}
+                        {(r.status === 'pending' || r.status === 'confirmed') && (
+                          <button onClick={() => startEdit(r)}
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
+                            <Pencil size={13} strokeWidth={1.5} />
+                          </button>
+                        )}
+                        <button onClick={() => deleteReservation(r.id)}
+                          className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
+                          <Trash2 size={13} strokeWidth={1.5} />
+                        </button>
+                      </div>
                     </div>
-                    {r.note && <div className="text-[11px] text-muted mt-1">{r.note}</div>}
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    {(NEXT_STATES[r.status] ?? []).map((ns) => (
-                      <button
-                        key={ns}
-                        onClick={() => changeStatus(r.id, ns)}
-                        className="px-2.5 py-1 rounded-md text-[11px] bg-stone-50 text-stone-600 hover:bg-stone-100"
-                      >
-                        {STATUS_LABELS[ns]}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => deleteReservation(r.id)}
-                      className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
-                    >
-                      <Trash2 size={13} strokeWidth={1.5} />
-                    </button>
-                  </div>
+                  )}
                 </CardBody>
               </Card>
             ))}

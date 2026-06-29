@@ -21,6 +21,13 @@ export interface ReservationsSlice {
     partySize?: number;
     note?: string | null;
   }) => Promise<Reservation | null>;
+  updateReservation: (id: string, patch: {
+    tableId?: string | null;
+    date?: string;
+    time?: string;
+    partySize?: number;
+    note?: string | null;
+  }) => Promise<boolean>;
   setReservationStatus: (id: string, status: ReservationStatus) => Promise<boolean>;
   deleteReservation: (id: string) => Promise<boolean>;
 
@@ -87,6 +94,31 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
         reservationsError: e instanceof Error ? e.message : 'خطا',
       }));
       return null;
+    }
+  },
+
+  async updateReservation(id, patch) {
+    const snapshot = get().reservations.find((r) => r.id === id);
+    if (!snapshot) return false;
+    set((s) => ({
+      reservations: s.reservations.map((r) => r.id === id ? { ...r, ...patch } : r),
+    }));
+    try {
+      const res = await fetch(`/api/reservations/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(patch),
+      });
+      if (!res.ok) throw new Error('خطا');
+      const data = (await res.json()) as { reservation?: Reservation };
+      if (data.reservation) {
+        set((s) => ({ reservations: s.reservations.map((r) => r.id === id ? data.reservation! : r) }));
+      }
+      return true;
+    } catch {
+      set((s) => ({ reservations: s.reservations.map((r) => r.id === id ? snapshot : r) }));
+      return false;
     }
   },
 
