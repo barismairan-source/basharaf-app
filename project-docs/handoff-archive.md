@@ -1,5 +1,9 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-28 — بخش ۴: بررسی صفحه‌ی روت عمومی (flag شد، بعداً اجرا شد) — اکانت ۱
+**چه شد:** بررسی امکان عمومی کردن روت (`/`). یافته: `SessionSync` ناشناس را به /login می‌برد مگر مسیر در allowlist. راه‌حل مستند شد؛ اجرا در جلسه‌ی بعد انجام شد.
+**Build:** بدون تغییر کد ✅.
+
 ## 📓 2026-06-27 — حذف نشانه‌های سیستم از صفحات عمومی (بخش ۳) — اکانت ۱
 **چه شد:** نشت ماهیت «سامانه حسابداری/پنل» در سطوح عمومی پاک شد: (۱) `app/layout.tsx`: title.default → «با شرف». (۲) `public/manifest.json`: name/description → «با شرف». (۳) عناوین عمومی: `/apply` → «فرم همکاری»، `/m` → «منو». (۴) متن بازاریابی login به متن خنثی تغییر کرد. بدنه‌ی apply/m/order نشتی نداشت.
 **فایل‌ها:** `app/layout.tsx`، `public/manifest.json`، `app/apply/layout.tsx`، `app/m/layout.tsx`، `app/(auth)/layout.tsx`، `project-docs/INVESTIGATION-public-system-traces.md`.
