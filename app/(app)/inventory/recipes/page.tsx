@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import {
   Loader2, Plus, Trash2, Calculator, Printer, AlertTriangle, X, Check, Search,
-  ArrowLeft, ArrowRight, ChefHat, Upload, Download, FileSpreadsheet,
+  ArrowLeft, ArrowRight, ChefHat, Upload, Download, FileSpreadsheet, Pencil,
 } from 'lucide-react';
 import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
@@ -35,6 +35,7 @@ export default function RecipesPage() {
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [editingRecipe, setEditingRecipe] = useState<InventoryRecipe | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -114,6 +115,7 @@ export default function RecipesPage() {
               recipe={r}
               items={items}
               onDelete={() => deleteRecipe(r)}
+              onEdit={() => setEditingRecipe(r)}
               canSeePrices={canSeePrices}
             />
           ))}
@@ -127,6 +129,18 @@ export default function RecipesPage() {
           canSeePrices={canSeePrices}
           onClose={() => setShowAdd(false)}
           onDone={async () => { setShowAdd(false); await load(); }}
+          showToast={showToast}
+        />
+      )}
+
+      {editingRecipe && (
+        <AddRecipeWizard
+          items={items}
+          branches={branches}
+          canSeePrices={canSeePrices}
+          editRecipe={editingRecipe}
+          onClose={() => setEditingRecipe(null)}
+          onDone={async () => { setEditingRecipe(null); await load(); }}
           showToast={showToast}
         />
       )}
@@ -145,11 +159,12 @@ export default function RecipesPage() {
 // ─── RecipeCard ──────────────────────────────────────────────────
 
 function RecipeCard({
-  recipe, items, onDelete, canSeePrices,
+  recipe, items, onDelete, onEdit, canSeePrices,
 }: {
   recipe: InventoryRecipe;
   items: InventoryItem[];
   onDelete: () => void;
+  onEdit: () => void;
   canSeePrices: boolean;
 }) {
   const [costing, setCosting] = useState<RecipeCosting | null>(null);
@@ -251,6 +266,13 @@ function RecipeCard({
               {portionCalc.portions} پرس
             </span>
           )}
+          <button
+            onClick={onEdit}
+            className="w-11 h-11 flex items-center justify-center text-muted hover:text-text rounded-lg"
+            title="ویرایش رسپی"
+          >
+            <Pencil size={14} strokeWidth={1.5} />
+          </button>
           <button
             onClick={handlePrint}
             className="w-11 h-11 flex items-center justify-center text-muted hover:text-text rounded-lg"
@@ -600,30 +622,38 @@ interface WizardLine { itemId: string; qty: string; }
 interface FlatMenuItem { id: string; titleFa: string; price: number | null; }
 
 function AddRecipeWizard({
-  items, branches, canSeePrices, onClose, onDone, showToast,
+  items, branches, canSeePrices, editRecipe, onClose, onDone, showToast,
 }: {
   items: InventoryItem[];
   branches: { id: string; name: string }[];
   canSeePrices: boolean;
+  editRecipe?: InventoryRecipe;
   onClose: () => void;
   onDone: () => void;
   showToast: (m: string, t?: ToastTone) => void;
 }) {
+  const isEdit = !!editRecipe;
   const [step, setStep] = useState<WizardStep>(1);
 
   // Step 1
-  const [name, setName] = useState('');
-  const [cookMode, setCookMode] = useState<'daily' | 'batch'>('daily');
-  const [portions, setPortions] = useState('1');
-  const [branchId, setBranchId] = useState('');
+  const [name, setName] = useState(editRecipe?.name ?? '');
+  const [cookMode, setCookMode] = useState<'daily' | 'batch'>(editRecipe?.cookMode ?? 'daily');
+  const [portions, setPortions] = useState(String(editRecipe?.portions ?? 1));
+  const [branchId, setBranchId] = useState(editRecipe?.branchId ?? '');
 
   // Step 2
-  const [lines, setLines] = useState<WizardLine[]>([]);
+  const [lines, setLines] = useState<WizardLine[]>(
+    editRecipe?.lines.map((l) => ({ itemId: l.itemId, qty: String(l.qtyBase) })) ?? []
+  );
   const [search, setSearch] = useState('');
 
   // Step 3
-  const [price, setPrice] = useState('');
-  const [menuItemId, setMenuItemId] = useState('');
+  const [price, setPrice] = useState(
+    editRecipe?.price && editRecipe.price > 0
+      ? editRecipe.price.toLocaleString('en-US')
+      : ''
+  );
+  const [menuItemId, setMenuItemId] = useState(editRecipe?.menuItemId ?? '');
   const [menuItemsList, setMenuItemsList] = useState<FlatMenuItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -719,21 +749,21 @@ function AddRecipeWizard({
     setSaving(true);
     try {
       await repos.inventory.saveRecipe({
-        id: null,
+        id: editRecipe?.id ?? null,
         name: name.trim(),
         branchId: branchId || null,
         portions: portionsNum,
-        targetFcPct: 30,
+        targetFcPct: editRecipe?.targetFcPct ?? 30,
         price: priceNum,
         cookMode,
-        shelfLifeDays: 1,
+        shelfLifeDays: editRecipe?.shelfLifeDays ?? 1,
         menuItemId: menuItemId || null,
         lines: validLines.map((l) => ({
           itemId: l.itemId,
           qtyBase: parseInt(l.qty, 10),
         })),
       } as InventoryRecipe);
-      showToast('رسپی ذخیره شد', 'success');
+      showToast(isEdit ? 'رسپی به‌روز شد' : 'رسپی ذخیره شد', 'success');
       onDone();
     } catch {
       showToast('خطا در ذخیره', 'danger');
@@ -756,7 +786,7 @@ function AddRecipeWizard({
         {/* Header + Step progress */}
         <div className="px-5 pt-5 pb-3 border-b border-border shrink-0">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[15px] font-semibold text-text">رسپی جدید</h2>
+            <h2 className="text-[15px] font-semibold text-text">{isEdit ? 'ویرایش رسپی' : 'رسپی جدید'}</h2>
             <button onClick={onClose} className="w-11 h-11 flex items-center justify-center text-muted hover:text-text">
               <X size={18} />
             </button>
@@ -1083,7 +1113,7 @@ function AddRecipeWizard({
               className="flex-1 bg-text text-surface rounded-lg text-[13px] min-h-[44px] flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
               {saving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              ذخیره رسپی
+              {isEdit ? 'به‌روزرسانی رسپی' : 'ذخیره رسپی'}
             </button>
           )}
         </div>
