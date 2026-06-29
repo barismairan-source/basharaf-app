@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Check, X, Loader2, Trash2, ChevronDown, ChevronLeft, RotateCcw, ClipboardList } from 'lucide-react';
+import { Check, X, Loader2, Trash2, ChevronDown, ChevronLeft, RotateCcw, ClipboardList, Pencil } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
@@ -41,6 +41,10 @@ export default function CartablePage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [pendingApprove, setPendingApprove] = useState<InventoryVoucher | null>(null);
   const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [editingVoucher, setEditingVoucher] = useState<InventoryVoucher | null>(null);
+  const [editLines, setEditLines] = useState<Array<{ itemId: string; qtyBase: string; estUnitCost: string }>>([]);
+  const [editNote, setEditNote] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const canSeePrices = canDo(user, 'inventory.viewCosts');
   const canApprove = canDo(user, 'inventory.approve');
@@ -122,6 +126,43 @@ export default function CartablePage() {
     finally { setBusy(null); }
   }
 
+  function startEditVoucher(v: InventoryVoucher) {
+    setEditLines(v.lines.map(l => ({
+      itemId: l.itemId,
+      qtyBase: String(l.qtyBase),
+      estUnitCost: String(l.estUnitCost ?? 0),
+    })));
+    setEditNote(v.note ?? '');
+    setEditingVoucher(v);
+  }
+
+  async function handleEditSave() {
+    if (!editingVoucher) return;
+    const lines = editLines.map(l => ({
+      itemId: l.itemId,
+      qtyBase: parseFloat(l.qtyBase) || 0,
+      estUnitCost: parseFloat(l.estUnitCost.replace(/,/g, '')) || 0,
+    }));
+    if (lines.some(l => l.qtyBase <= 0)) { showToast('مقدار باید بزرگ‌تر از صفر باشد', 'danger'); return; }
+    setEditSaving(true);
+    try {
+      const res = await fetch(`/api/inventory/vouchers/${editingVoucher.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ note: editNote, lines }),
+      });
+      if (!res.ok) throw new Error('خطا');
+      showToast('برگه ویرایش شد', 'success');
+      setEditingVoucher(null);
+      await load();
+    } catch (e) {
+      showToast(errMsg(e, 'خطا در ویرایش'), 'danger');
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
   async function handleReversal(id: string) {
     if (!confirm('یک برگه‌ی معکوس pending در کارتابل ساخته می‌شود. ادامه می‌دهید؟')) return;
     setReversalLoading(id);
@@ -184,6 +225,13 @@ export default function CartablePage() {
                         <Loader2 size={16} className="animate-spin text-muted" />
                       ) : canApprove ? (
                         <>
+                          <button
+                            onClick={() => startEditVoucher(v)}
+                            className="w-11 h-11 flex items-center justify-center text-muted hover:text-text rounded-lg"
+                            title="ویرایش برگه"
+                          >
+                            <Pencil size={14} strokeWidth={1.5} />
+                          </button>
                           <button
                             onClick={() => approve(v)}
                             className="flex items-center gap-1 bg-ok text-white px-3 py-2 rounded-lg text-[12px] min-h-[44px]"
@@ -287,6 +335,62 @@ export default function CartablePage() {
             </div>
           )}
         </>
+      )}
+
+      {/* ─── Modal ویرایش برگه‌ی pending ─── */}
+      {editingVoucher && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setEditingVoucher(null)}>
+          <div className="bg-surface rounded-xl shadow-modal p-5 w-full max-w-lg max-h-[90vh] overflow-y-auto text-right"
+            onClick={e => e.stopPropagation()}>
+            <h3 className="text-[14px] font-medium text-text mb-1">ویرایش برگه‌ی pending</h3>
+            <p className="text-[11.5px] text-muted mb-4">{VOUCHER_KIND_LABELS[editingVoucher.kind] ?? editingVoucher.kind} · {editingVoucher.no}</p>
+            <div className="space-y-2 mb-4">
+              {editLines.map((l, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="flex-1 text-[12px] text-text truncate">{itemName(l.itemId)}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <input
+                      type="text" inputMode="numeric" dir="ltr"
+                      value={l.qtyBase}
+                      onChange={e => setEditLines(ls => ls.map((x, j) => j === i ? { ...x, qtyBase: e.target.value } : x))}
+                      className="w-20 h-8 px-2 rounded border border-border text-[12px] text-left focus:outline-none focus:ring-1 focus:ring-accent bg-surface"
+                      placeholder="مقدار"
+                    />
+                    <span className="text-[11px] text-muted">{itemUnit(l.itemId)}</span>
+                    {editingVoucher.kind === 'in' && canSeePrices && (
+                      <input
+                        type="text" inputMode="numeric" dir="ltr"
+                        value={l.estUnitCost}
+                        onChange={e => setEditLines(ls => ls.map((x, j) => j === i ? { ...x, estUnitCost: e.target.value } : x))}
+                        className="w-28 h-8 px-2 rounded border border-border text-[12px] text-left focus:outline-none focus:ring-1 focus:ring-accent bg-surface"
+                        placeholder="قیمت واحد"
+                      />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mb-4">
+              <label className="text-[12px] text-muted block mb-1">یادداشت</label>
+              <input
+                type="text" value={editNote} onChange={e => setEditNote(e.target.value)}
+                className="w-full h-9 px-3 rounded border border-border text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setEditingVoucher(null)}
+                className="px-3 py-2 text-[12px] text-muted border border-border rounded-lg hover:bg-bg">
+                لغو
+              </button>
+              <button onClick={handleEditSave} disabled={editSaving}
+                className="flex items-center gap-1.5 px-4 py-2 text-[12px] bg-ok text-white rounded-lg disabled:opacity-40">
+                {editSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+                ذخیره
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ─── Modal انتخاب صندوق ─── */}
