@@ -263,8 +263,14 @@ export default function CartablePage() {
                   </div>
                   <button
                     onClick={() => handleReversal(v.id)}
-                    disabled={reversalLoading === v.id || !!v.parentVoucherId}
-                    title={v.parentVoucherId ? 'این برگه خودش اصلاحی است' : 'ایجاد برگه اصلاحی'}
+                    disabled={reversalLoading === v.id || !!v.parentVoucherId || v.kind === 'stocktake'}
+                    title={
+                      v.parentVoucherId
+                        ? 'این برگه خودش اصلاحی است'
+                        : v.kind === 'stocktake'
+                        ? 'برگه‌ی انبارگردانی قابل اصلاح نیست'
+                        : 'ایجاد برگه اصلاحی'
+                    }
                     className="w-11 h-11 flex items-center justify-center text-muted hover:text-warn disabled:opacity-40 disabled:cursor-not-allowed rounded-lg"
                   >
                     {reversalLoading === v.id
