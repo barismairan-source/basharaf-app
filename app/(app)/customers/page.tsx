@@ -207,10 +207,10 @@ export default function CustomersPage() {
                       key={c.id}
                       className="border-b border-stone-50 last:border-b-0 hover:bg-stone-50/50"
                     >
-                      <td className="px-5 py-3">
+                      <td className="px-5 py-3 max-w-[200px]">
                         <Link href={`/customers/${c.id}`} className="block">
-                          <div className="text-[12.5px] text-stone-800">{c.name}</div>
-                          <div className="text-[10.5px] text-muted" dir="ltr">
+                          <div className="text-[12.5px] text-stone-800 truncate">{c.name}</div>
+                          <div className="text-[10.5px] text-muted truncate" dir="ltr">
                             {c.phone}
                           </div>
                         </Link>

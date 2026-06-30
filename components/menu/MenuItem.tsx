@@ -21,7 +21,7 @@ export function MenuItem({ item }: { item: MenuItemType }) {
         {item.price !== null && (
           <>
             <span aria-hidden className="hidden flex-1 translate-y-[-3px] border-b border-dotted border-border sm:block" />
-            <span className={['tabular-nums text-lg text-foreground', sold ? 'line-through decoration-1' : undefined].filter(Boolean).join(' ')}>
+            <span className={['tabular-nums text-lg text-foreground flex-shrink-0', sold ? 'line-through decoration-1' : undefined].filter(Boolean).join(' ')}>
               {formatPrice(item.price)}
             </span>
           </>

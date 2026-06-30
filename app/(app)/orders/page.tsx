@@ -208,8 +208,8 @@ function OrderCard({
 
       {showBranchName && (
         <div className="flex items-center gap-1 text-stone-500 text-[11.5px]">
-          <Store size={11} strokeWidth={1.5} />
-          {order.branchName}
+          <Store size={11} strokeWidth={1.5} className="flex-shrink-0" />
+          <span className="truncate">{order.branchName}</span>
         </div>
       )}
 
