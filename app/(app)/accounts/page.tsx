@@ -84,7 +84,8 @@ export default function AccountsPage() {
     else showToast('خطا', 'danger');
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`حساب «${name}» غیرفعال شود؟`)) return;
     const ok = await deleteAccount(id);
     if (ok) showToast('حساب غیرفعال شد', 'success');
     else showToast('خطا', 'danger');
@@ -168,7 +169,7 @@ export default function AccountsPage() {
               <Edit3 size={13} strokeWidth={1.5} />
             </button>
             <button
-              onClick={e => { e.stopPropagation(); handleDelete(account.id); }}
+              onClick={e => { e.stopPropagation(); handleDelete(account.id, account.name); }}
               className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
             >
               <Trash2 size={13} strokeWidth={1.5} />
