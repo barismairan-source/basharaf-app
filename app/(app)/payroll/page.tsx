@@ -230,7 +230,7 @@ export default function PayrollPage() {
               const isBusy = busy === run.id;
               return (
                 <div key={run.id} className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-                  <div className="p-3 flex items-center gap-3">
+                  <div className="p-3 flex items-center gap-3 flex-wrap">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[13.5px] font-medium text-stone-900">دوره {periodLabel(run.periodYearMonth)}</span>
@@ -284,9 +284,9 @@ export default function PayrollPage() {
                             <div key={s.id} className="bg-white rounded border border-stone-100">
                               <div className="grid grid-cols-4 gap-2 text-[12px] p-2">
                                 <span className="text-stone-800 truncate">{s.employeeName}</span>
-                                <span className="text-left tabular-nums text-stone-600">{fmt(s.grossEarnings)}</span>
-                                <span className="text-left tabular-nums text-rose-600">{fmt(s.totalDeductions)}</span>
-                                <span className="text-left tabular-nums font-medium text-stone-900">{fmt(s.netPay)}</span>
+                                <span className="text-left tabular-nums text-stone-600 whitespace-nowrap">{fmt(s.grossEarnings)}</span>
+                                <span className="text-left tabular-nums text-rose-600 whitespace-nowrap">{fmt(s.totalDeductions)}</span>
+                                <span className="text-left tabular-nums font-medium text-stone-900 whitespace-nowrap">{fmt(s.netPay)}</span>
                               </div>
                               {s.deductionLines && s.deductionLines.length > 0 && (
                                 <div className="border-t border-stone-50 px-2 py-1.5 space-y-1">
@@ -471,7 +471,7 @@ export default function PayrollPage() {
                     <div key={ev.id} className="flex items-center gap-2 text-[11.5px] bg-stone-50 rounded p-2">
                       <span className="flex-1 text-stone-700">{ev.employeeName} · {ev.typeLabel}</span>
                       <span className="text-stone-500">{ev.periodYearMonth}</span>
-                      <span className="tabular-nums text-stone-800">{fmt(ev.amount)}</span>
+                      <span className="tabular-nums text-stone-800 whitespace-nowrap flex-shrink-0">{fmt(ev.amount)}</span>
                       <button onClick={() => handleVoidEvent(ev.id)} className="text-muted hover:text-rose-600">
                         <Trash2 size={13} strokeWidth={1.5} />
                       </button>
