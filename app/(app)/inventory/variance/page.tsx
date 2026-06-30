@@ -19,6 +19,8 @@ type VarianceRow = {
   avgCost: number;
 };
 
+type Source = 'voucher' | 'daily';
+
 export default function VariancePage() {
   const branches = useAppStore((s) => s.branches);
   const user = useAppStore((s) => s.user);
@@ -33,18 +35,25 @@ export default function VariancePage() {
   const [branchId, setBranchId] = useState(defaultBranch);
   const [dateFrom, setDateFrom] = useState(getTodayJalali());
   const [dateTo, setDateTo] = useState(getTodayJalali());
+  const [source, setSource] = useState<Source>('voucher');
   const [rows, setRows] = useState<VarianceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [queried, setQueried] = useState(false);
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
+  function handleSourceChange(s: Source) {
+    setSource(s);
+    setRows([]);
+    setQueried(false);
+  }
+
   async function runReport() {
     if (!branchId) { showToast('شعبه را انتخاب کنید', 'danger'); return; }
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/inventory/reports/variance?branchId=${branchId}&dateFrom=${dateFrom}&dateTo=${dateTo}`,
+        `/api/inventory/reports/variance?branchId=${branchId}&dateFrom=${dateFrom}&dateTo=${dateTo}&source=${source}`,
         { credentials: 'include' }
       );
       if (!res.ok) { showToast('خطا در دریافت گزارش', 'danger'); return; }
@@ -59,6 +68,7 @@ export default function VariancePage() {
   }
 
   function exportExcel() {
+    const sourceLabel = source === 'daily' ? 'فروش-واقعی' : 'حواله';
     const ws = XLSX.utils.aoa_to_sheet([
       ['قلم', 'واحد', 'مصرف تئوریک', 'مصرف واقعی', 'واریانس (مقدار)', 'واریانس (ریال)'],
       ...rows.map((r) => [r.itemName, r.unit, r.theoreticalQty, r.actualQty, r.varianceQty, r.varianceCost]),
@@ -66,7 +76,7 @@ export default function VariancePage() {
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'واریانس');
-    XLSX.writeFile(wb, `variance-${dateFrom}-${dateTo}.xlsx`);
+    XLSX.writeFile(wb, `variance-${sourceLabel}-${dateFrom}-${dateTo}.xlsx`);
   }
 
   const totalVarianceCost = rows.reduce((s, r) => s + r.varianceCost, 0);
@@ -74,6 +84,33 @@ export default function VariancePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-4">
       <PageHeader title="گزارش واریانس" backHref="/inventory" />
+
+      {/* toggle نمای گزارش */}
+      <div className="flex flex-col gap-1">
+        <div className="inline-flex gap-1 p-1 bg-bg border border-border rounded-lg self-start">
+          <button
+            onClick={() => handleSourceChange('voucher')}
+            className={`px-3 py-1.5 rounded text-[12px] transition-colors ${
+              source === 'voucher' ? 'bg-surface shadow-sm text-text font-medium' : 'text-muted hover:text-text'
+            }`}
+          >
+            نمای حواله
+          </button>
+          <button
+            onClick={() => handleSourceChange('daily')}
+            className={`px-3 py-1.5 rounded text-[12px] transition-colors ${
+              source === 'daily' ? 'bg-surface shadow-sm text-text font-medium' : 'text-muted hover:text-text'
+            }`}
+          >
+            نمای فروش واقعی
+          </button>
+        </div>
+        {source === 'daily' && (
+          <p className="text-[11px] text-muted">
+            بر اساس inv_daily_sales — رسپی <em>فعلی</em> مبنای محاسبه‌ی تئوریک است (نه رسپی وقت فروش)
+          </p>
+        )}
+      </div>
 
       <div className="bg-surface border border-border rounded-lg p-4">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
