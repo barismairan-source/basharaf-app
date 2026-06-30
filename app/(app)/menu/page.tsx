@@ -275,9 +275,9 @@ function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
 
   return (
     <tr className={cn('border-b border-stone-50 last:border-b-0', !item.isAvailable && 'opacity-50')}>
-      <td className="px-5 py-3">
-        <div className="text-[12.5px] text-stone-800">{item.titleFa}</div>
-        <div className="text-[10.5px] text-muted" dir="ltr">{item.titleEn}</div>
+      <td className="px-5 py-3 max-w-[200px]">
+        <div className="text-[12.5px] text-stone-800 truncate">{item.titleFa}</div>
+        <div className="text-[10.5px] text-muted truncate" dir="ltr">{item.titleEn}</div>
         <div className="flex gap-1 mt-1">
           <Chip tone={item.inHall ? 'green' : 'neutral'}>سالن</Chip>
           <Chip tone={item.inTakeaway ? 'green' : 'neutral'}>بیرون</Chip>
@@ -347,9 +347,9 @@ function CategoryRow({ s, onUpdate, onDelete, showToast }: any) {
 
   return (
     <tr className="border-b border-stone-50 last:border-b-0">
-      <td className="px-5 py-3">
-        <div className="text-[12.5px] text-stone-800">{s.labelFa}</div>
-        <div className="text-[10.5px] text-muted" dir="ltr">{s.slug}</div>
+      <td className="px-5 py-3 max-w-[200px]">
+        <div className="text-[12.5px] text-stone-800 truncate">{s.labelFa}</div>
+        <div className="text-[10.5px] text-muted truncate" dir="ltr">{s.slug}</div>
       </td>
       <td className="px-3 py-3 text-center"><span className="text-[12px] text-stone-500 tabular-nums">{s.items.length}</span></td>
       <td className="px-3 py-3 text-center">
