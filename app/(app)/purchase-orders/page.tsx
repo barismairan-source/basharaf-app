@@ -448,7 +448,7 @@ export default function PurchaseOrdersPage() {
                         <span className="text-[12.5px] text-stone-800" dir="ltr">{po.no}</span>
                       </td>
                       <td className="px-3 py-3">
-                        <span className="text-[12px] text-stone-600">{supplierName(po.supplierId)}</span>
+                        <span className="text-[12px] text-stone-600 truncate block max-w-[160px]">{supplierName(po.supplierId)}</span>
                       </td>
                       {isAdmin && (
                         <td className="px-3 py-3 text-center">
