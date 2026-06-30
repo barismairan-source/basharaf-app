@@ -22,7 +22,6 @@ export async function calculateContactBalance(contactId: string): Promise<number
       and(
         eq(schema.transactions.contactId, contactId),
         eq(schema.transactions.status, 'approved'),
-        eq(schema.transactions.isCredit, true),
       )
     );
 
@@ -56,12 +55,7 @@ export async function getContactLedger(contactId: string): Promise<{
   const rows = await db
     .select()
     .from(schema.transactions)
-    .where(
-      and(
-        eq(schema.transactions.contactId, contactId),
-        eq(schema.transactions.isCredit, true),
-      )
-    )
+    .where(eq(schema.transactions.contactId, contactId))
     .orderBy(desc(schema.transactions.createdAt));
 
   const balance = rows.reduce((sum, r) => {

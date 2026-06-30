@@ -194,7 +194,7 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
           {!loading && entries.length === 0 && (
             <div className="flex flex-col items-center justify-center h-48 text-muted">
               <FileText size={28} strokeWidth={1} className="mb-2 opacity-40" />
-              <div className="text-[12.5px]">هیچ تراکنش نسیه‌ای ثبت نشده</div>
+              <div className="text-[12.5px]">هیچ تراکنشی برای این طرف‌حساب ثبت نشده</div>
             </div>
           )}
 
