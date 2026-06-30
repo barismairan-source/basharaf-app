@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Ticket, Plus, Trash2, Power, Pencil, X, Check } from 'lucide-react';
+import { Ticket, Plus, EyeOff, Power, Pencil, X, Check } from 'lucide-react';
 import {
   Button,
   Card,
@@ -342,9 +342,10 @@ export default function CouponsPage() {
                           </button>
                           <button
                             onClick={() => handleDelete(c.id)}
-                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
+                            title="غیرفعال کردن"
+                            className="w-7 h-7 flex items-center justify-center rounded hover:bg-amber-50 text-muted hover:text-amber-600"
                           >
-                            <Trash2 size={13} strokeWidth={1.5} />
+                            <EyeOff size={13} strokeWidth={1.5} />
                           </button>
                         </div>
                       </td>
