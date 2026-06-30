@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.51-payroll-contacts-fixes` |
-| **آخرین به‌روزرسانی** | 2026-06-29 — اکانت: ۱ |
+| **نسخه** | `0.9.52-data-fixes` |
+| **آخرین به‌روزرسانی** | 2026-06-30 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
-| **کار نیمه‌تمام (in-progress)** | منتظر نتیجه‌ی endpoint تشخیصی `/api/admin/diag` از کاربر (مشکل ۲ و ۳). |
-| **کار بعدی پیشنهادی** | (۱) کاربر `/api/admin/diag` را باز کند و نتیجه را بدهد. (۲) بعد: فیکس ۲ (reverse payroll) + فیکس ۳ (contact balance) بسته به داده. |
-| **بلاک‌شده/منتظر کاربر** | نتیجه‌ی `GET /api/admin/diag` (SuperAdmin) — برای تشخیص مشکل ۲ و ۳. |
+| **کار نیمه‌تمام (in-progress)** | — |
+| **کار بعدی پیشنهادی** | تست موج داده (مانده طرف‌حساب‌ها + reverse حقوق اردیبهشت) توسط کاربر. سپس موج ۳ (🟡 مورد‌های جزئی audit). |
+| **بلاک‌شده/منتظر کاربر** | تأیید عملکرد فیکس‌های مشکل ۲ و ۳ در production. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-30 — فیکس‌های داده: مانده طرف‌حساب + reverse حقوق بدون سند — اکانت ۱
+**چه شد:**
+(مشکل ۳) حذف فیلتر `isCredit=true` از محاسبه‌ی مانده طرف‌حساب: `contacts/route.ts` + `contactLedger.ts` + `calculateContactBalance` همه اصلاح شدند. از این پس همه تراکنش‌های approved (نقدی + نسیه) در مانده لحاظ می‌شوند. drawer هم به‌طور خودکار بهتر می‌شود چون از همان API می‌خواند. داده قبلی: ۵۰ از ۵۰ تراکنش طرف‌حساب isCredit=false بودند → مانده همیشه صفر.
+(مشکل ۲) سه لایه اضافه شد: (الف) postToBasharaf خطای tagged با code=NO_JOURNAL_VOUCHER پرتاب می‌کند. (ب) reverse API این code را به client برمی‌گرداند (409). (ج) یک endpoint جدید `POST /api/payroll/runs/[id]/force-reset` فقط برای SuperAdmin ساخته شد که بدون اثر مالی status → approved می‌کند + audit می‌نویسد. اگر posted journal_voucher واقعی وجود داشته باشد → خطا (از reverse عادی استفاده کن). UI هم dialog هشدار نشان می‌دهد.
+endpoint تشخیصی موقت `/api/admin/diag` حذف شد.
+**فایل‌ها:** `app/api/contacts/route.ts`, `lib/db/contactLedger.ts`, `components/contacts/ContactLedgerDrawer.tsx`, `lib/payroll/postToBasharaf.ts`, `app/api/payroll/runs/[id]/reverse/route.ts`, `app/api/payroll/runs/[id]/force-reset/route.ts` (جدید), `lib/auth/audit.ts`, `store/slices/payrollSlice.ts`, `app/(app)/payroll/page.tsx`
+**Build:** tsc ✅ ۰ خطا. Commits: c2cf436, 419e4df, 2541657
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست کاربر: (الف) صفحه طرف‌حساب مانده نشان دهد؟ (ب) دکمه‌ی «برگشت ثبت» اردیبهشت ۱۴۰۵ → dialog بازنشانی اجباری نشان دهد؟
 
 ## 📓 2026-06-29 — فیکس ۱ + تفکیک drawer + endpoint تشخیصی — اکانت ۱
 **چه شد:**
@@ -103,20 +113,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست شکاف ۱ توسط کاربر. بعد از تأیید، شکاف ۳ variance.
-
-## 📓 2026-06-28 — تأیید فرضیات شکاف ۱ و ۳ رسپی (فاز بررسی) — اکانت ۱
-**چه شد:** قبل از پیاده‌سازی دو شکاف قدیمی رسپی‌ساز، فرضیات با کد فعلی تطبیق داده شد (بعد از جداسازی انبار/آشپزخانه و prep page). نتیجه: **هر دو فرضیه هنوز معتبرند.** شکاف ۱: costing از `inv_recipes.price` می‌خواند، wizard `menuItemId` نمی‌نویسد، هیچ sync نیست. شکاف ۳: variance theoretical از voucher_lines kind=sale با فیلتر `updatedAt`؛ مسیر ۲/۳ نامرئی. **پیش‌نیاز چک‌نشده‌ی شکاف ۳ حل شد:** `inv_stock_tx.jalali_date` موجود و notNull است (`schema.ts:1025`) → بازسازی actual بدون migration ممکن. نکات جدید: inv_stock_tx ستون branchId ندارد (فیلتر via join به inv_items)، ایندکس روی jalali_date ندارد (migration اختیاری perf). inv_daily_sales.lines دو شکل دارد (count/qty).
-**فایل‌ها:** `project-docs/INVESTIGATION-recipe-costing-gaps-1-3.md` (جدید). هیچ کد اجرایی تغییر نکرد.
-**Build:** بدون تغییر کد — tsc/tests دست‌نخورده ✅ 32/32.
-**ناتمام:** منتظر تأیید کاربر برای شروع شکاف ۱ (گزینه‌ی B).
-**نکته:** git status یک حذف `components/notifications/.gitkeep` دارد که کار من نیست — دست نزدم، در commitهایم نیاوردم.
-
-## 📓 2026-06-28 — فیکس timeout دیپلوی Liara — اکانت ۱
-**چه شد:** دیپلوی Liara بعد از «✓ Compiled successfully» در مرحله‌ی «Linting and checking validity of types» بیش از ۲۰ دقیقه گیر می‌کرد و timeout (exit 2). علت: `next build` روی builder محدود Liara هم ESLint هم type-check را اجرا می‌کرد. راه‌حل (الگوی استاندارد):
-(۱) `next.config.mjs`: `eslint.ignoreDuringBuilds: true` + `typescript.ignoreBuildErrors: true` → build حالا «Skipping validation of types / Skipping linting» می‌زند و سریع تمام می‌شود.
-(۲) برای حفظ گیت type-safety، به `.github/workflows/liara.yml` مراحل `npm ci` → `npm run type-check` → `npm test` **قبل از** deploy اضافه شد. اگر tsc یا tests fail شود، deploy اجرا نمی‌شود. پس چک‌ها از Liara به GitHub Actions (با زمان سخاوتمند) منتقل شدند، نه حذف.
-**فایل‌ها:** `next.config.mjs`، `.github/workflows/liara.yml`.
-**Build:** محلی ✅ سبز (Skipping validation/linting) · tsc ✅ ۰ خطا · tests ✅ 32/32
-**ناتمام:** — (دیپلوی بعدی باید سبز شود؛ بعد از push نتیجه‌ی Actions را چک کن.)
 
 

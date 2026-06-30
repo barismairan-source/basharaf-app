@@ -1,5 +1,15 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-28 — تأیید فرضیات شکاف ۱ و ۳ رسپی (فاز بررسی) — اکانت ۱
+**چه شد:** قبل از پیاده‌سازی دو شکاف قدیمی رسپی‌ساز، فرضیات با کد فعلی تطبیق داده شد. نتیجه: هر دو فرضیه معتبرند. inv_stock_tx.jalali_date موجود و notNull است → بازسازی actual بدون migration ممکن.
+**فایل‌ها:** `project-docs/INVESTIGATION-recipe-costing-gaps-1-3.md` (جدید).
+**Build:** بدون تغییر کد ✅.
+
+## 📓 2026-06-28 — فیکس timeout دیپلوی Liara — اکانت ۱
+**چه شد:** `next.config.mjs`: eslint/tsc ignoreDuringBuilds. `.github/workflows/liara.yml`: type-check و tests قبل از deploy در CI.
+**فایل‌ها:** `next.config.mjs`، `.github/workflows/liara.yml`.
+**Build:** ✅
+
 ## 📓 2026-06-28 — فیکس باگ لینک «ورود کارکنان» + ساده‌سازی روت — اکانت ۱
 **چه شد:**
 (۱) **علت باگ لینک:** دیشب فقط allowlist bootstrap در `store/index.ts` با `'/'` به‌روز شد، اما allowlist **دومِ مستقل** در `lib/auth/sessionExpiry.ts` (interceptor سراسری `window.fetch`) از قلم افتاد. روی روت، `bootstrap()` یک `GET /api/auth/me` می‌زند که برای ناشناس ۴۰۱ می‌دهد؛ interceptor چون `/` در `PUBLIC_PATH_PREFIXES` نبود، `handleSessionExpired()` → `window.location.replace('/login')` را اجرا می‌کرد و روت/لینک را خراب می‌کرد. فیکس: `'/'` به `PUBLIC_PATH_PREFIXES` اضافه شد (فقط مسیر دقیق روت match می‌شود؛ همگام با store).
