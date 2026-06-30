@@ -145,7 +145,7 @@ export default function SalesPage() {
             <label className="text-[11.5px] text-muted">تعداد فروش هر غذا</label>
             {branchRecipes.map((r) => (
               <div key={r.id} className="flex items-center gap-2 py-0.5">
-                <span className="flex-1 text-[13px] text-text">{r.name}</span>
+                <span className="flex-1 min-w-0 truncate text-[13px] text-text">{r.name}</span>
                 <span className="text-[11px] text-muted num">{fmt(r.price)} ت</span>
                 <input
                   value={qtys[r.id!] ?? ''}
