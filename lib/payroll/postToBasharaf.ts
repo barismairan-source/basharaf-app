@@ -206,7 +206,11 @@ export async function reversePayrollPost(runId: string): Promise<{ ok: boolean }
   return db.transaction(async (dbTx) => {
     const [voucher] = await dbTx.select().from(schema.journalVouchers)
       .where(eq(schema.journalVouchers.idempotencyKey, `payroll_run:${runId}`)).limit(1);
-    if (!voucher || voucher.status !== 'posted') throw new Error('سند posted برای این اجرا پیدا نشد');
+    if (!voucher || voucher.status !== 'posted') {
+      const err = new Error('این دوره سند حسابداری ندارد — نیاز به بازنشانی اجباری دارد');
+      (err as NodeJS.ErrnoException).code = 'NO_JOURNAL_VOUCHER';
+      throw err;
+    }
 
     // reverse تراکنش هسته
     if (voucher.basharafVoucherId) {

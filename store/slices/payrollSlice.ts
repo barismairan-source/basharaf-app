@@ -33,7 +33,8 @@ export interface PayrollSlice {
   calculateRun: (id: string, workingDays: number, overrides?: Record<string, { insuranceEmployee?: number; incomeTax?: number }>) => Promise<boolean>;
   approveRun: (id: string) => Promise<boolean>;
   postRun: (id: string, accountId: string, date: string) => Promise<boolean>;
-  reverseRun: (id: string) => Promise<boolean>;
+  reverseRun: (id: string) => Promise<{ ok: boolean; code?: string }>;
+  forceResetRun: (id: string) => Promise<boolean>;
   deleteRun: (id: string) => Promise<boolean>;
   getRunDetail: (id: string) => Promise<{ run: PayrollRun; payslips: Payslip[] } | null>;
   payrollEvents: PayrollEvent[];
@@ -117,6 +118,16 @@ export const createPayrollSlice: StateCreator<PayrollSlice> = (set) => ({
   async reverseRun(id) {
     try {
       const res = await fetch(`/api/payroll/runs/${id}/reverse`, { method: 'POST', credentials: 'include' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return { ok: false, code: (data as any).code };
+      set(s => ({ payrollRuns: s.payrollRuns.map(r => r.id === id ? { ...r, status: 'approved' } : r) }));
+      return { ok: true };
+    } catch { return { ok: false }; }
+  },
+
+  async forceResetRun(id) {
+    try {
+      const res = await fetch(`/api/payroll/runs/${id}/force-reset`, { method: 'POST', credentials: 'include' });
       if (!res.ok) return false;
       set(s => ({ payrollRuns: s.payrollRuns.map(r => r.id === id ? { ...r, status: 'approved' } : r) }));
       return true;

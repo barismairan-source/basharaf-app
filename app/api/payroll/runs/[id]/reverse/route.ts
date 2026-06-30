@@ -11,6 +11,12 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     await reversePayrollPost(params.id);
     return NextResponse.json({ ok: true });
   } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === 'NO_JOURNAL_VOUCHER') {
+      return NextResponse.json(
+        { ok: false, code: 'NO_JOURNAL_VOUCHER', error: (e as Error).message },
+        { status: 409 }
+      );
+    }
     return await handleErrorLogged(e, undefined, { category: 'payroll' });
   }
 }

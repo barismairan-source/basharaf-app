@@ -40,6 +40,7 @@ export default function PayrollPage() {
   const createEvent = useAppStore(s => s.createEvent);
   const voidEvent = useAppStore(s => s.voidEvent);
   const reverseRun = useAppStore(s => s.reverseRun);
+  const forceResetRun = useAppStore(s => s.forceResetRun);
   const deleteRun = useAppStore(s => s.deleteRun);
   const showToast = useAppStore(s => s.showToast);
 
@@ -61,6 +62,7 @@ export default function PayrollPage() {
 
   // override بیمه/مالیات
   const [overrideRun, setOverrideRun] = useState<string | null>(null);
+  const [noJvRunId, setNoJvRunId] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, { insuranceEmployee: string; incomeTax: string }>>({});
 
   async function openOverride(runId: string) {
@@ -135,9 +137,23 @@ export default function PayrollPage() {
   async function handleReverse(id: string) {
     if (!confirm('این عملیات ثبت حقوق را برمی‌گرداند و تراکنش هزینه‌ی مرتبط حذف می‌شود. ادامه می‌دهید؟')) return;
     setBusy(id);
-    const ok = await reverseRun(id);
+    const result = await reverseRun(id);
     setBusy(null);
-    showToast(ok ? 'ثبت برگشت داده شد' : 'خطا در برگشت', ok ? 'success' : 'danger');
+    if (result.ok) {
+      showToast('ثبت برگشت داده شد', 'success');
+    } else if (result.code === 'NO_JOURNAL_VOUCHER') {
+      setNoJvRunId(id);
+    } else {
+      showToast('خطا در برگشت ثبت', 'danger');
+    }
+  }
+
+  async function handleForceReset(id: string) {
+    setNoJvRunId(null);
+    setBusy(id);
+    const ok = await forceResetRun(id);
+    setBusy(null);
+    showToast(ok ? 'دوره به تأییدشده بازنشانی شد' : 'خطا در بازنشانی', ok ? 'success' : 'danger');
   }
 
   async function handleDeleteRun(id: string) {
@@ -366,6 +382,36 @@ export default function PayrollPage() {
             <div className="flex gap-2 mt-5">
               <Button variant="primary" onClick={applyOverride} loading={busy === overrideRun} icon={Check}>اعمال و محاسبه مجدد</Button>
               <Button variant="default" onClick={() => setOverrideRun(null)}>لغو</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* دیالوگ بازنشانی اجباری — وقتی دوره سند مالی ندارد */}
+      {noJvRunId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setNoJvRunId(null)}>
+          <div className="bg-white rounded-xl w-full max-w-sm p-5 shadow-xl" onClick={e => e.stopPropagation()}>
+            <div className="text-[15px] font-medium text-stone-900 mb-2">این دوره سند حسابداری ندارد</div>
+            <p className="text-[12.5px] text-stone-600 mb-1">
+              این دوره هنگام ثبت در حسابداری، سند مالی واقعی دریافت نکرده است.
+            </p>
+            <p className="text-[12px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2 mb-4">
+              ⚠️ «بازنشانی اجباری» فقط وضعیت را به «تأییدشده» برمی‌گرداند. مانده‌ی هیچ حسابی تغییر نمی‌کند.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleForceReset(noJvRunId)}
+                className="flex-1 h-9 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium transition-colors"
+              >
+                بازنشانی اجباری
+              </button>
+              <button
+                onClick={() => setNoJvRunId(null)}
+                className="h-9 px-4 rounded-lg border border-stone-200 text-[13px] text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                لغو
+              </button>
             </div>
           </div>
         </div>
