@@ -89,7 +89,12 @@ export default function AccountLedgerPage() {
                     </thead>
                     <tbody>
                       {entries.map(e => (
-                        <tr key={e.id} className="border-b border-stone-50 last:border-b-0">
+                        <tr
+                          key={e.id}
+                          className="border-b border-stone-50 last:border-b-0 hover:bg-stone-50/60 cursor-pointer"
+                          onClick={() => router.push(`/transactions?highlight=${e.id}`)}
+                          title="مشاهده تراکنش"
+                        >
                           <td className="px-5 py-3">
                             <div className="flex items-center gap-2">
                               {e.isIncoming ? (
