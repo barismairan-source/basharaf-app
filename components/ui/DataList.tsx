@@ -109,7 +109,7 @@ function DataList<T extends object>({
                 <span className="text-[11px] text-muted shrink-0 ml-3">
                   {col.mobileLabel ?? col.label}
                 </span>
-                <span className={cn('text-[13px] text-text text-left', col.cellClassName)}>
+                <span className={cn('text-[13px] text-text text-left min-w-0 truncate', col.cellClassName)}>
                   {col.render(row)}
                 </span>
               </div>
