@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.53-ux-wave3` |
+| **نسخه** | `0.9.54-variance-daily` |
 | **آخرین به‌روزرسانی** | 2026-06-30 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | تست کاربر: مانده طرف‌حساب‌ها + dialog بازنشانی اجباری حقوق اردیبهشت. همه‌ی ۱۹ آیتم موج ۳ UX کامل است. |
-| **بلاک‌شده/منتظر کاربر** | تأیید عملکرد فیکس‌های مشکل ۲ و ۳ در production. |
+| **کار بعدی پیشنهادی** | تست کاربر: (الف) مانده طرف‌حساب در production (ب) dialog بازنشانی اجباری حقوق (ج) نمای «فروش واقعی» variance با بازه واقعی فروش |
+| **بلاک‌شده/منتظر کاربر** | تأیید عملکرد فیکس‌های production (contact balance، force-reset، variance-daily). |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-30 — شکاف ۳: variance نمای فروش واقعی — اکانت ۱
+**چه شد:** پارامتر `?source=daily` به endpoint `GET /api/inventory/reports/variance` اضافه شد. نمای daily:
+- **تئوریک:** از `inv_daily_sales` در بازه jalaliDate → parse JSONB lines (دو فرمت qty/count هر دو handle شدند) → join به `inv_recipes` + `inv_recipe_lines` + `inv_items` → محاسبه `(saleQty / portions) × qtyBase × (100 / effectivePct)` در TypeScript.
+- **واقعی:** از `inv_stock_tx` kind∈(out,waste,sale) با فیلتر jalaliDate + فیلتر شعبه via `inv_items.branchId` (چون inv_stock_tx ستون branchId ندارد).
+- نمای voucher (قدیمی) کاملاً دست‌نخورده ماند.
+- UI: toggle «نمای حواله / نمای فروش واقعی» + یادداشت که رسپی فعلی مبنای محاسبه است.
+- فایل migration اختیاری ساخته شد: `project-docs/migrations/db-variance-daily-perf-index.sql` (index روی item_id,jalali_date برای بازه‌های بزرگ).
+**فایل‌ها:** `app/api/inventory/reports/variance/route.ts`, `app/(app)/inventory/variance/page.tsx`, `project-docs/migrations/db-variance-daily-perf-index.sql` (جدید)
+**Build:** tsc ✅ ۰ خطا. Commit: f8feb71
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست با بازه واقعی فروش: نمای daily باید ردیف بیشتری از نمای voucher نشان دهد (فروش‌های مسیر ۲ و ۳). migration اختیاری تنها اگر گزارش کند بود اجرا شود.
 
 ## 📓 2026-06-30 — موج ۳ فیکس‌های UX (۱۹ مورد 🟡/🔵) — اکانت ۱
 **چه شد:** همه‌ی ۱۹ آیتم موج ۳ پیاده و جداگانه commit شدند:
@@ -121,17 +133,5 @@ endpoint تشخیصی موقت `/api/admin/diag` حذف شد.
 **Build:** بدون تغییر کد — tsc/tests دست‌نخورده ✅ 32/32.
 **ناتمام:** —
 **برای جلسه‌ی بعد:** منتظر تأیید کاربر برای شروع فیکس‌ها (کدام ماژول اول؟).
-
-## 📓 2026-06-29 — شکاف ۱: لینک رسپی به آیتم منو + هشدار اختلاف قیمت — اکانت ۱
-**چه شد:** شکاف ۱ (sync قیمت رسپی ↔ منو) پیاده شد — گزینه‌ی B (دو قیمت مستقل + هشدار اختلاف):
-(۱) `recipes/route.ts`: `menuItemId` به `saveSchema` اضافه شد (nullable/optional) + در insert/update نوشته می‌شود. audit برای تغییر قیمت رسپی (`inv.recipe.priceChanged`) با مقایسه‌ی قیمت قبل/بعد.
-(۲) wizard (step 3): سلکتور اختیاری «لینک به آیتم منو» — آیتم‌های منو از `/api/menu` fetch می‌شوند. دکمه‌ی «استفاده از قیمت منو: X تومان» قیمت رسپی را پر می‌کند (دستی، نه sync خودکار).
-(۳) `costing/route.ts`: اگر `menuItemId` ست بود، join به `menu_items` و `menuPrice`/`menuPriceTakeaway` در خروجی costing برگشت داده می‌شود.
-(۴) `RecipeCard`: اگر costing باز باشد و `menuPrice` با `recipe.price` فرق داشته باشد، هشدار warn نشان داده می‌شود.
-(۵) `lib/auth/audit.ts`: `inv.recipe.priceChanged` به union اضافه شد.
-**فایل‌ها:** `lib/auth/audit.ts`, `app/api/inventory/recipes/route.ts`, `app/api/inventory/recipes/[id]/costing/route.ts`, `types/inventory.ts`, `app/(app)/inventory/recipes/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست شکاف ۱ توسط کاربر. بعد از تأیید، شکاف ۳ variance.
 
 

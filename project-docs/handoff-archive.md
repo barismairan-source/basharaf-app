@@ -1,5 +1,15 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-29 — شکاف ۱: لینک رسپی به آیتم منو + هشدار اختلاف قیمت — اکانت ۱
+**چه شد:** شکاف ۱ (sync قیمت رسپی ↔ منو) پیاده شد — گزینه‌ی B (دو قیمت مستقل + هشدار اختلاف):
+(۱) `recipes/route.ts`: `menuItemId` به `saveSchema` اضافه شد (nullable/optional) + در insert/update نوشته می‌شود. audit برای تغییر قیمت رسپی (`inv.recipe.priceChanged`) با مقایسه‌ی قیمت قبل/بعد.
+(۲) wizard (step 3): سلکتور اختیاری «لینک به آیتم منو» — آیتم‌های منو از `/api/menu` fetch می‌شوند. دکمه‌ی «استفاده از قیمت منو: X تومان» قیمت رسپی را پر می‌کند (دستی، نه sync خودکار).
+(۳) `costing/route.ts`: اگر `menuItemId` ست بود، join به `menu_items` و `menuPrice`/`menuPriceTakeaway` در خروجی costing برگشت داده می‌شود.
+(۴) `RecipeCard`: اگر costing باز باشد و `menuPrice` با `recipe.price` فرق داشته باشد، هشدار warn نشان داده می‌شود.
+(۵) `lib/auth/audit.ts`: `inv.recipe.priceChanged` به union اضافه شد.
+**فایل‌ها:** `lib/auth/audit.ts`, `app/api/inventory/recipes/route.ts`, `app/api/inventory/recipes/[id]/costing/route.ts`, `types/inventory.ts`, `app/(app)/inventory/recipes/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅ سبز · tests ✅ 32/32
+
 ## 📓 2026-06-28 — تأیید فرضیات شکاف ۱ و ۳ رسپی (فاز بررسی) — اکانت ۱
 **چه شد:** قبل از پیاده‌سازی دو شکاف قدیمی رسپی‌ساز، فرضیات با کد فعلی تطبیق داده شد. نتیجه: هر دو فرضیه معتبرند. inv_stock_tx.jalali_date موجود و notNull است → بازسازی actual بدون migration ممکن.
 **فایل‌ها:** `project-docs/INVESTIGATION-recipe-costing-gaps-1-3.md` (جدید).
