@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.52-data-fixes` |
+| **نسخه** | `0.9.53-ux-wave3` |
 | **آخرین به‌روزرسانی** | 2026-06-30 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests ✅ 32/32 |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | تست موج داده (مانده طرف‌حساب‌ها + reverse حقوق اردیبهشت) توسط کاربر. سپس موج ۳ (🟡 مورد‌های جزئی audit). |
+| **کار بعدی پیشنهادی** | تست کاربر: مانده طرف‌حساب‌ها + dialog بازنشانی اجباری حقوق اردیبهشت. همه‌ی ۱۹ آیتم موج ۳ UX کامل است. |
 | **بلاک‌شده/منتظر کاربر** | تأیید عملکرد فیکس‌های مشکل ۲ و ۳ در production. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -50,6 +50,26 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-06-30 — موج ۳ فیکس‌های UX (۱۹ مورد 🟡/🔵) — اکانت ۱
+**چه شد:** همه‌ی ۱۹ آیتم موج ۳ پیاده و جداگانه commit شدند:
+- **A6–A11**: overflow-x-auto برای جدول‌های موبایل (stocktake, cartable, sales, purchase-orders, DataList)
+- **B3**: confirm dialog قبل از غیرفعال‌کردن حساب
+- **B7**: KPICard از formatMoneyShort استفاده می‌کند
+- **B8**: ردیف‌های دفتر کل به /transactions لینک می‌شوند
+- **C4–C6**: حقوق — flex-wrap روی ردیف دکمه‌ها، whitespace-nowrap روی مبالغ فیش، flex-shrink-0 روی مبلغ رویداد
+- **D3**: confirm قبل از حذف رزرو
+- **D4**: confirm + راهنمای غیرفعال‌کردن قبل از حذف آیتم منو
+- **D5**: هشدار پیشگیرانه اگر دسته آیتم داشته باشد (قبل از call به API)
+- **D6**: آیکون Trash2 کوپن → EyeOff (رنگ amber) چون soft-deactivate است نه حذف
+- **D7/D8**: truncate روی نام آیتم و دسته در جدول منو
+- **D9**: truncate روی نام مشتری
+- **D10**: truncate روی branchName در کارت سفارش
+- **D11**: flex-shrink-0 روی قیمت آیتم در منوی عمومی
+**فایل‌ها:** `app/(app)/inventory/stocktake/page.tsx`, `app/(app)/inventory/cartable/page.tsx`, `app/(app)/inventory/sales/page.tsx`, `app/(app)/purchase-orders/page.tsx`, `components/ui/DataList.tsx`, `app/(app)/reports/page.tsx`, `app/(app)/accounts/[id]/page.tsx`, `app/(app)/accounts/page.tsx`, `app/(app)/reservations/page.tsx`, `app/(app)/menu/page.tsx`, `app/(app)/coupons/page.tsx`, `app/(app)/customers/page.tsx`, `app/(app)/orders/page.tsx`, `components/menu/MenuItem.tsx`, `app/(app)/payroll/page.tsx`
+**Build:** tsc ✅ ۰ خطا. Commits: c13666e, d4c9acf, 2165700, 555be48, 16c1f89, a73ad25
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست کاربر: (الف) مانده طرف‌حساب‌ها در production. (ب) dialog بازنشانی اجباری حقوق اردیبهشت. (ج) رفتار موج ۳ روی موبایل (truncate، overflow، flex-wrap).
 
 ## 📓 2026-06-30 — فیکس‌های داده: مانده طرف‌حساب + reverse حقوق بدون سند — اکانت ۱
 **چه شد:**
