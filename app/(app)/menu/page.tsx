@@ -297,7 +297,10 @@ function ItemRow({ item, sections, onUpdate, onDelete, showToast }: {
             className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
             <Edit3 size={13} strokeWidth={1.5} />
           </button>
-          <button onClick={async () => { if (await onDelete(item.id)) showToast('حذف شد', 'success'); }}
+          <button onClick={async () => {
+            if (!confirm('این آیتم از منو حذف شود؟\n\nاگر می‌خواهید موقتاً پنهان کنید، از دکمه‌ی چشم (غیرفعال‌سازی) استفاده کنید.')) return;
+            if (await onDelete(item.id)) showToast('حذف شد', 'success');
+          }}
             className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
@@ -358,7 +361,15 @@ function CategoryRow({ s, onUpdate, onDelete, showToast }: any) {
             className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700">
             <Edit3 size={13} strokeWidth={1.5} />
           </button>
-          <button onClick={async () => { const r = await onDelete(s.id); if (r.ok) showToast('حذف شد', 'success'); else showToast(r.error ?? 'خطا', 'danger'); }}
+          <button onClick={async () => {
+            if (s.items.length > 0) {
+              showToast(`این دسته ${s.items.length} آیتم دارد — اول آیتم‌ها را حذف یا جابه‌جا کنید`, 'danger');
+              return;
+            }
+            if (!confirm(`دسته «${s.labelFa}» حذف شود؟`)) return;
+            const r = await onDelete(s.id);
+            if (r.ok) showToast('حذف شد', 'success'); else showToast(r.error ?? 'خطا', 'danger');
+          }}
             className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
             <Trash2 size={13} strokeWidth={1.5} />
           </button>
