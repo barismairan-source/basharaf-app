@@ -494,8 +494,10 @@ export default function ReservationsPage() {
                             <Pencil size={13} strokeWidth={1.5} />
                           </button>
                         )}
-                        <button onClick={() => deleteReservation(r.id)}
-                          className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600">
+                        <button
+                          onClick={() => { if (confirm('این رزرو حذف شود؟')) deleteReservation(r.id); }}
+                          className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
+                        >
                           <Trash2 size={13} strokeWidth={1.5} />
                         </button>
                       </div>
