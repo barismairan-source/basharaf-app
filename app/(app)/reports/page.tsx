@@ -14,6 +14,7 @@ import {
 } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
+import { formatMoneyShort } from '@/lib/design/format';
 import { ExportPanel } from '@/components/transactions/ExportPanel';
 
 interface ReportData {
@@ -335,7 +336,9 @@ function KPICard({ label, value, icon: Icon, color }: {
           <div className="text-[11.5px] text-stone-500">{label}</div>
           <Icon size={14} strokeWidth={1.5} className="text-muted" />
         </div>
-        <div className={cn('text-[22px] font-medium tabular-nums', color)}>{fmt(value)}</div>
+        <div className={cn('text-[22px] font-medium tabular-nums', color)} title={`${fmt(value)} تومان`}>
+          {formatMoneyShort(value)}
+        </div>
         <div className="text-[10.5px] text-muted mt-1">تومان</div>
       </CardBody>
     </Card>
