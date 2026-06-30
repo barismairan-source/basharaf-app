@@ -134,7 +134,7 @@ export default function StocktakePage() {
             <div className="text-[11.5px] text-muted">
               موجودی واقعی شمرده‌شده را وارد کنید. فقط اقلامی که با سیستم فرق دارند ثبت می‌شوند. قیمت لازم نیست.
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
+            <div className="border border-border rounded-lg overflow-x-auto">
               <table className="w-full text-[12.5px]">
                 <thead className="bg-bg text-muted text-[11px]">
                   <tr>
