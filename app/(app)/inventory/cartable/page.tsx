@@ -259,8 +259,8 @@ export default function CartablePage() {
                   </div>
 
                   {isOpen && (
-                    <div className="mt-3 pt-3 border-t border-border">
-                      <table className="w-full text-[12px]">
+                    <div className="mt-3 pt-3 border-t border-border overflow-x-auto">
+                      <table className="w-full min-w-[320px] text-[12px]">
                         <thead>
                           <tr className="text-muted text-[11px]">
                             <th className="text-right pb-1.5">قلم</th>
