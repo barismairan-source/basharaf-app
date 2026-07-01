@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText } from 'lucide-react';
+import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Banknote, CreditCard } from 'lucide-react';
 import { cn, fmt } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import type { ContactLedgerEntry } from '@/lib/db/contactLedger';
@@ -30,6 +30,44 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   proforma: { label: 'پیش‌فاکتور', color: 'text-amber-600' },
   rejected: { label: 'رد شده',    color: 'text-danger' },
 };
+
+function EntryRow({ entry }: { entry: ContactLedgerEntry }) {
+  const isIncome = entry.type === 'income';
+  const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
+  const amtColor = isIncome ? 'text-ok' : 'text-danger';
+  const sign = isIncome ? '+' : '−';
+  const statusMeta = STATUS_LABEL[entry.status] ?? { label: entry.status, color: 'text-muted' };
+
+  return (
+    <li className="flex items-start gap-3 px-5 py-3.5">
+      <Icon size={14} strokeWidth={1.5} className={cn('mt-0.5 flex-shrink-0', amtColor)} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-[12.5px] text-text truncate">{entry.title}</span>
+          <span className={cn('text-[12.5px] font-medium num shrink-0', amtColor)}>
+            {sign}{formatMoneyShort(entry.amount)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-[10.5px] text-muted num">{entry.date}</span>
+          {entry.invoiceCode && (
+            <span className="text-[10.5px] text-muted">· {entry.invoiceCode}</span>
+          )}
+          <span className={cn('text-[10.5px]', statusMeta.color)}>{statusMeta.label}</span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: string }) {
+  return (
+    <div className="flex items-center gap-2 px-5 py-2 bg-stone-50/80 border-y border-border">
+      <Icon size={12} strokeWidth={1.5} className="text-muted" />
+      <span className="text-[10.5px] text-muted font-medium">{label}</span>
+    </div>
+  );
+}
 
 export function ContactLedgerDrawer({ contactId, onClose }: Props) {
   const open = contactId !== null;
@@ -70,6 +108,13 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
     return () => { document.body.style.overflow = ''; };
   }, [open]);
 
+  const cashEntries   = entries.filter(e => !e.isCredit);
+  const creditEntries = entries.filter(e => e.isCredit);
+
+  const approvedCash    = cashEntries.filter(e => e.status === 'approved');
+  const cashIncome      = approvedCash.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+  const cashExpense     = approvedCash.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+
   return (
     <>
       {/* backdrop */}
@@ -82,7 +127,7 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
         )}
       />
 
-      {/* panel — side drawer (right side in RTL) */}
+      {/* panel */}
       <aside
         role="dialog"
         aria-modal="true"
@@ -127,57 +172,27 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
           </div>
         </div>
 
-        {/* balance summary */}
+        {/* مانده نسیه */}
         {!loading && contact && (
-          <div className="px-5 py-3 border-b border-border shrink-0 bg-bg/60 space-y-2">
-            {/* مانده خالص */}
-            <div>
-              <div className="text-[10.5px] text-muted mb-0.5">مانده‌ی حساب (تأییدشده)</div>
-              {balance === 0 ? (
-                <div className="text-[15px] font-medium text-muted">تسویه</div>
-              ) : balance > 0 ? (
-                <div>
-                  <span className="text-[15px] font-medium text-emerald-700 num" title={`${fmt(balance)} تومان`}>
-                    {formatMoneyShort(balance)}
-                  </span>
-                  <span className="text-[10.5px] text-muted mr-1.5">بدهکار به ما</span>
-                </div>
-              ) : (
-                <div>
-                  <span className="text-[15px] font-medium text-rose-700 num" title={`${fmt(Math.abs(balance))} تومان`}>
-                    {formatMoneyShort(Math.abs(balance))}
-                  </span>
-                  <span className="text-[10.5px] text-muted mr-1.5">طلبکار از ما</span>
-                </div>
-              )}
-            </div>
-            {/* تفکیک دریافتی / پرداختی (فقط تراکنش‌های تأییدشده) */}
-            {entries.length > 0 && (() => {
-              const approvedEntries = entries.filter(e => e.status === 'approved');
-              const totalIncome  = approvedEntries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
-              const totalExpense = approvedEntries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
-              if (totalIncome === 0 && totalExpense === 0) return null;
-              return (
-                <div className="flex gap-4 pt-1 border-t border-border/60">
-                  {totalIncome > 0 && (
-                    <div>
-                      <div className="text-[9.5px] text-muted mb-0.5">جمع دریافتی</div>
-                      <span className="text-[12.5px] font-medium text-emerald-700 num" title={`${fmt(totalIncome)} تومان`}>
-                        {formatMoneyShort(totalIncome)}
-                      </span>
-                    </div>
-                  )}
-                  {totalExpense > 0 && (
-                    <div>
-                      <div className="text-[9.5px] text-muted mb-0.5">جمع پرداختی</div>
-                      <span className="text-[12.5px] font-medium text-rose-700 num" title={`${fmt(totalExpense)} تومان`}>
-                        {formatMoneyShort(totalExpense)}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
+          <div className="px-5 py-3 border-b border-border shrink-0 bg-bg/60">
+            <div className="text-[10.5px] text-muted mb-0.5">مانده‌ی نسیه (تأییدشده)</div>
+            {balance === 0 ? (
+              <div className="text-[15px] font-medium text-muted">تسویه</div>
+            ) : balance > 0 ? (
+              <div>
+                <span className="text-[15px] font-medium text-emerald-700 num" title={`${fmt(balance)} تومان`}>
+                  {formatMoneyShort(balance)}
+                </span>
+                <span className="text-[10.5px] text-muted mr-1.5">بدهکار به ما</span>
+              </div>
+            ) : (
+              <div>
+                <span className="text-[15px] font-medium text-rose-700 num" title={`${fmt(Math.abs(balance))} تومان`}>
+                  {formatMoneyShort(Math.abs(balance))}
+                </span>
+                <span className="text-[10.5px] text-muted mr-1.5">طلبکار از ما</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -199,36 +214,53 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
           )}
 
           {!loading && entries.length > 0 && (
-            <ul className="divide-y divide-border">
-              {entries.map((entry) => {
-                const isIncome = entry.type === 'income';
-                const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
-                const amtColor = isIncome ? 'text-ok' : 'text-danger';
-                const sign = isIncome ? '+' : '−';
-                const statusMeta = STATUS_LABEL[entry.status] ?? { label: entry.status, color: 'text-muted' };
-
-                return (
-                  <li key={entry.id} className="flex items-start gap-3 px-5 py-3.5">
-                    <Icon size={14} strokeWidth={1.5} className={cn('mt-0.5 flex-shrink-0', amtColor)} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <span className="text-[12.5px] text-text truncate">{entry.title}</span>
-                        <span className={cn('text-[12.5px] font-medium num shrink-0', amtColor)}>
-                          {sign}{formatMoneyShort(entry.amount)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10.5px] text-muted num">{entry.date}</span>
-                        {entry.invoiceCode && (
-                          <span className="text-[10.5px] text-muted">· {entry.invoiceCode}</span>
-                        )}
-                        <span className={cn('text-[10.5px]', statusMeta.color)}>{statusMeta.label}</span>
-                      </div>
+            <>
+              {/* بخش مبادلات نقدی */}
+              {cashEntries.length > 0 && (
+                <>
+                  <SectionHeader icon={Banknote} label="مبادلات نقدی" />
+                  <ul className="divide-y divide-border">
+                    {cashEntries.map(entry => <EntryRow key={entry.id} entry={entry} />)}
+                  </ul>
+                  {(cashIncome > 0 || cashExpense > 0) && (
+                    <div className="flex gap-4 px-5 py-2.5 border-b border-border bg-stone-50/50">
+                      {cashIncome > 0 && (
+                        <div>
+                          <div className="text-[9.5px] text-muted mb-0.5">جمع دریافتی نقدی</div>
+                          <span className="text-[12px] font-medium text-emerald-700 num" title={`${fmt(cashIncome)} تومان`}>
+                            {formatMoneyShort(cashIncome)}
+                          </span>
+                        </div>
+                      )}
+                      {cashExpense > 0 && (
+                        <div>
+                          <div className="text-[9.5px] text-muted mb-0.5">جمع پرداختی نقدی</div>
+                          <span className="text-[12px] font-medium text-rose-700 num" title={`${fmt(cashExpense)} تومان`}>
+                            {formatMoneyShort(cashExpense)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  </li>
-                );
-              })}
-            </ul>
+                  )}
+                </>
+              )}
+
+              {/* بخش حساب‌های نسیه */}
+              {creditEntries.length > 0 && (
+                <>
+                  <SectionHeader icon={CreditCard} label="حساب‌های نسیه" />
+                  <ul className="divide-y divide-border">
+                    {creditEntries.map(entry => <EntryRow key={entry.id} entry={entry} />)}
+                  </ul>
+                </>
+              )}
+
+              {creditEntries.length === 0 && (
+                <div className="px-5 py-3 text-[11px] text-muted italic border-t border-border/60">
+                  هیچ تراکنش نسیه‌ای ثبت نشده
+                </div>
+              )}
+            </>
           )}
         </div>
       </aside>

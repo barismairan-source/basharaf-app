@@ -1,16 +1,8 @@
 import { and, eq, desc } from 'drizzle-orm';
 import { db, schema } from './client';
 
-/**
- * محاسبه‌ی پویای مانده‌ی طرف‌حساب از روی تراکنش‌های approved.
- *
- * برخلاف contacts.balance (که یک cache denormalized است)، این تابع
- * مانده را از مجموع تراکنش‌های نسیه‌ی تأییدشده محاسبه می‌کند:
- *   درآمد نسیه approved  → مشتری بدهکار شد (+)
- *   هزینه نسیه approved  → ما بدهکار شدیم (−)
- *
- * برای دفتر حساب/statement استفاده می‌شود — نه برای لیست مخاطبان.
- */
+// مانده فقط از تراکنش‌های نسیه (isCredit=true) و approved محاسبه می‌شود.
+// پرداخت نقدی مانده نمی‌سازد — فقط جریان نقدی تاریخی است.
 export async function calculateContactBalance(contactId: string): Promise<number> {
   const rows = await db
     .select({
@@ -22,6 +14,7 @@ export async function calculateContactBalance(contactId: string): Promise<number
       and(
         eq(schema.transactions.contactId, contactId),
         eq(schema.transactions.status, 'approved'),
+        eq(schema.transactions.isCredit, true),
       )
     );
 
@@ -39,15 +32,12 @@ export interface ContactLedgerEntry {
   amount: number;
   invoiceCode: string | null;
   status: string;
+  isCredit: boolean;
   runningBalance: number;
 }
 
-/**
- * دفتر حساب یک طرف‌حساب — تراکنش‌های نسیه.
- * شامل همه وضعیت‌ها (pending / approved / proforma) برای شفافیت کامل.
- * مانده کل فقط از تراکنش‌های approved محاسبه می‌شود.
- * ردیف‌ها جدیدترین اول برمی‌گردند.
- */
+// همه تراکنش‌های طرف‌حساب (نقدی + نسیه) برمی‌گردند برای شفافیت.
+// balance فقط از نسیه‌ی approved است.
 export async function getContactLedger(contactId: string): Promise<{
   entries: ContactLedgerEntry[];
   balance: number;
@@ -59,7 +49,7 @@ export async function getContactLedger(contactId: string): Promise<{
     .orderBy(desc(schema.transactions.createdAt));
 
   const balance = rows.reduce((sum, r) => {
-    if (r.status !== 'approved') return sum;
+    if (r.status !== 'approved' || !r.isCredit) return sum;
     const amt = Number(r.amount);
     return r.type === 'income' ? sum + amt : sum - amt;
   }, 0);
@@ -72,6 +62,7 @@ export async function getContactLedger(contactId: string): Promise<{
     amount: Number(r.amount),
     invoiceCode: r.invoiceCode ?? null,
     status: r.status,
+    isCredit: r.isCredit,
     runningBalance: 0,
   }));
 

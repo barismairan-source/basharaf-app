@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
@@ -18,8 +18,7 @@ export async function GET() {
 
     const rows = await db.select().from(schema.contacts).where(eq(schema.contacts.isActive, true));
 
-    // محاسبه‌ی پویای مانده برای همه طرف‌حساب‌ها در یک کوئری
-    // همه تراکنش‌های approved (نقدی + نسیه) — proforma نادیده گرفته می‌شود
+    // مانده فقط از نسیه (isCredit=true) محاسبه می‌شود — پرداخت نقدی مانده نمی‌سازد
     const balanceRows = await db
       .select({
         contactId: schema.transactions.contactId,
@@ -36,7 +35,12 @@ export async function GET() {
         `,
       })
       .from(schema.transactions)
-      .where(eq(schema.transactions.status, 'approved'))
+      .where(
+        and(
+          eq(schema.transactions.status, 'approved'),
+          eq(schema.transactions.isCredit, true),
+        )
+      )
       .groupBy(schema.transactions.contactId);
 
     const balanceMap = new Map<string, number>(
