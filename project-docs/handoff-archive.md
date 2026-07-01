@@ -1,5 +1,13 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-29 — موج ۱ فیکس‌های UX (پنج باگ بحرانی) — اکانت ۱
+**چه شد:** B1 (silent fail approved tx edit), B5+B6 (label غلط proforma/transfer), A12 (رسپی بدون ویرایش), A1 (stocktake reversal).
+**Commits:** afe288f, 2a0836f, 773c557, cb01f7f
+
+## 📓 2026-06-29 — موج ۲ فیکس‌های UX (شش مورد آماده) — اکانت ۱
+**چه شد:** C1 (reverse حقوق posted), C2 (حذف draft حقوق), D12 (ویرایش دسته منو), D13 (ویرایش رزرو), D14 (ویرایش کوپن), A2 (ویرایش حواله pending اتمیک).
+**Commits:** ce9c503, 3005e45, fa662c5, fa763d4, 8dc26be
+
 ## 📓 2026-06-29 — UX Consistency Audit (بررسی سراسری ۳ الگو) — اکانت ۱
 **چه شد:** بررسی سراسری ۳ الگوی UX در ۴ ماژول اصلی (انبار/حسابداری/پرسنل/منو-سفارش) با ۴ agent موازی. ۳۵+ یافته در ۳ دسته اولویت‌بندی شدند: باگ واقعی / عمدی‌درست / نیاز به تصمیم. بحرانی‌ترین: B1/B5/B6 در TxDetailPanel (label غلط + silent fail) و A12 (رسپی بدون ویرایش). آماده‌ترین فیکس‌ها: C1 (reverse حقوق)، D12/D13/D14 (ویرایش دسته/رزرو/کوپن — API آماده).
 **فایل‌ها:** `project-docs/INVESTIGATION-ux-consistency-audit.md` (جدید)، `HANDOFF.md`.

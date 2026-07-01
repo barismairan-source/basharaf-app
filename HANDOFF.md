@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.56-employee-form-c7` |
+| **نسخه** | `0.9.57-playwright-e2e` |
 | **آخرین به‌روزرسانی** | 2026-07-01 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — هر push به main خودکار deploy می‌شود (`basharaff` روی لیارا). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | تست کاربر: (الف) فرم کارمند — باز کردن ویرایش و تست آکاردئون «اطلاعات تکمیلی» (ب) مانده طرف‌حساب در production (ج) dialog بازنشانی اجباری حقوق |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **کار بعدی پیشنهادی** | ۱. اضافه‌کردن secret `STAGING_URL` در GitHub → Settings → Secrets. ۲. اجرای محلی `npm run test:e2e` برای تأیید عملکرد. ۳. تست فرم کارمند + مانده طرف‌حساب در production. |
+| **بلاک‌شده/منتظر کاربر** | secret `STAGING_URL` برای e2e job در CI. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,20 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-01 — Playwright E2E برای ۵ مسیر بحرانی — اکانت ۱
+**چه شد:** زیرساخت کامل Playwright E2E اضافه شد:
+- `playwright.config.ts`: chromium headless، timeout 30s، storageState، globalSetup/Teardown
+- `tests/e2e/fixtures/seed.ts`: ساخت test user SuperAdmin (idempotent)
+- `tests/e2e/global-setup.ts`: seed + browser login + ذخیره session
+- `tests/e2e/global-teardown.ts`: DELETE کردن رکوردهای `[TEST]` از DB بعد از همه تست‌ها
+- ۵ spec file: auth (3 تست) · transactions (3 تست + B1 regression) · contacts (3 تست) · payroll (3 تست) · inventory (3 تست)
+- workflow restructure: ۴ job جداگانه — typecheck → unit-test → e2e (نیاز به secret `STAGING_URL`) → deploy
+- `tsconfig.json`: `tests/e2e` از main type-check خارج شد
+**فایل‌ها:** `playwright.config.ts`, `tests/e2e/**`, `tsconfig.json`, `package.json`, `.github/workflows/liara.yml`
+**Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32. Commit: a369b57
+**ناتمام:** —
+**برای جلسه‌ی بعد:** کاربر باید secret `STAGING_URL` = آدرس لیارا را در GitHub → Settings → Secrets اضافه کند تا e2e job در CI کار کند. اجرای محلی: `npm run test:e2e` (نیاز به `.env.local` با DATABASE_URL).
 
 ## 📓 2026-07-01 — C7: فرم کارمند — ۱۳ فیلد تکمیلی با آکاردئون — اکانت ۱
 **چه شد:** فیلدهایی که در API وجود داشتند ولی در UI نبودند به فرم افزودن/ویرایش کارمند اضافه شدند. بخش «اطلاعات تکمیلی» به‌صورت آکاردئون طراحی شد. فیلدها:
@@ -127,29 +141,5 @@ endpoint تشخیصی موقت `/api/admin/diag` حذف شد.
 **Build:** tsc ✅ ۰ خطا · tests ✅ 32/32. Commits: 97ffe5f, 7aa00d6, bf0721a
 **ناتمام:** منتظر نتیجه‌ی `/api/admin/diag` برای تشخیص مشکل ۲ (reverse posted) و مشکل ۳ (contact balance).
 **برای جلسه‌ی بعد:** کاربر `/api/admin/diag` را باز می‌کند → نتیجه → فیکس ۲ و ۳ طراحی می‌شوند.
-
-## 📓 2026-06-29 — موج ۲ فیکس‌های UX (شش مورد آماده) — اکانت ۱
-**چه شد:** شش مورد 🟠 از audit که API آماده داشتند پیاده شدند:
-(C1) reverse دوره‌ی posted حقوق: endpoint جدید `POST /api/payroll/runs/[id]/reverse` + دکمه‌ی «برگشت ثبت» با confirm dialog (تراکنش هزینه حذف، وضعیت → approved).
-(C2) حذف دوره‌ی draft حقوق: endpoint `DELETE /api/payroll/runs/[id]` فقط برای draft + دکمه‌ی Trash2 با confirm.
-(D12) ویرایش inline نام/ترتیب دسته‌ی منو: CategoryRow جدید با Edit3 → expand به فرم labelFa/labelEn/sortOrder.
-(D13) ویرایش رزرو: `updateReservation` به store اضافه شد + Pencil روی pending/confirmed → فرم inline تاریخ/ساعت/نفرات/میز/یادداشت.
-(D14) ویرایش کوپن: Pencil → modal ویرایش code/type/value/validFrom/validTo/usageLimit.
-(A2) ویرایش حواله pending: `PATCH /api/inventory/vouchers/[id]` (اتمیک: reverse فیزیکی قدیم → apply جدید → update DB) + Pencil + modal qty/قیمت/یادداشت در کارتابل.
-**فایل‌ها:** `app/api/payroll/runs/[id]/reverse/route.ts` (جدید), `app/api/payroll/runs/[id]/route.ts`, `store/slices/payrollSlice.ts`, `app/(app)/payroll/page.tsx`, `app/(app)/menu/page.tsx`, `store/slices/reservationsSlice.ts`, `app/(app)/reservations/page.tsx`, `app/(app)/coupons/page.tsx`, `app/api/inventory/vouchers/[id]/route.ts`, `app/(app)/inventory/cartable/page.tsx`
-**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32. Commits: ce9c503, 3005e45, fa662c5, fa763d4, 8dc26be
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست موج ۲ توسط کاربر. بعد: موج ۳ (🟡 مورد‌های جزئی) + شکاف ۳ variance رسپی.
-
-## 📓 2026-06-29 — موج ۱ فیکس‌های UX (پنج باگ بحرانی) — اکانت ۱
-**چه شد:** پنج باگ 🔴 بحرانی از audit نتیجه گرفته از INVESTIGATION-ux-consistency-audit.md پیاده و commit شدند:
-(B1) TxDetailPanel: ویرایش تراکنش approved بی‌صدا fail می‌کرد (patch شامل amount بود → ۴۲۲ → rollback → خطا نشان نمی‌داد). فیکس: فیلدهای مالی (amount/category/date) برای approved disabled + از payload حذف + toast خطا در صورت fail.
-(B5+B6) TxDetailPanel: وضعیت `proforma` به‌اشتباه «رد شده» (قرمز) و نوع `transfer` به‌اشتباه «هزینه» (قرمز) نشان می‌داد. فیکس: جایگزینی با `StatusPill` (دارای STATUS_MAP صحیح) و اضافه‌کردن حالت transfer به type chip.
-(A12) RecipeCard بدون دکمه‌ی ویرایش بود. فیکس: دکمه‌ی Pencil اضافه شد + wizard با پیش‌پرشدن همه‌ی فیلدها از رسپی موجود باز می‌شود.
-(A1) دکمه‌ی reversal روی حواله‌ی stocktake فعال بود ولی همیشه NOT_REVERSIBLE برمی‌گرداند. فیکس: `v.kind === 'stocktake'` به شرط disabled اضافه شد + tooltip توضیح می‌دهد.
-**فایل‌ها:** `components/transactions/TxDetailPanel.tsx`، `app/(app)/inventory/recipes/page.tsx`، `app/(app)/inventory/cartable/page.tsx`
-**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32. Commits: afe288f (B1), 2a0836f (B5+B6), 773c557 (A12), cb01f7f (A1).
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست شکاف ۱ رسپی + تصمیم اولویت موج ۲ (🟠 مورد‌های متوسط از audit).
 
 
