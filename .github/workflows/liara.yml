@@ -6,24 +6,63 @@ on:
       - main
 
 jobs:
-  deploy:
+  typecheck:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run type-check
 
-      # گیت کیفیت — قبل از deploy. چون next.config چک‌های داخل build را خاموش
-      # کرده (تا Liara timeout نشود)، type-check و tests اینجا اجرا می‌شوند.
-      # اگر هرکدام fail شود، deploy اجرا نمی‌شود.
-      - name: Install dependencies
-        run: npm ci
-      - name: Type check
-        run: npm run type-check
-      - name: Unit tests
-        run: npm test
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm test
 
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [typecheck, unit-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          BASE_URL: ${{ secrets.STAGING_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DATABASE_SSL: require
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [typecheck, unit-test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
       - name: Deploy to Liara
         env:
           LIARA_TOKEN: ${{ secrets.LIARA_API_TOKEN }}
