@@ -1,12 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil } from 'lucide-react';
+import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil, ChevronDown } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, normalizeDigits } from '@/lib/utils';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
-import { EMPLOYEE_ROLE_LABELS, INSURANCE_STATUS_LABELS, DEFAULT_ROLES, type EmployeeRole, type InsuranceStatus } from '@/types';
+import {
+  EMPLOYEE_ROLE_LABELS, INSURANCE_STATUS_LABELS, DEFAULT_ROLES,
+  type EmployeeRole, type InsuranceStatus, type Gender, type MaritalStatus,
+} from '@/types';
+
+const GENDER_LABELS: Record<Gender, string> = { male: 'مرد', female: 'زن', other: 'سایر' };
+const MARITAL_LABELS: Record<MaritalStatus, string> = { single: 'مجرد', married: 'متأهل', other: 'سایر' };
+
+function validateNationalId(v: string) { return v === '' || /^\d{10}$/.test(v); }
+function validateIban(v: string) { return v === '' || /^IR\d{24}$/i.test(v); }
 
 export default function EmployeesPage() {
   const user = useAppStore(s => s.user);
@@ -26,8 +35,8 @@ export default function EmployeesPage() {
   const [adding, setAdding] = useState(false);
   const [newRole, setNewRole] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [showExtra, setShowExtra] = useState(false);
 
-  // سمت‌ها: از تنظیمات (payroll.roles) یا پیش‌فرض
   const rolesRaw = getSetting('payroll.roles', '');
   let roles: { value: string; label: string }[] = DEFAULT_ROLES;
   if (rolesRaw) {
@@ -54,7 +63,7 @@ export default function EmployeesPage() {
     return roles.find(r => r.value === value)?.label ?? EMPLOYEE_ROLE_LABELS[value] ?? value;
   }
 
-  // فرم
+  // ── اطلاعات پایه ──
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState<EmployeeRole>('cook');
@@ -63,9 +72,23 @@ export default function EmployeesPage() {
   const [joinDate, setJoinDate] = useState(getTodayJalali());
   const [insuranceStatus, setInsuranceStatus] = useState<InsuranceStatus>('uninsured');
 
+  // ── اطلاعات تکمیلی ──
+  const [nationalId, setNationalId] = useState('');
+  const [insuranceNumber, setInsuranceNumber] = useState('');
+  const [fatherName, setFatherName] = useState('');
+  const [gender, setGender] = useState<Gender | ''>('');
+  const [maritalStatus, setMaritalStatus] = useState<MaritalStatus | ''>('');
+  const [iban, setIban] = useState('');
+  const [bankAccount, setBankAccount] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [healthCardNumber, setHealthCardNumber] = useState('');
+  const [healthCardExpiry, setHealthCardExpiry] = useState('');
+  const [address, setAddress] = useState('');
+  const [notes, setNotes] = useState('');
+
   useEffect(() => { setHydrated(true); loadEmployees(); }, [loadEmployees]);
 
-  // اگر از پنل استخدام «تبدیل به پرسنل» آمده باشد، فرم را پیش‌پر و باز کن
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const sp = new URLSearchParams(window.location.search);
@@ -76,7 +99,6 @@ export default function EmployeesPage() {
       setFullName(name);
       setPhone(ph);
       setShowAdd(true);
-      // پاک‌کردن query تا رفرش دوباره فرم را باز نکند
       window.history.replaceState({}, '', '/employees');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -88,9 +110,12 @@ export default function EmployeesPage() {
   }
 
   function resetForm() {
-    setEditingId(null);
+    setEditingId(null); setShowExtra(false);
     setFullName(''); setPhone(''); setRole('cook'); setBranchId('');
     setSalary(''); setJoinDate(getTodayJalali()); setInsuranceStatus('uninsured');
+    setNationalId(''); setInsuranceNumber(''); setFatherName(''); setGender(''); setMaritalStatus('');
+    setIban(''); setBankAccount(''); setEmergencyContactName(''); setEmergencyContactPhone('');
+    setHealthCardNumber(''); setHealthCardExpiry(''); setAddress(''); setNotes('');
   }
 
   function openEdit(e: typeof employees[number]) {
@@ -98,11 +123,26 @@ export default function EmployeesPage() {
     setFullName(e.fullName); setPhone(e.phone); setRole(e.role);
     setBranchId(e.branchId ?? '');
     setSalary(e.baseMonthlySalary ? e.baseMonthlySalary.toLocaleString('en-US') : '');
-    // joinDate در DB میلادی است؛ به شمسی برای نمایش
-    try {
-      setJoinDate(dateToJalali(new Date(e.joinDate)));
-    } catch { setJoinDate(getTodayJalali()); }
+    try { setJoinDate(dateToJalali(new Date(e.joinDate))); } catch { setJoinDate(getTodayJalali()); }
     setInsuranceStatus(e.insuranceStatus);
+    // تکمیلی
+    setNationalId(e.nationalId ?? '');
+    setInsuranceNumber(e.insuranceNumber ?? '');
+    setFatherName(e.fatherName ?? '');
+    setGender((e.gender as Gender | null) ?? '');
+    setMaritalStatus((e.maritalStatus as MaritalStatus | null) ?? '');
+    setIban(e.iban ?? '');
+    setBankAccount(e.bankAccount ?? '');
+    setEmergencyContactName(e.emergencyContactName ?? '');
+    setEmergencyContactPhone(e.emergencyContactPhone ?? '');
+    setHealthCardNumber(e.healthCardNumber ?? '');
+    setHealthCardExpiry(e.healthCardExpiryDate ?? '');
+    setAddress(e.address ?? '');
+    setNotes(e.notes ?? '');
+    const hasExtra = !!(e.nationalId || e.insuranceNumber || e.fatherName || e.gender ||
+      e.maritalStatus || e.iban || e.bankAccount || e.emergencyContactName ||
+      e.healthCardNumber || e.address || e.notes);
+    setShowExtra(hasExtra);
     setShowAdd(true);
   }
 
@@ -110,13 +150,36 @@ export default function EmployeesPage() {
     if (!fullName.trim() || !phone.trim()) { showToast('نام و تلفن الزامی است', 'danger'); return; }
     const gregorian = jalaliToDate(joinDate);
     if (!gregorian) { showToast('تاریخ استخدام نامعتبر است', 'danger'); return; }
-    setAdding(true);
+
+    const normalizedNatId = normalizeDigits(nationalId.trim());
+    if (!validateNationalId(normalizedNatId)) {
+      showToast('شماره ملی باید دقیقاً ۱۰ رقم باشد', 'danger'); return;
+    }
+    const normalizedIban = iban.trim().toUpperCase();
+    if (!validateIban(normalizedIban)) {
+      showToast('شماره شبا باید به فرمت IR + ۲۴ رقم باشد (مثلاً IR123456789012345678901234)', 'danger'); return;
+    }
+
     const branch = branches.find(b => b.id === branchId);
+    setAdding(true);
     const payload = {
       fullName: fullName.trim(), phone: phone.trim(), role,
       branchId: branchId || null, branchName: branch?.name ?? null,
       baseMonthlySalary: salary ? parseInt(salary.replace(/\D/g, ''), 10) || 0 : 0,
       joinDate: gregorian.toISOString().slice(0, 10), insuranceStatus,
+      nationalId: normalizedNatId || null,
+      insuranceNumber: insuranceNumber.trim() || null,
+      fatherName: fatherName.trim() || null,
+      gender: gender || null,
+      maritalStatus: maritalStatus || null,
+      iban: normalizedIban || null,
+      bankAccount: bankAccount.trim() || null,
+      emergencyContactName: emergencyContactName.trim() || null,
+      emergencyContactPhone: emergencyContactPhone.trim() || null,
+      healthCardNumber: healthCardNumber.trim() || null,
+      healthCardExpiryDate: healthCardExpiry.trim() || null,
+      address: address.trim() || null,
+      notes: notes.trim() || null,
     };
     let ok = false;
     if (editingId) {
@@ -154,7 +217,7 @@ export default function EmployeesPage() {
           </div>
         </div>
 
-        {/* پنل inline سمت‌ها (داخل لیست، نه modal جدا) */}
+        {/* پنل inline سمت‌ها */}
         {showRoles && (
           <div className="bg-stone-50 border border-stone-200 rounded-lg p-4">
             <div className="text-[12.5px] font-medium text-stone-700 mb-1">سمت‌های شغلی</div>
@@ -211,11 +274,18 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      {/* Add Modal */}
+      {/* Modal */}
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowAdd(false)}>
-          <div className="bg-white rounded-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={ev => ev.stopPropagation()}>
-            <h2 className="text-[16px] font-medium text-stone-900 mb-4">{editingId ? 'ویرایش پرسنل' : 'افزودن پرسنل'}</h2>
+          <div
+            className="bg-white rounded-xl w-full max-w-lg p-5 max-h-[90vh] overflow-y-auto"
+            onClick={ev => ev.stopPropagation()}
+          >
+            <h2 className="text-[16px] font-medium text-stone-900 mb-4">
+              {editingId ? 'ویرایش پرسنل' : 'افزودن پرسنل'}
+            </h2>
+
+            {/* ── اطلاعات پایه ── */}
             <div className="space-y-3">
               <Field label="نام و نام خانوادگی">
                 <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="مثلاً: علی رضایی" />
@@ -253,9 +323,171 @@ export default function EmployeesPage() {
                 </Field>
               </div>
             </div>
+
+            {/* ── آکاردئون اطلاعات تکمیلی ── */}
+            <div className="mt-4 border border-stone-200 rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowExtra(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-2.5 bg-stone-50 hover:bg-stone-100 transition-colors text-right"
+              >
+                <span className="text-[12.5px] font-medium text-stone-700">اطلاعات تکمیلی</span>
+                <ChevronDown
+                  size={15}
+                  strokeWidth={1.5}
+                  className={cn('text-muted transition-transform duration-200', showExtra && 'rotate-180')}
+                />
+              </button>
+
+              {showExtra && (
+                <div className="p-4 space-y-4 border-t border-stone-200">
+
+                  {/* شناسه‌ها */}
+                  <div>
+                    <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">شناسه‌ها</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="شماره ملی">
+                        <Input
+                          value={nationalId}
+                          onChange={e => setNationalId(normalizeDigits(e.target.value))}
+                          placeholder="۱۰ رقم"
+                          dir="ltr"
+                          maxLength={10}
+                        />
+                      </Field>
+                      <Field label="شماره بیمه">
+                        <Input
+                          value={insuranceNumber}
+                          onChange={e => setInsuranceNumber(e.target.value)}
+                          placeholder="شماره بیمه"
+                          dir="ltr"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* مشخصات فردی */}
+                  <div>
+                    <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">مشخصات فردی</div>
+                    <div className="space-y-3">
+                      <Field label="نام پدر">
+                        <Input value={fatherName} onChange={e => setFatherName(e.target.value)} placeholder="نام پدر" />
+                      </Field>
+                      <div className="grid grid-cols-2 gap-3">
+                        <Field label="جنسیت">
+                          <Select value={gender} onChange={e => setGender(e.target.value as Gender | '')}>
+                            <option value="">— انتخاب کنید —</option>
+                            {(Object.entries(GENDER_LABELS) as [Gender, string][]).map(([k, v]) => (
+                              <option key={k} value={k}>{v}</option>
+                            ))}
+                          </Select>
+                        </Field>
+                        <Field label="وضعیت تأهل">
+                          <Select value={maritalStatus} onChange={e => setMaritalStatus(e.target.value as MaritalStatus | '')}>
+                            <option value="">— انتخاب کنید —</option>
+                            {(Object.entries(MARITAL_LABELS) as [MaritalStatus, string][]).map(([k, v]) => (
+                              <option key={k} value={k}>{v}</option>
+                            ))}
+                          </Select>
+                        </Field>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* اطلاعات بانکی */}
+                  <div>
+                    <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">اطلاعات بانکی</div>
+                    <div className="space-y-3">
+                      <Field label="شماره شبا (IBAN)">
+                        <Input
+                          value={iban}
+                          onChange={e => setIban(e.target.value.toUpperCase())}
+                          placeholder="IR + ۲۴ رقم"
+                          dir="ltr"
+                          maxLength={26}
+                        />
+                      </Field>
+                      <Field label="شماره حساب بانکی">
+                        <Input
+                          value={bankAccount}
+                          onChange={e => setBankAccount(e.target.value)}
+                          placeholder="شماره حساب"
+                          dir="ltr"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* مخاطب اضطراری */}
+                  <div>
+                    <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">مخاطب اضطراری</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="نام">
+                        <Input value={emergencyContactName} onChange={e => setEmergencyContactName(e.target.value)} placeholder="نام و نسبت" />
+                      </Field>
+                      <Field label="تلفن">
+                        <Input
+                          value={emergencyContactPhone}
+                          onChange={e => setEmergencyContactPhone(normalizeDigits(e.target.value))}
+                          placeholder="۰۹۱۲..."
+                          dir="ltr"
+                        />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* کارت بهداشت */}
+                  <div>
+                    <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">کارت بهداشت</div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="شماره کارت">
+                        <Input value={healthCardNumber} onChange={e => setHealthCardNumber(e.target.value)} placeholder="شماره کارت" dir="ltr" />
+                      </Field>
+                      <Field label="تاریخ انقضا (میلادی)">
+                        <Input
+                          value={healthCardExpiry}
+                          onChange={e => setHealthCardExpiry(e.target.value)}
+                          placeholder="YYYY-MM-DD"
+                          dir="ltr"
+                          maxLength={10}
+                        />
+                      </Field>
+                    </div>
+                  </div>
+
+                  {/* آدرس */}
+                  <Field label="آدرس">
+                    <textarea
+                      value={address}
+                      onChange={e => setAddress(e.target.value)}
+                      placeholder="آدرس کامل..."
+                      rows={2}
+                      maxLength={500}
+                      className="w-full px-3 py-2 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-400 resize-none bg-white"
+                    />
+                  </Field>
+
+                  {/* یادداشت */}
+                  <Field label="یادداشت">
+                    <textarea
+                      value={notes}
+                      onChange={e => setNotes(e.target.value)}
+                      placeholder="یادداشت..."
+                      rows={3}
+                      maxLength={1000}
+                      className="w-full px-3 py-2 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-400 resize-none bg-white"
+                    />
+                  </Field>
+
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2 mt-5">
-              <Button variant="primary" onClick={handleSave} loading={adding} icon={editingId ? Pencil : Plus}>{editingId ? 'ذخیره' : 'افزودن'}</Button>
-              <Button variant="default" onClick={() => setShowAdd(false)}>لغو</Button>
+              <Button variant="primary" onClick={handleSave} loading={adding} icon={editingId ? Pencil : Plus}>
+                {editingId ? 'ذخیره' : 'افزودن'}
+              </Button>
+              <Button variant="default" onClick={() => { setShowAdd(false); resetForm(); }}>لغو</Button>
             </div>
           </div>
         </div>
