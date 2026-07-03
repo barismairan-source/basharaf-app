@@ -177,7 +177,23 @@ export async function GET(req: Request) {
       }));
     }
 
-    // ─── ۶. سفارش‌های بیرون‌بر (تکمیل‌شده) — تعداد، فروش، میانگین سبد، نسبت ارسال/پیکاپ ──
+    // ─── ۶. صورت سود و زیان (P&L) ──────────────────────────────────
+    // COGS: دسته 'بهای تمام‌شده (COGS)' — ثبت خودکار هنگام approve فروش
+    // Payroll: دسته 'حقوق پرسنل' — ثبت خودکار از post حقوق
+    const [plTotals] = await db
+      .select({
+        cogs: sql<string>`COALESCE(SUM(CASE WHEN type='expense' AND category_name='بهای تمام‌شده (COGS)' THEN amount ELSE 0 END),0)`,
+        payroll: sql<string>`COALESCE(SUM(CASE WHEN type='expense' AND category_name='حقوق پرسنل' THEN amount ELSE 0 END),0)`,
+      })
+      .from(schema.transactions)
+      .where(where);
+
+    const cogs = Number(plTotals?.cogs ?? 0);
+    const payroll = Number(plTotals?.payroll ?? 0);
+    const grossProfit = income - cogs;
+    const otherExpense = expense - cogs - payroll;
+
+    // ─── ۷. سفارش‌های بیرون‌بر (تکمیل‌شده) — تعداد، فروش، میانگین سبد، نسبت ارسال/پیکاپ ──
     const orderConditions = [inArray(schema.orders.status, ['delivered', 'completed'])];
     if (session.role === 'BranchUser' && session.branchId) {
       orderConditions.push(eq(schema.orders.branchId, session.branchId));
@@ -206,6 +222,14 @@ export async function GET(req: Request) {
         expense,
         balance: income - expense,
         count: Number(totals?.txCount ?? 0),
+      },
+      pl: {
+        revenue: income,
+        cogs,
+        grossProfit,
+        payroll,
+        otherExpense,
+        netProfit: grossProfit - payroll - otherExpense,
       },
       monthly,
       byBranch,

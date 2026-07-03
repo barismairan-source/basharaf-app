@@ -24,6 +24,7 @@ interface ReportData {
   byCategory: Array<{ name: string; type: string; total: number; count: number }>;
   byUser: Array<{ userId: string; name: string; approved: number; pending: number; rejected: number; total: number }>;
   takeaway: { count: number; totalSales: number; avgBasket: number; deliveryCount: number; pickupCount: number };
+  pl: { revenue: number; cogs: number; grossProfit: number; payroll: number; otherExpense: number; netProfit: number };
 }
 
 function toMillions(v: number) {
@@ -116,6 +117,33 @@ export default function ReportsPage() {
               <KPICard label="موجودی خالص" value={data.summary.balance} icon={Wallet}
                 color={data.summary.balance >= 0 ? 'text-stone-900' : 'text-rose-700'} />
             </div>
+
+            {/* P&L Statement */}
+            <Card>
+              <CardHeader title="صورت سود و زیان" sub="محاسبه بر اساس تراکنش‌های تأیید‌شده" />
+              <CardBody className="space-y-0">
+                <PLRow label="درآمد فروش" value={data.pl.revenue} color="text-emerald-700" bold />
+                <PLRow label="بهای تمام‌شده‌ی فروش (COGS)" value={-data.pl.cogs} color="text-rose-600" indent />
+                <PLDivider />
+                <PLRow
+                  label="سود ناخالص"
+                  value={data.pl.grossProfit}
+                  color={data.pl.grossProfit >= 0 ? 'text-stone-900' : 'text-rose-700'}
+                  bold
+                  margin={data.pl.revenue > 0 ? Math.round((data.pl.grossProfit / data.pl.revenue) * 100) : null}
+                />
+                <PLRow label="حقوق پرسنل" value={-data.pl.payroll} color="text-rose-600" indent />
+                <PLRow label="سایر هزینه‌های عملیاتی" value={-data.pl.otherExpense} color="text-rose-600" indent />
+                <PLDivider />
+                <PLRow
+                  label="سود خالص"
+                  value={data.pl.netProfit}
+                  color={data.pl.netProfit >= 0 ? 'text-emerald-700' : 'text-rose-700'}
+                  bold
+                  margin={data.pl.revenue > 0 ? Math.round((data.pl.netProfit / data.pl.revenue) * 100) : null}
+                />
+              </CardBody>
+            </Card>
 
             {/* Monthly Bar Chart */}
             {data.monthly.length > 0 && (
@@ -307,6 +335,28 @@ export default function ReportsPage() {
             </div>
           </>
         ) : null}
+      </div>
+    </div>
+  );
+}
+
+function PLDivider() {
+  return <div className="border-t border-stone-200 my-1" />;
+}
+
+function PLRow({ label, value, color, bold, indent, margin }: {
+  label: string; value: number; color: string; bold?: boolean; indent?: boolean; margin?: number | null;
+}) {
+  return (
+    <div className={cn('flex items-center justify-between py-2.5 gap-4', indent && 'pl-5')}>
+      <div className={cn('text-[12.5px]', bold ? 'font-medium text-stone-900' : 'text-stone-600')}>{label}</div>
+      <div className="flex items-center gap-3 shrink-0">
+        {margin != null && (
+          <span className="text-[10.5px] text-stone-400 tabular-nums">{margin}٪</span>
+        )}
+        <span className={cn('text-[13px] tabular-nums', bold && 'font-semibold', color)}>
+          {value < 0 ? '(' : ''}{fmt(Math.abs(value))}{value < 0 ? ')' : ''} تومان
+        </span>
       </div>
     </div>
   );

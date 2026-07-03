@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.57-playwright-e2e` |
-| **آخرین به‌روزرسانی** | 2026-07-01 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 |
+| **نسخه** | `0.9.58-pl-report` |
+| **آخرین به‌روزرسانی** | 2026-07-03 — اکانت: ۱ |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 · build ✅ |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. اضافه‌کردن secret `STAGING_URL` در GitHub → Settings → Secrets. ۲. اجرای محلی `npm run test:e2e` برای تأیید عملکرد. ۳. تست فرم کارمند + مانده طرف‌حساب در production. |
-| **بلاک‌شده/منتظر کاربر** | secret `STAGING_URL` برای e2e job در CI. |
+| **کار بعدی پیشنهادی** | ۱. تست صورت سود و زیان در production (باز کردن /reports و فیلتر ماه جاری). ۲. اجرای ۴ migration در pgAdmin. ۳. تست فرم کارمند + مانده طرف‌حساب در production. |
+| **بلاک‌شده/منتظر کاربر** | ۴ migration معلق در pgAdmin. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-03 — P&L: صورت سود و زیان در گزارش مالی — اکانت ۱
+**چه شد:** بخش «صورت سود و زیان» به صفحه‌ی `/reports` اضافه شد:
+- **API** (`app/api/reports/route.ts`): یک query جدید که COGS (`'بهای تمام‌شده (COGS)'`) و حقوق پرسنل (`'حقوق پرسنل'`) را از جمع هزینه‌ها تفکیک می‌کند. response حاوی `pl: { revenue, cogs, grossProfit, payroll, otherExpense, netProfit }` شد.
+- **UI** (`app/(app)/reports/page.tsx`): کارت P&L با ردیف‌های درآمد → COGS (منفی) → سود ناخالص (+ حاشیه%) → حقوق (منفی) → سایر هزینه‌ها (منفی) → سود خالص (+ حاشیه%). اعداد منفی با فرمت حسابداری `(عدد)` نمایش داده می‌شوند.
+- TypeScript تمام: `pl` به interface `ReportData` اضافه شد.
+**فایل‌ها:** `app/api/reports/route.ts`, `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست در production — اگر COGS یا حقوق هنوز ثبت نشده باشند، همه صفر نشان می‌دهد (نرمال است). می‌توان ماه جاری را فیلتر کرد تا P&L دقیق‌تر باشد.
 
 ## 📓 2026-07-01 — Playwright E2E برای ۵ مسیر بحرانی — اکانت ۱
 **چه شد:** زیرساخت کامل Playwright E2E اضافه شد:
