@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.58-pl-report` |
-| **آخرین به‌روزرسانی** | 2026-07-03 — اکانت: ۱ |
+| **نسخه** | `0.9.59-otp-security` |
+| **آخرین به‌روزرسانی** | 2026-07-04 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). 🟡 **۴ migration** در انتظار اجرای دستی در pgAdmin: `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. (اجراشده ✅: فاز۱ آشپزخانه + `db-user-roles-migration.sql`) |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04): `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. تست صورت سود و زیان در production (باز کردن /reports و فیلتر ماه جاری). ۲. اجرای ۴ migration در pgAdmin. ۳. تست فرم کارمند + مانده طرف‌حساب در production. |
-| **بلاک‌شده/منتظر کاربر** | ۴ migration معلق در pgAdmin. |
+| **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. audit log برای ایجاد/رد تراکنش و import انبوه. ۲. audit log برای payroll post/reverse. ۳. audit log برای account recalculate. ۴. rate limit قوی‌تر برای OTP send. |
+| **بلاک‌شده/منتظر کاربر** | تصمیم روی اولویت‌بندی موارد 🟠 بعدی. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-04 — امنیت: rate limit OTP + حذف console.log — اکانت ۱
+**چه شد:**
+(۱) **OTP verify rate limit**: `lib/auth/rateLimit.ts` با توابع phone-keyed rate limiting برای OTP گسترش یافت (`checkOtpRateLimit`, `recordOtpFailedAttempt`, `clearOtpAttempts`, `OTP_MAX_ATTEMPTS=5`). `verifyWebOtp` در `lib/ordering/webCustomer.ts` حالا: (الف) قبل از هر query rate limit را بررسی می‌کند (ب) بعد از ۵ شکست، OTP فعال را invalidate می‌کند (used=true) و 429 می‌دهد (ج) بعد از موفقیت counter را پاک می‌کند.
+(۲) **OTP console.log**: خط `console.log([OTP MOCK]...)` در `createWebOtp` با `NODE_ENV !== 'production'` guard محافظت شد — در production لاگ نمی‌شود.
+(۳) **Migration verify**: همه ۴ migration (proforma، is_active، warning/critical، financial_periods) در schema.ts تأیید شدند. ۲ فایل migration که agent بررسی جامع خالی کرده بود بازگردانی شدند.
+**فایل‌ها:** `lib/auth/rateLimit.ts`, `lib/ordering/webCustomer.ts`, `HANDOFF.md`, `project-docs/INVESTIGATION-full-project-review.md`
+**Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32
+**ناتمام:** —
+**برای جلسه‌ی بعد:** موارد 🟠 بعدی از بررسی جامع: audit log‌های ۶‌گانه (transaction create/reject/import، payroll post/reverse، account recalculate).
 
 ## 📓 2026-07-03 — P&L: صورت سود و زیان در گزارش مالی — اکانت ۱
 **چه شد:** بخش «صورت سود و زیان» به صفحه‌ی `/reports` اضافه شد:
