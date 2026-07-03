@@ -94,3 +94,45 @@ export function getClientIp(req: Request): string {
   }
   return req.headers.get('x-real-ip') ?? 'unknown';
 }
+
+// ─── OTP verify rate limiter — keyed by phone number ─────────────────────────
+// جدا از login rate limiter: هدف جلوگیری از brute-force کد ۶ رقمی
+// بعد از OTP_MAX_ATTEMPTS شکست، OTP فعال invalidate می‌شود
+
+export const OTP_MAX_ATTEMPTS = 5;
+const OTP_WINDOW_MS = 15 * 60 * 1000; // ۱۵ دقیقه
+
+interface OtpAttemptRecord {
+  count: number;
+  firstAttempt: number;
+}
+
+const otpAttempts = new Map<string, OtpAttemptRecord>();
+
+export function checkOtpRateLimit(phone: string): { allowed: boolean } {
+  const now = Date.now();
+  const record = otpAttempts.get(phone);
+  if (!record) return { allowed: true };
+  if (now - record.firstAttempt > OTP_WINDOW_MS) {
+    otpAttempts.delete(phone);
+    return { allowed: true };
+  }
+  return { allowed: record.count < OTP_MAX_ATTEMPTS };
+}
+
+/** ثبت یک تلاش ناموفق — برمی‌گرداند تعداد کل تلاش‌های ناموفق فعلی */
+export function recordOtpFailedAttempt(phone: string): number {
+  const now = Date.now();
+  const record = otpAttempts.get(phone);
+  if (!record || now - record.firstAttempt > OTP_WINDOW_MS) {
+    otpAttempts.set(phone, { count: 1, firstAttempt: now });
+    return 1;
+  }
+  record.count += 1;
+  otpAttempts.set(phone, record);
+  return record.count;
+}
+
+export function clearOtpAttempts(phone: string): void {
+  otpAttempts.delete(phone);
+}

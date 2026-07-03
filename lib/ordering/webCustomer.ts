@@ -1,6 +1,12 @@
 import { and, eq, gt, desc } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { ApiError } from '@/lib/api-error';
+import {
+  checkOtpRateLimit,
+  recordOtpFailedAttempt,
+  clearOtpAttempts,
+  OTP_MAX_ATTEMPTS,
+} from '@/lib/auth/rateLimit';
 
 const OTP_EXPIRE_MS = 5 * 60 * 1000; // ۵ دقیقه
 const OTP_SPAM_MS = 2 * 60 * 1000;   // ضد-اسپم: اگر OTP فعال در ۲ دقیقه اخیر وجود دارد → 429
@@ -68,8 +74,10 @@ export async function createWebOtp(phone: string): Promise<string> {
 
   await db.insert(schema.webCustomerOtp).values({ phone, code, expiresAt, used: false });
 
-  // کنسول mock — در آینده با SMS provider واقعی جایگزین می‌شود
-  console.log(`[OTP MOCK] شماره ${phone} — کد: ${code} (منقضی: ${expiresAt.toISOString()})`);
+  // mock SMS — فقط در development؛ در production حذف شود با SMS provider واقعی
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`[OTP MOCK] شماره ${phone} — کد: ${code} (منقضی: ${expiresAt.toISOString()})`);
+  }
 
   return code;
 }
@@ -77,11 +85,20 @@ export async function createWebOtp(phone: string): Promise<string> {
 /**
  * تأیید OTP — اگر معتبر باشد مشتری را برمی‌گرداند، در غیر این صورت null.
  * کد را بعد از استفاده به used=true تبدیل می‌کند.
+ *
+ * Rate limiting: حداکثر OTP_MAX_ATTEMPTS تلاش ناموفق روی یک شماره در ۱۵ دقیقه.
+ * بعد از رسیدن به حد، OTP فعال invalidate می‌شود تا مهاجم نتواند با OTP جدید ادامه دهد.
  */
 export async function verifyWebOtp(
   phone: string,
   code: string
 ): Promise<typeof schema.webCustomers.$inferSelect | null> {
+  // ۱. بررسی rate limit قبل از هر query
+  const { allowed } = checkOtpRateLimit(phone);
+  if (!allowed) {
+    throw new ApiError(429, 'تعداد تلاش بیش از حد — دوباره کد بگیرید', 'OTP_TOO_MANY_ATTEMPTS');
+  }
+
   const now = new Date();
 
   const [otp] = await db
@@ -97,8 +114,28 @@ export async function verifyWebOtp(
     )
     .limit(1);
 
-  if (!otp) return null;
+  if (!otp) {
+    // ۲. کد اشتباه — ثبت تلاش ناموفق
+    const failCount = recordOtpFailedAttempt(phone);
+    if (failCount >= OTP_MAX_ATTEMPTS) {
+      // OTP فعال را باطل کن تا مهاجم با همان OTP ادامه ندهد
+      await db
+        .update(schema.webCustomerOtp)
+        .set({ used: true })
+        .where(
+          and(
+            eq(schema.webCustomerOtp.phone, phone),
+            eq(schema.webCustomerOtp.used, false),
+            gt(schema.webCustomerOtp.expiresAt, now)
+          )
+        );
+      throw new ApiError(429, 'تعداد تلاش بیش از حد — دوباره کد بگیرید', 'OTP_TOO_MANY_ATTEMPTS');
+    }
+    return null;
+  }
 
+  // ۳. کد درست — پاک کردن counter و mark as used
+  clearOtpAttempts(phone);
   await db
     .update(schema.webCustomerOtp)
     .set({ used: true })
