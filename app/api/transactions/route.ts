@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
 import { createExpenseTx, notifyPendingTransaction } from '@/lib/db/createExpenseTx';
+import { audit } from '@/lib/auth/audit';
 
 const createBodySchema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
@@ -105,6 +106,7 @@ export async function POST(req: Request) {
       await notifyPendingTransaction(inserted.id, inserted.title, branch.name);
     }
 
+    void audit({ action: 'transaction.created', userId: session.sub, meta: { id: inserted.id, type: inserted.type, amount: Number(inserted.amount), status: inserted.status, branchId: inserted.branchId } });
     return NextResponse.json({ transaction: rowToTransaction(inserted) }, { status: 201 });
   } catch (e) {
     return handleError(e);

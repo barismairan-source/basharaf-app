@@ -55,7 +55,12 @@ export type AuditAction =
   | 'admin.user.roleChanged'
   | 'admin.user.branchChanged'
   | 'inv.recipe.priceChanged'
-  | 'payroll.forceReset';
+  | 'payroll.forceReset'
+  | 'transaction.created'
+  | 'transaction.imported'
+  | 'payroll.posted'
+  | 'payroll.reversed'
+  | 'account.recalculated';
 
 export async function audit(params: {
   action: AuditAction;
