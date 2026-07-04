@@ -6,6 +6,7 @@ import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
 import { isValidJalaliString } from '@/lib/jalali';
+import { audit } from '@/lib/auth/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -145,6 +146,7 @@ export async function POST(req: Request) {
       }
     });
 
+    void audit({ action: 'transaction.imported', userId: session.sub, meta: { count: imported, branchIds: [...new Set(prepared.map(p => p.branchId as string))] } });
     return NextResponse.json({ ok: true, imported, errors: [] }, { status: 201 });
   } catch (e) {
     return handleError(e);
