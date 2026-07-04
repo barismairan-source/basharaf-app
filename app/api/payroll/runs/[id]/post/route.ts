@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleErrorLogged } from '@/lib/api-error';
 import { postPayrollRunToBasharaf, reversePayrollPost } from '@/lib/payroll/postToBasharaf';
+import { audit } from '@/lib/auth/audit';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,6 +24,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const { accountId, date } = postSchema.parse(body);
 
     const result = await postPayrollRunToBasharaf(params.id, accountId, session.sub, date);
+    if (!result.alreadyPosted) {
+      void audit({ action: 'payroll.posted', userId: session.sub, meta: { runId: params.id, accountId, date } });
+    }
     return NextResponse.json(result, { status: result.alreadyPosted ? 200 : 201 });
   } catch (e) {
     return await handleErrorLogged(e, req, { category: 'payroll' });
@@ -35,8 +39,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
  */
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const result = await reversePayrollPost(params.id);
+    void audit({ action: 'payroll.reversed', userId: session.sub, meta: { runId: params.id } });
     return NextResponse.json(result);
   } catch (e) {
     return await handleErrorLogged(e, req, { category: 'payroll' });
