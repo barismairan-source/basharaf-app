@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
 import { notify } from '@/lib/notify';
+import { audit } from '@/lib/auth/audit';
 
 const rejectBodySchema = z.object({
   reason: z.string().max(300).optional(),
@@ -74,6 +75,7 @@ export async function POST(
       });
     }
 
+    void audit({ action: 'transaction.rejected', userId: session.sub, meta: { id: params.id, title: current.title, amount: Number(current.amount), reason: finalReason, branchId: current.branchId } });
     return NextResponse.json({ transaction: rowToTransaction(updated) });
   } catch (e) {
     return handleError(e);
