@@ -3,6 +3,7 @@ import { eq, and, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
+import { audit } from '@/lib/auth/audit';
 
 /**
  * POST /api/accounts/recalculate
@@ -10,8 +11,9 @@ import { handleError } from '@/lib/api-error';
  */
 export async function POST() {
   try {
-    await requireAdmin();
+    const session = await requireAdmin();
     const accounts = await db.select().from(schema.accounts);
+    const oldBalances = new Map(accounts.map(a => [a.id, Number(a.balance)]));
 
     for (const account of accounts) {
       const [inc] = await db.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
@@ -33,6 +35,14 @@ export async function POST() {
     }
 
     const updated = await db.select().from(schema.accounts);
+    void audit({
+      action: 'account.recalculated',
+      userId: session.sub,
+      meta: {
+        count: updated.length,
+        accounts: updated.map(a => ({ id: a.id, name: a.name, old: oldBalances.get(a.id) ?? 0, new: Number(a.balance) })),
+      },
+    });
     return NextResponse.json({
       ok: true,
       accounts: updated.map(a => ({ id: a.id, name: a.name, balance: Number(a.balance) })),
