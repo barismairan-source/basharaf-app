@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.59-otp-security` |
+| **نسخه** | `0.9.60-audit-logs` |
 | **آخرین به‌روزرسانی** | 2026-07-04 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 · build ✅ |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04): `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. audit log برای ایجاد/رد تراکنش و import انبوه. ۲. audit log برای payroll post/reverse. ۳. audit log برای account recalculate. ۴. rate limit قوی‌تر برای OTP send. |
+| **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. rate limit قوی‌تر برای OTP send (sliding window). ۲. رفع parseFloat روی مقادیر مالی انبار (`lib/db/inventoryHelpers.ts:23`، `approve/route.ts`، `reversal/route.ts`). ۳. UI دکمه force-reset حقوق (SuperAdmin). |
 | **بلاک‌شده/منتظر کاربر** | تصمیم روی اولویت‌بندی موارد 🟠 بعدی. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -50,6 +50,21 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-04 — audit log برای ۶ عملیات مالی — اکانت ۱
+**چه شد:**
+۶ عملیات مالی که قبلاً هیچ ردپایی نمی‌گذاشتند حالا در `audit_log` ثبت می‌شوند:
+- `transaction.created` — هر تراکنش جدید (id, type, amount, status, branchId)
+- `transaction.rejected` — رد تراکنش (title, amount, reason, branchId)
+- `transaction.imported` — import انبوه اکسل (count, branchIds)
+- `payroll.posted` — post حقوق به حسابداری (runId, accountId, date؛ فقط اولین بار، نه idempotent replay)
+- `payroll.reversed` — معکوس حقوق (هر دو route: DELETE روی `/post` و POST روی `/reverse`)
+- `account.recalculated` — بازمحاسبه موجودی (count + old/new balance هر حساب)
+`AuditAction` union در `lib/auth/audit.ts` با ۵ نوع جدید گسترش یافت (`transaction.rejected` از قبل بود).
+**فایل‌ها:** `lib/auth/audit.ts`, `app/api/transactions/route.ts`, `app/api/transactions/[id]/reject/route.ts`, `app/api/transactions/import/route.ts`, `app/api/payroll/runs/[id]/post/route.ts`, `app/api/payroll/runs/[id]/reverse/route.ts`, `app/api/accounts/recalculate/route.ts`
+**Build:** tsc ✅ ۰ خطا (بعد از هر commit جداگانه تأیید شد) — ۶ commit جدا
+**ناتمام:** —
+**برای جلسه‌ی بعد:** موارد 🟠 باقی‌مانده: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
 
 ## 📓 2026-07-04 — امنیت: rate limit OTP + حذف console.log — اکانت ۱
 **چه شد:**
@@ -121,45 +136,5 @@
 **Build:** tsc ✅ ۰ خطا. Commit: f8feb71
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست با بازه واقعی فروش: نمای daily باید ردیف بیشتری از نمای voucher نشان دهد (فروش‌های مسیر ۲ و ۳). migration اختیاری تنها اگر گزارش کند بود اجرا شود.
-
-## 📓 2026-06-30 — موج ۳ فیکس‌های UX (۱۹ مورد 🟡/🔵) — اکانت ۱
-**چه شد:** همه‌ی ۱۹ آیتم موج ۳ پیاده و جداگانه commit شدند:
-- **A6–A11**: overflow-x-auto برای جدول‌های موبایل (stocktake, cartable, sales, purchase-orders, DataList)
-- **B3**: confirm dialog قبل از غیرفعال‌کردن حساب
-- **B7**: KPICard از formatMoneyShort استفاده می‌کند
-- **B8**: ردیف‌های دفتر کل به /transactions لینک می‌شوند
-- **C4–C6**: حقوق — flex-wrap روی ردیف دکمه‌ها، whitespace-nowrap روی مبالغ فیش، flex-shrink-0 روی مبلغ رویداد
-- **D3**: confirm قبل از حذف رزرو
-- **D4**: confirm + راهنمای غیرفعال‌کردن قبل از حذف آیتم منو
-- **D5**: هشدار پیشگیرانه اگر دسته آیتم داشته باشد (قبل از call به API)
-- **D6**: آیکون Trash2 کوپن → EyeOff (رنگ amber) چون soft-deactivate است نه حذف
-- **D7/D8**: truncate روی نام آیتم و دسته در جدول منو
-- **D9**: truncate روی نام مشتری
-- **D10**: truncate روی branchName در کارت سفارش
-- **D11**: flex-shrink-0 روی قیمت آیتم در منوی عمومی
-**فایل‌ها:** `app/(app)/inventory/stocktake/page.tsx`, `app/(app)/inventory/cartable/page.tsx`, `app/(app)/inventory/sales/page.tsx`, `app/(app)/purchase-orders/page.tsx`, `components/ui/DataList.tsx`, `app/(app)/reports/page.tsx`, `app/(app)/accounts/[id]/page.tsx`, `app/(app)/accounts/page.tsx`, `app/(app)/reservations/page.tsx`, `app/(app)/menu/page.tsx`, `app/(app)/coupons/page.tsx`, `app/(app)/customers/page.tsx`, `app/(app)/orders/page.tsx`, `components/menu/MenuItem.tsx`, `app/(app)/payroll/page.tsx`
-**Build:** tsc ✅ ۰ خطا. Commits: c13666e, d4c9acf, 2165700, 555be48, 16c1f89, a73ad25
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست کاربر: (الف) مانده طرف‌حساب‌ها در production. (ب) dialog بازنشانی اجباری حقوق اردیبهشت. (ج) رفتار موج ۳ روی موبایل (truncate، overflow، flex-wrap).
-
-## 📓 2026-06-30 — فیکس‌های داده: مانده طرف‌حساب + reverse حقوق بدون سند — اکانت ۱
-**چه شد:**
-(مشکل ۳) حذف فیلتر `isCredit=true` از محاسبه‌ی مانده طرف‌حساب: `contacts/route.ts` + `contactLedger.ts` + `calculateContactBalance` همه اصلاح شدند. از این پس همه تراکنش‌های approved (نقدی + نسیه) در مانده لحاظ می‌شوند. drawer هم به‌طور خودکار بهتر می‌شود چون از همان API می‌خواند. داده قبلی: ۵۰ از ۵۰ تراکنش طرف‌حساب isCredit=false بودند → مانده همیشه صفر.
-(مشکل ۲) سه لایه اضافه شد: (الف) postToBasharaf خطای tagged با code=NO_JOURNAL_VOUCHER پرتاب می‌کند. (ب) reverse API این code را به client برمی‌گرداند (409). (ج) یک endpoint جدید `POST /api/payroll/runs/[id]/force-reset` فقط برای SuperAdmin ساخته شد که بدون اثر مالی status → approved می‌کند + audit می‌نویسد. اگر posted journal_voucher واقعی وجود داشته باشد → خطا (از reverse عادی استفاده کن). UI هم dialog هشدار نشان می‌دهد.
-endpoint تشخیصی موقت `/api/admin/diag` حذف شد.
-**فایل‌ها:** `app/api/contacts/route.ts`, `lib/db/contactLedger.ts`, `components/contacts/ContactLedgerDrawer.tsx`, `lib/payroll/postToBasharaf.ts`, `app/api/payroll/runs/[id]/reverse/route.ts`, `app/api/payroll/runs/[id]/force-reset/route.ts` (جدید), `lib/auth/audit.ts`, `store/slices/payrollSlice.ts`, `app/(app)/payroll/page.tsx`
-**Build:** tsc ✅ ۰ خطا. Commits: c2cf436, 419e4df, 2541657
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست کاربر: (الف) صفحه طرف‌حساب مانده نشان دهد؟ (ب) دکمه‌ی «برگشت ثبت» اردیبهشت ۱۴۰۵ → dialog بازنشانی اجباری نشان دهد؟
-
-## 📓 2026-06-29 — فیکس ۱ + تفکیک drawer + endpoint تشخیصی — اکانت ۱
-**چه شد:**
-(فیکس ۱) route محاسبه مجدد حقوق: اگر دوره قبلاً payslips داشته باشد، از همان employee IDs (نه re-query کارمندان فعال) محاسبه می‌کند → soft-delete بعدی دیگر NO_EMPLOYEES نمی‌دهد.
-(نیاز جدید) `ContactLedgerDrawer`: دو ردیف «جمع دریافتی» و «جمع پرداختی» (approved) در بالای drawer اضافه شد — کاملاً client-side از entries موجود.
-(تشخیص) `GET /api/admin/diag` (موقت، SuperAdmin) ساخته شد: isCredit distribution روی تراکنش‌های با contactId + audit دوره‌های posted بدون journal_voucher. **بعد از دریافت نتیجه از کاربر → فایل حذف شود.**
-**فایل‌ها:** `app/api/payroll/runs/[id]/calculate/route.ts`, `components/contacts/ContactLedgerDrawer.tsx`, `app/api/admin/diag/route.ts` (موقت)
-**Build:** tsc ✅ ۰ خطا · tests ✅ 32/32. Commits: 97ffe5f, 7aa00d6, bf0721a
-**ناتمام:** منتظر نتیجه‌ی `/api/admin/diag` برای تشخیص مشکل ۲ (reverse posted) و مشکل ۳ (contact balance).
-**برای جلسه‌ی بعد:** کاربر `/api/admin/diag` را باز می‌کند → نتیجه → فیکس ۲ و ۳ طراحی می‌شوند.
 
 

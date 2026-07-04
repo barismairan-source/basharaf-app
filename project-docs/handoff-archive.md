@@ -1,5 +1,17 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-30 — موج ۳ فیکس‌های UX (۱۹ مورد 🟡/🔵) — اکانت ۱
+**چه شد:** همه‌ی ۱۹ آیتم موج ۳ پیاده و جداگانه commit شدند: A6–A11 (overflow-x-auto موبایل)، B3/B7/B8 (confirm/KPICard/ledger link)، C4–C6 (حقوق flex)، D3–D11 (confirm/truncate/آیکون کوپن).
+**Build:** tsc ✅. Commits: c13666e, d4c9acf, 2165700, 555be48, 16c1f89, a73ad25
+
+## 📓 2026-06-30 — فیکس‌های داده: مانده طرف‌حساب + reverse حقوق بدون سند — اکانت ۱
+**چه شد:** (۱) فیلتر isCredit=true از محاسبه مانده طرف‌حساب حذف شد. (۲) force-reset endpoint ساخته شد (بدون اثر مالی + audit). endpoint تشخیصی /api/admin/diag حذف شد.
+**Build:** tsc ✅. Commits: c2cf436, 419e4df, 2541657
+
+## 📓 2026-06-29 — فیکس ۱ + تفکیک drawer + endpoint تشخیصی — اکانت ۱
+**چه شد:** (۱) route محاسبه مجدد حقوق از همان employee IDs استفاده می‌کند (نه re-query). (۲) ContactLedgerDrawer دو ردیف «جمع دریافتی/پرداختی» گرفت. (۳) /api/admin/diag موقت ساخته شد.
+**Build:** tsc ✅. Commits: 97ffe5f, 7aa00d6, bf0721a
+
 ## 📓 2026-06-29 — موج ۱ فیکس‌های UX (پنج باگ بحرانی) — اکانت ۱
 **چه شد:** B1 (silent fail approved tx edit), B5+B6 (label غلط proforma/transfer), A12 (رسپی بدون ویرایش), A1 (stocktake reversal).
 **Commits:** afe288f, 2a0836f, 773c557, cb01f7f
