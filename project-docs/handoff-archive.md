@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-01 — فیکس مانده طرف‌حساب (بار دوم): تفکیک نقدی/نسیه — اکانت ۱
+**چه شد:** پرداخت‌های نقدی مانده منفی می‌ساختند. منطق: مانده فقط از isCredit=true AND approved. contactLedger.ts + contacts/route.ts فیلتر isCredit=true گرفتند. ContactLedgerDrawer دو بخش جداگانه نقدی/نسیه.
+**فایل‌ها:** `lib/db/contactLedger.ts`, `app/api/contacts/route.ts`, `components/contacts/ContactLedgerDrawer.tsx`
+**Build:** tsc ✅. Commit: 1913ff5
+
 ## 📓 2026-06-30 — شکاف ۳: variance نمای فروش واقعی — اکانت ۱
 **چه شد:** پارامتر `?source=daily` به endpoint `GET /api/inventory/reports/variance` اضافه شد. نمای daily از inv_daily_sales + inv_stock_tx. UI: toggle «نمای حواله / نمای فروش واقعی».
 **Build:** tsc ✅. Commit: f8feb71

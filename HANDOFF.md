@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.61-ui-features` |
+| **نسخه** | `0.9.62-menu-engineering` |
 | **آخرین به‌روزرسانی** | 2026-07-05 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 · build ✅ |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. rate limit قوی‌تر برای OTP send (sliding window). ۲. رفع parseFloat روی مقادیر مالی انبار (`lib/db/inventoryHelpers.ts:23`، `approve/route.ts`، `reversal/route.ts`). ۳. UI دکمه force-reset حقوق (SuperAdmin). |
+| **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. rate limit قوی‌تر برای OTP send. ۲. رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`). ۳. UI دکمه force-reset حقوق (SuperAdmin). |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -50,6 +50,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-05 — C8: مهندسی منو — اکانت ۱
+**چه شد:** ماتریس مهندسی منو (Menu Engineering Matrix) پیاده شد:
+- **API** `GET /api/inventory/reports/menu-engineering`: فروش روزانه inv_daily_sales بازه را جمع می‌کند، costRecipe را برای هر رسپی اجرا می‌کند، میانگین unitsSold و unitMargin را محاسبه می‌کند، هر آیتم را در یکی از ۴ ربع (star/plowhorse/puzzle/dog) قرار می‌دهد. اگر کمتر از ۳ آیتم فروخته شده باشد `tooFew: true` برمی‌گرداند.
+- **صفحه** `/inventory/menu-engineering`: فیلتر شعبه + بازه تاریخ، ماتریس ۲×۲ با آیکون + عنوان + راهنمای اقدام فارسی، جدول جزئیات با رنگ‌بندی حاشیه سود، خروجی اکسل.
+- **Hub آشپزخانه**: کارت «مهندسی منو» (BarChart2) اضافه شد.
+- **nav-config**: `/inventory/menu-engineering` به KITCHEN_PATHS اضافه شد.
+**فایل‌ها:** `app/api/inventory/reports/menu-engineering/route.ts` (جدید), `app/(app)/inventory/menu-engineering/page.tsx` (جدید), `app/(app)/inventory/kitchen/page.tsx`, `components/layout/nav-config.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅. Commit: 98b5d0b
+**ناتمام:** —
+**برای جلسه‌ی بعد:** موارد 🟠: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
 
 ## 📓 2026-07-05 — UI: هشدار انقضا + پیش‌بینی تقاضا + Prime Cost % — اکانت ۱
 **چه شد:**
@@ -124,14 +135,4 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست در production: ویرایش کارمند → باز کردن آکاردئون → ذخیره شماره ملی/شبا.
 
-## 📓 2026-07-01 — فیکس مانده طرف‌حساب (بار دوم): تفکیک نقدی/نسیه — اکانت ۱
-**چه شد:** فیکس قبلی (حذف isCredit=true) باعث شد پرداخت‌های نقدی به تأمین‌کننده مانده منفی (= «طلبکار از ما») بسازند که غلط بود. منطق صحیح پیاده شد:
-- **مانده** فقط از `isCredit=true AND approved` — پرداخت نقدی مانده نمی‌سازد.
-- `contactLedger.ts`: هر دو تابع فیلتر `isCredit=true` گرفتند؛ `isCredit: boolean` به `ContactLedgerEntry` اضافه شد.
-- `contacts/route.ts`: کوئری bulk balance نیز `and(status=approved, isCredit=true)` فیلتر گرفت.
-- `ContactLedgerDrawer`: دو بخش جداگانه — «مبادلات نقدی» (جریان تاریخی + جمع) و «حساب‌های نسیه» (مانده). کارت بالا فقط مانده نسیه نشان می‌دهد.
-**فایل‌ها:** `lib/db/contactLedger.ts`, `app/api/contacts/route.ts`, `components/contacts/ContactLedgerDrawer.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅. Commit: 1913ff5
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست در production: (الف) مانده طرف‌حساب‌ها باید ۰ باشد (هنوز نسیه‌ای نداریم) (ب) در drawer بخش «مبادلات نقدی» همه تراکنش‌های نقدی را نشان دهد (ج) dialog بازنشانی اجباری حقوق اردیبهشت (د) variance فروش واقعی.
 
