@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Wallet, Users,
-  Building2, Download, Printer, ShoppingBag, type LucideIcon,
+  Building2, Download, Printer, ShoppingBag, Info, type LucideIcon,
 } from 'lucide-react';
 import {
   Button, Card, CardBody, CardHeader, Select, Field, JalaliDatePicker,
@@ -133,6 +133,22 @@ export default function ReportsPage() {
                   margin={data.pl.revenue > 0 ? Math.round((data.pl.grossProfit / data.pl.revenue) * 100) : null}
                 />
                 <PLRow label="حقوق پرسنل" value={-data.pl.payroll} color="text-rose-600" indent />
+                {(() => {
+                  const primeCost = data.pl.cogs + data.pl.payroll;
+                  const pct = data.pl.revenue > 0 ? Math.round((primeCost / data.pl.revenue) * 100) : null;
+                  const pctColor = pct == null ? 'text-stone-400' : pct <= 60 ? 'text-emerald-600' : pct <= 65 ? 'text-amber-600' : 'text-rose-600';
+                  return (
+                    <PLRow
+                      label="Prime Cost (COGS + حقوق)"
+                      value={-primeCost}
+                      color="text-rose-600"
+                      indent
+                      margin={pct}
+                      marginColor={pctColor}
+                      tooltip="شاخص استاندارد صنعت رستوران: مجموع بهای تمام‌شده و نیروی کار نسبت به فروش (هدف: زیر ۶۰٪)"
+                    />
+                  );
+                })()}
                 <PLRow label="سایر هزینه‌های عملیاتی" value={-data.pl.otherExpense} color="text-rose-600" indent />
                 <PLDivider />
                 <PLRow
@@ -344,15 +360,23 @@ function PLDivider() {
   return <div className="border-t border-stone-200 my-1" />;
 }
 
-function PLRow({ label, value, color, bold, indent, margin }: {
-  label: string; value: number; color: string; bold?: boolean; indent?: boolean; margin?: number | null;
+function PLRow({ label, value, color, bold, indent, margin, marginColor, tooltip }: {
+  label: string; value: number; color: string; bold?: boolean; indent?: boolean;
+  margin?: number | null; marginColor?: string; tooltip?: string;
 }) {
   return (
     <div className={cn('flex items-center justify-between py-2.5 gap-4', indent && 'pl-5')}>
-      <div className={cn('text-[12.5px]', bold ? 'font-medium text-stone-900' : 'text-stone-600')}>{label}</div>
+      <div className="flex items-center gap-1.5 min-w-0">
+        <span className={cn('text-[12.5px]', bold ? 'font-medium text-stone-900' : 'text-stone-600')}>{label}</span>
+        {tooltip && (
+          <span title={tooltip} className="flex-shrink-0 cursor-help">
+            <Info size={12} strokeWidth={1.5} className="text-stone-400" />
+          </span>
+        )}
+      </div>
       <div className="flex items-center gap-3 shrink-0">
         {margin != null && (
-          <span className="text-[10.5px] text-stone-400 tabular-nums">{margin}٪</span>
+          <span className={cn('text-[10.5px] tabular-nums font-medium', marginColor ?? 'text-stone-400')}>{margin}٪</span>
         )}
         <span className={cn('text-[13px] tabular-nums', bold && 'font-semibold', color)}>
           {value < 0 ? '(' : ''}{fmt(Math.abs(value))}{value < 0 ? ')' : ''} تومان
