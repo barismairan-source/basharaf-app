@@ -107,7 +107,7 @@ export const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 // مسیرهای آشپزخانه که زیر /inventory/* پراکنده‌اند ولی به آیتم nav «آشپزخانه» تعلق دارند
-const KITCHEN_PATHS = ['/inventory/kitchen', '/inventory/recipes', '/inventory/plan'];
+const KITCHEN_PATHS = ['/inventory/kitchen', '/inventory/recipes', '/inventory/plan', '/inventory/menu-engineering'];
 
 export function isNavItemActive(href: string, pathname: string, matchPrefix?: boolean): boolean {
   if (matchPrefix) {
