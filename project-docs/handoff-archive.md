@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-06-30 — شکاف ۳: variance نمای فروش واقعی — اکانت ۱
+**چه شد:** پارامتر `?source=daily` به endpoint `GET /api/inventory/reports/variance` اضافه شد. نمای daily از inv_daily_sales + inv_stock_tx. UI: toggle «نمای حواله / نمای فروش واقعی».
+**Build:** tsc ✅. Commit: f8feb71
+
+
 ## 📓 2026-06-30 — موج ۳ فیکس‌های UX (۱۹ مورد 🟡/🔵) — اکانت ۱
 **چه شد:** همه‌ی ۱۹ آیتم موج ۳ پیاده و جداگانه commit شدند: A6–A11 (overflow-x-auto موبایل)، B3/B7/B8 (confirm/KPICard/ledger link)، C4–C6 (حقوق flex)، D3–D11 (confirm/truncate/آیکون کوپن).
 **Build:** tsc ✅. Commits: c13666e, d4c9acf, 2165700, 555be48, 16c1f89, a73ad25

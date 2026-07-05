@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.60-audit-logs` |
-| **آخرین به‌روزرسانی** | 2026-07-04 — اکانت: ۱ |
+| **نسخه** | `0.9.61-ui-features` |
+| **آخرین به‌روزرسانی** | 2026-07-05 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04): `db-accounting-v1-migration.sql`، `db-admin-migration.sql`، `db-notifications-v2-migration.sql`، `db-financial-periods-migration.sql`. |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). |
 | **کار نیمه‌تمام (in-progress)** | — |
 | **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. rate limit قوی‌تر برای OTP send (sliding window). ۲. رفع parseFloat روی مقادیر مالی انبار (`lib/db/inventoryHelpers.ts:23`، `approve/route.ts`، `reversal/route.ts`). ۳. UI دکمه force-reset حقوق (SuperAdmin). |
-| **بلاک‌شده/منتظر کاربر** | تصمیم روی اولویت‌بندی موارد 🟠 بعدی. |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-05 — UI: هشدار انقضا + پیش‌بینی تقاضا + Prime Cost % — اکانت ۱
+**چه شد:**
+(۱) **هشدار انقضای موجودی** (`app/(app)/inventory/page.tsx`): کارت «هشدار انقضا» به hub انبار اضافه شد. فقط وقتی اقلام نزدیک یا گذشته از تاریخ انقضا وجود دارد نمایش می‌دهد (اگر همه سالم → کارت پنهان). برای هر قلم: نام، تاریخ انقضا، badge وضعیت (منقضی/امروز/فردا/N روز).
+(۲) **پیش‌بینی تقاضا** (`app/(app)/inventory/kitchen/page.tsx`): جدول «پیش‌بینی مصرف فردا» در hub آشپزخانه اضافه شد. داده از `POST /api/inventory/forecast`. نمایش rawCoverage: قلم | مصرف روزانه | موجودی فعلی | کمبود احتمالی. ردیف‌های کمبود قرمز. واحدها تبدیل‌شده (qtyBase ÷ basePerUnit + unit).
+(۳) **Prime Cost %** (`app/(app)/reports/page.tsx`): ردیف جدید بعد از «حقوق پرسنل» در P&L. Prime Cost = COGS + حقوق. درصد رنگ‌بندی: سبز ≤۶۰٪، کهربایی ۶۰–۶۵٪، قرمز >۶۵٪. آیکون Info با tooltip فارسی. `PLRow` با `marginColor` و `tooltip` prop گسترش یافت.
+**فایل‌ها:** `app/(app)/inventory/page.tsx`, `app/(app)/inventory/kitchen/page.tsx`, `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32 — ۳ commit جدا
+**ناتمام:** —
+**برای جلسه‌ی بعد:** موارد 🟠: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
 
 ## 📓 2026-07-04 — audit log برای ۶ عملیات مالی — اکانت ۱
 **چه شد:**
@@ -124,17 +134,4 @@
 **Build:** tsc ✅ ۰ خطا · build ✅. Commit: 1913ff5
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست در production: (الف) مانده طرف‌حساب‌ها باید ۰ باشد (هنوز نسیه‌ای نداریم) (ب) در drawer بخش «مبادلات نقدی» همه تراکنش‌های نقدی را نشان دهد (ج) dialog بازنشانی اجباری حقوق اردیبهشت (د) variance فروش واقعی.
-
-## 📓 2026-06-30 — شکاف ۳: variance نمای فروش واقعی — اکانت ۱
-**چه شد:** پارامتر `?source=daily` به endpoint `GET /api/inventory/reports/variance` اضافه شد. نمای daily:
-- **تئوریک:** از `inv_daily_sales` در بازه jalaliDate → parse JSONB lines (دو فرمت qty/count هر دو handle شدند) → join به `inv_recipes` + `inv_recipe_lines` + `inv_items` → محاسبه `(saleQty / portions) × qtyBase × (100 / effectivePct)` در TypeScript.
-- **واقعی:** از `inv_stock_tx` kind∈(out,waste,sale) با فیلتر jalaliDate + فیلتر شعبه via `inv_items.branchId` (چون inv_stock_tx ستون branchId ندارد).
-- نمای voucher (قدیمی) کاملاً دست‌نخورده ماند.
-- UI: toggle «نمای حواله / نمای فروش واقعی» + یادداشت که رسپی فعلی مبنای محاسبه است.
-- فایل migration اختیاری ساخته شد: `project-docs/migrations/db-variance-daily-perf-index.sql` (index روی item_id,jalali_date برای بازه‌های بزرگ).
-**فایل‌ها:** `app/api/inventory/reports/variance/route.ts`, `app/(app)/inventory/variance/page.tsx`, `project-docs/migrations/db-variance-daily-perf-index.sql` (جدید)
-**Build:** tsc ✅ ۰ خطا. Commit: f8feb71
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست با بازه واقعی فروش: نمای daily باید ردیف بیشتری از نمای voucher نشان دهد (فروش‌های مسیر ۲ و ۳). migration اختیاری تنها اگر گزارش کند بود اجرا شود.
-
 
