@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   PackageOpen, ClipboardCheck, TrendingDown, AlertTriangle,
-  ChefHat, BarChart2, CalendarClock, Package, ChevronLeft,
+  ChefHat, BarChart2, CalendarClock, Package, ChevronLeft, CalendarX2,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
@@ -17,6 +17,11 @@ interface ExceptionsData {
   clampWarnings: { count: number };
   belowMin: { count: number; items: Array<{ name: string }> };
   pendingReversals: { count: number };
+}
+
+interface ExpiryWarning {
+  itemId: string; itemName: string; unit: string;
+  expiryDate: string; daysUntilExpiry: number; isExpired: boolean;
 }
 
 interface ActionCard {
@@ -53,6 +58,7 @@ export default function InventoryPage() {
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   const [exceptions, setExceptions] = useState<ExceptionsData | null>(null);
   const [excLoading, setExcLoading] = useState(false);
+  const [expiry, setExpiry] = useState<ExpiryWarning[]>([]);
 
   // For non-SuperAdmin, branch is fixed to assignedBranch
   const effectiveBranchId = (() => {
@@ -67,6 +73,14 @@ export default function InventoryPage() {
       setSelectedBranchId(branches[0].id);
     }
   }, [branches, selectedBranchId]);
+
+  // Fetch expiry warnings once on mount
+  useEffect(() => {
+    fetch('/api/inventory/expiry', { credentials: 'include' })
+      .then((r) => r.ok ? r.json() : null)
+      .then((d: { warnings: ExpiryWarning[] } | null) => { if (d?.warnings) setExpiry(d.warnings); })
+      .catch(() => {});
+  }, []);
 
   // Fetch exceptions whenever effective branch changes
   useEffect(() => {
@@ -254,6 +268,39 @@ export default function InventoryPage() {
               </p>
             </div>
           )}
+        </Card>
+      )}
+
+      {/* ─── هشدار انقضا ─── */}
+      {expiry.length > 0 && (
+        <Card>
+          <div className="px-5 py-3.5 border-b border-border flex items-center gap-2">
+            <CalendarX2 size={15} strokeWidth={1.5} className="text-danger" />
+            <div className="text-[13.5px] font-medium text-text">هشدار انقضا</div>
+            <span className="mr-auto text-[11px] font-medium text-white bg-danger px-2 py-0.5 rounded-full">{expiry.length}</span>
+          </div>
+          <ul className="divide-y divide-border">
+            {expiry.map((w) => {
+              const badge = w.isExpired
+                ? { label: 'منقضی', cls: 'bg-danger text-white' }
+                : w.daysUntilExpiry === 0
+                  ? { label: 'امروز', cls: 'bg-amber-100 text-amber-700' }
+                  : w.daysUntilExpiry === 1
+                    ? { label: 'فردا', cls: 'bg-amber-100 text-amber-700' }
+                    : { label: `${w.daysUntilExpiry} روز`, cls: 'bg-stone-100 text-stone-600' };
+              return (
+                <li key={`${w.itemId}-${w.expiryDate}`} className="flex items-center justify-between px-5 py-3 gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[13px] text-text truncate">{w.itemName}</div>
+                    <div className="text-[11px] text-muted mt-0.5">{w.expiryDate}</div>
+                  </div>
+                  <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0 ${badge.cls}`}>
+                    {badge.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         </Card>
       )}
 
