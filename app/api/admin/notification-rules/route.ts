@@ -22,6 +22,7 @@ export async function GET() {
         label: r.label,
         description: r.description,
         enabled: r.enabled,
+        smsEnabled: r.smsEnabled,
         threshold: r.threshold,
         updatedAt: r.updatedAt.toISOString(),
       })),
@@ -34,6 +35,7 @@ export async function GET() {
 const patchSchema = z.object({
   key: z.string().min(1),
   enabled: z.boolean().optional(),
+  smsEnabled: z.boolean().optional(),
   threshold: z.number().int().min(0).nullable().optional(),
 });
 
@@ -47,6 +49,7 @@ export async function PATCH(req: Request) {
       updatedAt: new Date(),
     };
     if (body.enabled !== undefined) patch.enabled = body.enabled;
+    if (body.smsEnabled !== undefined) patch.smsEnabled = body.smsEnabled;
     if (body.threshold !== undefined) patch.threshold = body.threshold;
 
     const [updated] = await db
@@ -65,6 +68,7 @@ export async function PATCH(req: Request) {
         label: updated.label,
         description: updated.description,
         enabled: updated.enabled,
+        smsEnabled: updated.smsEnabled,
         threshold: updated.threshold,
         updatedAt: updated.updatedAt.toISOString(),
       },

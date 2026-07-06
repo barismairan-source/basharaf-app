@@ -95,6 +95,8 @@ export const users = pgTable(
     joined: text('joined').notNull(),
     /** آیا حساب کاربری فعال است؟ false = suspended (نمی‌تواند وارد شود) */
     isActive: boolean('is_active').notNull().default(true),
+    /** شماره موبایل برای دریافت پیامک هشدار — اختیاری */
+    smsPhone: text('sms_phone'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -339,6 +341,7 @@ export const notificationRules = pgTable('notification_rules', {
   label: text('label').notNull(),
   description: text('description'),
   enabled: boolean('enabled').notNull().default(true),
+  smsEnabled: boolean('sms_enabled').notNull().default(false),
   threshold: integer('threshold'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -1651,3 +1654,32 @@ export const cheques = pgTable(
 );
 
 export type ChequeRow = typeof cheques.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول پیامک — SMS Log
+// ════════════════════════════════════════════════════════════════
+export const smsLog = pgTable(
+  'sms_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    phone: text('phone').notNull(),
+    message: text('message').notNull(),
+    templateKey: text('template_key'),
+    entityId: text('entity_id'),
+    // pending | sent | failed | dry_run | deduped | capped
+    status: text('status').notNull().default('pending'),
+    provider: text('provider').notNull().default('kavenegar'),
+    providerResponse: jsonb('provider_response'),
+    error: text('error'),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    phoneIdx: index('sms_log_phone_idx').on(t.phone),
+    statusIdx: index('sms_log_status_idx').on(t.status),
+    entityIdx: index('sms_log_entity_idx').on(t.entityId),
+    createdIdx: index('sms_log_created_idx').on(t.createdAt),
+  })
+);
+
+export type SmsLogEntry = typeof smsLog.$inferSelect;

@@ -5,6 +5,41 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 
+export const dynamic = 'force-dynamic';
+
+/** GET /api/users/[id] — دریافت اطلاعات یک کاربر */
+export async function GET(
+  _req: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await requireSession();
+    if (session.role !== 'SuperAdmin' && session.sub !== params.id) {
+      throw new ApiError(403, 'دسترسی مجاز نیست', 'FORBIDDEN');
+    }
+    const [user] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, params.id))
+      .limit(1);
+    if (!user) throw new ApiError(404, 'کاربر پیدا نشد', 'NOT_FOUND');
+    return NextResponse.json({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        assignedBranch: user.assignedBranchId,
+        initials: user.initials,
+        smsPhone: user.smsPhone ?? null,
+        permissions: user.permissions ?? null,
+      },
+    });
+  } catch (e) {
+    return handleError(e);
+  }
+}
+
 const patchBodySchema = z.object({
   name: z.string().min(2).max(80).optional(),
   email: z
@@ -14,6 +49,11 @@ const patchBodySchema = z.object({
     .transform((v) => v.trim().toLowerCase())
     .optional(),
   permissions: z.array(z.string().max(40)).max(20).nullable().optional(),
+  smsPhone: z
+    .string()
+    .regex(/^(\+98|0)?9\d{9}$/, 'شماره موبایل نامعتبر است')
+    .nullable()
+    .optional(),
 });
 
 export async function PATCH(

@@ -8,6 +8,7 @@ import {
   Tags,
   PenLine,
   Shield,
+  MessageSquare,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
@@ -21,7 +22,8 @@ export type SettingsTab =
   | 'branches'
   | 'categories'
   | 'content'
-  | 'security';
+  | 'security'
+  | 'sms';
 
 interface TabDef {
   id: SettingsTab;
@@ -38,6 +40,7 @@ const TABS: ReadonlyArray<TabDef> = [
   { id: 'categories', label: 'دسته‌بندی‌ها', icon: Tags, requires: 'settings.categories' },
   { id: 'content', label: 'متن‌های سامانه', icon: PenLine, requires: 'settings.content' },
   { id: 'security', label: 'امنیت', icon: Shield, requires: 'settings.security' },
+  { id: 'sms', label: 'پیامک', icon: MessageSquare, requires: 'settings.security' },
 ];
 
 interface SettingsNavProps {

@@ -10,6 +10,7 @@ import {
   CategoriesPane,
   ContentPane,
   SecurityPane,
+  SmsPane,
   type SettingsTab,
 } from '@/components/settings';
 import { RouterGuard } from '@/components/layout';
@@ -69,6 +70,11 @@ export default function SettingsPage() {
             {activeTab === 'security' && (
               <RouterGuard cap="settings.security" fallbackTitle="امنیت">
                 <SecurityPane />
+              </RouterGuard>
+            )}
+            {activeTab === 'sms' && (
+              <RouterGuard cap="settings.security" fallbackTitle="پیامک">
+                <SmsPane />
               </RouterGuard>
             )}
           </div>

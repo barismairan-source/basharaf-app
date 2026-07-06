@@ -8,6 +8,7 @@
  */
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
+import { sendSms } from '@/lib/sms/sendSms';
 import type { NotificationType } from '@/types';
 
 export interface NotifyParams {
@@ -47,24 +48,32 @@ export async function notify(params: NotifyParams): Promise<void> {
   });
 }
 
+export interface NotifyAdminsOptions {
+  /** اگر true باشد و قانون sms_enabled=true داشته باشد، پیامک هم ارسال می‌شود */
+  sms?: boolean;
+}
+
 /** اعلان به تمام SuperAdminها (با بررسی قانون) */
 export async function notifyAdmins(
   params: Omit<NotifyParams, 'userId'>,
-  tx?: any
+  tx?: any,
+  options?: NotifyAdminsOptions
 ): Promise<void> {
   const client: typeof db = tx ?? db;
 
+  let smsEnabled = false;
   if (params.ruleKey) {
     const [rule] = await client
-      .select({ enabled: schema.notificationRules.enabled })
+      .select({ enabled: schema.notificationRules.enabled, smsEnabled: schema.notificationRules.smsEnabled })
       .from(schema.notificationRules)
       .where(eq(schema.notificationRules.key, params.ruleKey))
       .limit(1);
     if (rule && !rule.enabled) return;
+    smsEnabled = rule?.smsEnabled ?? false;
   }
 
   const admins = await client
-    .select({ id: schema.users.id })
+    .select({ id: schema.users.id, smsPhone: schema.users.smsPhone })
     .from(schema.users)
     .where(eq(schema.users.role, 'SuperAdmin'));
 
@@ -83,6 +92,20 @@ export async function notifyAdmins(
       userId: admin.id,
     }))
   );
+
+  // پیامک — fire-and-forget (خطا اعلان را خراب نمی‌کند)
+  if (options?.sms && smsEnabled) {
+    for (const admin of admins) {
+      if (admin.smsPhone) {
+        sendSms({
+          phone: admin.smsPhone,
+          message: `${params.title}\n${params.sub}`,
+          templateKey: params.ruleKey,
+          entityId: params.entityId ?? undefined,
+        }).catch(() => {/* fire-and-forget */});
+      }
+    }
+  }
 }
 
 /** آستانه‌ی یک قانون را برمی‌گرداند — برای مقایسه در runtime */
