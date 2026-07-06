@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.67-sms-phase3` |
+| **نسخه** | `0.9.68-detective-phase4` |
 | **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow ۴ job: typecheck / unit-test / e2e / deploy. 🟡 **۴ migration جدید pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql` — باید در pgAdmin اجرا شوند. |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
+| **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۵ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql` — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | **فاز ۴** — موتور کارآگاه مالی (`lib/detective/`, `anomaly_findings` table، ۶ قانون event-driven) |
-| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۴ migration در pgAdmin. ۲. تنظیم `KAVENEGAR_API_KEY` در env برای پیامک واقعی. |
+| **کار بعدی پیشنهادی** | **فاز ۵** — UI کارآگاه (`/detective` page، لیست findings با فیلتر، تغییر وضعیت، کارت داشبورد) + اتصال SMS برای detective alerts |
+| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۵ migration در pgAdmin (db-anomaly-migration.sql آخرین است). ۲. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — فاز ۴: موتور کارآگاه مالی — اکانت ۱
+**چه شد:** موتور کارآگاه کامل پیاده شد. هیچ مسیر مالی شکسته یا کند نشد — تمام callها fire-and-forget با try/catch هستند.
+- **`db-anomaly-migration.sql`**: جدول `anomaly_findings` (text+CHECK برای severity/status) + `anomaly_rules` (JSON thresholds) + seed ۶ قانون + seed در notification_rules برای UI آینده.
+- **`lib/anomaly/`**: `types.ts`، `utils.ts` (توابع خالص قابل unit test)، `engine.ts` (isDuplicate با بازه ۲۴h، saveFindings، notifyAdmins برای high/medium).
+- **۶ قانون**: wasteSpikeRule (waste voucher approve، high)، priceJumpRule (in voucher approve، high)، rejectionPatternRule (tx+voucher reject، medium)، consumptionSpikeRule (daily scan، medium)، belowApprovalLimitRule (tx create، high)، offHoursRule (tx create، low).
+- **`POST /api/anomaly/scan`**: SuperAdmin یا `X-Scan-Secret` header.
+- **Wire**: voucher approve (waste+in)، voucher reject، tx reject، tx create — همه fire-and-forget.
+- **16 unit test**: توابع خالص ۲ قانون + dedup mock.
+**فایل‌ها:** `db-anomaly-migration.sql`, `lib/anomaly/types.ts`, `lib/anomaly/utils.ts`, `lib/anomaly/engine.ts`, `lib/anomaly/rules/wasteSpikeRule.ts`, `lib/anomaly/rules/priceJumpRule.ts`, `lib/anomaly/rules/rejectionPatternRule.ts`, `lib/anomaly/rules/consumptionSpikeRule.ts`, `lib/anomaly/rules/belowApprovalLimitRule.ts`, `lib/anomaly/rules/offHoursRule.ts`, `app/api/anomaly/scan/route.ts`, `app/api/transactions/route.ts`, `app/api/transactions/[id]/reject/route.ts`, `app/api/inventory/vouchers/[id]/approve/route.ts`, `app/api/inventory/vouchers/[id]/reject/route.ts`, `lib/db/schema.ts`, `tests/unit/anomaly.test.ts`
+**Build:** tsc ✅ · build ✅ · 48 unit tests ✅. Commit: 8a39294
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۵ migration در pgAdmin (db-anomaly-migration.sql جدید). **فاز ۵**: صفحه `/detective` (لیست findings، فیلتر status/severity، تغییر وضعیت)، کارت داشبورد، nav item، اتصال SMS برای high/medium alerts، `DETECTIVE_SCAN_SECRET` در GitHub Actions.
 
 ## 📓 2026-07-06 — فاز ۳: SMS کانال notification — اکانت ۱
 **چه شد:** پیامک به‌عنوان کانال موازی سیستم notifications v2 وصل شد. هیچ رفتار موجودی نشکست.
