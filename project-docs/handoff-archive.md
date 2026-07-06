@@ -1,5 +1,21 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-01 — Playwright E2E برای ۵ مسیر بحرانی — اکانت ۱
+**چه شد:** زیرساخت کامل Playwright E2E اضافه شد:
+- `playwright.config.ts`: chromium headless، timeout 30s، storageState، globalSetup/Teardown
+- `tests/e2e/fixtures/seed.ts`: ساخت test user SuperAdmin (idempotent)
+- `tests/e2e/global-setup.ts`: seed + browser login + ذخیره session
+- `tests/e2e/global-teardown.ts`: DELETE کردن رکوردهای `[TEST]` از DB بعد از همه تست‌ها
+- ۵ spec file: auth · transactions · contacts · payroll · inventory (هر کدام ۳ تست)
+- workflow restructure: ۴ job جداگانه — typecheck → unit-test → e2e → deploy
+**فایل‌ها:** `playwright.config.ts`, `tests/e2e/**`, `tsconfig.json`, `package.json`, `.github/workflows/liara.yml`
+**Build:** tsc ✅ · unit tests ✅ 32/32. Commit: a369b57
+
+## 📓 2026-07-01 — C7: فرم کارمند — ۱۳ فیلد تکمیلی با آکاردئون — اکانت ۱
+**چه شد:** فیلدهای تکمیلی کارمند (nationalId، insuranceNumber، fatherName، gender، maritalStatus، iban، bankAccount، emergencyContact، healthCard، address، note) در آکاردئون به فرم افزوده شدند.
+**فایل‌ها:** `app/(app)/employees/page.tsx`
+**Build:** tsc ✅ · build ✅. Commit: d186040
+
 ## 📓 2026-07-01 — فیکس مانده طرف‌حساب (بار دوم): تفکیک نقدی/نسیه — اکانت ۱
 **چه شد:** پرداخت‌های نقدی مانده منفی می‌ساختند. منطق: مانده فقط از isCredit=true AND approved. contactLedger.ts + contacts/route.ts فیلتر isCredit=true گرفتند. ContactLedgerDrawer دو بخش جداگانه نقدی/نسیه.
 **فایل‌ها:** `lib/db/contactLedger.ts`, `app/api/contacts/route.ts`, `components/contacts/ContactLedgerDrawer.tsx`

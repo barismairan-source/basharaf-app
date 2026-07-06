@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.63-price-history` |
+| **نسخه** | `0.9.64-cheques` |
 | **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). 🟡 **۲ migration جدید pending**: `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
 | **کار بعدی پیشنهادی** | موارد 🟠 باقی‌مانده: ۱. رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`). ۲. UI دکمه force-reset حقوق (SuperAdmin). ۳. rate limit قوی‌تر برای OTP send. |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **بلاک‌شده/منتظر کاربر** | ۲ migration SQL در `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — کاربر باید در pgAdmin اجرا کند. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,23 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — ماژول مدیریت چک + ضایعات با دلیل — اکانت ۱
+**چه شد:**
+(۱) **ضایعات با دلیل** (کامل شد): `wasteReason text nullable` به `inv_voucher_lines` اضافه شد. UI فرم دریافت انبار: select با گزینه‌های فارسی + ورودی متن سفاری برای «سایر». Migration: `db-waste-reason-migration.sql`.
+(۲) **ماژول چک‌ها** (کامل):
+  - Schema: جدول `cheques` (text+CHECK برای kind/status، bigint تومان، تاریخ جلالی text). Migration: `db-cheques-migration.sql`.
+  - API: `GET/POST /api/cheques`، `GET/PATCH/DELETE /api/cheques/[id]`، `GET /api/contacts/[id]/cheques`.
+  - صفحه `/cheques`: دو تب (دریافتی/پرداختی)، کارت‌های خلاصه، جدول با رنگ‌بندی (قرمز = سررسید گذشته، کهربایی = ≤۷ روز)، select inline برای تغییر وضعیت، Sheet فرم با JalaliDatePicker، دکمه «ثبت تراکنش» → prefill `/transactions/new` از طریق URL params.
+  - sidebar: آیتم «چک‌ها» با آیکون FileCheck بین صندوق‌ها و طرف‌حساب‌ها.
+  - `ContactLedgerDrawer`: بخش «چک‌ها» اضافه شد (parallel fetch از `/api/contacts/[id]/cheques`).
+  - `transactions/new`: prefill از URL params با `useSearchParams`.
+  - `audit.ts`: نوع `chq.statusChanged` اضافه شد.
+  - notification rule `cheque.dueSoon` در migration SQL.
+**فایل‌ها:** `app/(app)/cheques/page.tsx` (جدید), `app/api/cheques/route.ts` (جدید), `app/api/cheques/[id]/route.ts` (جدید), `app/api/contacts/[id]/cheques/route.ts` (جدید), `types/cheque.ts` (جدید), `types/index.ts`, `lib/db/schema.ts`, `lib/auth/audit.ts`, `components/layout/nav-config.ts`, `components/contacts/ContactLedgerDrawer.tsx`, `app/(app)/transactions/new/page.tsx`, `db-waste-reason-migration.sql` (جدید), `db-cheques-migration.sql` (جدید)
+**Build:** tsc ✅ ۰ خطا · build ✅. Commits: ce170cf (waste reason), 5944e32 (cheques)
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۲ migration باید در pgAdmin اجرا شوند. موارد 🟠: parseFloat مالی انبار، force-reset حقوق، rate limit OTP.
 
 ## 📓 2026-07-06 — تاریخچه قیمت خرید اقلام انبار — اکانت ۱
 **چه شد:** فیچر «تاریخچه قیمت» برای رصد تورم مواد اولیه پیاده شد:
@@ -116,33 +133,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست در production — اگر COGS یا حقوق هنوز ثبت نشده باشند، همه صفر نشان می‌دهد (نرمال است). می‌توان ماه جاری را فیلتر کرد تا P&L دقیق‌تر باشد.
-
-## 📓 2026-07-01 — Playwright E2E برای ۵ مسیر بحرانی — اکانت ۱
-**چه شد:** زیرساخت کامل Playwright E2E اضافه شد:
-- `playwright.config.ts`: chromium headless، timeout 30s، storageState، globalSetup/Teardown
-- `tests/e2e/fixtures/seed.ts`: ساخت test user SuperAdmin (idempotent)
-- `tests/e2e/global-setup.ts`: seed + browser login + ذخیره session
-- `tests/e2e/global-teardown.ts`: DELETE کردن رکوردهای `[TEST]` از DB بعد از همه تست‌ها
-- ۵ spec file: auth (3 تست) · transactions (3 تست + B1 regression) · contacts (3 تست) · payroll (3 تست) · inventory (3 تست)
-- workflow restructure: ۴ job جداگانه — typecheck → unit-test → e2e (نیاز به secret `STAGING_URL`) → deploy
-- `tsconfig.json`: `tests/e2e` از main type-check خارج شد
-**فایل‌ها:** `playwright.config.ts`, `tests/e2e/**`, `tsconfig.json`, `package.json`, `.github/workflows/liara.yml`
-**Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32. Commit: a369b57
-**ناتمام:** —
-**برای جلسه‌ی بعد:** کاربر باید secret `STAGING_URL` = آدرس لیارا را در GitHub → Settings → Secrets اضافه کند تا e2e job در CI کار کند. اجرای محلی: `npm run test:e2e` (نیاز به `.env.local` با DATABASE_URL).
-
-## 📓 2026-07-01 — C7: فرم کارمند — ۱۳ فیلد تکمیلی با آکاردئون — اکانت ۱
-**چه شد:** فیلدهایی که در API وجود داشتند ولی در UI نبودند به فرم افزودن/ویرایش کارمند اضافه شدند. بخش «اطلاعات تکمیلی» به‌صورت آکاردئون طراحی شد. فیلدها:
-- **شناسه‌ها:** nationalId (validate 10 رقم + normalizeDigits)، insuranceNumber
-- **مشخصات فردی:** fatherName، gender (select)، maritalStatus (select)
-- **بانکی:** iban (validate IR+24 رقم، auto-uppercase)، bankAccount
-- **مخاطب اضطراری:** emergencyContactName، emergencyContactPhone
-- **بهداشت:** healthCardNumber، healthCardExpiryDate (ISO text input)
-- **آدرس** (textarea)، **یادداشت** (textarea)
-- آکاردئون هنگام ویرایش کارمندی که داده تکمیلی دارد خودکار باز می‌شود.
-**فایل‌ها:** `app/(app)/employees/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅. Commit: d186040
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست در production: ویرایش کارمند → باز کردن آکاردئون → ذخیره شماره ملی/شبا.
 
 
