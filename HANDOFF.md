@@ -10,7 +10,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.64-cheques` |
+| **نسخه** | `0.9.65-flash-report` |
 | **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). 🟡 **۲ migration جدید pending**: `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — باید در pgAdmin اجرا شوند. |
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — Flash Report روزانه برای داشبورد — اکانت ۱
+**چه شد:** گزارش روزانه «یک‌نگاهی» برای مالک پیاده شد:
+- **`lib/reports/flashReport.ts`**: تابع `getFlashReport(dateJalali, branchId?)` — منطق جداگانه برای استفاده مجدد (بات تلگرام آینده). جمع income امروز، COGS (بهای تمام‌شده COGS)، payroll، ضایعات (invVouchers kind='waste') + همان داده‌های هفته‌ی پیش برای مقایسه ٪.
+- **`GET /api/reports/flash?date=jalali&branchId=`**: endpoint ساده — زمینه session + date امروز به‌صورت پیش‌فرض.
+- **`FlashReportCard`** در داشبورد (فقط SuperAdmin): ۵ KPI در یک ردیف — فروش (+ فلش هفته قبل)، تعداد فاکتور، COGS (+ فلش)، Prime Cost % (رنگ‌بندی ≤۶۰٪ سبز/۶۰–۶۵٪ کهربایی/>۶۵٪ قرمز)، ضایعات.
+**فایل‌ها:** `lib/reports/flashReport.ts` (جدید), `app/api/reports/flash/route.ts` (جدید), `components/dashboard/FlashReportCard.tsx` (جدید), `components/dashboard/index.ts`, `app/(app)/dashboard/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅. Commit: 8d8f288
+**ناتمام:** —
+**برای جلسه‌ی بعد:** اگر بات تلگرام اضافه شد، `getFlashReport` را مستقیم صدا بزند. موارد 🟠: parseFloat مالی انبار، force-reset حقوق، rate limit OTP.
 
 ## 📓 2026-07-06 — ماژول مدیریت چک + ضایعات با دلیل — اکانت ۱
 **چه شد:**
@@ -124,14 +134,5 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** موارد 🟠 بعدی از بررسی جامع: audit log‌های ۶‌گانه (transaction create/reject/import، payroll post/reverse، account recalculate).
 
-## 📓 2026-07-03 — P&L: صورت سود و زیان در گزارش مالی — اکانت ۱
-**چه شد:** بخش «صورت سود و زیان» به صفحه‌ی `/reports` اضافه شد:
-- **API** (`app/api/reports/route.ts`): یک query جدید که COGS (`'بهای تمام‌شده (COGS)'`) و حقوق پرسنل (`'حقوق پرسنل'`) را از جمع هزینه‌ها تفکیک می‌کند. response حاوی `pl: { revenue, cogs, grossProfit, payroll, otherExpense, netProfit }` شد.
-- **UI** (`app/(app)/reports/page.tsx`): کارت P&L با ردیف‌های درآمد → COGS (منفی) → سود ناخالص (+ حاشیه%) → حقوق (منفی) → سایر هزینه‌ها (منفی) → سود خالص (+ حاشیه%). اعداد منفی با فرمت حسابداری `(عدد)` نمایش داده می‌شوند.
-- TypeScript تمام: `pl` به interface `ReportData` اضافه شد.
-**فایل‌ها:** `app/api/reports/route.ts`, `app/(app)/reports/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست در production — اگر COGS یا حقوق هنوز ثبت نشده باشند، همه صفر نشان می‌دهد (نرمال است). می‌توان ماه جاری را فیلتر کرد تا P&L دقیق‌تر باشد.
 
 

@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-03 — P&L: صورت سود و زیان در گزارش مالی — اکانت ۱
+**چه شد:** بخش «صورت سود و زیان» به `/reports` اضافه شد. API جدید: COGS + payroll جدا. UI: کارت P&L با ردیف‌های رنگی. `pl` به interface `ReportData` اضافه شد.
+**فایل‌ها:** `app/api/reports/route.ts`, `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ · build ✅
+
 ## 📓 2026-07-01 — Playwright E2E برای ۵ مسیر بحرانی — اکانت ۱
 **چه شد:** زیرساخت کامل Playwright E2E اضافه شد:
 - `playwright.config.ts`: chromium headless، timeout 30s، storageState، globalSetup/Teardown
