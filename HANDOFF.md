@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.62-menu-engineering` |
-| **آخرین به‌روزرسانی** | 2026-07-05 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · unit tests ✅ 32/32 · build ✅ |
+| **نسخه** | `0.9.63-price-history` |
+| **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | موارد 🟠 از بررسی جامع: ۱. rate limit قوی‌تر برای OTP send. ۲. رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`). ۳. UI دکمه force-reset حقوق (SuperAdmin). |
+| **کار بعدی پیشنهادی** | موارد 🟠 باقی‌مانده: ۱. رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`). ۲. UI دکمه force-reset حقوق (SuperAdmin). ۳. rate limit قوی‌تر برای OTP send. |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
@@ -50,6 +50,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — تاریخچه قیمت خرید اقلام انبار — اکانت ۱
+**چه شد:** فیچر «تاریخچه قیمت» برای رصد تورم مواد اولیه پیاده شد:
+- **API** `GET /api/inventory/items/[id]/price-history`: از `inv_voucher_lines` + `inv_vouchers` (kind='in', status='approved') قیمت‌های خرید تأییدشده را بازیابی می‌کند. خروجی: آرایه `{ date (jalali), unitPrice, qty, source }` مرتب بر اساس تاریخ + خلاصه `{ firstPrice, lastPrice, avgPrice, changePct, change3mPct }`.
+- **API** `GET /api/inventory/items/price-changes`: یک‌جا قیمت آخرین خرید + تغییر ۳ ماهه برای همه اقلام — برای ستون جدول.
+- **UI** `app/(app)/inventory/items/page.tsx`: (الف) آیکون `TrendingUp` کنار میانگین بها — با کلیک Sheet تاریخچه باز می‌شود. (ب) ستون «تغییر ۳م.» جدید (فقط برای canDo inventory.viewCosts): قرمز >۲۰٪، کهربایی ۱–۲۰٪، سبز کاهش. (پ) Sheet تاریخچه: Summary card (آخرین قیمت + ٪ تغییر نسبت به ۳ ماه + میانگین) + نمودار خطی Recharts + جدول (تاریخ/قیمت/مقدار/منبع).
+**فایل‌ها:** `app/api/inventory/items/[id]/price-history/route.ts` (جدید), `app/api/inventory/items/price-changes/route.ts` (جدید), `app/(app)/inventory/items/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅. Commit: b455cf1
+**ناتمام:** —
+**برای جلسه‌ی بعد:** موارد 🟠: رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`)، UI force-reset حقوق (SuperAdmin)، rate limit قوی‌تر OTP send.
 
 ## 📓 2026-07-05 — C8: مهندسی منو — اکانت ۱
 **چه شد:** ماتریس مهندسی منو (Menu Engineering Matrix) پیاده شد:
