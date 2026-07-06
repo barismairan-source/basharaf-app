@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.65-flash-report` |
+| **نسخه** | `0.9.66-sms-phase2` |
 | **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). 🟡 **۲ migration جدید pending**: `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — باید در pgAdmin اجرا شوند. |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow ۴ job: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL`. 🟡 **۳ migration جدید pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql` — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | **فاز ۲ کارآگاه+SMS** (منتظر تأیید کاربر): `lib/sms/`, `db-sms-anomaly-migration.sql`, هسته پیامک. جزئیات در `project-docs/INVESTIGATION-anomaly-sms.md`. |
-| **بلاک‌شده/منتظر کاربر** | ۱. تأیید طراحی `INVESTIGATION-anomaly-sms.md` + پاسخ ۵ سوال باز بخش ۷. ۲. migration SQL در `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — باید در pgAdmin اجرا شوند. |
+| **کار بعدی پیشنهادی** | **فاز ۳** — اتصال SMS به notify در API routeها (approve تراکنش، تأیید برگه انبار، ...) یا **فاز ۴** موتور کارآگاه |
+| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۳ migration در pgAdmin. ۲. تنظیم `KAVENEGAR_API_KEY` در env Liara برای رفع dry-run. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,20 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — فاز ۲: هسته‌ی پیامک (SMS core) — اکانت ۱
+**چه شد:** کاربر طراحی INVESTIGATION را تأیید کرد + ۵ سوال باز را پاسخ داد. فاز ۲ کامل پیاده شد:
+- **`db-sms-anomaly-migration.sql`**: جدول `sms_log` (dedup/cap/dry_run)، `sms_phone` روی `users`، `sms_enabled` روی `notification_rules`، seed تنظیمات در `app_settings`. همه قوانین با `sms_enabled=false` شروع می‌شوند (اصل پیش‌فرض خاموش).
+- **`lib/sms/`**: `types.ts` (SmsStatus/SendSmsParams/SendSmsResult)، `kavenegar.ts` (dry-run وقتی KEY نباشد یا SMS_DRY_RUN=true)، `sendSms.ts` (cap از app_settings، dedup N ساعته، fire-and-forget).
+- **`lib/notify.ts`**: `notifyAdmins` با `options?: { sms? }` — اگر قانون `sms_enabled=true` باشد و ادمین `sms_phone` داشته باشد، `sendSms` به‌صورت fire-and-forget صدا می‌شود.
+- **`GET/PATCH /api/admin/notification-rules`**: `smsEnabled` اضافه شد.
+- **`PATCH /api/users/[id]`**: `smsPhone` با regex validation. `GET /api/users/[id]` (جدید).
+- **`POST /api/sms/test`**: endpoint آزمایشی (SuperAdmin).
+- **Settings > تب «پیامک»**: `SmsPane` با فرم شماره + دکمه آزمایشی + toggle per-rule.
+**فایل‌ها:** `db-sms-anomaly-migration.sql` (جدید), `lib/sms/types.ts` (جدید), `lib/sms/kavenegar.ts` (جدید), `lib/sms/sendSms.ts` (جدید), `lib/notify.ts`, `lib/db/schema.ts`, `app/api/sms/test/route.ts` (جدید), `app/api/admin/notification-rules/route.ts`, `app/api/users/[id]/route.ts`, `components/settings/SmsPane.tsx` (جدید), `components/settings/SettingsNav.tsx`, `components/settings/index.ts`, `app/(app)/settings/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅. Commit: a73b9c1
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۳ migration در pgAdmin اجرا شوند. فاز ۳: اتصال SMS به notifyAdmins در routeهایی که مهم‌اند (مثلاً approve تراکنش بزرگ). فاز ۴: موتور کارآگاه. یادآوری: DETECTIVE_SCAN_SECRET را در GitHub Actions بساز (وقتی فاز ۴ شروع شد).
 
 ## 📓 2026-07-06 — طراحی کارآگاه مالی + زیرساخت پیامک — اکانت ۱
 **چه شد:** فاز تحلیل و طراحی کامل شد (بدون هیچ کد/migration). سند کامل در `project-docs/INVESTIGATION-anomaly-sms.md`.
