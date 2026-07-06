@@ -1683,3 +1683,43 @@ export const smsLog = pgTable(
 );
 
 export type SmsLogEntry = typeof smsLog.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول کارآگاه — Anomaly Detection (فاز ۴)
+// text+CHECK برای severity و status — طبق قرارداد پروژه (نه pgEnum)
+// ════════════════════════════════════════════════════════════════
+export const anomalyFindings = pgTable(
+  'anomaly_findings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ruleKey: text('rule_key').notNull(),
+    severity: text('severity').notNull(), // 'high' | 'medium' | 'low'
+    status: text('status').notNull().default('new'), // 'new' | 'investigating' | 'confirmed' | 'false_positive'
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+    entityType: text('entity_type'),
+    entityId: text('entity_id'),
+    jalaliDate: text('jalali_date'),
+    detectedAt: timestamp('detected_at', { withTimezone: true }).notNull().defaultNow(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+    resolvedBy: uuid('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    details: jsonb('details').notNull(),
+    note: text('note').notNull().default(''),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    ruleIdx: index('af_rule_idx').on(t.ruleKey),
+    statusIdx: index('af_status_idx').on(t.status),
+    branchIdx: index('af_branch_idx').on(t.branchId),
+    entityIdx: index('af_entity_idx').on(t.entityId),
+    detectedIdx: index('af_detected_idx').on(t.detectedAt),
+  })
+);
+
+export const anomalyRules = pgTable('anomaly_rules', {
+  ruleKey: text('rule_key').primaryKey(),
+  enabled: boolean('enabled').notNull().default(true),
+  thresholds: jsonb('thresholds').notNull(),
+});
+
+export type AnomalyFinding = typeof anomalyFindings.$inferSelect;
+export type AnomalyRule = typeof anomalyRules.$inferSelect;

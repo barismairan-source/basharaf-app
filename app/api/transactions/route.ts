@@ -7,6 +7,9 @@ import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
 import { createExpenseTx, notifyPendingTransaction } from '@/lib/db/createExpenseTx';
 import { audit } from '@/lib/auth/audit';
+import { belowApprovalLimitRule } from '@/lib/anomaly/rules/belowApprovalLimitRule';
+import { offHoursRule } from '@/lib/anomaly/rules/offHoursRule';
+import { saveFindings } from '@/lib/anomaly/engine';
 
 const createBodySchema = z.object({
   type: z.enum(['income', 'expense', 'transfer']),
@@ -105,6 +108,24 @@ export async function POST(req: Request) {
     if (inserted.status === 'pending') {
       await notifyPendingTransaction(inserted.id, inserted.title, branch.name);
     }
+
+    // کارآگاه: قانون‌های event-driven (fire-and-forget)
+    const _now = new Date();
+    if (inserted.status === 'pending') {
+      void belowApprovalLimitRule({
+        txId: inserted.id,
+        userId: session.sub,
+        amount: Number(inserted.amount),
+        branchId: inserted.branchId ?? null,
+        createdAt: _now,
+      }).then((f) => saveFindings(f)).catch(() => {});
+    }
+    void offHoursRule({
+      entityType: 'transaction',
+      entityId: inserted.id,
+      createdAt: _now,
+      branchId: inserted.branchId ?? null,
+    }).then((f) => saveFindings(f)).catch(() => {});
 
     void audit({ action: 'transaction.created', userId: session.sub, meta: { id: inserted.id, type: inserted.type, amount: Number(inserted.amount), status: inserted.status, branchId: inserted.branchId } });
     return NextResponse.json({ transaction: rowToTransaction(inserted) }, { status: 201 });

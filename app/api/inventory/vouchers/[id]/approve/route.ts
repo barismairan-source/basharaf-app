@@ -6,6 +6,9 @@ import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { approveVoucherTx } from '@/lib/db/inventoryHelpers';
+import { wasteSpikeRule } from '@/lib/anomaly/rules/wasteSpikeRule';
+import { priceJumpRule } from '@/lib/anomaly/rules/priceJumpRule';
+import { saveFindings } from '@/lib/anomaly/engine';
 import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting, postStocktakeToAccounting } from '@/lib/inventory/postToAccounting';
 import { computeAutoRecost } from '@/lib/inventory/costing';
 import { audit } from '@/lib/auth/audit';
@@ -259,6 +262,28 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         userId: updated.createdBy,
         ruleKey: 'voucher_pending',
       });
+    }
+
+    // کارآگاه: قانون‌های event-driven بعد از commit (fire-and-forget)
+    if (kind === 'waste' && current.branchId) {
+      void wasteSpikeRule({
+        voucherId: params.id,
+        branchId: current.branchId,
+        finalTotal,
+        makerDate: current.makerDate,
+      }).then((f) => saveFindings(f)).catch(() => {});
+    }
+    if (kind === 'in' && current.branchId && updatedLines.length > 0) {
+      const pjLines = updatedLines.map((l) => ({
+        itemId: l.itemId,
+        finalUnitCost: parseFloat(l.finalUnitCost ?? l.estUnitCost),
+      }));
+      void priceJumpRule({
+        voucherId: params.id,
+        branchId: current.branchId,
+        lines: pjLines,
+        makerDate: current.makerDate,
+      }).then((f) => saveFindings(f)).catch(() => {});
     }
 
     audit({ action: 'inv.voucher.approved', userId: session.sub, meta: { voucherId: params.id, finalTotal, selfApprove } });

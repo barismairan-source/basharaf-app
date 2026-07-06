@@ -7,6 +7,8 @@ import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
 import { notify } from '@/lib/notify';
 import { audit } from '@/lib/auth/audit';
+import { rejectionPatternRule } from '@/lib/anomaly/rules/rejectionPatternRule';
+import { saveFindings } from '@/lib/anomaly/engine';
 
 const rejectBodySchema = z.object({
   reason: z.string().max(300).optional(),
@@ -73,6 +75,14 @@ export async function POST(
         entityId: updated.id,
         userId: updated.createdBy,
       });
+    }
+
+    // کارآگاه: الگوی رد (fire-and-forget)
+    if (current.createdBy) {
+      void rejectionPatternRule({
+        createdBy: current.createdBy,
+        branchId: current.branchId ?? null,
+      }).then((f) => saveFindings(f)).catch(() => {});
     }
 
     void audit({ action: 'transaction.rejected', userId: session.sub, meta: { id: params.id, title: current.title, amount: Number(current.amount), reason: finalReason, branchId: current.branchId } });

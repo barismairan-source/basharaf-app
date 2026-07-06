@@ -8,6 +8,8 @@ import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { rejectVoucherTx } from '@/lib/db/inventoryHelpers';
 import { audit } from '@/lib/auth/audit';
+import { rejectionPatternRule } from '@/lib/anomaly/rules/rejectionPatternRule';
+import { saveFindings } from '@/lib/anomaly/engine';
 
 /**
  * POST /api/inventory/vouchers/[id]/reject — رد برگه، برگشت اثر فیزیکی موقت.
@@ -65,6 +67,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         entityId: updated.id,
         userId: updated.createdBy,
       });
+    }
+
+    // کارآگاه: الگوی رد (fire-and-forget)
+    if (current.createdBy) {
+      void rejectionPatternRule({
+        createdBy: current.createdBy,
+        branchId: current.branchId ?? null,
+      }).then((f) => saveFindings(f)).catch(() => {});
     }
 
     audit({ action: 'inv.voucher.rejected', userId: session.sub, meta: { voucherId: params.id, reason } });
