@@ -13,6 +13,7 @@ import {
   UnifiedOverview,
   OperationsStrip,
   RoleHome,
+  FlashReportCard,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import {
@@ -122,6 +123,9 @@ export default function DashboardPage() {
           {/* BranchPicker فقط برای SuperAdmin */}
           {isAdmin && <BranchPicker />}
         </div>
+
+        {/* ─── Flash Report — فقط SuperAdmin ─── */}
+        {isAdmin && <FlashReportCard />}
 
         {/* ─── کارت‌های نقش‌محور برای Warehouse و Chef ─── */}
         {isOperational && <RoleHome role={user.role} />}
