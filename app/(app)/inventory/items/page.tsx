@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Search, Info, ChevronDown, MoreVertical } from 'lucide-react';
+import { Search, Info, ChevronDown, MoreVertical, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
@@ -9,6 +10,15 @@ import { fmt, toFa } from '@/lib/utils';
 import { Button, DataList, EmptyState, Sheet, PageHeader } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import type { InventoryItem, NewInventoryItemInput, InvUnit } from '@/types';
+
+type PriceRecord = { date: string; unitPrice: number; qty: number; source: string };
+type PriceHistoryResponse = {
+  history: PriceRecord[];
+  summary: {
+    firstPrice: number; lastPrice: number; avgPrice: number;
+    changePct: number | null; change3mPct: number | null;
+  } | null;
+};
 
 const repos = createRepos(null as never);
 
@@ -111,6 +121,10 @@ export default function InventoryItemsPage() {
   const [form, setForm] = useState<ItemForm>(EMPTY_FORM);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [priceChanges, setPriceChanges] = useState<Record<string, { lastPrice: number; change3mPct: number | null }>>({});
+  const [priceHistoryItem, setPriceHistoryItem] = useState<InventoryItem | null>(null);
+  const [priceHistoryData, setPriceHistoryData] = useState<PriceHistoryResponse | null>(null);
+  const [priceHistoryLoading, setPriceHistoryLoading] = useState(false);
 
   const canSeePrices = canDo(user, 'inventory.viewCosts');
   const isSuperAdmin = user?.role === 'SuperAdmin';
@@ -130,6 +144,14 @@ export default function InventoryItemsPage() {
   }, [showToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    if (!canSeePrices) return;
+    fetch('/api/inventory/items/price-changes')
+      .then((r) => r.json())
+      .then((d) => setPriceChanges(d.changes ?? {}))
+      .catch(() => {});
+  }, [canSeePrices]);
 
   // ── form helpers ──────────────────────────────────────────────────
 
@@ -196,6 +218,17 @@ export default function InventoryItemsPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  function openPriceHistory(item: InventoryItem) {
+    setPriceHistoryItem(item);
+    setPriceHistoryData(null);
+    setPriceHistoryLoading(true);
+    fetch(`/api/inventory/items/${item.id}/price-history`)
+      .then((r) => r.json())
+      .then((d) => setPriceHistoryData(d))
+      .catch(() => setPriceHistoryData({ history: [], summary: null }))
+      .finally(() => setPriceHistoryLoading(false));
   }
 
   // ── filtering ─────────────────────────────────────────────────────
@@ -266,18 +299,48 @@ export default function InventoryItemsPage() {
       ),
     },
     ...(canSeePrices
-      ? ([{
-          key: 'cost',
-          label: 'میانگین بها',
-          mobileLabel: 'میانگین بها',
-          headerClassName: 'text-left',
-          cellClassName: 'text-left',
-          render: (row: InventoryItem) => (
-            <span className="num text-[13px]">
-              {row.avgCostPerBase > 0 ? `${fmt(Math.round(row.avgCostPerBase))} ت` : '—'}
-            </span>
-          ),
-        }] as DataColumn<InventoryItem>[])
+      ? ([
+          {
+            key: 'cost',
+            label: 'میانگین بها',
+            mobileLabel: 'میانگین بها',
+            headerClassName: 'text-left',
+            cellClassName: 'text-left',
+            render: (row: InventoryItem) => (
+              <div className="flex items-center justify-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); openPriceHistory(row); }}
+                  className="text-muted hover:text-accent transition-colors flex-shrink-0"
+                  title="تاریخچه قیمت"
+                  aria-label="تاریخچه قیمت"
+                >
+                  <TrendingUp size={12} strokeWidth={1.5} />
+                </button>
+                <span className="num text-[13px]">
+                  {row.avgCostPerBase > 0 ? `${fmt(Math.round(row.avgCostPerBase))} ت` : '—'}
+                </span>
+              </div>
+            ),
+          },
+          {
+            key: 'priceChange',
+            label: 'تغییر ۳م.',
+            mobileHide: true,
+            headerClassName: 'text-left',
+            cellClassName: 'text-left',
+            render: (row: InventoryItem) => {
+              const pct = priceChanges[row.id]?.change3mPct ?? null;
+              if (pct === null) return <span className="text-muted num text-[12px]">—</span>;
+              const color = pct > 20 ? 'text-danger' : pct > 0 ? 'text-amber-500' : 'text-emerald-600';
+              return (
+                <span className={`num text-[12px] font-medium ${color}`}>
+                  {pct > 0 ? '+' : ''}{toFa(pct)}٪
+                </span>
+              );
+            },
+          },
+        ] as DataColumn<InventoryItem>[])
       : []),
     ...(isSuperAdmin
       ? ([{
@@ -392,6 +455,110 @@ export default function InventoryItemsPage() {
           }
         />
       </div>
+
+      {/* ─── Price History Sheet ─── */}
+      <Sheet
+        open={priceHistoryItem !== null}
+        onClose={() => { setPriceHistoryItem(null); setPriceHistoryData(null); }}
+        title={priceHistoryItem ? `تاریخچه قیمت — ${priceHistoryItem.name}` : 'تاریخچه قیمت'}
+        maxHeight="90vh"
+      >
+        {priceHistoryLoading && (
+          <div className="py-12 text-center text-[13px] text-muted">در حال بارگذاری...</div>
+        )}
+        {!priceHistoryLoading && priceHistoryData && (
+          <div className="space-y-4 pb-6">
+            {priceHistoryData.summary ? (
+              <div className={`rounded-lg px-4 py-3 border ${
+                (priceHistoryData.summary.change3mPct ?? 0) > 20
+                  ? 'bg-danger/5 border-danger/30'
+                  : 'bg-accent-subtle border-border'
+              }`}>
+                <div className="text-[13px] font-medium">
+                  آخرین قیمت: <span className="num">{fmt(priceHistoryData.summary.lastPrice)} تومان</span>
+                </div>
+                {priceHistoryData.summary.change3mPct != null && (
+                  <div className={`text-[12px] mt-0.5 ${
+                    priceHistoryData.summary.change3mPct > 20 ? 'text-danger font-semibold' : 'text-muted'
+                  }`}>
+                    نسبت به میانگین ۳ ماه پیش:{' '}
+                    <span className="num">
+                      {priceHistoryData.summary.change3mPct > 0 ? '+' : ''}
+                      {toFa(priceHistoryData.summary.change3mPct)}٪
+                    </span>
+                  </div>
+                )}
+                <div className="text-[11px] text-muted mt-1">
+                  میانگین کل: <span className="num">{fmt(priceHistoryData.summary.avgPrice)} ت</span>
+                </div>
+              </div>
+            ) : null}
+
+            {priceHistoryData.history.length > 1 && (
+              <div className="h-40 -mx-1">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={[...priceHistoryData.history].reverse()}>
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 9 }}
+                      interval="preserveStartEnd"
+                    />
+                    <YAxis
+                      tickFormatter={(v: number) =>
+                        v >= 1000000 ? toFa(Math.round(v / 1000000)) + 'م'
+                        : v >= 1000 ? toFa(Math.round(v / 1000)) + 'ک'
+                        : toFa(Math.round(v))
+                      }
+                      tick={{ fontSize: 9 }}
+                      width={44}
+                    />
+                    <ChartTooltip
+                      formatter={(v: unknown) => [`${fmt(Math.round(v as number))} ت`, 'قیمت']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="unitPrice"
+                      stroke="#6366f1"
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: '#6366f1' }}
+                      activeDot={{ r: 5 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {priceHistoryData.history.length === 0 ? (
+              <div className="py-8 text-center text-[13px] text-muted">
+                سابقه خرید تأییدشده‌ای یافت نشد
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="border-b border-border text-muted">
+                      <th className="text-right pb-2 font-normal">تاریخ</th>
+                      <th className="text-left pb-2 font-normal">قیمت واحد</th>
+                      <th className="text-left pb-2 font-normal">مقدار</th>
+                      <th className="text-right pb-2 font-normal">منبع</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {priceHistoryData.history.map((r, i) => (
+                      <tr key={i} className="hover:bg-bg/50">
+                        <td className="py-2 text-right num">{r.date}</td>
+                        <td className="py-2 text-left num">{fmt(Math.round(r.unitPrice))} ت</td>
+                        <td className="py-2 text-left num">{toFa(Math.round(r.qty))}</td>
+                        <td className="py-2 text-right text-muted">{r.source}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </Sheet>
 
       {/* ─── Add / Edit Sheet ─── */}
       <Sheet
