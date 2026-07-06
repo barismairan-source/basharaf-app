@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.66-sms-phase2` |
+| **نسخه** | `0.9.67-sms-phase3` |
 | **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow ۴ job: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL`. 🟡 **۳ migration جدید pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql` — باید در pgAdmin اجرا شوند. |
+| **دیپلوی** | ✅ **GitHub Actions فعال** — workflow ۴ job: typecheck / unit-test / e2e / deploy. 🟡 **۴ migration جدید pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql` — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | **فاز ۳** — اتصال SMS به notify در API routeها (approve تراکنش، تأیید برگه انبار، ...) یا **فاز ۴** موتور کارآگاه |
-| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۳ migration در pgAdmin. ۲. تنظیم `KAVENEGAR_API_KEY` در env Liara برای رفع dry-run. |
+| **کار بعدی پیشنهادی** | **فاز ۴** — موتور کارآگاه مالی (`lib/detective/`, `anomaly_findings` table، ۶ قانون event-driven) |
+| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۴ migration در pgAdmin. ۲. تنظیم `KAVENEGAR_API_KEY` در env برای پیامک واقعی. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — فاز ۳: SMS کانال notification — اکانت ۱
+**چه شد:** پیامک به‌عنوان کانال موازی سیستم notifications v2 وصل شد. هیچ رفتار موجودی نشکست.
+- **Wire `{ sms: true }`** در همه‌ی `notifyAdmins()` callها: `transactions/approve` (low_stock + high_value_tx جدید)، `purchase-orders/receive` (po_received)، `inventory/vouchers/import` (voucher_pending). `cheque.dueSoon` از `notify(null)` به `notifyAdmins()` تبدیل شد.
+- **`high_value_tx`** اولین پیاده‌سازی — بعد از approve تراکنش، threshold از notification_rules می‌خواند؛ اگر amount≥threshold → notifyAdmins + sms.
+- **API جدید**: `GET /api/sms/log`، `GET/PATCH /api/admin/sms-settings`، `POST /api/sms/test-notify`.
+- **SmsPane کامل**: ۴ بخش — تنظیمات cap/dedup، مدیریت شماره SuperAdminها، toggleهای per-rule، جدول sms_log + دکمه تست کامل.
+- **`db-sms-phase3-migration.sql`**: seed قانون `sms.test_notify`.
+**فایل‌ها:** `db-sms-phase3-migration.sql`, `app/api/sms/log/route.ts`, `app/api/sms/test-notify/route.ts`, `app/api/admin/sms-settings/route.ts`, `app/api/transactions/[id]/approve/route.ts`, `app/api/cheques/route.ts`, `app/api/purchase-orders/[id]/receive/route.ts`, `app/api/inventory/vouchers/import/route.ts`, `app/api/users/route.ts`, `components/settings/SmsPane.tsx`
+**Build:** tsc ✅ · build ✅. Commit: 69500c7
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۴ migration در pgAdmin. **فاز ۴** موتور کارآگاه: `lib/detective/`، `anomaly_findings` table، ۶ قانون. یادآوری: `DETECTIVE_SCAN_SECRET` در GitHub Actions.
 
 ## 📓 2026-07-06 — فاز ۲: هسته‌ی پیامک (SMS core) — اکانت ۱
 **چه شد:** کاربر طراحی INVESTIGATION را تأیید کرد + ۵ سوال باز را پاسخ داد. فاز ۲ کامل پیاده شد:
@@ -112,32 +124,3 @@
 **Build:** tsc ✅ ۰ خطا · build ✅. Commit: b455cf1
 **ناتمام:** —
 **برای جلسه‌ی بعد:** موارد 🟠: رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`)، UI force-reset حقوق (SuperAdmin)، rate limit قوی‌تر OTP send.
-
-## 📓 2026-07-05 — C8: مهندسی منو — اکانت ۱
-**چه شد:** ماتریس مهندسی منو (Menu Engineering Matrix) پیاده شد:
-- **API** `GET /api/inventory/reports/menu-engineering`: فروش روزانه inv_daily_sales بازه را جمع می‌کند، costRecipe را برای هر رسپی اجرا می‌کند، میانگین unitsSold و unitMargin را محاسبه می‌کند، هر آیتم را در یکی از ۴ ربع (star/plowhorse/puzzle/dog) قرار می‌دهد. اگر کمتر از ۳ آیتم فروخته شده باشد `tooFew: true` برمی‌گرداند.
-- **صفحه** `/inventory/menu-engineering`: فیلتر شعبه + بازه تاریخ، ماتریس ۲×۲ با آیکون + عنوان + راهنمای اقدام فارسی، جدول جزئیات با رنگ‌بندی حاشیه سود، خروجی اکسل.
-- **Hub آشپزخانه**: کارت «مهندسی منو» (BarChart2) اضافه شد.
-- **nav-config**: `/inventory/menu-engineering` به KITCHEN_PATHS اضافه شد.
-**فایل‌ها:** `app/api/inventory/reports/menu-engineering/route.ts` (جدید), `app/(app)/inventory/menu-engineering/page.tsx` (جدید), `app/(app)/inventory/kitchen/page.tsx`, `components/layout/nav-config.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅. Commit: 98b5d0b
-**ناتمام:** —
-**برای جلسه‌ی بعد:** موارد 🟠: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
-
-## 📓 2026-07-05 — UI: هشدار انقضا + پیش‌بینی تقاضا + Prime Cost % — اکانت ۱
-**چه شد:**
-(۱) **هشدار انقضای موجودی** (`app/(app)/inventory/page.tsx`): کارت «هشدار انقضا» به hub انبار اضافه شد. فقط وقتی اقلام نزدیک یا گذشته از تاریخ انقضا وجود دارد نمایش می‌دهد (اگر همه سالم → کارت پنهان). برای هر قلم: نام، تاریخ انقضا، badge وضعیت (منقضی/امروز/فردا/N روز).
-(۲) **پیش‌بینی تقاضا** (`app/(app)/inventory/kitchen/page.tsx`): جدول «پیش‌بینی مصرف فردا» در hub آشپزخانه اضافه شد. داده از `POST /api/inventory/forecast`. نمایش rawCoverage: قلم | مصرف روزانه | موجودی فعلی | کمبود احتمالی. ردیف‌های کمبود قرمز. واحدها تبدیل‌شده (qtyBase ÷ basePerUnit + unit).
-(۳) **Prime Cost %** (`app/(app)/reports/page.tsx`): ردیف جدید بعد از «حقوق پرسنل» در P&L. Prime Cost = COGS + حقوق. درصد رنگ‌بندی: سبز ≤۶۰٪، کهربایی ۶۰–۶۵٪، قرمز >۶۵٪. آیکون Info با tooltip فارسی. `PLRow` با `marginColor` و `tooltip` prop گسترش یافت.
-**فایل‌ها:** `app/(app)/inventory/page.tsx`, `app/(app)/inventory/kitchen/page.tsx`, `app/(app)/reports/page.tsx`
-**Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32 — ۳ commit جدا
-**ناتمام:** —
-**برای جلسه‌ی بعد:** موارد 🟠: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
-
-**فایل‌ها:** `lib/auth/rateLimit.ts`, `lib/ordering/webCustomer.ts`, `HANDOFF.md`, `project-docs/INVESTIGATION-full-project-review.md`
-**Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32
-**ناتمام:** —
-**برای جلسه‌ی بعد:** موارد 🟠 بعدی از بررسی جامع: audit log‌های ۶‌گانه (transaction create/reject/import، payroll post/reverse، account recalculate).
-
-
-
