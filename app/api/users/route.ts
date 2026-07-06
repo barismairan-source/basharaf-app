@@ -35,6 +35,7 @@ export async function GET() {
         joined: u.joined,
         permissions: u.permissions ?? null,
         isActive: u.isActive,
+        smsPhone: u.smsPhone ?? null,
       })),
     });
   } catch (e) {

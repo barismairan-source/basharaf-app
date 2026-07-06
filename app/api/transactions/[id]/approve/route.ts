@@ -7,7 +7,7 @@ import { rowToTransaction } from '@/lib/db/serializers';
 import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
 import { applyMenuSaleDeduction, type MenuSaleLine } from '@/lib/inventory/menuSaleDeduction';
 import { audit } from '@/lib/auth/audit';
-import { notify, notifyAdmins } from '@/lib/notify';
+import { notify, notifyAdmins, getRuleThreshold } from '@/lib/notify';
 
 /**
  * POST /api/transactions/[id]/approve — Atomic با balance update.
@@ -93,7 +93,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             actionUrl: `/transactions`,
             entityId: params.id,
             ruleKey: 'low_stock',
-          }, dbTx);
+          }, dbTx, { sms: true });
         }
       }
     });
@@ -113,6 +113,20 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         userId: updated.createdBy,
         ruleKey: 'pending_approval',
       });
+    }
+
+    // بررسی تراکنش مبلغ بالا — اعلان + پیامک به ادمین‌ها
+    const highValueThreshold = await getRuleThreshold('high_value_tx');
+    if (highValueThreshold !== null && updated.amount >= highValueThreshold) {
+      await notifyAdmins({
+        type: 'critical',
+        title: 'تراکنش مبلغ بالا تأیید شد',
+        sub: `${updated.title} — ${new Intl.NumberFormat('fa-IR').format(updated.amount)} ت — ${updated.branchName}`,
+        txId: updated.id,
+        actionUrl: `/transactions`,
+        entityId: updated.id,
+        ruleKey: 'high_value_tx',
+      }, undefined, { sms: true });
     }
 
     audit({ action: 'transaction.approved', userId: session.sub, meta: { txId: params.id } });

@@ -211,7 +211,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         actionUrl: `/purchase-orders/${params.id}`,
         entityId: params.id,
         ruleKey: 'po_received',
-      });
+      }, undefined, { sms: true });
 
       audit({
         action: 'po.receiveDiscrepancy',

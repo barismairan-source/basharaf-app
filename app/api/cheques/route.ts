@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
-import { notify } from '@/lib/notify';
+import { notifyAdmins } from '@/lib/notify';
 import { jalaliToDate } from '@/lib/jalali';
 
 function rowToCheque(
@@ -118,15 +118,14 @@ export async function POST(req: Request) {
         const threshold = rule?.enabled ? (rule.threshold ?? 3) : null;
         if (threshold != null && daysUntil >= 0 && daysUntil <= threshold) {
           const kindLabel = input.kind === 'received' ? 'دریافتی' : 'پرداختی';
-          await notify({
+          await notifyAdmins({
             type: 'warning',
             title: `چک ${kindLabel} نزدیک به سررسید`,
-            sub: `چک ${input.serialNo || row.id.slice(0, 8)} · ${daysUntil === 0 ? 'امروز' : `${daysUntil} روز دیگر`} · ${new Intl.NumberFormat('fa-IR').format(input.amount)} ت`,
-            userId: null,
+            sub: `چک ${input.serialNo || row.id.slice(0, 8)} · ${daysUntil === 0 ? 'امروز' : `${new Intl.NumberFormat('fa-IR').format(daysUntil)} روز دیگر`} · ${new Intl.NumberFormat('fa-IR').format(input.amount)} ت`,
             actionUrl: '/cheques',
             entityId: row.id,
             ruleKey: 'cheque.dueSoon',
-          });
+          }, undefined, { sms: true });
         }
       }
     } catch { /* fire-and-forget */ }

@@ -147,7 +147,7 @@ export async function POST(req: Request) {
       txId: null,
       actionUrl: '/inventory/cartable',
       ruleKey: 'voucher_pending',
-    });
+    }, undefined, { sms: true });
 
     return NextResponse.json({ ok: true, vouchers, imported: lineCount, errors: [] }, { status: 201 });
   } catch (e) {
