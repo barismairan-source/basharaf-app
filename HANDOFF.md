@@ -15,8 +15,8 @@
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ **GitHub Actions فعال** — workflow اکنون ۴ job جداگانه دارد: typecheck / unit-test / e2e / deploy. 🟡 **e2e job** نیاز به secret `STAGING_URL` در GitHub دارد (باید manually اضافه شود). ✅ **۴ migration اجرا شدند** (2026-07-04). 🟡 **۲ migration جدید pending**: `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | موارد 🟠 باقی‌مانده: ۱. رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`). ۲. UI دکمه force-reset حقوق (SuperAdmin). ۳. rate limit قوی‌تر برای OTP send. |
-| **بلاک‌شده/منتظر کاربر** | ۲ migration SQL در `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — کاربر باید در pgAdmin اجرا کند. |
+| **کار بعدی پیشنهادی** | **فاز ۲ کارآگاه+SMS** (منتظر تأیید کاربر): `lib/sms/`, `db-sms-anomaly-migration.sql`, هسته پیامک. جزئیات در `project-docs/INVESTIGATION-anomaly-sms.md`. |
+| **بلاک‌شده/منتظر کاربر** | ۱. تأیید طراحی `INVESTIGATION-anomaly-sms.md` + پاسخ ۵ سوال باز بخش ۷. ۲. migration SQL در `db-waste-reason-migration.sql` و `db-cheques-migration.sql` — باید در pgAdmin اجرا شوند. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-06 — طراحی کارآگاه مالی + زیرساخت پیامک — اکانت ۱
+**چه شد:** فاز تحلیل و طراحی کامل شد (بدون هیچ کد/migration). سند کامل در `project-docs/INVESTIGATION-anomaly-sms.md`.
+- **SMS:** Kavenegar انتخاب شد. جدول `sms_log`. ستون `sms_enabled` به `notification_rules`. ستون `sms_phone` به `users`. منطق سقف روزانه + dedup. Fallback به اعلان داخلی. SMS «کانال» همان notification_rules است نه سیستم جداگانه.
+- **کارآگاه:** ۶ قانون rule-based: waste_spike, price_jump, rejection_pattern, consumption_spike, below_approval_limit, off_hours. جدول `anomaly_findings` با چرخه‌ی وضعیت new→investigating→confirmed/false_positive. زمان‌بندی ترکیبی: ۵ قانون event-driven + ۱ قانون daily scan از GitHub Actions.
+- **فازبندی:** ۴ فاز مشخص (۲=SMS هسته، ۳=اتصال به notify، ۴=موتور detective، ۵=UI).
+- ۵ سوال باز در بخش ۷ سند — منتظر پاسخ کاربر.
+**فایل‌ها:** `project-docs/INVESTIGATION-anomaly-sms.md` (جدید)
+**Build:** هیچ کدی تغییر نکرد — فقط سند طراحی.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** کاربر ۵ سوال بخش ۷ را پاسخ دهد، فاز ۲ شروع شود.
 
 ## 📓 2026-07-06 — Flash Report روزانه برای داشبورد — اکانت ۱
 **چه شد:** گزارش روزانه «یک‌نگاهی» برای مالک پیاده شد:
@@ -109,26 +120,6 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** موارد 🟠: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
 
-## 📓 2026-07-04 — audit log برای ۶ عملیات مالی — اکانت ۱
-**چه شد:**
-۶ عملیات مالی که قبلاً هیچ ردپایی نمی‌گذاشتند حالا در `audit_log` ثبت می‌شوند:
-- `transaction.created` — هر تراکنش جدید (id, type, amount, status, branchId)
-- `transaction.rejected` — رد تراکنش (title, amount, reason, branchId)
-- `transaction.imported` — import انبوه اکسل (count, branchIds)
-- `payroll.posted` — post حقوق به حسابداری (runId, accountId, date؛ فقط اولین بار، نه idempotent replay)
-- `payroll.reversed` — معکوس حقوق (هر دو route: DELETE روی `/post` و POST روی `/reverse`)
-- `account.recalculated` — بازمحاسبه موجودی (count + old/new balance هر حساب)
-`AuditAction` union در `lib/auth/audit.ts` با ۵ نوع جدید گسترش یافت (`transaction.rejected` از قبل بود).
-**فایل‌ها:** `lib/auth/audit.ts`, `app/api/transactions/route.ts`, `app/api/transactions/[id]/reject/route.ts`, `app/api/transactions/import/route.ts`, `app/api/payroll/runs/[id]/post/route.ts`, `app/api/payroll/runs/[id]/reverse/route.ts`, `app/api/accounts/recalculate/route.ts`
-**Build:** tsc ✅ ۰ خطا (بعد از هر commit جداگانه تأیید شد) — ۶ commit جدا
-**ناتمام:** —
-**برای جلسه‌ی بعد:** موارد 🟠 باقی‌مانده: rate limit OTP send، parseFloat مالی انبار، UI force-reset حقوق.
-
-## 📓 2026-07-04 — امنیت: rate limit OTP + حذف console.log — اکانت ۱
-**چه شد:**
-(۱) **OTP verify rate limit**: `lib/auth/rateLimit.ts` با توابع phone-keyed rate limiting برای OTP گسترش یافت (`checkOtpRateLimit`, `recordOtpFailedAttempt`, `clearOtpAttempts`, `OTP_MAX_ATTEMPTS=5`). `verifyWebOtp` در `lib/ordering/webCustomer.ts` حالا: (الف) قبل از هر query rate limit را بررسی می‌کند (ب) بعد از ۵ شکست، OTP فعال را invalidate می‌کند (used=true) و 429 می‌دهد (ج) بعد از موفقیت counter را پاک می‌کند.
-(۲) **OTP console.log**: خط `console.log([OTP MOCK]...)` در `createWebOtp` با `NODE_ENV !== 'production'` guard محافظت شد — در production لاگ نمی‌شود.
-(۳) **Migration verify**: همه ۴ migration (proforma، is_active، warning/critical، financial_periods) در schema.ts تأیید شدند. ۲ فایل migration که agent بررسی جامع خالی کرده بود بازگردانی شدند.
 **فایل‌ها:** `lib/auth/rateLimit.ts`, `lib/ordering/webCustomer.ts`, `HANDOFF.md`, `project-docs/INVESTIGATION-full-project-review.md`
 **Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32
 **ناتمام:** —

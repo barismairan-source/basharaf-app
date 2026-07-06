@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-04 — audit log برای ۶ عملیات مالی + rate limit OTP — اکانت ۱
+**چه شد:** ۶ نوع AuditAction جدید (transaction.created/rejected/imported, payroll.posted/reversed, account.recalculated). rate limit OTP با phone-keyed counter max-5. console.log OTP در production guard شد.
+**فایل‌ها:** `lib/auth/audit.ts`, `lib/auth/rateLimit.ts`, `lib/ordering/webCustomer.ts`, route‌های تراکنش/حقوق/حساب
+**Build:** tsc ✅ · unit tests ✅ 32/32
+
 ## 📓 2026-07-03 — P&L: صورت سود و زیان در گزارش مالی — اکانت ۱
 **چه شد:** بخش «صورت سود و زیان» به `/reports` اضافه شد. API جدید: COGS + payroll جدا. UI: کارت P&L با ردیف‌های رنگی. `pl` به interface `ReportData` اضافه شد.
 **فایل‌ها:** `app/api/reports/route.ts`, `app/(app)/reports/page.tsx`
