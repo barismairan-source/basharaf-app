@@ -73,6 +73,7 @@ export interface InventoryVoucherLine {
   qtyBase: number;
   estUnitCost: number;
   finalUnitCost: number | null;
+  wasteReason: string | null;
 }
 
 export interface InventoryVoucher {
@@ -104,7 +105,7 @@ export interface NewVoucherInput {
   branchId: string;
   note?: string;
   date: string; // Jalali
-  lines: Array<{ itemId: string; qtyBase: number; estUnitCost?: number }>;
+  lines: Array<{ itemId: string; qtyBase: number; estUnitCost?: number; wasteReason?: string }>;
   saleMeta?: unknown | null;
 }
 

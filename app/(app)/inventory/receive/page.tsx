@@ -18,6 +18,8 @@ const UNIT_LABELS: Record<string, string> = {
   pcs: 'عدد', can: 'قوطی', pack: 'بسته',
 };
 
+const WASTE_REASONS = ['فاسد شد', 'اشتباه پخت', 'برگشتی مشتری', 'آسیب حمل', 'سایر'] as const;
+
 type Mode = 'voucher' | 'quickbuy';
 
 export default function ReceivePage() {
@@ -117,12 +119,12 @@ function VoucherForm({
   const [branchId, setBranchId] = useState(defaultBranch);
   const [date, setDate] = useState(getTodayJalali());
   const [note, setNote] = useState('');
-  const [lines, setLines] = useState<{ itemId: string; qty: string; cost: string }[]>([
-    { itemId: '', qty: '', cost: '' },
+  const [lines, setLines] = useState<{ itemId: string; qty: string; cost: string; wasteReason: string; wasteReasonOther: string }[]>([
+    { itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' },
   ]);
   const [saving, setSaving] = useState(false);
 
-  function setLine(i: number, patch: Partial<{ itemId: string; qty: string; cost: string }>) {
+  function setLine(i: number, patch: Partial<{ itemId: string; qty: string; cost: string; wasteReason: string; wasteReasonOther: string }>) {
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
   }
 
@@ -137,14 +139,20 @@ function VoucherForm({
     try {
       await (createRepos(null as never).inventory as any).createVoucher({
         kind, branchId, date, note: note || undefined,
-        lines: valid.map((l) => ({
-          itemId: l.itemId,
-          qtyBase: parseInt(l.qty.replace(/\D/g, ''), 10),
-          estUnitCost: l.cost ? parseInt(l.cost.replace(/\D/g, ''), 10) : undefined,
-        })),
+        lines: valid.map((l) => {
+          const resolvedReason = kind === 'waste' && l.wasteReason
+            ? (l.wasteReason === 'سایر' ? (l.wasteReasonOther.trim() || 'سایر') : l.wasteReason)
+            : undefined;
+          return {
+            itemId: l.itemId,
+            qtyBase: parseInt(l.qty.replace(/\D/g, ''), 10),
+            estUnitCost: l.cost ? parseInt(l.cost.replace(/\D/g, ''), 10) : undefined,
+            ...(resolvedReason ? { wasteReason: resolvedReason } : {}),
+          };
+        }),
       });
       showToast('برگه ثبت شد (در انتظار تأیید)', 'success');
-      setLines([{ itemId: '', qty: '', cost: '' }]);
+      setLines([{ itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' }]);
       setNote('');
       onDone();
     } catch {
@@ -197,47 +205,71 @@ function VoucherForm({
       <div className="space-y-2">
         <label className="text-[11.5px] text-muted">اقلام</label>
         {lines.map((l, i) => (
-          <div key={i} className="flex gap-2">
-            <select
-              value={l.itemId}
-              onChange={(e) => setLine(i, { itemId: e.target.value })}
-              className="flex-1 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-            >
-              <option value="">— قلم —</option>
-              {items.map((it) => (
-                <option key={it.id} value={it.id}>
-                  {it.name} ({UNIT_LABELS[it.unit] ?? it.unit})
-                </option>
-              ))}
-            </select>
-            <input
-              value={l.qty}
-              onChange={(e) => setLine(i, { qty: formatNumericInputValue(e.target) })}
-              dir="ltr"
-              placeholder="مقدار"
-              className="w-28 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-            />
-            {kind === 'in' && canSeePrices && (
+          <div key={i} className="space-y-1.5">
+            <div className="flex gap-2">
+              <select
+                value={l.itemId}
+                onChange={(e) => setLine(i, { itemId: e.target.value })}
+                className="flex-1 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+              >
+                <option value="">— قلم —</option>
+                {items.map((it) => (
+                  <option key={it.id} value={it.id}>
+                    {it.name} ({UNIT_LABELS[it.unit] ?? it.unit})
+                  </option>
+                ))}
+              </select>
               <input
-                value={l.cost}
-                onChange={(e) => setLine(i, { cost: formatNumericInputValue(e.target) })}
+                value={l.qty}
+                onChange={(e) => setLine(i, { qty: formatNumericInputValue(e.target) })}
                 dir="ltr"
-                placeholder="بهای واحد"
+                placeholder="مقدار"
                 className="w-28 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
               />
-            )}
-            {lines.length > 1 && (
-              <button
-                onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
-                className="w-11 h-11 flex items-center justify-center text-muted hover:text-danger"
-              >
-                <Trash2 size={15} />
-              </button>
+              {kind === 'in' && canSeePrices && (
+                <input
+                  value={l.cost}
+                  onChange={(e) => setLine(i, { cost: formatNumericInputValue(e.target) })}
+                  dir="ltr"
+                  placeholder="بهای واحد"
+                  className="w-28 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                />
+              )}
+              {lines.length > 1 && (
+                <button
+                  onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
+                  className="w-11 h-11 flex items-center justify-center text-muted hover:text-danger"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+            </div>
+            {kind === 'waste' && (
+              <div className="flex gap-2 pr-1">
+                <select
+                  value={l.wasteReason}
+                  onChange={(e) => setLine(i, { wasteReason: e.target.value, wasteReasonOther: '' })}
+                  className="flex-1 border border-border rounded-lg px-2 py-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                >
+                  <option value="">— دلیل ضایعات (اختیاری) —</option>
+                  {WASTE_REASONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {l.wasteReason === 'سایر' && (
+                  <input
+                    value={l.wasteReasonOther}
+                    onChange={(e) => setLine(i, { wasteReasonOther: e.target.value })}
+                    placeholder="توضیح دلیل..."
+                    className="flex-1 border border-border rounded-lg px-2 py-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  />
+                )}
+              </div>
             )}
           </div>
         ))}
         <button
-          onClick={() => setLines((prev) => [...prev, { itemId: '', qty: '', cost: '' }])}
+          onClick={() => setLines((prev) => [...prev, { itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' }])}
           className="flex items-center justify-center gap-1.5 w-full py-2.5 text-[12.5px] text-muted border border-dashed border-border rounded-lg hover:bg-bg hover:text-text hover:border-text/30 transition-colors mt-1"
         >
           <Plus size={13} />

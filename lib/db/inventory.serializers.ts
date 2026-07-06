@@ -100,8 +100,8 @@ export function rowToInvVoucher(
       qtyBase: toNum(l.qtyBase),
       estUnitCost: maskCosts ? null : toNum(l.estUnitCost),
       finalUnitCost: maskCosts ? null : (l.finalUnitCost == null ? null : toNum(l.finalUnitCost)),
-      // تاریخ انقضا یک داده‌ی مقداری/ردیابی است نه مالی — برای انباردار هم قابل مشاهده است
-      expiryDate: (l as any).expiryDate ?? null,
+      expiryDate: l.expiryDate ?? null,
+      wasteReason: l.wasteReason ?? null,
     })),
     updatedAt: row.updatedAt.toISOString(),
   };

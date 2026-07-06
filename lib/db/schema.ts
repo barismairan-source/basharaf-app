@@ -998,6 +998,8 @@ export const invVoucherLines = pgTable(
     finalUnitCost: numeric('final_unit_cost', { precision: 24, scale: 6 }),
     // ردیابی/انقضا (زمینه‌ساز FIFO آینده): تاریخ انقضای محموله — رشته‌ی جلالی، اختیاری
     expiryDate: text('expiry_date'),
+    // دلیل ضایعات — فقط برای kind='waste'؛ NULL برای برگه‌های قدیمی و غیر-waste
+    wasteReason: text('waste_reason'),
   },
   (t) => ({
     voucherIdx: index('inv_voucher_lines_voucher_idx').on(t.voucherId),

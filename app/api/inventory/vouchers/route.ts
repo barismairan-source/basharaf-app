@@ -28,8 +28,8 @@ const lineSchema = z.object({
   itemId: z.string().uuid(),
   qtyBase: z.number().finite().positive().max(1_000_000_000, 'مقدار خیلی بزرگ است'),
   estUnitCost: z.number().finite('بهای واحد نامعتبر است').min(0).max(MONEY_MAX, 'بهای واحد بیش از حد مجاز است — لطفاً بررسی کنید').default(0),
-  // تاریخ انقضای محموله (جلالی، اختیاری) — برای ردیابی/هشدار انقضا (زمینه‌ساز FIFO آینده)
   expiryDate: z.string().max(20).optional().nullable(),
+  wasteReason: z.string().max(200).optional().nullable(),
 });
 
 const createVoucherSchema = z.object({
@@ -122,6 +122,7 @@ export async function POST(req: Request) {
           qtyBase: String(l.qtyBase),
           estUnitCost: String(l.estUnitCost),
           ...(l.expiryDate ? { expiryDate: l.expiryDate } : {}),
+          ...(l.wasteReason ? { wasteReason: l.wasteReason } : {}),
         });
         // فقط لایه‌ی فیزیکی (قطعی بعد از تأیید). انبارگردانی استثناست:
         // qtyBase آن «موجودی شمرده‌شده» است نه حرکت، پس فیزیکی را تغییر نمی‌دهیم.
