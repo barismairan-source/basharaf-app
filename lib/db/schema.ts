@@ -1616,3 +1616,38 @@ export const financialPeriods = pgTable(
 );
 
 export type FinancialPeriod = typeof financialPeriods.$inferSelect;
+
+// ════════════════════════════════════════════════════════════════
+// ماژول چک — مدیریت چک دریافتی و پرداختی
+// kind='received': چک دریافتی از طرف‌حساب
+// kind='issued':   چک پرداختی به طرف‌حساب
+// status: text + CHECK (نه enum) — طبق قرارداد پروژه
+// ════════════════════════════════════════════════════════════════
+export const cheques = pgTable(
+  'cheques',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    kind: text('kind').notNull(), // 'received' | 'issued'
+    contactId: uuid('contact_id').references(() => contacts.id, { onDelete: 'set null' }),
+    amount: bigint('amount', { mode: 'number' }).notNull(),
+    serialNo: text('serial_no').notNull().default(''),
+    bankName: text('bank_name').notNull().default(''),
+    dueDateJalali: text('due_date_jalali').notNull(),
+    status: text('status').notNull().default('pending'), // 'pending'|'cashed'|'bounced'|'returned'|'spent'
+    note: text('note').notNull().default(''),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    dueDateIdx:  index('cheques_due_date_idx').on(t.dueDateJalali),
+    statusIdx:   index('cheques_status_idx').on(t.status),
+    kindIdx:     index('cheques_kind_idx').on(t.kind),
+    branchIdx:   index('cheques_branch_idx').on(t.branchId),
+    contactIdx:  index('cheques_contact_idx').on(t.contactId),
+  })
+);
+
+export type ChequeRow = typeof cheques.$inferSelect;

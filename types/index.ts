@@ -23,5 +23,6 @@ export type {
 } from './customer';
 export * from './payroll';
 export * from './inventory';
+export type { Cheque, ChequeStatus, ChequeKind, NewChequeInput } from './cheque';
 export * from './operations';
 export * from './ordering';

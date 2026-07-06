@@ -60,7 +60,8 @@ export type AuditAction =
   | 'transaction.imported'
   | 'payroll.posted'
   | 'payroll.reversed'
-  | 'account.recalculated';
+  | 'account.recalculated'
+  | 'chq.statusChanged';
 
 export async function audit(params: {
   action: AuditAction;

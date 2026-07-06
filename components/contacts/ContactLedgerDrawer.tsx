@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Banknote, CreditCard } from 'lucide-react';
+import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Banknote, CreditCard, FileCheck } from 'lucide-react';
 import { cn, fmt } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import type { ContactLedgerEntry } from '@/lib/db/contactLedger';
@@ -69,24 +69,44 @@ function SectionHeader({ icon: Icon, label }: { icon: React.ElementType; label: 
   );
 }
 
+type ChequeMini = { id: string; kind: 'received' | 'issued'; amount: number; serialNo: string; bankName: string; dueDateJalali: string; status: string };
+
+const CHQ_STATUS_LABEL: Record<string, string> = {
+  pending: 'در جریان', cashed: 'وصول', bounced: 'برگشتی', returned: 'عودت', spent: 'خرج‌شده',
+};
+const CHQ_STATUS_COLOR: Record<string, string> = {
+  pending: 'text-amber-600', cashed: 'text-green-700', bounced: 'text-danger',
+  returned: 'text-muted', spent: 'text-purple-700',
+};
+
 export function ContactLedgerDrawer({ contactId, onClose }: Props) {
   const open = contactId !== null;
   const [contact, setContact] = useState<ContactInfo | null>(null);
   const [entries, setEntries] = useState<ContactLedgerEntry[]>([]);
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [cheques, setCheques] = useState<ChequeMini[]>([]);
 
   const load = useCallback(async (id: string) => {
     setLoading(true);
     setContact(null);
     setEntries([]);
+    setCheques([]);
     try {
-      const res = await fetch(`/api/contacts/${id}/ledger`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setContact(data.contact);
-      setEntries(data.entries);
-      setBalance(data.balance);
+      const [ledgerRes, chqRes] = await Promise.all([
+        fetch(`/api/contacts/${id}/ledger`),
+        fetch(`/api/contacts/${id}/cheques`),
+      ]);
+      if (ledgerRes.ok) {
+        const data = await ledgerRes.json();
+        setContact(data.contact);
+        setEntries(data.entries);
+        setBalance(data.balance);
+      }
+      if (chqRes.ok) {
+        const data = await chqRes.json();
+        setCheques(data.cheques ?? []);
+      }
     } finally {
       setLoading(false);
     }
@@ -260,6 +280,33 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
                   هیچ تراکنش نسیه‌ای ثبت نشده
                 </div>
               )}
+            </>
+          )}
+
+          {/* بخش چک‌ها */}
+          {!loading && cheques.length > 0 && (
+            <>
+              <SectionHeader icon={FileCheck} label="چک‌ها" />
+              <ul className="divide-y divide-border">
+                {cheques.map((c) => (
+                  <li key={c.id} className="flex items-start justify-between gap-3 px-5 py-3">
+                    <div>
+                      <div className="text-[12px] text-text">
+                        {c.kind === 'received' ? 'دریافتی' : 'پرداختی'}
+                        {c.serialNo ? ` · ${c.serialNo}` : ''}
+                        {c.bankName ? ` · ${c.bankName}` : ''}
+                      </div>
+                      <div className="text-[10.5px] text-muted num mt-0.5">سررسید {c.dueDateJalali}</div>
+                    </div>
+                    <div className="text-left shrink-0">
+                      <div className="num text-[12px] font-medium">{fmt(c.amount)} ت</div>
+                      <div className={`text-[10.5px] mt-0.5 ${CHQ_STATUS_COLOR[c.status] ?? 'text-muted'}`}>
+                        {CHQ_STATUS_LABEL[c.status] ?? c.status}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
         </div>

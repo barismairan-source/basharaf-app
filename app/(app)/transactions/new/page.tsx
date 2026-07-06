@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,6 +18,7 @@ import { transactionSchema, type TransactionFormInput } from '@/lib/validations/
 
 export default function NewTransactionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const user = useAppStore(s => s.user);
   const branches = useAppStore(s => s.branches);
   const categories = useAppStore(s => s.categories);
@@ -43,6 +44,27 @@ export default function NewTransactionPage() {
     loadAccounts();
     loadContacts();
   }, [loadAccounts, loadContacts]);
+
+  // pre-fill از پارامترهای URL (مثلاً از صفحه‌ی چک‌ها)
+  useEffect(() => {
+    const prefillType = searchParams.get('prefill_type') as 'income' | 'expense' | null;
+    const prefillAmount = searchParams.get('prefill_amount');
+    const prefillTitle = searchParams.get('prefill_title');
+    const prefillNote = searchParams.get('prefill_note');
+    const prefillContactId = searchParams.get('prefill_contactId');
+    if (prefillType) setValue('type' as any, prefillType);
+    if (prefillAmount) {
+      const n = parseInt(prefillAmount, 10);
+      if (!isNaN(n)) {
+        setValue('amount' as any, n);
+        setAmountDisplay(new Intl.NumberFormat('fa-IR').format(n));
+      }
+    }
+    if (prefillTitle) setValue('title' as any, prefillTitle);
+    if (prefillNote) setValue('note' as any, prefillNote);
+    if (prefillContactId) setContactId(prefillContactId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const isAdmin = user?.role === 'SuperAdmin';
   const defaultBranchId = user?.role === 'BranchUser' ? (user.assignedBranch ?? '') : (branches[0]?.id ?? '');

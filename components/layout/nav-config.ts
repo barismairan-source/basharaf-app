@@ -3,6 +3,7 @@ import {
   LayoutDashboard, Receipt, BarChart3, Landmark, Users, UtensilsCrossed, ScrollText,
   Briefcase, Calculator, Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
   CalendarClock, Wrench, ShoppingCart, ClipboardList, Truck, TrendingUp, PackageOpen, ChefHat,
+  FileCheck,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { SectionKey } from '@/lib/auth/permissions';
@@ -43,6 +44,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: '/transactions',  label: 'تراکنش‌ها',          icon: Receipt,         roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
       { href: '/orders',        label: 'سفارش‌های بیرون‌بر', icon: Truck,           roles: ['SuperAdmin', 'BranchUser', 'Chef'], matchPrefix: true },
       { href: '/accounts',      label: 'صندوق‌ها',           icon: Landmark,        roles: ['SuperAdmin', 'BranchUser'] },
+      { href: '/cheques',       label: 'چک‌ها',              icon: FileCheck,       roles: ['SuperAdmin', 'BranchUser'] },
       { href: '/contacts',      label: 'طرف‌حساب‌ها',        icon: Users,           roles: ['SuperAdmin', 'BranchUser'] },
     ],
   },
