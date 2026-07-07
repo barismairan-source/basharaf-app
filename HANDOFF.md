@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.68-detective-phase4` |
-| **آخرین به‌روزرسانی** | 2026-07-06 — اکانت: ۱ |
+| **نسخه** | `0.9.69-detective-phase5` |
+| **آخرین به‌روزرسانی** | 2026-07-07 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
 | **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۵ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql` — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | **فاز ۵** — UI کارآگاه (`/detective` page، لیست findings با فیلتر، تغییر وضعیت، کارت داشبورد) + اتصال SMS برای detective alerts |
-| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۵ migration در pgAdmin (db-anomaly-migration.sql آخرین است). ۲. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
+| **کار بعدی پیشنهادی** | فاز ۵ کامل شد ✅. بعدی: اجرای migrationها در pgAdmin + تنظیم env vars. بعد از آن: مشخص توسط کاربر. |
+| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۵ migration در pgAdmin (ترتیب: waste-reason → cheques → sms-anomaly → sms-phase3 → anomaly). ۲. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-07 — فاز ۵: UI کارآگاه مالی + تنظیمات + Badge — اکانت ۱
+**چه شد:** فاز پایانی پروژه کارآگاه کامل پیاده شد:
+- **`app/(app)/anomaly/page.tsx`**: کارت‌های خلاصه (high/medium/low/total open)، جدول با فیلتر شدت/وضعیت/شعبه/قانون، Sheet drawer با خلاصه فارسی + metadata + لینک مستقیم به رکورد منبع (voucher/transaction) + تغییر وضعیت (new→investigating→confirmed|false_positive) + یادداشت + audit log خودکار.
+- **Sidebar badge**: badge قرمز تعداد یافته‌های باز high در کنار «کارآگاه مالی» — refresh روی هر route change (SuperAdmin only). Collapsed: badge کوچک روی آیکون. Expanded: badge کنار label.
+- **Settings → «قوانین کارآگاه»**: تب جدید فقط SuperAdmin — toggle enabled/disabled هر قانون، toggle smsEnabled، expand برای ویرایش JSON thresholds بدون deploy.
+- **API**: `GET/PATCH anomaly/findings`، `GET anomaly/findings/counts`، `PATCH anomaly/findings/[id]`، `GET anomaly/rules`، `PATCH anomaly/rules/[key]`.
+- **permissions**: `'anomaly'` SectionKey + sectionForPath → nav middleware کار می‌کند.
+**فایل‌ها:** `app/(app)/anomaly/page.tsx` (جدید), `app/api/anomaly/findings/route.ts`, `app/api/anomaly/findings/counts/route.ts`, `app/api/anomaly/findings/[id]/route.ts`, `app/api/anomaly/rules/route.ts`, `app/api/anomaly/rules/[key]/route.ts`, `components/layout/Sidebar.tsx`, `components/layout/nav-config.ts`, `components/settings/SettingsNav.tsx`, `components/settings/DetectivePane.tsx` (جدید), `components/settings/index.ts`, `app/(app)/settings/page.tsx`, `lib/auth/audit.ts`, `lib/auth/permissions.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅. Commit: 5dffacd
+**ناتمام:** —
+**برای جلسه‌ی بعد:** همه چیز commit/push شد. ۵ migration در pgAdmin باید اجرا شود. `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. بعد از آن می‌توان SMS live را تست کرد.
 
 ## 📓 2026-07-06 — فاز ۴: موتور کارآگاه مالی — اکانت ۱
 **چه شد:** موتور کارآگاه کامل پیاده شد. هیچ مسیر مالی شکسته یا کند نشد — تمام callها fire-and-forget با try/catch هستند.
@@ -128,12 +140,3 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۲ migration باید در pgAdmin اجرا شوند. موارد 🟠: parseFloat مالی انبار، force-reset حقوق، rate limit OTP.
 
-## 📓 2026-07-06 — تاریخچه قیمت خرید اقلام انبار — اکانت ۱
-**چه شد:** فیچر «تاریخچه قیمت» برای رصد تورم مواد اولیه پیاده شد:
-- **API** `GET /api/inventory/items/[id]/price-history`: از `inv_voucher_lines` + `inv_vouchers` (kind='in', status='approved') قیمت‌های خرید تأییدشده را بازیابی می‌کند. خروجی: آرایه `{ date (jalali), unitPrice, qty, source }` مرتب بر اساس تاریخ + خلاصه `{ firstPrice, lastPrice, avgPrice, changePct, change3mPct }`.
-- **API** `GET /api/inventory/items/price-changes`: یک‌جا قیمت آخرین خرید + تغییر ۳ ماهه برای همه اقلام — برای ستون جدول.
-- **UI** `app/(app)/inventory/items/page.tsx`: (الف) آیکون `TrendingUp` کنار میانگین بها — با کلیک Sheet تاریخچه باز می‌شود. (ب) ستون «تغییر ۳م.» جدید (فقط برای canDo inventory.viewCosts): قرمز >۲۰٪، کهربایی ۱–۲۰٪، سبز کاهش. (پ) Sheet تاریخچه: Summary card (آخرین قیمت + ٪ تغییر نسبت به ۳ ماه + میانگین) + نمودار خطی Recharts + جدول (تاریخ/قیمت/مقدار/منبع).
-**فایل‌ها:** `app/api/inventory/items/[id]/price-history/route.ts` (جدید), `app/api/inventory/items/price-changes/route.ts` (جدید), `app/(app)/inventory/items/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅. Commit: b455cf1
-**ناتمام:** —
-**برای جلسه‌ی بعد:** موارد 🟠: رفع parseFloat مالی انبار (`lib/db/inventoryHelpers.ts:23`)، UI force-reset حقوق (SuperAdmin)، rate limit قوی‌تر OTP send.

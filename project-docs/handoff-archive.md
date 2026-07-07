@@ -1,5 +1,13 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-06 — تاریخچه قیمت خرید اقلام انبار — اکانت ۱
+**چه شد:** فیچر «تاریخچه قیمت» برای رصد تورم مواد اولیه پیاده شد:
+- **API** `GET /api/inventory/items/[id]/price-history`: قیمت‌های خرید تأییدشده از `inv_voucher_lines`. خلاصه `{ firstPrice, lastPrice, avgPrice, changePct, change3mPct }`.
+- **API** `GET /api/inventory/items/price-changes`: تغییر ۳ماهه برای همه اقلام.
+- **UI** items/page.tsx: Sheet تاریخچه با Recharts line chart + ستون «تغییر ۳م.» رنگی.
+**فایل‌ها:** `app/api/inventory/items/[id]/price-history/route.ts`, `app/api/inventory/items/price-changes/route.ts`, `app/(app)/inventory/items/page.tsx`
+**Build:** tsc ✅ · build ✅. Commit: b455cf1
+
 ## 📓 2026-07-04 — audit log برای ۶ عملیات مالی + rate limit OTP — اکانت ۱
 **چه شد:** ۶ نوع AuditAction جدید (transaction.created/rejected/imported, payroll.posted/reversed, account.recalculated). rate limit OTP با phone-keyed counter max-5. console.log OTP در production guard شد.
 **فایل‌ها:** `lib/auth/audit.ts`, `lib/auth/rateLimit.ts`, `lib/ordering/webCustomer.ts`, route‌های تراکنش/حقوق/حساب
