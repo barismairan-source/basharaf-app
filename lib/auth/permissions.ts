@@ -25,6 +25,7 @@ export type SectionKey =
   | 'orders'
   | 'recruitment'
   | 'logs'
+  | 'anomaly'
   | 'settings';
 
 export interface SectionDef {
@@ -51,6 +52,7 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
   { key: 'recruitment',  label: 'استخدام',           defaultRoles: ['SuperAdmin'] },
   { key: 'logs',         label: 'لاگ سیستم',         defaultRoles: ['SuperAdmin'] },
+  { key: 'anomaly',      label: 'کارآگاه مالی',       defaultRoles: ['SuperAdmin'] },
   { key: 'settings',     label: 'تنظیمات',           defaultRoles: ['SuperAdmin', 'BranchUser'] },
 ];
 
@@ -132,6 +134,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (pathname.startsWith('/orders')) return 'orders';
   if (pathname.startsWith('/recruitment')) return 'recruitment';
   if (pathname.startsWith('/logs')) return 'logs';
+  if (pathname.startsWith('/anomaly')) return 'anomaly';
   if (pathname.startsWith('/settings')) return 'settings';
   return null;
 }

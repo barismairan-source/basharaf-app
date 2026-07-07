@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Receipt, BarChart3, Landmark, Users, UtensilsCrossed, ScrollText,
   Briefcase, Calculator, Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
   CalendarClock, Wrench, ShoppingCart, ClipboardList, Truck, TrendingUp, PackageOpen, ChefHat,
-  FileCheck,
+  FileCheck, ShieldAlert,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { SectionKey } from '@/lib/auth/permissions';
@@ -16,6 +16,8 @@ export interface NavItem {
   matchPrefix?: boolean;
   /** اگر true، در sidebar دسکتاپ زیر تاگ «بیشتر» پنهان می‌ماند */
   rarely?: boolean;
+  /** اگر true، sidebar برای این آیتم badge count کارآگاه را نشان می‌دهد */
+  hasBadge?: boolean;
 }
 
 export interface NavGroup {
@@ -73,8 +75,9 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
   {
     label: 'تحلیل و گزارش',
     items: [
-      { href: '/reports', label: 'گزارش‌ها',  icon: BarChart3,  roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/logs',    label: 'لاگ سیستم', icon: ScrollText, roles: ['SuperAdmin'] },
+      { href: '/reports',  label: 'گزارش‌ها',      icon: BarChart3,   roles: ['SuperAdmin', 'BranchUser'] },
+      { href: '/anomaly',  label: 'کارآگاه مالی',   icon: ShieldAlert, roles: ['SuperAdmin'], hasBadge: true },
+      { href: '/logs',     label: 'لاگ سیستم',     icon: ScrollText,  roles: ['SuperAdmin'] },
     ],
   },
 ];

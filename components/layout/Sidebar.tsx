@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { BrandMark, Avatar } from '@/components/ui';
-import { cn } from '@/lib/utils';
+import { cn, toFa } from '@/lib/utils';
 import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
 import {
   NAV_GROUPS, BOTTOM_NAV_HREFS, SETTINGS_NAV_ITEM,
@@ -18,12 +18,13 @@ import {
 import { APP_VERSION } from '@/lib/version';
 
 function NavLink({
-  item, pathname, collapsed, onNavClick,
+  item, pathname, collapsed, onNavClick, badge,
 }: {
-  item: NavItem; pathname: string; collapsed: boolean; onNavClick?: () => void;
+  item: NavItem; pathname: string; collapsed: boolean; onNavClick?: () => void; badge?: number;
 }) {
   const active = isNavItemActive(item.href, pathname, item.matchPrefix);
   const Icon = item.icon;
+  const showBadge = badge !== undefined && badge > 0;
   return (
     <li>
       <Link
@@ -33,7 +34,7 @@ function NavLink({
         className={cn(
           'flex items-center rounded-md text-[13px] transition-colors',
           collapsed
-            ? 'h-10 w-10 justify-center mx-auto'
+            ? 'h-10 w-10 justify-center mx-auto relative'
             : 'h-10 gap-2.5 px-3',
           active
             ? 'bg-accent-subtle text-accent font-medium'
@@ -41,13 +42,24 @@ function NavLink({
         )}
         aria-current={active ? 'page' : undefined}
       >
-        <Icon
-          size={15}
-          strokeWidth={active ? 2 : 1.5}
-          aria-hidden="true"
-          className="flex-shrink-0"
-        />
-        {!collapsed && <span className="truncate">{item.label}</span>}
+        <span className="relative flex-shrink-0">
+          <Icon
+            size={15}
+            strokeWidth={active ? 2 : 1.5}
+            aria-hidden="true"
+          />
+          {showBadge && collapsed && (
+            <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold px-0.5 leading-none">
+              {badge! > 99 ? '۹۹+' : toFa(badge!)}
+            </span>
+          )}
+        </span>
+        {!collapsed && <span className="truncate flex-1">{item.label}</span>}
+        {!collapsed && showBadge && (
+          <span className="mr-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 leading-none">
+            {badge! > 99 ? '۹۹+' : toFa(badge!)}
+          </span>
+        )}
       </Link>
     </li>
   );
@@ -77,6 +89,15 @@ export function SidebarContent({
   const user = useAppStore((s) => s.user);
   const logout = useAppStore((s) => s.logout);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [anomalyCount, setAnomalyCount] = useState(0);
+
+  useEffect(() => {
+    if (!user || user.role !== 'SuperAdmin') return;
+    fetch('/api/anomaly/findings/counts')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data?.high) setAnomalyCount(data.high); })
+      .catch(() => {});
+  }, [user, pathname]);
 
   function toggleGroup(label: string) {
     setExpandedGroups((prev) => {
@@ -180,6 +201,7 @@ export function SidebarContent({
                       pathname={pathname}
                       collapsed={collapsed}
                       onNavClick={onNavClick}
+                      badge={item.hasBadge ? anomalyCount : undefined}
                     />
                   ))}
                 </ul>

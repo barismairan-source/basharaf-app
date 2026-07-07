@@ -7,3 +7,4 @@ export { CategoriesPane } from './CategoriesPane';
 export { ContentPane } from './ContentPane';
 export { SecurityPane } from './SecurityPane';
 export { SmsPane } from './SmsPane';
+export { DetectivePane } from './DetectivePane';

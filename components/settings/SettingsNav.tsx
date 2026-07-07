@@ -9,6 +9,7 @@ import {
   PenLine,
   Shield,
   MessageSquare,
+  ShieldAlert,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
@@ -23,13 +24,15 @@ export type SettingsTab =
   | 'categories'
   | 'content'
   | 'security'
-  | 'sms';
+  | 'sms'
+  | 'detective';
 
 interface TabDef {
   id: SettingsTab;
   label: string;
   icon: LucideIcon;
   requires?: CapabilityKey;
+  superAdminOnly?: boolean;
 }
 
 const TABS: ReadonlyArray<TabDef> = [
@@ -41,6 +44,7 @@ const TABS: ReadonlyArray<TabDef> = [
   { id: 'content', label: 'متن‌های سامانه', icon: PenLine, requires: 'settings.content' },
   { id: 'security', label: 'امنیت', icon: Shield, requires: 'settings.security' },
   { id: 'sms', label: 'پیامک', icon: MessageSquare, requires: 'settings.security' },
+  { id: 'detective', label: 'قوانین کارآگاه', icon: ShieldAlert, superAdminOnly: true },
 ];
 
 interface SettingsNavProps {
@@ -52,7 +56,11 @@ export function SettingsNav({ active, onChange }: SettingsNavProps) {
   const user = useAppStore((s) => s.user);
   if (!user) return null;
 
-  const visible = TABS.filter((t) => !t.requires || canDo(user, t.requires));
+  const visible = TABS.filter((t) => {
+    if (t.superAdminOnly && user.role !== 'SuperAdmin') return false;
+    if (t.requires && !canDo(user, t.requires)) return false;
+    return true;
+  });
 
   return (
     <nav className="lg:w-56 flex-shrink-0">

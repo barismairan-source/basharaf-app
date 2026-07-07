@@ -11,6 +11,7 @@ import {
   ContentPane,
   SecurityPane,
   SmsPane,
+  DetectivePane,
   type SettingsTab,
 } from '@/components/settings';
 import { RouterGuard } from '@/components/layout';
@@ -77,6 +78,7 @@ export default function SettingsPage() {
                 <SmsPane />
               </RouterGuard>
             )}
+            {activeTab === 'detective' && <DetectivePane />}
           </div>
         </div>
       </div>
