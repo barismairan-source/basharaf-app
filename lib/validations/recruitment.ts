@@ -26,6 +26,7 @@ export const applicationCreateSchema = z.object({
   shiftAvailability: z.array(z.string()).min(1, 'حداقل یک شیفت انتخاب کنید').optional().nullable(),
   startAvailability: z.enum(['immediate', 'within_week', 'after_week']).optional().nullable(),
   referralSource: z.string().max(50).optional().nullable(),
+  customFields: z.record(z.string(), z.unknown()).default({}),
 });
 
 export type ApplicationCreateInput = z.infer<typeof applicationCreateSchema>;

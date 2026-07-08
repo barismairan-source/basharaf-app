@@ -10,13 +10,15 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.70-recruitment-wizard` |
+| **نسخه** | `0.10.0-form-builder` |
 | **آخرین به‌روزرسانی** | 2026-07-08 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۶ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql`، **`db-recruitment-fields-migration.sql`** — باید در pgAdmin اجرا شوند. |
+| **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۷ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql`، `db-recruitment-fields-migration.sql`، **`db-form-builder-migration.sql`** — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | مشخص توسط کاربر. |
-| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۶ migration در pgAdmin (ترتیب: waste-reason → cheques → sms-anomaly → sms-phase3 → anomaly → recruitment-fields). ۲. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
+| **کار بعدی پیشنهادی** | ۱. اجرای `db-form-builder-migration.sql` در pgAdmin. ۲. رفتن به `/recruitment/form-builder` و زدن دکمه «بارگذاری داده اولیه فرم» (seed). ۳. تست سناریوی کامل (فرم‌ساز → /apply موبایل/دسکتاپ → پنل پاسخ). |
+| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۷ migration در pgAdmin (ترتیب: waste-reason → cheques → sms-anomaly → sms-phase3 → anomaly → recruitment-fields → **form-builder**). ۲. اجرای seed از `/recruitment/form-builder`. ۳. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
+
+> ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +52,20 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-08 — Form Builder داینامیک استخدام (v0.10.0) — اکانت ۱
+**چه شد:** فرم‌ساز داینامیک کامل پیاده شد — کنترل ۱۰۰٪ فرم `/apply` از داشبورد بدون کدنویسی:
+- **Schema (4 جدول جدید):** `form_sections`, `form_fields`, `form_field_options`, `form_field_conditions` + ۲ ستون جدید به `job_applications` (`custom_fields` JSONB، `field_snapshot` JSONB). Migration: `db-form-builder-migration.sql` + `drizzle/migrations/0002_form_builder.sql`.
+- **Seed API:** `POST /api/recruitment/form-builder/seed` — همه فیلدهای فعلی فرم را به عنوان seed اولیه وارد می‌کند (نام، موبایل، سن، جنسیت، محله، شیفت، شروع، آشنایی + شرط «توضیح آشنایی» برای «سایر»). یک‌بار در pgAdmin چک و بعد از seed UI اجرا شود.
+- **API‌های CRUD فرم‌ساز:** GET/POST فیلد، PATCH (label+options+conditions یکجا)، DELETE (غیرفعال‌سازی نرم)، PUT reorder (drag-to-reorder + جابه‌جایی بین مراحل)، CRUD مراحل.
+- **API عمومی فرم:** `GET /api/recruitment/form-structure?area=hall|kitchen` — فیلدهای فعال با فیلتر scope و شرط‌ها.
+- **فرم‌ساز UI:** `/recruitment/form-builder` — درخت فیلدها + ویرایشگر ۴ تب (پایه/گزینه‌ها/شرایط/اعتبارسنجی) + پیش‌نمایش زنده موبایل/دسکتاپ + drag-to-reorder با HTML5 native.
+- **فرم `/apply` کاملاً داینامیک:** مرحله ۱ از DB رندر می‌شود، موتور شرط‌ها client-side، ولیدیشن از `field.validation` JSON، `customFields` و `fieldSnapshot` در submit ذخیره می‌شود.
+- **پنل `/recruitment` داینامیک:** نمایش `customFields` با label از snapshot، فیلترهای داینامیک برای filterable fields، اکسل با ستون‌های داینامیک.
+**فایل‌ها:** `lib/db/schema.ts` (4 جدول جدید + 2 ستون)، `lib/recruitment/form-types.ts` (جدید)، `lib/recruitment/questions.ts` (JobApplication type)، `lib/validations/recruitment.ts` (customFields)، `app/api/recruitment/route.ts`، `app/api/recruitment/form-structure/route.ts` (جدید)، `app/api/recruitment/form-builder/route.ts` (جدید)، `app/api/recruitment/form-builder/fields/route.ts` (جدید)، `app/api/recruitment/form-builder/fields/[id]/route.ts` (جدید)، `app/api/recruitment/form-builder/reorder/route.ts` (جدید)، `app/api/recruitment/form-builder/seed/route.ts` (جدید)، `app/api/recruitment/form-builder/sections/route.ts` (جدید)، `app/api/recruitment/form-builder/sections/[id]/route.ts` (جدید)، `app/(app)/recruitment/form-builder/page.tsx` (جدید)، `app/(app)/recruitment/page.tsx`، `app/apply/page.tsx`، `db-form-builder-migration.sql` (جدید)، `drizzle/migrations/0002_form_builder.sql` (جدید)
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
+**ناتمام:** migration هنوز در pgAdmin اجرا نشده، seed هنوز اجرا نشده — UI آماده است.
+**برای جلسه‌ی بعد:** ۱. اجرای `db-form-builder-migration.sql` در pgAdmin. ۲. رفتن به `/recruitment/form-builder` و زدن «بارگذاری داده اولیه». ۳. تست سناریوی کامل (ساخت فیلد جدید، شرط‌گذاری، submit از /apply، مشاهده در پنل و اکسل).
 
 ## 📓 2026-07-08 — ماژول استخدام: فیلدهای جدید + ریسپانسیو wizard — اکانت ۱
 **چه شد:** فرم `/apply` و پنل `/recruitment` بهبود کامل یافت:

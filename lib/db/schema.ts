@@ -462,6 +462,8 @@ export const jobApplications = pgTable(
     score: integer('score'),
     reviewerNote: text('reviewer_note'),
     reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    customFields: jsonb('custom_fields').$type<Record<string, unknown>>().default({}),
+    fieldSnapshot: jsonb('field_snapshot').$type<Array<{ key: string; label: string; type: string }>>().default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -472,6 +474,79 @@ export const jobApplications = pgTable(
 );
 
 export type JobApplication = typeof jobApplications.$inferSelect;
+
+// ─── Form Builder (فرم‌ساز داینامیک استخدام) ─────────────────────
+
+export const formFieldTypeEnum = pgEnum('form_field_type', [
+  'text', 'textarea', 'number', 'tel', 'email',
+  'select', 'multiselect', 'radio', 'checkbox', 'date',
+]);
+export const formFieldScopeEnum = pgEnum('form_field_scope', ['all', 'kitchen', 'hall']);
+export const formFieldWidthEnum = pgEnum('form_field_width', ['full', 'half']);
+export const conditionOperatorEnum = pgEnum('condition_operator', [
+  'equals', 'not_equals', 'includes', 'is_empty', 'is_not_empty',
+]);
+export const conditionActionEnum = pgEnum('condition_action', ['show', 'hide', 'require']);
+
+export const formSections = pgTable('form_sections', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  key: text('key').notNull().unique(),
+  title: text('title').notNull(),
+  subtitle: text('subtitle'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  isSystem: boolean('is_system').notNull().default(false),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const formFields = pgTable('form_fields', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  sectionId: uuid('section_id').notNull().references(() => formSections.id, { onDelete: 'cascade' }),
+  key: text('key').notNull().unique(),
+  label: text('label').notNull(),
+  placeholder: text('placeholder'),
+  helpText: text('help_text'),
+  type: formFieldTypeEnum('type').notNull(),
+  isRequired: boolean('is_required').notNull().default(false),
+  isActive: boolean('is_active').notNull().default(true),
+  isSystem: boolean('is_system').notNull().default(false),
+  isFilterable: boolean('is_filterable').notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(0),
+  scope: formFieldScopeEnum('scope').notNull().default('all'),
+  validation: jsonb('validation').$type<{
+    regex?: string; min?: number; max?: number; minLength?: number; maxLength?: number;
+  }>(),
+  defaultValue: text('default_value'),
+  width: formFieldWidthEnum('width').notNull().default('full'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const formFieldOptions = pgTable('form_field_options', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fieldId: uuid('field_id').notNull().references(() => formFields.id, { onDelete: 'cascade' }),
+  label: text('label').notNull(),
+  value: text('value').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  isActive: boolean('is_active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const formFieldConditions = pgTable('form_field_conditions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  fieldId: uuid('field_id').notNull().references(() => formFields.id, { onDelete: 'cascade' }),
+  dependsOnFieldId: uuid('depends_on_field_id').notNull().references(() => formFields.id, { onDelete: 'cascade' }),
+  operator: conditionOperatorEnum('operator').notNull(),
+  value: text('value'),
+  action: conditionActionEnum('action').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type FormSection = typeof formSections.$inferSelect;
+export type FormField = typeof formFields.$inferSelect;
+export type FormFieldOption = typeof formFieldOptions.$inferSelect;
+export type FormFieldCondition = typeof formFieldConditions.$inferSelect;
 
 // ─── Menu (منوی دیجیتال صفاسیتی) ─────────────────────────────────
 /**

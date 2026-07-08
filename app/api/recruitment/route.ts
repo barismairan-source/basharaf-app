@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { desc } from 'drizzle-orm';
+import { desc, eq, and, asc } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applicationCreateSchema } from '@/lib/validations/recruitment';
 import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import type { FieldSnapshot } from '@/lib/recruitment/form-types';
+import { SYSTEM_FIELD_COLUMN_MAP } from '@/lib/recruitment/form-types';
 
 /**
  * POST /api/recruitment — عمومی (متقاضی login ندارد). ثبت یک درخواست استخدام.
@@ -13,7 +15,6 @@ import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rat
 
 export async function POST(req: Request) {
   try {
-    // محدودیت اسپم — چون route عمومی است
     const ip = getClientIp(req);
     const rl = checkRateLimit(ip);
     if (!rl.allowed) {
@@ -22,13 +23,34 @@ export async function POST(req: Request) {
 
     const input = applicationCreateSchema.parse(await req.json());
 
-    // پاسخ‌ها پویا هستند (سوال‌ها از پنل قابل ویرایش‌اند)؛ هر پاسخ متنی معتبر را نگه دار
+    // پاسخ‌های سوال‌های مرحله ۳ (سیستم موجود)
     const answers: Record<string, string> = {};
     for (const [id, v] of Object.entries(input.answers)) {
       if (typeof v === 'string' && v.trim()) answers[id] = v.trim();
     }
 
-    // هر ثبت را به‌عنوان یک تلاش بشمار (محدودیت تعداد ثبت per IP)
+    // ساخت customFields و fieldSnapshot از فیلدهای داینامیک
+    const customFields: Record<string, unknown> = {};
+    const fieldSnapshot: FieldSnapshot[] = [];
+
+    if (input.customFields && typeof input.customFields === 'object') {
+      // گرفتن metadata فیلدهای فعال از DB برای snapshot
+      const activeFields = await db
+        .select({ id: schema.formFields.id, key: schema.formFields.key, label: schema.formFields.label, type: schema.formFields.type, isSystem: schema.formFields.isSystem })
+        .from(schema.formFields)
+        .where(eq(schema.formFields.isActive, true));
+
+      const customInput = input.customFields as Record<string, unknown>;
+      for (const [key, value] of Object.entries(customInput)) {
+        if (value === undefined || value === null || value === '') continue;
+        const fieldMeta = activeFields.find(f => f.key === key);
+        if (!fieldMeta) continue;
+        if (fieldMeta.isSystem) continue; // سیستمی‌ها در ستون‌های اختصاصی ذخیره می‌شوند
+        customFields[key] = value;
+        fieldSnapshot.push({ key, label: fieldMeta.label, type: fieldMeta.type });
+      }
+    }
+
     recordFailedAttempt(ip);
 
     const [row] = await db
@@ -49,6 +71,8 @@ export async function POST(req: Request) {
         shiftAvailability: input.shiftAvailability ?? null,
         startAvailability: input.startAvailability ?? null,
         referralSource: input.referralSource ?? null,
+        customFields,
+        fieldSnapshot,
       })
       .returning({ id: schema.jobApplications.id });
 
@@ -85,6 +109,8 @@ export async function GET() {
         shiftAvailability: (r.shiftAvailability as string[] | null) ?? null,
         startAvailability: r.startAvailability ?? null,
         referralSource: r.referralSource ?? null,
+        customFields: (r.customFields ?? {}) as Record<string, unknown>,
+        fieldSnapshot: (r.fieldSnapshot ?? []) as FieldSnapshot[],
         status: r.status,
         score: r.score,
         reviewerNote: r.reviewerNote,

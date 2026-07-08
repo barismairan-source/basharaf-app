@@ -104,6 +104,8 @@ export interface JobApplication {
   status: ApplicationStatus;
   score: number | null;
   reviewerNote: string | null;
+  customFields: Record<string, unknown>;
+  fieldSnapshot: Array<{ key: string; label: string; type: string }>;
   createdAt: string;
   updatedAt: string;
 }
