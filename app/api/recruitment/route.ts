@@ -46,6 +46,9 @@ export async function POST(req: Request) {
         manualInfo: input.manualInfo ?? null,
         answers,
         area: input.area,
+        shiftAvailability: input.shiftAvailability ?? null,
+        startAvailability: input.startAvailability ?? null,
+        referralSource: input.referralSource ?? null,
       })
       .returning({ id: schema.jobApplications.id });
 
@@ -79,6 +82,9 @@ export async function GET() {
         manualInfo: r.manualInfo,
         answers: (r.answers ?? {}) as Record<string, string>,
         area: r.area,
+        shiftAvailability: (r.shiftAvailability as string[] | null) ?? null,
+        startAvailability: r.startAvailability ?? null,
+        referralSource: r.referralSource ?? null,
         status: r.status,
         score: r.score,
         reviewerNote: r.reviewerNote,

@@ -23,6 +23,9 @@ export const applicationCreateSchema = z.object({
   manualInfo: z.string().max(2000).optional().nullable(),
   answers: z.record(z.string(), z.string().max(2000)).default({}),
   area: z.enum(['hall', 'kitchen'], { required_error: 'بخش را انتخاب کنید' }),
+  shiftAvailability: z.array(z.string()).min(1, 'حداقل یک شیفت انتخاب کنید').optional().nullable(),
+  startAvailability: z.enum(['immediate', 'within_week', 'after_week']).optional().nullable(),
+  referralSource: z.string().max(50).optional().nullable(),
 });
 
 export type ApplicationCreateInput = z.infer<typeof applicationCreateSchema>;

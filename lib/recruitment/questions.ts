@@ -59,6 +59,31 @@ export const GENDER_LABELS: Record<ApplicantGender, string> = {
   female: 'خانم',
 };
 
+export type ShiftSlot = 'morning' | 'evening' | 'night' | 'weekend';
+export type StartAvailability = 'immediate' | 'within_week' | 'after_week';
+export type ReferralSource = 'instagram' | 'divar' | 'friend' | 'customer' | 'other';
+
+export const SHIFT_LABELS: Record<ShiftSlot, string> = {
+  morning: 'صبح',
+  evening: 'عصر',
+  night:   'شب',
+  weekend: 'آخر هفته و تعطیلات',
+};
+
+export const START_LABELS: Record<StartAvailability, string> = {
+  immediate:   'فوری',
+  within_week: 'تا یک هفته',
+  after_week:  'بیشتر از یک هفته',
+};
+
+export const REFERRAL_LABELS: Record<ReferralSource, string> = {
+  instagram: 'اینستاگرام',
+  divar:     'دیوار',
+  friend:    'معرفی دوست یا همکار',
+  customer:  'مشتری رستوران هستم',
+  other:     'سایر',
+};
+
 export interface JobApplication {
   id: string;
   firstName: string;
@@ -73,6 +98,9 @@ export interface JobApplication {
   manualInfo: string | null;
   answers: Record<string, string>;
   area: ApplicationArea | null;
+  shiftAvailability: string[] | null;
+  startAvailability: string | null;
+  referralSource: string | null;
   status: ApplicationStatus;
   score: number | null;
   reviewerNote: string | null;

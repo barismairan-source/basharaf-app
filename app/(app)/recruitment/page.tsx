@@ -12,6 +12,7 @@ import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import {
   SCREENING_QUESTIONS, AREA_LABELS, STATUS_LABELS, GENDER_LABELS,
+  SHIFT_LABELS, START_LABELS, REFERRAL_LABELS,
   type JobApplication, type ApplicationStatus, type ScreeningQuestion,
 } from '@/lib/recruitment/questions';
 
@@ -50,6 +51,7 @@ export default function RecruitmentPage() {
   const [hydrated, setHydrated] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | ApplicationStatus>('all');
   const [areaFilter, setAreaFilter] = useState<'all' | 'hall' | 'kitchen'>('all');
+  const [startFilter, setStartFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showQuestions, setShowQuestions] = useState(false);
@@ -67,10 +69,11 @@ export default function RecruitmentPage() {
     return applications.filter((a) => {
       if (statusFilter !== 'all' && a.status !== statusFilter) return false;
       if (areaFilter !== 'all' && a.area !== areaFilter) return false;
+      if (startFilter !== 'all' && a.startAvailability !== startFilter) return false;
       if (q && !`${a.firstName} ${a.lastName} ${a.phone}`.includes(q)) return false;
       return true;
     });
-  }, [applications, statusFilter, areaFilter, search]);
+  }, [applications, statusFilter, areaFilter, startFilter, search]);
 
   const selected = useMemo(
     () => applications.find((a) => a.id === selectedId) ?? null,
@@ -94,7 +97,10 @@ export default function RecruitmentPage() {
         موبایل: a.phone,
         سن: a.age ?? '',
         جنسیت: a.gender ? GENDER_LABELS[a.gender] : '',
-        'محل سکونت': a.city ?? '',
+        'محله سکونت': a.city ?? '',
+        'شیفت‌ها': (a.shiftAvailability ?? []).map(s => SHIFT_LABELS[s as keyof typeof SHIFT_LABELS] ?? s).join(' / '),
+        'امکان شروع': a.startAvailability ? (START_LABELS[a.startAvailability as keyof typeof START_LABELS] ?? a.startAvailability) : '',
+        'کانال آشنایی': a.referralSource ? (REFERRAL_LABELS[a.referralSource as keyof typeof REFERRAL_LABELS] ?? a.referralSource) : '',
         بخش: a.area ? AREA_LABELS[a.area] : '',
         وضعیت: STATUS_LABELS[a.status],
         امتیاز: a.score ?? '',
@@ -229,6 +235,12 @@ export default function RecruitmentPage() {
             <option value="hall">سالن</option>
             <option value="kitchen">آشپزخانه</option>
           </Select>
+          <Select value={startFilter} onChange={(e) => setStartFilter(e.target.value)} className="w-40">
+            <option value="all">همه زمان‌های شروع</option>
+            <option value="immediate">فوری</option>
+            <option value="within_week">تا یک هفته</option>
+            <option value="after_week">بیشتر از یک هفته</option>
+          </Select>
           <div className="relative flex-1 min-w-[160px]">
             <Input icon={Search} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="جستجوی نام یا موبایل…" />
           </div>
@@ -282,7 +294,28 @@ export default function RecruitmentPage() {
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] text-stone-600 sm:grid-cols-4">
                       <div><span className="text-muted">سن: </span>{a.age ?? '—'}</div>
                       <div><span className="text-muted">جنسیت: </span>{a.gender ? GENDER_LABELS[a.gender] : '—'}</div>
-                      <div className="col-span-2"><span className="text-muted">سکونت: </span>{a.city ?? '—'}</div>
+                      <div className="col-span-2"><span className="text-muted">محله: </span>{a.city ?? '—'}</div>
+                    </div>
+                    {/* new fields */}
+                    <div className="grid grid-cols-1 gap-y-1.5 text-[12px] text-stone-600 sm:grid-cols-3 sm:gap-x-4">
+                      <div>
+                        <span className="text-muted">شیفت‌ها: </span>
+                        {(a.shiftAvailability ?? []).length > 0
+                          ? (a.shiftAvailability!.map(s => SHIFT_LABELS[s as keyof typeof SHIFT_LABELS] ?? s).join('، '))
+                          : '—'}
+                      </div>
+                      <div>
+                        <span className="text-muted">شروع: </span>
+                        {a.startAvailability
+                          ? (START_LABELS[a.startAvailability as keyof typeof START_LABELS] ?? a.startAvailability)
+                          : '—'}
+                      </div>
+                      <div>
+                        <span className="text-muted">آشنایی: </span>
+                        {a.referralSource
+                          ? (REFERRAL_LABELS[a.referralSource as keyof typeof REFERRAL_LABELS] ?? a.referralSource)
+                          : '—'}
+                      </div>
                     </div>
 
                     {a.resumeUrl ? (
