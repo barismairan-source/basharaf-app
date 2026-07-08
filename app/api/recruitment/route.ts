@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { desc, eq, and, asc } from 'drizzle-orm';
+import { desc, eq, and, asc, count } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
@@ -83,13 +83,48 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await requireAdmin();
-    const rows = await db
-      .select()
-      .from(schema.jobApplications)
-      .orderBy(desc(schema.jobApplications.createdAt));
+    const url    = new URL(req.url);
+    const page   = Math.max(1, parseInt(url.searchParams.get('page')  ?? '1',  10));
+    const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') ?? '50', 10)));
+    const offset = (page - 1) * limit;
+
+    const [countResult, rows] = await Promise.all([
+      db.select({ total: count() }).from(schema.jobApplications),
+      db
+        .select({
+          id: schema.jobApplications.id,
+          firstName: schema.jobApplications.firstName,
+          lastName: schema.jobApplications.lastName,
+          phone: schema.jobApplications.phone,
+          age: schema.jobApplications.age,
+          gender: schema.jobApplications.gender,
+          city: schema.jobApplications.city,
+          hasResume: schema.jobApplications.hasResume,
+          resumePath: schema.jobApplications.resumePath,
+          manualInfo: schema.jobApplications.manualInfo,
+          answers: schema.jobApplications.answers,
+          area: schema.jobApplications.area,
+          shiftAvailability: schema.jobApplications.shiftAvailability,
+          startAvailability: schema.jobApplications.startAvailability,
+          referralSource: schema.jobApplications.referralSource,
+          customFields: schema.jobApplications.customFields,
+          fieldSnapshot: schema.jobApplications.fieldSnapshot,
+          status: schema.jobApplications.status,
+          score: schema.jobApplications.score,
+          reviewerNote: schema.jobApplications.reviewerNote,
+          createdAt: schema.jobApplications.createdAt,
+          updatedAt: schema.jobApplications.updatedAt,
+        })
+        .from(schema.jobApplications)
+        .orderBy(desc(schema.jobApplications.createdAt))
+        .limit(limit)
+        .offset(offset),
+    ]);
+
+    const total = countResult[0]?.total ?? 0;
 
     return NextResponse.json({
       applications: rows.map((r) => ({
@@ -101,7 +136,6 @@ export async function GET() {
         gender: r.gender,
         city: r.city,
         hasResume: r.hasResume,
-        resumeUrl: r.resumeUrl,
         resumePath: r.resumePath,
         manualInfo: r.manualInfo,
         answers: (r.answers ?? {}) as Record<string, string>,
@@ -117,6 +151,9 @@ export async function GET() {
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
       })),
+      total,
+      page,
+      limit,
     });
   } catch (e) {
     return handleError(e);

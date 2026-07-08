@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.10.0-form-builder` |
+| **نسخه** | `0.10.1-hr-ux` |
 | **آخرین به‌روزرسانی** | 2026-07-08 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۷ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql`، `db-recruitment-fields-migration.sql`، **`db-form-builder-migration.sql`** — باید در pgAdmin اجرا شوند. |
+| **دیپلوی** | ✅ **GitHub Actions فعال**. همه migration‌ها دیپلوی شدند (کاربر تأیید کرد). Branch: `fix/recruitment-hr-ux` — هنوز merge نشده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. اجرای `db-form-builder-migration.sql` در pgAdmin. ۲. رفتن به `/recruitment/form-builder` و زدن دکمه «بارگذاری داده اولیه فرم» (seed). ۳. تست سناریوی کامل (فرم‌ساز → /apply موبایل/دسکتاپ → پنل پاسخ). |
-| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۷ migration در pgAdmin (ترتیب: waste-reason → cheques → sms-anomaly → sms-phase3 → anomaly → recruitment-fields → **form-builder**). ۲. اجرای seed از `/recruitment/form-builder`. ۳. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
+| **کار بعدی پیشنهادی** | ۱. Seed فرم از `/recruitment/form-builder` (دکمه «بارگذاری داده اولیه»). ۲. تست پنل استخدام — بررسی سرعت لود، نمایش سوال کامل، دانلود رزومه. ۳. Merge branch `fix/recruitment-hr-ux` به main. |
+| **بلاک‌شده/منتظر کاربر** | ۱. تست پنل و تأیید کارکرد. ۲. Merge branch. ۳. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -52,6 +52,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-08 — HR UX بهبود پنل استخدام (v0.10.1) — اکانت ۱
+**چه شد:** ۵ بهبود P1–P5 در ماژول استخدام، بدون تغییر schema:
+- **P1a (سوال کامل)**: در detail card کاندید، label سوال از `q.title` (کوتاه) به `q.prompt` (متن کامل) تغییر یافت — HR دقیقاً می‌داند هر جواب به کدام سوال است.
+- **P1b (طراحی card)**: اطلاعات کلیدی (سن، جنسیت، محله، شیفت‌ها، زمان شروع، آشنایی) به‌صورت chips رنگی چیده می‌شوند — سریع‌خوانی بالاتر، سلسله‌مراتب بهتر.
+- **P2 (حل ~7MB payload)**: `resumeUrl` از GET list API حذف شد (base64 تا 6MB بود!) — فقط `hasResume: boolean` برمی‌گردد. Pagination 50تایی اضافه شد + دکمه «بارگذاری بیشتر» در UI.
+- **P3 (رزومه موبایل)**: endpoint جدید `GET /api/recruitment/[id]/resume` با `Content-Disposition: attachment` — دکمه دانلود از `<a href={dataURI}>` به `<a href={/api/...}>` تغییر یافت (Safari iOS سازگار).
+- **P4 (error state در /apply)**: loading spinner + error message + دکمه «تلاش مجدد» برای fetch ساختار فرم اضافه شد.
+**فایل‌ها:** `lib/recruitment/questions.ts` (حذف resumeUrl از interface)، `app/api/recruitment/route.ts` (GET — pagination، حذف resumeUrl)، `app/api/recruitment/[id]/resume/route.ts` (جدید)، `store/slices/recruitmentSlice.ts` (pagination + loadMore)، `app/(app)/recruitment/page.tsx` (P1+P2+P3)، `app/apply/page.tsx` (P4)
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
+**ناتمام:** Seed فرم هنوز اجرا نشده. Branch: `fix/recruitment-hr-ux` — منتظر تست و merge.
+**برای جلسه‌ی بعد:** ۱. تست `/apply` + پنل استخدام. ۲. Seed از `/recruitment/form-builder`. ۳. Merge branch به main.
 
 ## 📓 2026-07-08 — Form Builder داینامیک استخدام (v0.10.0) — اکانت ۱
 **چه شد:** فرم‌ساز داینامیک کامل پیاده شد — کنترل ۱۰۰٪ فرم `/apply` از داشبورد بدون کدنویسی:

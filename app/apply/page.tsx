@@ -211,9 +211,11 @@ export default function ApplyPage() {
   const [area,       setArea]       = useState<Area | null>(null);
 
   // ── فرم داینامیک ──────────────────────────────────────────────
-  const [formStructure, setFormStructure] = useState<FormStructure | null>(null);
-  const [formValues,    setFormValues]    = useState<Record<string, unknown>>({});
-  const [lockedFields,  setLockedFields]  = useState<Set<string>>(new Set());
+  const [formStructure,  setFormStructure]  = useState<FormStructure | null>(null);
+  const [formLoading,    setFormLoading]    = useState(false);
+  const [formError,      setFormError]      = useState<string | null>(null);
+  const [formValues,     setFormValues]     = useState<Record<string, unknown>>({});
+  const [lockedFields,   setLockedFields]   = useState<Set<string>>(new Set());
 
   // ── سیستم موجود سوال‌ها (مرحله ۳) ──────────────────────────
   const [questions,  setQuestions]  = useState<ScreeningQuestion[]>([]);
@@ -242,22 +244,33 @@ export default function ApplyPage() {
   }, []);
 
   // ── بارگذاری ساختار فرم وقتی area انتخاب شد ──────────────
+  const fetchFormStructure = useCallback(async (selectedArea: Area) => {
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      const r = await fetch(`/api/recruitment/form-structure?area=${selectedArea}`, { cache: 'no-store' });
+      if (!r.ok) throw new Error(`خطای سرور (${r.status})`);
+      const s: FormStructure = await r.json();
+      setFormStructure(s);
+      const init: Record<string, unknown> = { ...formValues };
+      for (const sec of s.sections) {
+        for (const f of sec.fields) {
+          if (f.defaultValue && init[f.key] === undefined) init[f.key] = f.defaultValue;
+        }
+      }
+      setFormValues(init);
+    } catch (e) {
+      setFormError(e instanceof Error ? e.message : 'بارگذاری فرم ناموفق بود');
+      setFormStructure(null);
+    } finally {
+      setFormLoading(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!area) return;
-    fetch(`/api/recruitment/form-structure?area=${area}`, { cache: 'no-store' })
-      .then(r => r.json())
-      .then((s: FormStructure) => {
-        setFormStructure(s);
-        // مقداردهی اولیه از defaultValue
-        const init: Record<string, unknown> = { ...formValues };
-        for (const sec of s.sections) {
-          for (const f of sec.fields) {
-            if (f.defaultValue && init[f.key] === undefined) init[f.key] = f.defaultValue;
-          }
-        }
-        setFormValues(init);
-      })
-      .catch(() => setFormStructure(null));
+    void fetchFormStructure(area);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [area]);
 
@@ -529,7 +542,23 @@ export default function ApplyPage() {
               <h2 className="text-xl lg:text-2xl font-bold text-gray-900">اطلاعات شما</h2>
               <p className="text-sm text-gray-400 mt-2 mb-6 lg:mb-8">لطفاً اطلاعات خود را کامل وارد کنید</p>
 
-              {!personalSection ? (
+              {formLoading ? (
+                <div className="flex flex-col items-center gap-3 py-12">
+                  <Loader2 className="animate-spin text-gray-400" size={28} />
+                  <p className="text-sm text-gray-400">در حال بارگذاری فرم…</p>
+                </div>
+              ) : formError ? (
+                <div className="flex flex-col items-center gap-4 py-12 text-center">
+                  <p className="text-sm text-red-500">{formError}</p>
+                  <button
+                    type="button"
+                    onClick={() => area && void fetchFormStructure(area)}
+                    className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    تلاش مجدد
+                  </button>
+                </div>
+              ) : !personalSection ? (
                 <div className="flex justify-center py-10">
                   <Loader2 className="animate-spin text-gray-400" size={24} />
                 </div>

@@ -54,13 +54,16 @@ function renderCustomValue(val: unknown, field?: FormFieldData | null): string {
 }
 
 export default function RecruitmentPage() {
-  const user             = useAppStore((s) => s.user);
-  const applications     = useAppStore((s) => s.applications);
-  const loadApplications = useAppStore((s) => s.loadApplications);
-  const reviewApplication = useAppStore((s) => s.reviewApplication);
-  const deleteApplication = useAppStore((s) => s.deleteApplication);
-  const showToast        = useAppStore((s) => s.showToast);
-  const router           = useRouter();
+  const user                  = useAppStore((s) => s.user);
+  const applications          = useAppStore((s) => s.applications);
+  const applicationsTotal     = useAppStore((s) => s.applicationsTotal);
+  const loadApplications      = useAppStore((s) => s.loadApplications);
+  const loadMoreApplications  = useAppStore((s) => s.loadMoreApplications);
+  const reviewApplication     = useAppStore((s) => s.reviewApplication);
+  const deleteApplication     = useAppStore((s) => s.deleteApplication);
+  const showToast             = useAppStore((s) => s.showToast);
+  const router                = useRouter();
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [hydrated,     setHydrated]     = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | ApplicationStatus>('all');
@@ -151,7 +154,7 @@ export default function RecruitmentPage() {
         بخش: a.area ? AREA_LABELS[a.area] : '',
         وضعیت: STATUS_LABELS[a.status],
         امتیاز: a.score ?? '',
-        رزومه: a.resumeUrl ?? (a.manualInfo ? 'متنی' : '—'),
+        رزومه: a.hasResume ? 'دارد' : (a.manualInfo ? 'متنی' : '—'),
         یادداشت: a.reviewerNote ?? '',
         تاریخ: faDate(a.createdAt),
       };
@@ -257,7 +260,7 @@ export default function RecruitmentPage() {
           <div>
             <h1 className="text-[20px] font-medium tracking-tight text-stone-900">استخدام</h1>
             <div className="mt-1 text-[12px] text-stone-500">
-              {applications.length} درخواست · لینک فرم: <span dir="ltr">/apply</span>
+              {applicationsTotal > 0 ? `${applicationsTotal} درخواست` : `${applications.length} درخواست`} · لینک فرم: <span dir="ltr">/apply</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -340,40 +343,51 @@ export default function RecruitmentPage() {
                         <Star size={13} fill="currentColor" /> {a.score}
                       </span>
                     )}
-                    {a.resumeUrl && <FileText size={15} className="text-muted" />}
+                    {a.hasResume && <FileText size={15} className="text-muted" />}
                   </button>
 
                   {selectedId === a.id && (
                     <CardBody className="border-t border-stone-100 space-y-4">
-                      {/* اطلاعات سیستمی */}
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] text-stone-600 sm:grid-cols-4">
-                        <div><span className="text-muted">سن: </span>{a.age ?? '—'}</div>
-                        <div><span className="text-muted">جنسیت: </span>{a.gender ? GENDER_LABELS[a.gender] : '—'}</div>
-                        <div className="col-span-2"><span className="text-muted">محله: </span>{a.city ?? '—'}</div>
-                      </div>
-                      <div className="grid grid-cols-1 gap-y-1.5 text-[12px] text-stone-600 sm:grid-cols-3 sm:gap-x-4">
-                        <div>
-                          <span className="text-muted">شیفت‌ها: </span>
-                          {(a.shiftAvailability ?? []).length > 0
-                            ? a.shiftAvailability!.map((s: string) => SHIFT_LABELS[s as keyof typeof SHIFT_LABELS] ?? s).join('، ')
-                            : '—'}
-                        </div>
-                        <div>
-                          <span className="text-muted">شروع: </span>
-                          {a.startAvailability ? (START_LABELS[a.startAvailability as keyof typeof START_LABELS] ?? a.startAvailability) : '—'}
-                        </div>
-                        <div>
-                          <span className="text-muted">آشنایی: </span>
-                          {a.referralSource ? (REFERRAL_LABELS[a.referralSource as keyof typeof REFERRAL_LABELS] ?? a.referralSource) : '—'}
-                        </div>
+
+                      {/* ── اطلاعات پایه: chips ─────────────────────────── */}
+                      <div className="flex flex-wrap gap-1.5">
+                        {a.age && (
+                          <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-[11.5px] text-stone-700">
+                            {a.age} ساله
+                          </span>
+                        )}
+                        {a.gender && (
+                          <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-[11.5px] text-stone-700">
+                            {GENDER_LABELS[a.gender]}
+                          </span>
+                        )}
+                        {a.city && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2.5 py-0.5 text-[11.5px] text-stone-700">
+                            <MapPin size={10} />{a.city}
+                          </span>
+                        )}
+                        {(a.shiftAvailability ?? []).map((s: string) => (
+                          <span key={s} className="rounded-full bg-amber-50 px-2.5 py-0.5 text-[11.5px] text-amber-700">
+                            {SHIFT_LABELS[s as keyof typeof SHIFT_LABELS] ?? s}
+                          </span>
+                        ))}
+                        {a.startAvailability && (
+                          <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11.5px] text-emerald-700">
+                            شروع: {START_LABELS[a.startAvailability as keyof typeof START_LABELS] ?? a.startAvailability}
+                          </span>
+                        )}
+                        {a.referralSource && (
+                          <span className="rounded-full bg-sky-50 px-2.5 py-0.5 text-[11.5px] text-sky-700">
+                            {REFERRAL_LABELS[a.referralSource as keyof typeof REFERRAL_LABELS] ?? a.referralSource}
+                          </span>
+                        )}
                       </div>
 
-                      {/* فیلدهای سفارشی داینامیک */}
+                      {/* ── فیلدهای سفارشی داینامیک ────────────────────── */}
                       {(snap.length > 0 || customDisplayFields.length > 0) && (
-                        <div className="border-t border-stone-100 pt-3">
+                        <div className="border-t border-stone-100 pt-3 space-y-1.5">
                           <div className="text-[10.5px] font-semibold text-stone-400 uppercase tracking-widest mb-2">فیلدهای فرم‌ساز</div>
                           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-[12px] text-stone-600 sm:grid-cols-3">
-                            {/* نمایش بر اساس snapshot رکورد */}
                             {snap.map(s => {
                               const fieldDef = formFields.find(f => f.key === s.key);
                               const val = cf[s.key];
@@ -397,7 +411,6 @@ export default function RecruitmentPage() {
                                 </div>
                               );
                             })}
-                            {/* فیلدهای فعال که در این رکورد نیستند */}
                             {customDisplayFields.filter(f => !snap.find(s => s.key === f.key)).map(f => (
                               <div key={f.key}><span className="text-muted">{f.label}: </span>—</div>
                             ))}
@@ -405,9 +418,9 @@ export default function RecruitmentPage() {
                         </div>
                       )}
 
-                      {/* رزومه */}
-                      {a.resumeUrl ? (
-                        <a href={a.resumeUrl} target="_blank" rel="noreferrer" download={a.resumeUrl.startsWith('data:') ? 'resume' : undefined}>
+                      {/* ── رزومه / اطلاعات متنی ───────────────────────── */}
+                      {a.hasResume ? (
+                        <a href={`/api/recruitment/${a.id}/resume`} download>
                           <Button variant="default" size="sm" icon={FileText}>دانلود رزومه</Button>
                         </a>
                       ) : a.manualInfo ? (
@@ -417,12 +430,12 @@ export default function RecruitmentPage() {
                         </div>
                       ) : null}
 
-                      {/* سوال‌های مرحله ۳ */}
-                      <div className="space-y-2.5">
+                      {/* ── سوال‌های مرحله ۳ ───────────────────────────── */}
+                      <div className="border-t border-stone-100 pt-3 space-y-3">
                         {SCREENING_QUESTIONS.map((q) => (
-                          <div key={q.id}>
-                            <div className="text-[11.5px] text-muted">{q.title}</div>
-                            <div className="text-[12.5px] leading-6 text-stone-700">{a.answers[q.id] || '—'}</div>
+                          <div key={q.id} className="space-y-0.5">
+                            <div className="text-[11.5px] leading-5 text-stone-500">{q.prompt}</div>
+                            <div className="text-[13px] font-medium leading-6 text-stone-800">{a.answers[q.id] || '—'}</div>
                           </div>
                         ))}
                       </div>
@@ -461,6 +474,25 @@ export default function RecruitmentPage() {
                 </Card>
               );
             })}
+
+            {/* بارگذاری بیشتر */}
+            {applications.length < applicationsTotal && (
+              <div className="flex justify-center pt-2">
+                <Button
+                  variant="default"
+                  size="sm"
+                  icon={loadingMore ? Loader2 : undefined}
+                  onClick={async () => {
+                    setLoadingMore(true);
+                    await loadMoreApplications();
+                    setLoadingMore(false);
+                  }}
+                  disabled={loadingMore}
+                >
+                  {loadingMore ? 'در حال بارگذاری…' : `بارگذاری بیشتر (${applicationsTotal - applications.length} درخواست دیگر)`}
+                </Button>
+              </div>
+            )}
           </div>
         )}
 

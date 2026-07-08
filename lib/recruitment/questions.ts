@@ -93,7 +93,6 @@ export interface JobApplication {
   gender: ApplicantGender | null;
   city: string | null;
   hasResume: boolean;
-  resumeUrl: string | null;
   resumePath: string | null;
   manualInfo: string | null;
   answers: Record<string, string>;
