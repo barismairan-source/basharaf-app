@@ -391,7 +391,7 @@ export default function ApplyPage() {
         body: JSON.stringify({
           firstName, lastName,
           phone: rawPhone,
-          age: age ?? 0,
+          age: age,
           gender: (gender === 'male' || gender === 'female') ? gender : undefined,
           city, area,
           hasResume, resumeUrl, resumePath,
@@ -405,7 +405,23 @@ export default function ApplyPage() {
       });
 
       if (!res.ok) {
-        const e = await res.json().catch(() => ({})) as { error?: string };
+        const e = await res.json().catch(() => ({})) as {
+          error?: string;
+          details?: Record<string, string[]>;
+        };
+        // اگر Zod details داشت، خطاهای field-level را نمایش بده و به قدم درست برگرد
+        if (e.details && typeof e.details === 'object') {
+          const fieldErrors: Record<string, string> = {};
+          for (const [field, msgs] of Object.entries(e.details)) {
+            if (Array.isArray(msgs) && msgs[0]) fieldErrors[field] = msgs[0];
+          }
+          if (Object.keys(fieldErrors).length > 0) {
+            setErrors(fieldErrors);
+            const step1Fields = new Set(['firstName','lastName','phone','age','gender','city','first_name','last_name','shiftAvailability','startAvailability','referralSource']);
+            if (Object.keys(fieldErrors).some(k => step1Fields.has(k))) setStep(1);
+            return;
+          }
+        }
         setErrors({ submit: e.error ?? 'ثبت درخواست ناموفق بود' });
         return;
       }

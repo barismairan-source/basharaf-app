@@ -14,8 +14,8 @@ export const applicationCreateSchema = z.object({
     .string()
     .transform((v) => v.replace(/[^0-9]/g, ''))
     .refine((v) => phoneRe.test(v), 'شماره موبایل معتبر نیست (مثل 09123456789)'),
-  age: z.coerce.number().int().min(14, 'سن معتبر نیست').max(80),
-  gender: z.enum(['male', 'female'], { required_error: 'جنسیت را انتخاب کنید' }),
+  age: z.coerce.number().int().min(14, 'سن معتبر نیست').max(80).optional().nullable(),
+  gender: z.enum(['male', 'female']).optional().nullable(),
   city: z.string().min(2, 'محل سکونت را وارد کنید').max(80).transform((v) => v.trim()),
   hasResume: z.boolean().default(false),
   resumeUrl: z.string().max(8_000_000).optional().nullable(), // base64 data URI — تا ۶MB فایل
