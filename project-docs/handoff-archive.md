@@ -1,5 +1,9 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-06 — طراحی کارآگاه مالی + زیرساخت پیامک — اکانت ۱
+**چه شد:** فاز تحلیل و طراحی کامل — فقط سند، بدون کد. `project-docs/INVESTIGATION-anomaly-sms.md`. SMS=Kavenegar، ۶ قانون کارآگاه، فازبندی ۴ فاز.
+**Build:** هیچ کدی تغییر نکرد.
+
 ## 📓 2026-07-06 — تاریخچه قیمت خرید اقلام انبار — اکانت ۱
 **چه شد:** فیچر «تاریخچه قیمت» برای رصد تورم مواد اولیه پیاده شد:
 - **API** `GET /api/inventory/items/[id]/price-history`: قیمت‌های خرید تأییدشده از `inv_voucher_lines`. خلاصه `{ firstPrice, lastPrice, avgPrice, changePct, change3mPct }`.

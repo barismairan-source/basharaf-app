@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.9.69-detective-phase5` |
-| **آخرین به‌روزرسانی** | 2026-07-07 — اکانت: ۱ |
+| **نسخه** | `0.9.70-recruitment-wizard` |
+| **آخرین به‌روزرسانی** | 2026-07-08 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۵ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql` — باید در pgAdmin اجرا شوند. |
+| **دیپلوی** | ✅ **GitHub Actions فعال**. 🟡 **۶ migration pending**: `db-waste-reason-migration.sql`، `db-cheques-migration.sql`، `db-sms-anomaly-migration.sql`، `db-sms-phase3-migration.sql`، `db-anomaly-migration.sql`، **`db-recruitment-fields-migration.sql`** — باید در pgAdmin اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | فاز ۵ کامل شد ✅. بعدی: اجرای migrationها در pgAdmin + تنظیم env vars. بعد از آن: مشخص توسط کاربر. |
-| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۵ migration در pgAdmin (ترتیب: waste-reason → cheques → sms-anomaly → sms-phase3 → anomaly). ۲. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
+| **کار بعدی پیشنهادی** | مشخص توسط کاربر. |
+| **بلاک‌شده/منتظر کاربر** | ۱. اجرای ۶ migration در pgAdmin (ترتیب: waste-reason → cheques → sms-anomaly → sms-phase3 → anomaly → recruitment-fields). ۲. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
 
 > ⛔ **هشدار همزمانی:** هر دو اکانت روی **یک پوشه‌ی واحد** کار می‌کنند. **هرگز دو جلسه هم‌زمان باز نکنید** — تغییرات همدیگر را خراب می‌کنند. همیشه نوبتی: جلسه‌ی قبلی commit/push کرده باشد، بعد جلسه‌ی جدید شروع شود.
 
@@ -50,6 +50,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-08 — ماژول استخدام: فیلدهای جدید + ریسپانسیو wizard — اکانت ۱
+**چه شد:** فرم `/apply` و پنل `/recruitment` بهبود کامل یافت:
+- **مرحله ۲ — فیلدهای جدید**: «محله» (relabel از شهر + placeholder)؛ «دسترسی شیفت» (multi-select chips حداقل ۱)؛ «امکان شروع» (radio chips ۳ گزینه)؛ «آشنایی با ما» (select ۵ گزینه + auto-fill از utm_source). ترتیب: نام‌ها→موبایل→سن/جنسیت→محله→شیفت→شروع→آشنایی→رزومه.
+- **ریسپانسیو wizard**: موبایل stepper افقی sticky بالا (بجای sidebar)؛ دکمه‌های «قبلی/بعدی» sticky bottom (lg:hidden)؛ inputMode="numeric" برای موبایل و سن؛ pb-28 برای content زیر sticky nav؛ فیلدها تک‌ستونه در موبایل. Desktop: max-w-[640px] center، فیلدهای نام دو‌ستونه.
+- **Validation**: per-field inline errors بجای یک خطای global.
+- **پنل ادمین**: ردیف جدید محله/شیفت/شروع/آشنایی در detail card؛ فیلتر «امکان شروع»؛ Excel ستون‌های جدید.
+- **DB**: `db-recruitment-fields-migration.sql` (فقط ۳ ALTER TABLE ADD COLUMN IF NOT EXISTS). drizzle-kit generate هم اجرا شد (0001_recruitment_new_fields.sql).
+- مرحله ۱ (کارت‌های بخش)، مرحله ۳ (سوال‌ها)، و صفحه موفقیت — بدون تغییر.
+**فایل‌ها:** `app/apply/page.tsx`, `app/api/recruitment/route.ts`, `app/(app)/recruitment/page.tsx`, `lib/db/schema.ts`, `lib/recruitment/questions.ts`, `lib/validations/recruitment.ts`, `db-recruitment-fields-migration.sql` (جدید), `drizzle/migrations/0001_recruitment_new_fields.sql` (جدید)
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅. Commit: b773538
+**ناتمام:** —
+**برای جلسه‌ی بعد:** `db-recruitment-fields-migration.sql` در pgAdmin اجرا شود. تست submit از `/apply` روی موبایل/دسکتاپ بعد از migration.
 
 ## 📓 2026-07-07 — فاز ۵: UI کارآگاه مالی + تنظیمات + Badge — اکانت ۱
 **چه شد:** فاز پایانی پروژه کارآگاه کامل پیاده شد:
@@ -102,16 +115,6 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۳ migration در pgAdmin اجرا شوند. فاز ۳: اتصال SMS به notifyAdmins در routeهایی که مهم‌اند (مثلاً approve تراکنش بزرگ). فاز ۴: موتور کارآگاه. یادآوری: DETECTIVE_SCAN_SECRET را در GitHub Actions بساز (وقتی فاز ۴ شروع شد).
 
-## 📓 2026-07-06 — طراحی کارآگاه مالی + زیرساخت پیامک — اکانت ۱
-**چه شد:** فاز تحلیل و طراحی کامل شد (بدون هیچ کد/migration). سند کامل در `project-docs/INVESTIGATION-anomaly-sms.md`.
-- **SMS:** Kavenegar انتخاب شد. جدول `sms_log`. ستون `sms_enabled` به `notification_rules`. ستون `sms_phone` به `users`. منطق سقف روزانه + dedup. Fallback به اعلان داخلی. SMS «کانال» همان notification_rules است نه سیستم جداگانه.
-- **کارآگاه:** ۶ قانون rule-based: waste_spike, price_jump, rejection_pattern, consumption_spike, below_approval_limit, off_hours. جدول `anomaly_findings` با چرخه‌ی وضعیت new→investigating→confirmed/false_positive. زمان‌بندی ترکیبی: ۵ قانون event-driven + ۱ قانون daily scan از GitHub Actions.
-- **فازبندی:** ۴ فاز مشخص (۲=SMS هسته، ۳=اتصال به notify، ۴=موتور detective، ۵=UI).
-- ۵ سوال باز در بخش ۷ سند — منتظر پاسخ کاربر.
-**فایل‌ها:** `project-docs/INVESTIGATION-anomaly-sms.md` (جدید)
-**Build:** هیچ کدی تغییر نکرد — فقط سند طراحی.
-**ناتمام:** —
-**برای جلسه‌ی بعد:** کاربر ۵ سوال بخش ۷ را پاسخ دهد، فاز ۲ شروع شود.
 
 ## 📓 2026-07-06 — Flash Report روزانه برای داشبورد — اکانت ۱
 **چه شد:** گزارش روزانه «یک‌نگاهی» برای مالک پیاده شد:
