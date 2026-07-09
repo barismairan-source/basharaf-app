@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.10.1-hr-ux` |
-| **آخرین به‌روزرسانی** | 2026-07-08 — اکانت: ۱ |
+| **نسخه** | `0.10.2-panel-v2` |
+| **آخرین به‌روزرسانی** | 2026-07-09 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ **GitHub Actions فعال**. همه migration‌ها دیپلوی شدند (کاربر تأیید کرد). Branch: `fix/recruitment-hr-ux` — هنوز merge نشده. |
+| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `feat/recruitment-panel-v2` آماده merge. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. Seed فرم از `/recruitment/form-builder` (دکمه «بارگذاری داده اولیه»). ۲. تست پنل استخدام — بررسی سرعت لود، نمایش سوال کامل، دانلود رزومه. ۳. Merge branch `fix/recruitment-hr-ux` به main. |
-| **بلاک‌شده/منتظر کاربر** | ۱. تست پنل و تأیید کارکرد. ۲. Merge branch. ۳. تنظیم `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. |
+| **کار بعدی پیشنهادی** | ۱. تست پنل: مقایسه، تگ کلمات کلیدی، امتیازدهی سریع، URL فیلتر. ۲. Seed فرم از `/recruitment/form-builder`. ۳. Merge branch به main. |
+| **بلاک‌شده/منتظر کاربر** | تست و تأیید پنل جدید قبل از merge. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -52,6 +52,21 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-09 — پنل استخدام v2 + باگ validation فرم (v0.10.2) — اکانت ۱
+**چه شد:**
+- **باگ fix**: فرم /apply خطای ۴۰۰ می‌داد چون schema سرور age/gender را اجباری می‌دانست ولی form-builder آن‌ها را optional تعریف کرده. هر دو `.optional().nullable()` شدند. باگ `age: age ?? 0` (ارسال صفر به جای undefined) هم رفع شد.
+- **Task 1 (Collapse)**: هدر فشرده‌تر — نام+وضعیت+بخش+سن+تاریخ+اولین ۲ شیفت در ردیف‌های خوانا. Chevron نشانگر باز/بسته. کارت‌ها پیش‌فرض بسته.
+- **Task 2 (Q&A hierarchy)**: هر سوال‌وجواب در یک box با `bg-stone-50 rounded-lg` — سوال کم‌رنگ بالا، جواب برجسته پایین. سوال‌های بدون جواب نمایش داده نمی‌شوند.
+- **Task 3 (امتیاز سریع)**: ۵ ستاره روی هدر هر کارت — کلیک بدون باز کردن جزئیات ثبت می‌شود. مرتب‌سازی بر اساس امتیاز (نزولی) در dropdown اضافه شد.
+- **Task 4 (URL فیلترها)**: وضعیت/بخش/زمان/جستجو/مرتب‌سازی در query string — رفرش URL را حفظ می‌کند.
+- **Task 5 (مقایسه)**: دکمه «مقایسه» در هدر، چک‌باکس روی کارت‌ها (فقط در حالت مقایسه)، modal جدول مقایسه‌ای (ردیف=فیلد، ستون=داوطلب) با همه فیلدهای کلیدی + پاسخ سوال‌ها.
+- **Task 6 (Excel)**: تأیید شد — از `sorted` استفاده می‌کند (فیلترشده+مرتب‌شده) — هیچ باگی نبود.
+- **Task 7 (تگ کلمات کلیدی)**: ۶ تگ خودکار (فشاری/شلوغی/صبور/تیمی/باتجربه/مشتری‌مدار) از regex روی متن پاسخ‌ها — chip‌های رنگی زیر نام در هدر.
+**فایل‌ها:** `app/(app)/recruitment/page.tsx` (بازنویسی کامل)، `lib/validations/recruitment.ts` (age/gender optional)، `app/apply/page.tsx` (age fix + field error parse)
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
+**ناتمام:** —. Branch: `feat/recruitment-panel-v2` — منتظر تست و merge.
+**برای جلسه‌ی بعد:** Merge branch به main. Seed فرم از `/recruitment/form-builder` (اگر هنوز نشده).
 
 ## 📓 2026-07-08 — HR UX بهبود پنل استخدام (v0.10.1) — اکانت ۱
 **چه شد:** ۵ بهبود P1–P5 در ماژول استخدام، بدون تغییر schema:
@@ -129,45 +144,4 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۴ migration در pgAdmin. **فاز ۴** موتور کارآگاه: `lib/detective/`، `anomaly_findings` table، ۶ قانون. یادآوری: `DETECTIVE_SCAN_SECRET` در GitHub Actions.
 
-## 📓 2026-07-06 — فاز ۲: هسته‌ی پیامک (SMS core) — اکانت ۱
-**چه شد:** کاربر طراحی INVESTIGATION را تأیید کرد + ۵ سوال باز را پاسخ داد. فاز ۲ کامل پیاده شد:
-- **`db-sms-anomaly-migration.sql`**: جدول `sms_log` (dedup/cap/dry_run)، `sms_phone` روی `users`، `sms_enabled` روی `notification_rules`، seed تنظیمات در `app_settings`. همه قوانین با `sms_enabled=false` شروع می‌شوند (اصل پیش‌فرض خاموش).
-- **`lib/sms/`**: `types.ts` (SmsStatus/SendSmsParams/SendSmsResult)، `kavenegar.ts` (dry-run وقتی KEY نباشد یا SMS_DRY_RUN=true)، `sendSms.ts` (cap از app_settings، dedup N ساعته، fire-and-forget).
-- **`lib/notify.ts`**: `notifyAdmins` با `options?: { sms? }` — اگر قانون `sms_enabled=true` باشد و ادمین `sms_phone` داشته باشد، `sendSms` به‌صورت fire-and-forget صدا می‌شود.
-- **`GET/PATCH /api/admin/notification-rules`**: `smsEnabled` اضافه شد.
-- **`PATCH /api/users/[id]`**: `smsPhone` با regex validation. `GET /api/users/[id]` (جدید).
-- **`POST /api/sms/test`**: endpoint آزمایشی (SuperAdmin).
-- **Settings > تب «پیامک»**: `SmsPane` با فرم شماره + دکمه آزمایشی + toggle per-rule.
-**فایل‌ها:** `db-sms-anomaly-migration.sql` (جدید), `lib/sms/types.ts` (جدید), `lib/sms/kavenegar.ts` (جدید), `lib/sms/sendSms.ts` (جدید), `lib/notify.ts`, `lib/db/schema.ts`, `app/api/sms/test/route.ts` (جدید), `app/api/admin/notification-rules/route.ts`, `app/api/users/[id]/route.ts`, `components/settings/SmsPane.tsx` (جدید), `components/settings/SettingsNav.tsx`, `components/settings/index.ts`, `app/(app)/settings/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅. Commit: a73b9c1
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۳ migration در pgAdmin اجرا شوند. فاز ۳: اتصال SMS به notifyAdmins در routeهایی که مهم‌اند (مثلاً approve تراکنش بزرگ). فاز ۴: موتور کارآگاه. یادآوری: DETECTIVE_SCAN_SECRET را در GitHub Actions بساز (وقتی فاز ۴ شروع شد).
-
-
-## 📓 2026-07-06 — Flash Report روزانه برای داشبورد — اکانت ۱
-**چه شد:** گزارش روزانه «یک‌نگاهی» برای مالک پیاده شد:
-- **`lib/reports/flashReport.ts`**: تابع `getFlashReport(dateJalali, branchId?)` — منطق جداگانه برای استفاده مجدد (بات تلگرام آینده). جمع income امروز، COGS (بهای تمام‌شده COGS)، payroll، ضایعات (invVouchers kind='waste') + همان داده‌های هفته‌ی پیش برای مقایسه ٪.
-- **`GET /api/reports/flash?date=jalali&branchId=`**: endpoint ساده — زمینه session + date امروز به‌صورت پیش‌فرض.
-- **`FlashReportCard`** در داشبورد (فقط SuperAdmin): ۵ KPI در یک ردیف — فروش (+ فلش هفته قبل)، تعداد فاکتور، COGS (+ فلش)، Prime Cost % (رنگ‌بندی ≤۶۰٪ سبز/۶۰–۶۵٪ کهربایی/>۶۵٪ قرمز)، ضایعات.
-**فایل‌ها:** `lib/reports/flashReport.ts` (جدید), `app/api/reports/flash/route.ts` (جدید), `components/dashboard/FlashReportCard.tsx` (جدید), `components/dashboard/index.ts`, `app/(app)/dashboard/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅. Commit: 8d8f288
-**ناتمام:** —
-**برای جلسه‌ی بعد:** اگر بات تلگرام اضافه شد، `getFlashReport` را مستقیم صدا بزند. موارد 🟠: parseFloat مالی انبار، force-reset حقوق، rate limit OTP.
-
-## 📓 2026-07-06 — ماژول مدیریت چک + ضایعات با دلیل — اکانت ۱
-**چه شد:**
-(۱) **ضایعات با دلیل** (کامل شد): `wasteReason text nullable` به `inv_voucher_lines` اضافه شد. UI فرم دریافت انبار: select با گزینه‌های فارسی + ورودی متن سفاری برای «سایر». Migration: `db-waste-reason-migration.sql`.
-(۲) **ماژول چک‌ها** (کامل):
-  - Schema: جدول `cheques` (text+CHECK برای kind/status، bigint تومان، تاریخ جلالی text). Migration: `db-cheques-migration.sql`.
-  - API: `GET/POST /api/cheques`، `GET/PATCH/DELETE /api/cheques/[id]`، `GET /api/contacts/[id]/cheques`.
-  - صفحه `/cheques`: دو تب (دریافتی/پرداختی)، کارت‌های خلاصه، جدول با رنگ‌بندی (قرمز = سررسید گذشته، کهربایی = ≤۷ روز)، select inline برای تغییر وضعیت، Sheet فرم با JalaliDatePicker، دکمه «ثبت تراکنش» → prefill `/transactions/new` از طریق URL params.
-  - sidebar: آیتم «چک‌ها» با آیکون FileCheck بین صندوق‌ها و طرف‌حساب‌ها.
-  - `ContactLedgerDrawer`: بخش «چک‌ها» اضافه شد (parallel fetch از `/api/contacts/[id]/cheques`).
-  - `transactions/new`: prefill از URL params با `useSearchParams`.
-  - `audit.ts`: نوع `chq.statusChanged` اضافه شد.
-  - notification rule `cheque.dueSoon` در migration SQL.
-**فایل‌ها:** `app/(app)/cheques/page.tsx` (جدید), `app/api/cheques/route.ts` (جدید), `app/api/cheques/[id]/route.ts` (جدید), `app/api/contacts/[id]/cheques/route.ts` (جدید), `types/cheque.ts` (جدید), `types/index.ts`, `lib/db/schema.ts`, `lib/auth/audit.ts`, `components/layout/nav-config.ts`, `components/contacts/ContactLedgerDrawer.tsx`, `app/(app)/transactions/new/page.tsx`, `db-waste-reason-migration.sql` (جدید), `db-cheques-migration.sql` (جدید)
-**Build:** tsc ✅ ۰ خطا · build ✅. Commits: ce170cf (waste reason), 5944e32 (cheques)
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۲ migration باید در pgAdmin اجرا شوند. موارد 🟠: parseFloat مالی انبار، force-reset حقوق، rate limit OTP.
 

@@ -972,3 +972,11 @@ next `14.2.15` · react `^18.3.1` · typescript `^5.6.3` · drizzle-orm `^0.36.1
 **Build:** tsc ✅ ۰ خطا · unit tests ✅ 32/32
 **ناتمام:** —
 **برای جلسه‌ی بعد:** موارد 🟠 بعدی از بررسی جامع: audit log‌های ۶‌گانه (transaction create/reject/import، payroll post/reverse، account recalculate).
+## 📓 2026-07-06 — فاز ۲: هسته‌ی پیامک (SMS core) — اکانت ۱
+Commit: a73b9c1. lib/sms/ (kavenegar/sendSms/types) + notifyAdmins sms integration + SmsPane settings. db-sms-anomaly-migration.sql.
+
+## 📓 2026-07-06 — Flash Report روزانه برای داشبورد — اکانت ۱
+Commit: 8d8f288. lib/reports/flashReport.ts + FlashReportCard + /api/reports/flash.
+
+## 📓 2026-07-06 — ماژول مدیریت چک + ضایعات با دلیل — اکانت ۱
+Commits: ce170cf + 5944e32. cheques جدول + صفحه + API + ContactLedger. wasteReason به inv_voucher_lines. migrations: db-waste-reason + db-cheques.
