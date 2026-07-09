@@ -169,6 +169,12 @@ export default function RecruitmentPage() {
     [formFields]
   );
 
+  // ── لیست مقایسه (باید قبل از early return باشد — قانون Hooks) ──────────
+  const compareList = useMemo(
+    () => applications.filter(a => compareIds.has(a.id)),
+    [applications, compareIds]
+  );
+
   // ── لیست فیلترشده + مرتب‌شده ───────────────────────────────────────────
   const sorted = useMemo(() => {
     const q = search.trim();
@@ -315,11 +321,6 @@ export default function RecruitmentPage() {
     setCompareIds(new Set());
     setShowCompare(false);
   }
-
-  const compareList = useMemo(
-    () => applications.filter(a => compareIds.has(a.id)),
-    [applications, compareIds]
-  );
 
   // ── رندر ───────────────────────────────────────────────────────────────
   return (
