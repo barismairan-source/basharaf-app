@@ -51,6 +51,21 @@ export function HRSummaryCard() {
 
   const { hr } = data;
 
+  // ۰ پرسنل فعال → یک خط باریک با لینک به /employees
+  if (hr.activeEmployees === 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => router.push('/employees')}
+        className="w-full flex items-center gap-2 px-4 h-10 rounded-lg border border-stone-200 text-[12.5px] text-stone-500 hover:border-stone-300 transition-colors text-right"
+      >
+        <Users size={13} strokeWidth={1.75} className="text-stone-400 shrink-0" />
+        <span className="flex-1">هنوز پرسنل فعالی ثبت نشده</span>
+        <span className="text-[11px] text-stone-400 shrink-0">افزودن ←</span>
+      </button>
+    );
+  }
+
   return (
     <Card
       className="cursor-pointer hover:border-stone-300 transition-colors"
