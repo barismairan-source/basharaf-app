@@ -7,22 +7,27 @@ import { toFa } from '@/lib/utils';
 import { getTodayJalali } from '@/lib/jalali';
 import type { FlashReportData } from '@/lib/reports/flashReport';
 
-function DeltaBadge({ pct }: { pct: number | null }) {
+/** invert=true: افت = سبز (خوب)، رشد = قرمز (بد) — برای Prime Cost % */
+function DeltaBadge({ pct, invert = false, unit = '٪' }: { pct: number | null; invert?: boolean; unit?: string }) {
   if (pct === null) return <span className="text-[10px] text-muted">—</span>;
-  if (pct > 0)
+  if (pct > 0) {
+    const isGood = invert;
     return (
-      <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-700 font-medium">
+      <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${isGood ? 'text-emerald-700' : 'text-rose-600'}`}>
         <TrendingUp size={10} strokeWidth={2} />
-        {toFa(pct)}٪
+        {toFa(pct)}{unit}
       </span>
     );
-  if (pct < 0)
+  }
+  if (pct < 0) {
+    const isGood = !invert;
     return (
-      <span className="inline-flex items-center gap-0.5 text-[10px] text-rose-600 font-medium">
+      <span className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${isGood ? 'text-emerald-700' : 'text-rose-600'}`}>
         <TrendingDown size={10} strokeWidth={2} />
-        {toFa(Math.abs(pct))}٪
+        {toFa(Math.abs(pct))}{unit}
       </span>
     );
+  }
   return (
     <span className="inline-flex items-center gap-0.5 text-[10px] text-muted">
       <Minus size={10} strokeWidth={2} />
@@ -84,6 +89,7 @@ export function FlashReportCard() {
         <Kpi
           label="تعداد فاکتور"
           value={toFa(data.invoiceCount)}
+          delta={<DeltaBadge pct={data.invoiceCountPctChange} />}
         />
         <Kpi
           label="COGS تخمینی"
@@ -93,7 +99,9 @@ export function FlashReportCard() {
         <div className="flex flex-col gap-0.5">
           <div className="text-[10.5px] text-muted">Prime Cost %</div>
           <PrimeCostBadge pct={data.primeCostPct} />
-          <div className="text-[9.5px] text-muted mt-0.5">≤۶۰٪ هدف</div>
+          <div className="mt-0.5">
+            <DeltaBadge pct={data.primeCostPctChange} invert unit=" پوینت" />
+          </div>
         </div>
         <Kpi
           label="ضایعات"

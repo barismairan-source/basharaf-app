@@ -13,6 +13,10 @@ export interface FlashReportData {
   lastWeekCogs: number | null;
   revenuePctChange: number | null;
   cogsPctChange: number | null;
+  /** درصد تغییر تعداد فاکتور نسبت به همان روز هفته‌ی قبل */
+  invoiceCountPctChange: number | null;
+  /** تفاوت نقطه‌ای Prime Cost % نسبت به هفته‌ی قبل (عدد منفی = بهبود) */
+  primeCostPctChange: number | null;
 }
 
 function txWhere(date: string, branchId?: string) {
@@ -80,6 +84,20 @@ export async function getFlashReport(dateJalali: string, branchId?: string): Pro
     lastWeek && lastWeek.cogs > 0
       ? Math.round(((today.cogs - lastWeek.cogs) / lastWeek.cogs) * 100)
       : null;
+  const invoiceCountPctChange =
+    lastWeek && lastWeek.invoiceCount > 0
+      ? Math.round(((today.invoiceCount - lastWeek.invoiceCount) / lastWeek.invoiceCount) * 100)
+      : null;
+
+  const lastWeekPrimeCost = lastWeek ? lastWeek.cogs + lastWeek.payroll : null;
+  const lastWeekPrimeCostPct =
+    lastWeek && lastWeek.revenue > 0 && lastWeekPrimeCost !== null
+      ? (lastWeekPrimeCost / lastWeek.revenue) * 100
+      : null;
+  const primeCostPctChange =
+    primeCostPct !== null && lastWeekPrimeCostPct !== null
+      ? Math.round(primeCostPct - lastWeekPrimeCostPct)
+      : null;
 
   return {
     date: dateJalali,
@@ -92,5 +110,7 @@ export async function getFlashReport(dateJalali: string, branchId?: string): Pro
     lastWeekCogs: lastWeek?.cogs ?? null,
     revenuePctChange,
     cogsPctChange,
+    invoiceCountPctChange,
+    primeCostPctChange,
   };
 }
