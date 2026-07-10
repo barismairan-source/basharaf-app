@@ -87,7 +87,9 @@ export default function DashboardPage() {
 
   const isAdmin = user.role === 'SuperAdmin';
   const isOperational = user.role === 'Warehouse' || user.role === 'Chef';
-  const showBranchSummary = isAdmin && !branchFilter;
+  // مقایسه شعب فقط وقتی ≥۲ شعبه داده‌ی غیرصفر دارند (شعبه‌ی کاملاً خالی نویز است)
+  const nonZeroBranches = branchSummaryData.filter((b) => b.income > 0 || b.expense > 0);
+  const showBranchSummary = isAdmin && !branchFilter && nonZeroBranches.length >= 2;
   const canSeeContacts = canAccessSection(user, 'contacts');
   const canSeeFinance = canAccessSection(user, 'transactions');
 
@@ -255,7 +257,7 @@ export default function DashboardPage() {
             {/* ─── مقایسه شعب (SuperAdmin) ─── */}
             {showBranchSummary && (
               <BranchSummary
-                data={branchSummaryData}
+                data={nonZeroBranches}
                 onBranchClick={(id) => {
                   setBranchFilter(id);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -265,15 +267,19 @@ export default function DashboardPage() {
 
             {/* ─── تفکیک هزینه + آخرین تراکنش‌ها ─── */}
             {metrics.filtered.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <BreakdownCard
-                  title="تفکیک هزینه"
-                  subtitle={`${breakdownForCard.length} دسته`}
-                  tone="expense"
-                  data={breakdownForCard}
-                />
+              breakdownForCard.length >= 2 ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <BreakdownCard
+                    title="تفکیک هزینه"
+                    subtitle={`${breakdownForCard.length} دسته`}
+                    tone="expense"
+                    data={breakdownForCard}
+                  />
+                  <RecentList transactions={metrics.filtered} limit={6} />
+                </div>
+              ) : (
                 <RecentList transactions={metrics.filtered} limit={6} />
-              </div>
+              )
             ) : (
               <div className="text-center text-[12px] text-muted py-8">
                 هنوز هیچ تراکنشی برای نمایش وجود ندارد.
