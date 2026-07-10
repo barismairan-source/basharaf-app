@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Wallet, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Wallet, TrendingUp, TrendingDown, Clock, ArrowLeft } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
   KPICard,
@@ -10,10 +11,11 @@ import {
   BranchSummary,
   RecentList,
   DashboardSkeleton,
-  UnifiedOverview,
-  OperationsStrip,
   RoleHome,
   FlashReportCard,
+  AnomalyBanner,
+  AttentionWidget,
+  HRSummaryCard,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import {
@@ -23,48 +25,47 @@ import {
   SPARK_PENDING,
 } from '@/lib/sparklines';
 import { fmt } from '@/lib/utils';
+import { formatMoneyShort } from '@/lib/design/format';
 import { formatBranchName } from '@/lib/design/format';
 import { MetricCard } from '@/components/ui';
+import { canAccessSection } from '@/lib/auth/permissions';
+import { cn } from '@/lib/utils';
 
 /**
- * Dashboard — صفحه اصلی اپلیکیشن بعد از login.
+ * Dashboard — صفحه‌ی اصلی سیستم.
  *
- * ساختار:
- *   1. Header با عنوان + BranchPicker (فقط SuperAdmin)
- *   2. KPI grid (۴ کارت: موجودی، درآمد، هزینه، در انتظار)
- *   3. تفکیک هزینه (BreakdownCard)
- *   4. آخرین تراکنش‌ها (RecentList)
- *   5. مقایسه شعب (فقط SuperAdmin، فقط وقتی branchFilter null)
+ * معماری سه‌لایه (فاز ۲):
  *
- * یک نکته مهم درباره hydration:
- * - Zustand persist در server side دسترسی به localStorage ندارد، پس user اولیه null است
- * - بعد از hydration در client، user populate می‌شود
- * - اگر در حین این فاصله render کنیم، یک flash خالی می‌بینیم
- * - راه‌حل: تا hydration کامل نشود، DashboardSkeleton نمایش می‌دهیم
+ * ┌─────────────────────────────────────────────────────┐
+ * │ لایه ۱ — نبض سیستم (فقط SuperAdmin)               │
+ * │   FlashReportCard + AnomalyBanner (اگر یافته باشد)│
+ * ├─────────────────────────────────────────────────────┤
+ * │ لایه ۲ — نیازمند توجه (همه‌ی غیر عملیاتی)        │
+ * │   AttentionWidget — ادغام OperationsStrip + هشدارها│
+ * ├─────────────────────────────────────────────────────┤
+ * │ لایه ۳ — تراز مالی و روندها                       │
+ * │   KPI cards · حساب‌ها · شرکا · HR · مقایسه شعب   │
+ * │   تفکیک هزینه · آخرین تراکنش‌ها                  │
+ * └─────────────────────────────────────────────────────┘
+ *
+ * نکته Hydration: Zustand persist در server side دسترسی به localStorage ندارد.
+ * تا hydration کامل نشود، DashboardSkeleton نمایش می‌دهیم تا flash خالی نداشته باشیم.
  */
 export default function DashboardPage() {
+  const router = useRouter();
   const user = useAppStore((s) => s.user);
   const branches = useAppStore((s) => s.branches);
   const transactions = useAppStore((s) => s.transactions);
   const accounts = useAppStore((s) => s.accounts);
+  const contacts = useAppStore((s) => s.contacts);
   const branchFilter = useAppStore((s) => s.branchFilter);
   const setBranchFilter = useAppStore((s) => s.setBranchFilter);
   const metrics = useDashboardMetrics();
 
-  const totalAccountBalance = useMemo(
-    () => accounts.reduce((sum, a) => sum + a.balance, 0),
-    [accounts]
-  );
-
-  // ─── Hydration tracking ───
-  // در اولین render پس از mount، Zustand هنوز از localStorage hydrate نشده.
-  // برای جلوگیری از flash، تا اولین useEffect صفحه را skeleton نشان می‌دهیم.
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
+  useEffect(() => { setHydrated(true); }, []);
 
-  // ─── BranchSummary data (فقط برای SuperAdmin بدون branchFilter) ───
+  // ─── BranchSummary data (فقط SuperAdmin بدون branchFilter) ───
   const branchSummaryData = useMemo(() => {
     if (!user || user.role !== 'SuperAdmin' || branchFilter) return [];
     return branches.map((b) => {
@@ -77,21 +78,12 @@ export default function DashboardPage() {
         if (t.type === 'income') income += t.amount;
         else expense += t.amount;
       }
-      return {
-        branchId: b.id,
-        branchName: b.name,
-        income,
-        expense,
-        balance: income - expense,
-      };
+      return { branchId: b.id, branchName: b.name, income, expense, balance: income - expense };
     });
   }, [user, branches, transactions, branchFilter]);
 
-  if (!hydrated || !user) {
-    return <DashboardSkeleton />;
-  }
+  if (!hydrated || !user) return <DashboardSkeleton />;
 
-  // adapter: تبدیل expenseBreakdown از hook به شکلی که BreakdownCard می‌خواهد
   const breakdownForCard = metrics.expenseBreakdown.map((item) => ({
     category: item.name,
     amount: item.amount,
@@ -101,16 +93,25 @@ export default function DashboardPage() {
   const isAdmin = user.role === 'SuperAdmin';
   const isOperational = user.role === 'Warehouse' || user.role === 'Chef';
   const showBranchSummary = isAdmin && !branchFilter;
+  const canSeeContacts = canAccessSection(user, 'contacts');
+  const canSeeFinance = canAccessSection(user, 'transactions');
+
+  // شرکا: همه‌ی کانتکت‌های فعال با موجودی غیر صفر، مرتب از بیشترین قدرمطلق
+  const partnerCards = canSeeContacts
+    ? contacts
+        .filter((c) => c.isActive)
+        .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+        .slice(0, 6)
+    : [];
 
   return (
     <div className="p-6">
       <div className="max-w-6xl mx-auto space-y-6">
+
         {/* ─── Header ─── */}
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">
-              داشبورد
-            </h1>
+            <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">داشبورد</h1>
             <div className="text-[12px] text-stone-500 mt-1">
               {isAdmin
                 ? branchFilter
@@ -119,99 +120,164 @@ export default function DashboardPage() {
                 : `شعبه: ${formatBranchName(branches.find((b) => b.id === user.assignedBranch) ?? { name: '—' })}`}
             </div>
           </div>
-
-          {/* BranchPicker فقط برای SuperAdmin */}
           {isAdmin && <BranchPicker />}
         </div>
 
-        {/* ─── Flash Report — فقط SuperAdmin ─── */}
-        {isAdmin && <FlashReportCard />}
-
-        {/* ─── کارت‌های نقش‌محور برای Warehouse و Chef ─── */}
+        {/* ─── نقش‌محور: Warehouse / Chef ─── */}
         {isOperational && <RoleHome role={user.role} />}
 
-        {/* ─── داشبورد یکپارچه: انبار + فروش/مالی + پرسنل/حقوق در یک نگاه ─── */}
-        {!isOperational && <UnifiedOverview />}
-
-        {/* ─── میانبر عملیات: PO باز / تجهیزات در تعمیر / وظایف امروزِ ناتمام ─── */}
-        {!isOperational && <OperationsStrip />}
-
-        {/* ─── بخش مالی — فقط برای مدیران با دسترسی مالی ─── */}
-        {!isOperational && <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <KPICard
-              tone="balance"
-              label="موجودی (تراکنش‌ها)"
-              value={metrics.balance}
-              icon={Wallet}
-              spark={SPARK_BALANCE}
-              highlightNegative
-            />
-            <KPICard
-              tone="income"
-              label="مجموع درآمد"
-              value={metrics.income}
-              icon={TrendingUp}
-              spark={SPARK_INCOME}
-            />
-            <KPICard
-              tone="expense"
-              label="مجموع هزینه"
-              value={metrics.expense}
-              icon={TrendingDown}
-              spark={SPARK_EXPENSE}
-            />
-            <KPICard
-              tone="pending"
-              label={`در انتظار (${new Intl.NumberFormat('fa-IR').format(
-                metrics.pendingCount
-              )} مورد)`}
-              value={metrics.pendingAmount}
-              icon={Clock}
-              spark={SPARK_PENDING}
-            />
+        {/* ══════════════════════════════════════════════════════════════
+            لایه ۱ — نبض سیستم (فقط SuperAdmin)
+            ══════════════════════════════════════════════════════════════ */}
+        {isAdmin && (
+          <div className="space-y-2">
+            <div className="text-[11.5px] text-stone-400 font-medium">نبض سیستم</div>
+            <FlashReportCard />
+            <AnomalyBanner />
           </div>
+        )}
 
-          {accounts.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {accounts.slice(0, 4).map(a => (
-                <div key={a.id} title={`${fmt(a.balance)} تومان`}>
-                  <MetricCard
-                    label={a.name}
-                    value={a.balance}
-                    sparkColor={a.balance >= 0 ? '#15803d' : '#be123c'}
-                  />
+        {/* ══════════════════════════════════════════════════════════════
+            لایه ۲ — نیازمند توجه شما
+            ══════════════════════════════════════════════════════════════ */}
+        {!isOperational && (
+          <div className="space-y-2">
+            <div className="text-[11.5px] text-stone-400 font-medium">اقدامات فوری</div>
+            <AttentionWidget />
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════
+            لایه ۳ — تراز مالی و روندها
+            ══════════════════════════════════════════════════════════════ */}
+        {!isOperational && canSeeFinance && (
+          <div className="space-y-4">
+            <div className="text-[11.5px] text-stone-400 font-medium">تراز مالی</div>
+
+            {/* KPI grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <KPICard
+                tone="balance"
+                label="موجودی (تراکنش‌ها)"
+                value={metrics.balance}
+                icon={Wallet}
+                spark={SPARK_BALANCE}
+                highlightNegative
+              />
+              <KPICard
+                tone="income"
+                label="مجموع درآمد"
+                value={metrics.income}
+                icon={TrendingUp}
+                spark={SPARK_INCOME}
+              />
+              <KPICard
+                tone="expense"
+                label="مجموع هزینه"
+                value={metrics.expense}
+                icon={TrendingDown}
+                spark={SPARK_EXPENSE}
+              />
+              <KPICard
+                tone="pending"
+                label={`در انتظار (${new Intl.NumberFormat('fa-IR').format(metrics.pendingCount)} مورد)`}
+                value={metrics.pendingAmount}
+                icon={Clock}
+                spark={SPARK_PENDING}
+              />
+            </div>
+
+            {/* حساب‌های بانکی */}
+            {accounts.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {accounts.slice(0, 4).map((a) => (
+                  <div key={a.id} title={`${fmt(a.balance)} تومان`}>
+                    <MetricCard
+                      label={a.name}
+                      value={a.balance}
+                      sparkColor={a.balance >= 0 ? '#15803d' : '#be123c'}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ─── وضعیت شرکا ─── */}
+            {partnerCards.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-[12px] text-stone-600 font-medium">وضعیت شرکا</div>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/contacts')}
+                    className="text-[11px] text-stone-400 hover:text-stone-700 transition-colors"
+                  >
+                    مشاهده همه ←
+                  </button>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {partnerCards.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => router.push('/contacts')}
+                      className="bg-white border border-stone-200 rounded-lg p-4 text-right hover:border-stone-300 transition-colors group"
+                    >
+                      <div className="text-[11px] text-stone-500 truncate mb-1.5">{c.name}</div>
+                      <div
+                        className={cn(
+                          'text-[15px] font-medium tabular-nums leading-none',
+                          c.balance > 0 ? 'text-emerald-700' : c.balance < 0 ? 'text-rose-700' : 'text-stone-500'
+                        )}
+                        title={`${fmt(c.balance)} تومان`}
+                      >
+                        {formatMoneyShort(Math.abs(c.balance))}
+                      </div>
+                      <div className={cn(
+                        'text-[10px] mt-1',
+                        c.balance > 0 ? 'text-emerald-600' : c.balance < 0 ? 'text-rose-600' : 'text-stone-400'
+                      )}>
+                        {c.balance > 0 ? 'بستانکار' : c.balance < 0 ? 'بدهکار' : 'تسویه'}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {showBranchSummary && (
-            <BranchSummary
-              data={branchSummaryData}
-              onBranchClick={(id) => {
-                setBranchFilter(id);
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-            />
-          )}
+            {/* ─── پرسنل و حقوق ─── */}
+            <HRSummaryCard />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <BreakdownCard
-              title="تفکیک هزینه"
-              subtitle={`${breakdownForCard.length} دسته`}
-              tone="expense"
-              data={breakdownForCard}
-            />
-            <RecentList transactions={metrics.filtered} limit={6} />
+            {/* ─── مقایسه شعب (SuperAdmin) ─── */}
+            {showBranchSummary && (
+              <BranchSummary
+                data={branchSummaryData}
+                onBranchClick={(id) => {
+                  setBranchFilter(id);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
+
+            {/* ─── تفکیک هزینه + آخرین تراکنش‌ها ─── */}
+            {metrics.filtered.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <BreakdownCard
+                  title="تفکیک هزینه"
+                  subtitle={`${breakdownForCard.length} دسته`}
+                  tone="expense"
+                  data={breakdownForCard}
+                />
+                <RecentList transactions={metrics.filtered} limit={6} />
+              </div>
+            ) : (
+              <div className="text-center text-[12px] text-muted py-8">
+                هنوز هیچ تراکنشی برای نمایش وجود ندارد.
+              </div>
+            )}
           </div>
+        )}
 
-          {metrics.filtered.length === 0 && (
-            <div className="text-center text-[12px] text-muted py-8">
-              هنوز هیچ تراکنشی برای نمایش وجود ندارد.
-            </div>
-          )}
-        </>}
       </div>
     </div>
   );
