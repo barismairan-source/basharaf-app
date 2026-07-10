@@ -10,3 +10,4 @@ export { AnomalyBanner } from './AnomalyBanner';
 export { AttentionWidget } from './AttentionWidget';
 export { HRSummaryCard } from './HRSummaryCard';
 export { RecruitmentWidget } from './RecruitmentWidget';
+export { DashCard } from './DashCard';
