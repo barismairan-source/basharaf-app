@@ -82,7 +82,7 @@ export function BranchSummary({ data, onBranchClick }: BranchSummaryProps) {
                       )}
                       title={`${fmt(row.balance)} تومان`}
                     >
-                      {formatMoneyShort(Math.abs(row.balance))}
+                      {formatMoneyShort(row.balance)}
                     </div>
                   </div>
                   <ArrowLeft

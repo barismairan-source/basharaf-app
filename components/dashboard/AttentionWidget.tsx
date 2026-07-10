@@ -145,6 +145,16 @@ export function AttentionWidget() {
   const sorted = items.sort((a, b) => a.priority - b.priority).slice(0, 5);
   const urgentCount = sorted.filter((i) => i.priority <= 3).length;
 
+  // وقتی هیچ آیتمی نیست: نوار باریک سبز به‌جای کارت کامل
+  if (sorted.length === 0) {
+    return (
+      <div className="flex items-center gap-2 px-4 h-10 rounded-lg bg-emerald-50 border border-emerald-100 text-[12.5px] text-emerald-700">
+        <CheckCircle2 size={14} strokeWidth={1.75} className="shrink-0" />
+        <span>همه‌چیز مرتب است — موردی نیاز به توجه ندارد.</span>
+      </div>
+    );
+  }
+
   return (
     <Card>
       <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-stone-100">
@@ -156,33 +166,26 @@ export function AttentionWidget() {
         )}
       </div>
       <CardBody className="py-2">
-        {sorted.length === 0 ? (
-          <div className="flex items-center gap-2 py-2">
-            <CheckCircle2 size={16} strokeWidth={1.5} className="text-emerald-500 shrink-0" />
-            <span className="text-[12.5px] text-stone-600">همه چیز خوب است — موردی نیاز به توجه ندارد.</span>
-          </div>
-        ) : (
-          <ul>
-            {sorted.map((item) => {
-              const Icon = item.icon;
-              return (
-                <li key={item.id} className={item.mobileHide ? 'hidden sm:block' : undefined}>
-                  <button
-                    type="button"
-                    onClick={() => router.push(item.href)}
-                    className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-stone-50/80 transition-colors text-right"
-                  >
-                    <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${item.iconClass}`}>
-                      <Icon size={14} strokeWidth={1.75} />
-                    </div>
-                    <span className="text-[12.5px] text-stone-700 flex-1">{item.text}</span>
-                    <span className="text-[11px] text-stone-400 shrink-0" aria-hidden="true">←</span>
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <ul>
+          {sorted.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.id} className={item.mobileHide ? 'hidden sm:block' : undefined}>
+                <button
+                  type="button"
+                  onClick={() => router.push(item.href)}
+                  className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-stone-50/80 transition-colors text-right"
+                >
+                  <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${item.iconClass}`}>
+                    <Icon size={14} strokeWidth={1.75} />
+                  </div>
+                  <span className="text-[12.5px] text-stone-700 flex-1">{item.text}</span>
+                  <span className="text-[11px] text-stone-400 shrink-0" aria-hidden="true">←</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
       </CardBody>
     </Card>
   );
