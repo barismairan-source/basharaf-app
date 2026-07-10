@@ -1,6 +1,31 @@
 import { fmt, toFa } from '@/lib/utils';
 
 /**
+ * بخش‌های جداگانه‌ی مبلغ — برای نمایش عدد و واحد با سایزهای متفاوت.
+ * `formatMoneyParts(5_400_000_000)` → { main: '۵.۴ میلیارد', unit: 'تومان' }
+ * `formatMoneyParts(-6_000_000)`  → { main: '⁦-۶ میلیون⁩', unit: 'تومان' }
+ */
+export function formatMoneyParts(n: number): { main: string; unit: string } {
+  const abs = Math.abs(n);
+  let main: string;
+
+  if (abs < 10_000) {
+    main = fmt(n); // fmt خودش LTR isolate برای منفی می‌گذارد
+  } else if (abs >= 1_000_000_000) {
+    const v = (abs / 1_000_000_000).toFixed(1).replace(/\.0$/, '');
+    main = n < 0 ? `⁦-${toFa(v)} میلیارد⁩` : `${toFa(v)} میلیارد`;
+  } else if (abs >= 1_000_000) {
+    const v = (abs / 1_000_000).toFixed(1).replace(/\.0$/, '');
+    main = n < 0 ? `⁦-${toFa(v)} میلیون⁩` : `${toFa(v)} میلیون`;
+  } else {
+    const v = Math.round(abs / 1_000).toString();
+    main = n < 0 ? `⁦-${toFa(v)} هزار⁩` : `${toFa(v)} هزار`;
+  }
+
+  return { main, unit: 'تومان' };
+}
+
+/**
  * توابع فرمت مشترک — تنها مرجع برای نمایش مبلغ و نام شعبه.
  * همه‌ی کامپوننت‌ها از اینجا import کنند، نه مستقیم از utils.
  */
