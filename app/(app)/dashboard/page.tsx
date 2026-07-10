@@ -223,7 +223,7 @@ export default function DashboardPage() {
                         )}
                         title={`${fmt(c.balance)} تومان`}
                       >
-                        {formatMoneyShort(Math.abs(c.balance))}
+                        {formatMoneyShort(c.balance)}
                       </div>
                       <div className={cn(
                         'text-[10px] mt-1',

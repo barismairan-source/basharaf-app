@@ -122,15 +122,15 @@ export function KPICard({
         </div>
       </div>
 
-      {/* Value */}
+      {/* Value — formatMoneyShort خودش علامت منفی + LTR isolate را مدیریت می‌کند */}
       <div
         className={cn(
           'text-[22px] font-medium tabular-nums leading-none',
           isNegative ? 'text-rose-700' : 'text-stone-900'
         )}
-        title={`${fmt(Math.abs(value))} تومان`}
+        title={`${fmt(value)} تومان`}
       >
-        {formatMoneyShort(Math.abs(value))}
+        {formatMoneyShort(value)}
       </div>
 
       {/* Sparkline (اختیاری) */}

@@ -17,11 +17,13 @@ export function formatMoney(n: number): string {
 }
 
 /**
- * مبالغ بزرگ را خلاصه می‌کند.
- * `formatMoneyShort(5_400_000_000)` → '۵.۴ میلیارد تومان'
- * `formatMoneyShort(54_000_000)`    → '۵۴ میلیون تومان'
- * `formatMoneyShort(540_000)`       → '۵۴۰ هزار تومان'
- * `formatMoneyShort(4_999)`         → '۴,۹۹۹ تومان'  (زیر ۱۰هزار: فرمت کامل)
+ * مبالغ بزرگ را خلاصه می‌کند. اعداد منفی با علامت − و در LTR isolate.
+ * `formatMoneyShort(5_400_000_000)`  → '۵.۴ میلیارد تومان'
+ * `formatMoneyShort(-6_500_000_000)` → '⁦-۶.۵ میلیارد تومان⁩'
+ * `formatMoneyShort(4_999)`          → '۴,۹۹۹ تومان'  (زیر ۱۰هزار: فرمت کامل)
+ *
+ * همه‌ی caller ها باید مقدار اصلی (بدون Math.abs) را پاس کنند —
+ * این تابع خودش علامت را مدیریت می‌کند.
  */
 export function formatMoneyShort(n: number): string {
   const abs = Math.abs(n);
