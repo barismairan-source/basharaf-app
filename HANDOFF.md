@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.10.2-panel-v2` |
-| **آخرین به‌روزرسانی** | 2026-07-09 — اکانت: ۱ |
+| **نسخه** | `0.10.3-dashboard-fix` |
+| **آخرین به‌روزرسانی** | 2026-07-10 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `feat/recruitment-panel-v2` آماده merge. |
+| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. main branch. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. تست پنل: مقایسه، تگ کلمات کلیدی، امتیازدهی سریع، URL فیلتر. ۲. Seed فرم از `/recruitment/form-builder`. ۳. Merge branch به main. |
-| **بلاک‌شده/منتظر کاربر** | تست و تأیید پنل جدید قبل از merge. |
+| **کار بعدی پیشنهادی** | تست دستی داشبورد دسکتاپ+موبایل (KPI کوتاه، وضعیت مالی، BranchSummary hover). |
+| **بلاک‌شده/منتظر کاربر** | تأیید تست بصری داشبورد. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -52,6 +52,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-10 — اصلاح داشبورد: تکرار، فرمت، نام‌گذاری (v0.10.3) — اکانت ۱
+**چه شد:**
+- **Task 1 (حذف تکرار):** بخش «فعالیت مالی اخیر» در UnifiedOverview که لیست تراکنش‌ها نشان می‌داد (تکراری با RecentList) به «وضعیت مالی» تبدیل شد — حالا فقط تعداد تراکنش‌های در انتظار تأیید را نمایش می‌دهد (عدد بزرگ amber یا پیام سبز «هیچ در انتظار نیست»). ArrowUpRight/ArrowDownLeft که دیگر استفاده نمی‌شدند از import حذف شدند.
+- **Task 2 (علامت منفی):** در RecentList علامت `+`/`−` کنار مبلغ حذف شد — فقط رنگ (emerald/rose) تمیزسازی می‌کند. در BranchSummary برای موجودی از `Math.abs()` استفاده شد تا علامت منفی حذف شود و فقط رنگ rose نشانگر منفی باشد.
+- **Task 3 (فرمت کوتاه):** KPICard حالا `formatMoneyShort(Math.abs(value))` نشان می‌دهد با `title` (عدد دقیق در hover). BranchSummary هم همین الگو برای income/expense/balance.
+- **Task 4 (باگ شعب):** کد محاسبه `balance = income - expense` صحیح است. یکسانی عدد هزینه و |موجودی| برای A.S.P coincidence داده است (income صفر → |balance| = expense). با formatMoneyShort اکنون بهتر متمایز می‌شوند.
+- **Task 5 (تغییر نام):** «کارآگاه مالی» → «دستیار مالی» در nav-config، permissions، anomaly/page، DetectivePane.
+**فایل‌ها:** `components/dashboard/UnifiedOverview.tsx`, `RecentList.tsx`, `KPICard.tsx`, `BranchSummary.tsx`, `components/layout/nav-config.ts`, `lib/auth/permissions.ts`, `app/(app)/anomaly/page.tsx`, `components/settings/DetectivePane.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست دستی داشبورد دسکتاپ+موبایل — بررسی KPI کوتاه، hover عدد دقیق، وضعیت مالی، BranchSummary.
 
 ## 📓 2026-07-09 — پنل استخدام v2 + باگ validation فرم (v0.10.2) — اکانت ۱
 **چه شد:**
