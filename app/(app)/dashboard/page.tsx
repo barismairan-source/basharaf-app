@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wallet, TrendingUp, TrendingDown, Clock, ArrowLeft, CheckCircle2 } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Clock, CheckCircle2 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
   KPICard,
@@ -29,23 +29,24 @@ import { cn } from '@/lib/utils';
 /**
  * Dashboard — صفحه‌ی اصلی سیستم.
  *
- * معماری سه‌لایه (فاز ۲):
- *
- * ┌─────────────────────────────────────────────────────┐
- * │ لایه ۱ — نبض سیستم (فقط SuperAdmin)               │
- * │   FlashReportCard + AnomalyBanner (اگر یافته باشد)│
- * ├─────────────────────────────────────────────────────┤
- * │ لایه ۲ — نیازمند توجه (همه‌ی غیر عملیاتی)        │
- * │   AttentionWidget — ادغام OperationsStrip + هشدارها│
- * ├─────────────────────────────────────────────────────┤
- * │ لایه ۳ — تراز مالی و روندها                       │
- * │   KPI cards · حساب‌ها · شرکا · HR · مقایسه شعب   │
- * │   تفکیک هزینه · آخرین تراکنش‌ها                  │
- * └─────────────────────────────────────────────────────┘
- *
- * نکته Hydration: Zustand persist در server side دسترسی به localStorage ندارد.
- * تا hydration کامل نشود، DashboardSkeleton نمایش می‌دهیم تا flash خالی نداشته باشیم.
+ * ترتیب بخش‌ها (فاز hierarchy):
+ * ① نبض سیستم  — FlashReportCard + AnomalyBanner (SuperAdmin)
+ * ② نیازمند توجه — AttentionWidget
+ * ③ تراز مالی   — KPI + حساب‌ها + شرکا
+ * ④ عملیاتی     — پرسنل + مقایسه شعب + تفکیک هزینه
+ * ⑤ آخرین تراکنش‌ها
+ * ⑥ داوطلبان تازه (SuperAdmin، انتهای صفحه)
  */
+
+/** عنوان کوچک بالای هر بخش — یکدست در همه‌جا */
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <div className="text-[11px] font-semibold text-stone-400 tracking-wide uppercase select-none">
+      {children}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAppStore((s) => s.user);
@@ -60,7 +61,6 @@ export default function DashboardPage() {
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => { setHydrated(true); }, []);
 
-  // ─── BranchSummary data (فقط SuperAdmin بدون branchFilter) ───
   const branchSummaryData = useMemo(() => {
     if (!user || user.role !== 'SuperAdmin' || branchFilter) return [];
     return branches.map((b) => {
@@ -87,13 +87,11 @@ export default function DashboardPage() {
 
   const isAdmin = user.role === 'SuperAdmin';
   const isOperational = user.role === 'Warehouse' || user.role === 'Chef';
-  // مقایسه شعب فقط وقتی ≥۲ شعبه داده‌ی غیرصفر دارند (شعبه‌ی کاملاً خالی نویز است)
   const nonZeroBranches = branchSummaryData.filter((b) => b.income > 0 || b.expense > 0);
   const showBranchSummary = isAdmin && !branchFilter && nonZeroBranches.length >= 2;
   const canSeeContacts = canAccessSection(user, 'contacts');
   const canSeeFinance = canAccessSection(user, 'transactions');
 
-  // شرکا: فقط کانتکت‌های فعال با مانده‌ی غیرصفر — کانتکت تسویه‌شده نویز است
   const activeContacts = canSeeContacts ? contacts.filter((c) => c.isActive) : [];
   const partnerCards = activeContacts
     .filter((c) => c.balance !== 0)
@@ -102,14 +100,14 @@ export default function DashboardPage() {
   const allPartnersSettled = activeContacts.length > 0 && partnerCards.length === 0;
 
   return (
-    <div className="p-6">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="p-4 sm:p-6">
+      <div className="max-w-6xl mx-auto space-y-8">
 
         {/* ─── Header ─── */}
         <div className="flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">داشبورد</h1>
-            <div className="text-[12px] text-stone-500 mt-1">
+            <h1 className="text-[20px] font-semibold text-stone-900 tracking-tight">داشبورد</h1>
+            <div className="text-[12px] text-stone-500 mt-0.5">
               {isAdmin
                 ? branchFilter
                   ? `نمایش: ${formatBranchName(branches.find((b) => b.id === branchFilter) ?? { name: '—' })}`
@@ -124,36 +122,35 @@ export default function DashboardPage() {
         {isOperational && <RoleHome role={user.role} />}
 
         {/* ══════════════════════════════════════════════════════════════
-            لایه ۱ — نبض سیستم (فقط SuperAdmin)
+            ① نبض سیستم (SuperAdmin)
             ══════════════════════════════════════════════════════════════ */}
         {isAdmin && (
-          <div className="space-y-2">
-            <div className="text-[11.5px] text-stone-400 font-medium">نبض سیستم</div>
+          <div className="space-y-3">
+            <SectionLabel>نبض سیستم</SectionLabel>
             <FlashReportCard />
             <AnomalyBanner />
           </div>
         )}
 
         {/* ══════════════════════════════════════════════════════════════
-            لایه ۲ — نیازمند توجه شما
+            ② نیازمند توجه
             ══════════════════════════════════════════════════════════════ */}
         {!isOperational && (
-          <div className="space-y-2">
-            <div className="text-[11.5px] text-stone-400 font-medium">اقدامات فوری</div>
+          <div className="space-y-3">
+            <SectionLabel>نیازمند توجه</SectionLabel>
             <AttentionWidget />
-            {isAdmin && <RecruitmentWidget />}
           </div>
         )}
 
         {/* ══════════════════════════════════════════════════════════════
-            لایه ۳ — تراز مالی و روندها
+            ③ تراز مالی — KPI + حساب‌ها + شرکا
             ══════════════════════════════════════════════════════════════ */}
         {!isOperational && canSeeFinance && (
           <div className="space-y-4">
-            <div className="text-[11.5px] text-stone-400 font-medium">تراز مالی</div>
+            <SectionLabel>تراز مالی</SectionLabel>
 
-            {/* KPI grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* KPI grid — ۴ کارت هم‌ارتفاع */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
               <KPICard
                 tone="balance"
                 label="موجودی (تراکنش‌ها)"
@@ -196,7 +193,7 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* ─── وضعیت شرکا ─── */}
+            {/* وضعیت شرکا */}
             {canSeeContacts && activeContacts.length > 0 && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
@@ -226,13 +223,13 @@ export default function DashboardPage() {
                         key={c.id}
                         type="button"
                         onClick={() => router.push('/contacts')}
-                        className="bg-white border border-stone-200 rounded-lg p-4 text-right hover:border-stone-300 transition-colors group"
+                        className="bg-white border border-stone-200 rounded-lg p-4 text-right hover:border-stone-300 transition-colors"
                       >
                         <div className="text-[11px] text-stone-500 truncate mb-1.5">{c.name}</div>
                         <div
                           className={cn(
-                            'text-[15px] font-medium tabular-nums leading-none',
-                            c.balance > 0 ? 'text-emerald-700' : 'text-rose-700'
+                            'text-[15px] font-semibold tabular-nums leading-none',
+                            c.balance > 0 ? 'text-emerald-700' : 'text-rose-700',
                           )}
                           title={`${fmt(c.balance)} تومان`}
                         >
@@ -240,7 +237,7 @@ export default function DashboardPage() {
                         </div>
                         <div className={cn(
                           'text-[10px] mt-1',
-                          c.balance > 0 ? 'text-emerald-600' : 'text-rose-600'
+                          c.balance > 0 ? 'text-emerald-600' : 'text-rose-600',
                         )}>
                           {c.balance > 0 ? 'بستانکار' : 'بدهکار'}
                         </div>
@@ -250,11 +247,18 @@ export default function DashboardPage() {
                 )}
               </div>
             )}
+          </div>
+        )}
 
-            {/* ─── پرسنل و حقوق ─── */}
+        {/* ══════════════════════════════════════════════════════════════
+            ④ عملیاتی — پرسنل + مقایسه شعب + تفکیک هزینه
+            ══════════════════════════════════════════════════════════════ */}
+        {!isOperational && canSeeFinance && (
+          <div className="space-y-4">
+            <SectionLabel>عملیات</SectionLabel>
+
             <HRSummaryCard />
 
-            {/* ─── مقایسه شعب (SuperAdmin) ─── */}
             {showBranchSummary && (
               <BranchSummary
                 data={nonZeroBranches}
@@ -265,26 +269,40 @@ export default function DashboardPage() {
               />
             )}
 
-            {/* ─── تفکیک هزینه + آخرین تراکنش‌ها ─── */}
-            {metrics.filtered.length > 0 ? (
-              breakdownForCard.length >= 2 ? (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <BreakdownCard
-                    title="تفکیک هزینه"
-                    subtitle={`${breakdownForCard.length} دسته`}
-                    tone="expense"
-                    data={breakdownForCard}
-                  />
-                  <RecentList transactions={metrics.filtered} limit={6} />
-                </div>
-              ) : (
-                <RecentList transactions={metrics.filtered} limit={6} />
-              )
-            ) : (
-              <div className="text-center text-[12px] text-muted py-8">
-                هنوز هیچ تراکنشی برای نمایش وجود ندارد.
-              </div>
+            {metrics.filtered.length > 0 && breakdownForCard.length >= 2 && (
+              <BreakdownCard
+                title="تفکیک هزینه"
+                subtitle={`${breakdownForCard.length} دسته`}
+                tone="expense"
+                data={breakdownForCard}
+              />
             )}
+          </div>
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════
+            ⑤ آخرین تراکنش‌ها
+            ══════════════════════════════════════════════════════════════ */}
+        {!isOperational && canSeeFinance && (
+          metrics.filtered.length > 0 ? (
+            <div className="space-y-3">
+              <SectionLabel>آخرین تراکنش‌ها</SectionLabel>
+              <RecentList transactions={metrics.filtered} limit={6} />
+            </div>
+          ) : (
+            <div className="text-center text-[12px] text-muted py-8">
+              هنوز هیچ تراکنشی برای نمایش وجود ندارد.
+            </div>
+          )
+        )}
+
+        {/* ══════════════════════════════════════════════════════════════
+            ⑥ داوطلبان تازه (SuperAdmin — انتهای صفحه)
+            ══════════════════════════════════════════════════════════════ */}
+        {isAdmin && (
+          <div className="space-y-3">
+            <SectionLabel>استخدام</SectionLabel>
+            <RecruitmentWidget />
           </div>
         )}
 
