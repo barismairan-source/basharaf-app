@@ -1,5 +1,17 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-08 — ماژول استخدام: فیلدهای جدید + ریسپانسیو wizard — اکانت ۱
+**چه شد:** فرم `/apply` — فیلدهای محله/شیفت/شروع/آشنایی اضافه شد. Wizard ریسپانسیو موبایل. `db-recruitment-fields-migration.sql`. Commit: b773538.
+
+## 📓 2026-07-07 — فاز ۵: UI کارآگاه مالی + تنظیمات + Badge — اکانت ۱
+**چه شد:** `app/(app)/anomaly/page.tsx` کامل، Sidebar badge، Settings قوانین کارآگاه. API findings/rules. Commit: 5dffacd.
+
+## 📓 2026-07-06 — فاز ۴: موتور کارآگاه مالی — اکانت ۱
+**چه شد:** `lib/anomaly/` کامل — ۶ قانون، `anomaly_findings`, `anomaly_rules`. 16 unit test. Commit: 8a39294.
+
+## 📓 2026-07-06 — فاز ۳: SMS کانال notification — اکانت ۱
+**چه شد:** `notifyAdmins()` با `{ sms: true }`، SmsPane کامل، `db-sms-phase3-migration.sql`. Commit: 69500c7.
+
 ## 📓 2026-07-06 — طراحی کارآگاه مالی + زیرساخت پیامک — اکانت ۱
 **چه شد:** فاز تحلیل و طراحی کامل — فقط سند، بدون کد. `project-docs/INVESTIGATION-anomaly-sms.md`. SMS=Kavenegar، ۶ قانون کارآگاه، فازبندی ۴ فاز.
 **Build:** هیچ کدی تغییر نکرد.

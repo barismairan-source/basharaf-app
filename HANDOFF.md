@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.12.0-dashboard-phase3` |
+| **نسخه** | `0.12.1-dashboard-noise` |
 | **آخرین به‌روزرسانی** | 2026-07-10 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
 | **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. تست دستی: FlashReportCard — delta زیر فروش/فاکتور/Prime Cost (به‌خصوص چراغ‌راهنمای معکوس Prime Cost). ۲. تست ویجت داوطلبان: حالت بدون داوطلب (null)، حالت با داوطلب و امتیاز. ۳. تصمیم Sparklines (هنوز mock). |
-| **بلاک‌شده/منتظر کاربر** | تصمیم Sparklines (mock یا حذف یا اتصال واقعی). |
+| **کار بعدی پیشنهادی** | ۱. تست دستی داشبورد با داده‌ی فعلی (صفر): AttentionWidget باریک سبز، شرکا تسویه باریک سبز، BranchSummary پنهان، BreakdownCard پنهان. ۲. تست حالت پر (با داده): هیچ‌چیز پنهان نشده باشد. ۳. تست FlashReportCard delta. |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -52,6 +52,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-10 — داشبورد: حذف نویز empty/zero (v0.12.1) — اکانت ۱
+**چه شد:** ۶ commit مستقل روی رفتار کارت‌های خالی/صفر:
+1. **Sparklines حذف**: `lib/sparklines.ts` داده‌ی hardcode/mock بود — گمراه‌کننده. فایل حذف، prop اختیاری `spark` از KPICard دیگر pass نمی‌شود.
+2. **علامت منفی یکپارچه**: `formatMoneyShort` از قبل LTR isolate داشت ولی caller ها با `Math.abs()` علامت را می‌گرفتند. حالا مقدار مستقیم پاس می‌شود — KPICard balance، BranchSummary موجودی، کارت‌های شرکا.
+3. **AttentionWidget خالی → نوار ۴۰px**: وقتی هیچ آیتمی نیست، کارت کامل با نوار باریک emerald جایگزین می‌شود.
+4. **HRSummaryCard ۰ پرسنل → خط**: وقتی `activeEmployees=0`، کارت کامل با یک خط لینک به `/employees` جایگزین.
+5. **شرکا تسویه → یک خط**: کانتکت‌های `balance=0` از کارت‌ها حذف. اگر همه تسویه → نوار emerald با لینک `/contacts`.
+6. **BranchSummary/BreakdownCard conditional**: BranchSummary فقط اگر ≥۲ شعبه غیرصفر؛ BreakdownCard فقط اگر ≥۲ دسته (با ۱ دسته نمودار ۱۰۰٪ اطلاعاتی ندارد، RecentList تمام‌عرض می‌شود).
+**فایل‌ها:** `lib/sparklines.ts` (حذف)، `lib/design/format.ts`، `components/dashboard/KPICard.tsx`، `BranchSummary.tsx`، `AttentionWidget.tsx`، `HRSummaryCard.tsx`، `app/(app)/dashboard/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست دستی: (الف) حالت پر از صفر: AttentionWidget=نوار سبز، شرکا=نوار سبز، BranchSummary=مخفی، Breakdown=مخفی. (ب) حالت با داده: هیچ‌چیز پنهان نشده باشد، علامت منفی روی موجودی منفی صحیح نشان داده شود.
 
 ## 📓 2026-07-10 — داشبورد فاز ۳: روند درصدی + ویجت داوطلبان (v0.12.0) — اکانت ۱
 **چه شد:**
@@ -130,55 +143,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
 **ناتمام:** migration هنوز در pgAdmin اجرا نشده، seed هنوز اجرا نشده — UI آماده است.
 **برای جلسه‌ی بعد:** ۱. اجرای `db-form-builder-migration.sql` در pgAdmin. ۲. رفتن به `/recruitment/form-builder` و زدن «بارگذاری داده اولیه». ۳. تست سناریوی کامل (ساخت فیلد جدید، شرط‌گذاری، submit از /apply، مشاهده در پنل و اکسل).
-
-## 📓 2026-07-08 — ماژول استخدام: فیلدهای جدید + ریسپانسیو wizard — اکانت ۱
-**چه شد:** فرم `/apply` و پنل `/recruitment` بهبود کامل یافت:
-- **مرحله ۲ — فیلدهای جدید**: «محله» (relabel از شهر + placeholder)؛ «دسترسی شیفت» (multi-select chips حداقل ۱)؛ «امکان شروع» (radio chips ۳ گزینه)؛ «آشنایی با ما» (select ۵ گزینه + auto-fill از utm_source). ترتیب: نام‌ها→موبایل→سن/جنسیت→محله→شیفت→شروع→آشنایی→رزومه.
-- **ریسپانسیو wizard**: موبایل stepper افقی sticky بالا (بجای sidebar)؛ دکمه‌های «قبلی/بعدی» sticky bottom (lg:hidden)؛ inputMode="numeric" برای موبایل و سن؛ pb-28 برای content زیر sticky nav؛ فیلدها تک‌ستونه در موبایل. Desktop: max-w-[640px] center، فیلدهای نام دو‌ستونه.
-- **Validation**: per-field inline errors بجای یک خطای global.
-- **پنل ادمین**: ردیف جدید محله/شیفت/شروع/آشنایی در detail card؛ فیلتر «امکان شروع»؛ Excel ستون‌های جدید.
-- **DB**: `db-recruitment-fields-migration.sql` (فقط ۳ ALTER TABLE ADD COLUMN IF NOT EXISTS). drizzle-kit generate هم اجرا شد (0001_recruitment_new_fields.sql).
-- مرحله ۱ (کارت‌های بخش)، مرحله ۳ (سوال‌ها)، و صفحه موفقیت — بدون تغییر.
-**فایل‌ها:** `app/apply/page.tsx`, `app/api/recruitment/route.ts`, `app/(app)/recruitment/page.tsx`, `lib/db/schema.ts`, `lib/recruitment/questions.ts`, `lib/validations/recruitment.ts`, `db-recruitment-fields-migration.sql` (جدید), `drizzle/migrations/0001_recruitment_new_fields.sql` (جدید)
-**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅. Commit: b773538
-**ناتمام:** —
-**برای جلسه‌ی بعد:** `db-recruitment-fields-migration.sql` در pgAdmin اجرا شود. تست submit از `/apply` روی موبایل/دسکتاپ بعد از migration.
-
-## 📓 2026-07-07 — فاز ۵: UI کارآگاه مالی + تنظیمات + Badge — اکانت ۱
-**چه شد:** فاز پایانی پروژه کارآگاه کامل پیاده شد:
-- **`app/(app)/anomaly/page.tsx`**: کارت‌های خلاصه (high/medium/low/total open)، جدول با فیلتر شدت/وضعیت/شعبه/قانون، Sheet drawer با خلاصه فارسی + metadata + لینک مستقیم به رکورد منبع (voucher/transaction) + تغییر وضعیت (new→investigating→confirmed|false_positive) + یادداشت + audit log خودکار.
-- **Sidebar badge**: badge قرمز تعداد یافته‌های باز high در کنار «کارآگاه مالی» — refresh روی هر route change (SuperAdmin only). Collapsed: badge کوچک روی آیکون. Expanded: badge کنار label.
-- **Settings → «قوانین کارآگاه»**: تب جدید فقط SuperAdmin — toggle enabled/disabled هر قانون، toggle smsEnabled، expand برای ویرایش JSON thresholds بدون deploy.
-- **API**: `GET/PATCH anomaly/findings`، `GET anomaly/findings/counts`، `PATCH anomaly/findings/[id]`، `GET anomaly/rules`، `PATCH anomaly/rules/[key]`.
-- **permissions**: `'anomaly'` SectionKey + sectionForPath → nav middleware کار می‌کند.
-**فایل‌ها:** `app/(app)/anomaly/page.tsx` (جدید), `app/api/anomaly/findings/route.ts`, `app/api/anomaly/findings/counts/route.ts`, `app/api/anomaly/findings/[id]/route.ts`, `app/api/anomaly/rules/route.ts`, `app/api/anomaly/rules/[key]/route.ts`, `components/layout/Sidebar.tsx`, `components/layout/nav-config.ts`, `components/settings/SettingsNav.tsx`, `components/settings/DetectivePane.tsx` (جدید), `components/settings/index.ts`, `app/(app)/settings/page.tsx`, `lib/auth/audit.ts`, `lib/auth/permissions.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅. Commit: 5dffacd
-**ناتمام:** —
-**برای جلسه‌ی بعد:** همه چیز commit/push شد. ۵ migration در pgAdmin باید اجرا شود. `KAVENEGAR_API_KEY` + `DETECTIVE_SCAN_SECRET` در GitHub Secrets. بعد از آن می‌توان SMS live را تست کرد.
-
-## 📓 2026-07-06 — فاز ۴: موتور کارآگاه مالی — اکانت ۱
-**چه شد:** موتور کارآگاه کامل پیاده شد. هیچ مسیر مالی شکسته یا کند نشد — تمام callها fire-and-forget با try/catch هستند.
-- **`db-anomaly-migration.sql`**: جدول `anomaly_findings` (text+CHECK برای severity/status) + `anomaly_rules` (JSON thresholds) + seed ۶ قانون + seed در notification_rules برای UI آینده.
-- **`lib/anomaly/`**: `types.ts`، `utils.ts` (توابع خالص قابل unit test)، `engine.ts` (isDuplicate با بازه ۲۴h، saveFindings، notifyAdmins برای high/medium).
-- **۶ قانون**: wasteSpikeRule (waste voucher approve، high)، priceJumpRule (in voucher approve، high)، rejectionPatternRule (tx+voucher reject، medium)، consumptionSpikeRule (daily scan، medium)، belowApprovalLimitRule (tx create، high)، offHoursRule (tx create، low).
-- **`POST /api/anomaly/scan`**: SuperAdmin یا `X-Scan-Secret` header.
-- **Wire**: voucher approve (waste+in)، voucher reject، tx reject، tx create — همه fire-and-forget.
-- **16 unit test**: توابع خالص ۲ قانون + dedup mock.
-**فایل‌ها:** `db-anomaly-migration.sql`, `lib/anomaly/types.ts`, `lib/anomaly/utils.ts`, `lib/anomaly/engine.ts`, `lib/anomaly/rules/wasteSpikeRule.ts`, `lib/anomaly/rules/priceJumpRule.ts`, `lib/anomaly/rules/rejectionPatternRule.ts`, `lib/anomaly/rules/consumptionSpikeRule.ts`, `lib/anomaly/rules/belowApprovalLimitRule.ts`, `lib/anomaly/rules/offHoursRule.ts`, `app/api/anomaly/scan/route.ts`, `app/api/transactions/route.ts`, `app/api/transactions/[id]/reject/route.ts`, `app/api/inventory/vouchers/[id]/approve/route.ts`, `app/api/inventory/vouchers/[id]/reject/route.ts`, `lib/db/schema.ts`, `tests/unit/anomaly.test.ts`
-**Build:** tsc ✅ · build ✅ · 48 unit tests ✅. Commit: 8a39294
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۵ migration در pgAdmin (db-anomaly-migration.sql جدید). **فاز ۵**: صفحه `/detective` (لیست findings، فیلتر status/severity، تغییر وضعیت)، کارت داشبورد، nav item، اتصال SMS برای high/medium alerts، `DETECTIVE_SCAN_SECRET` در GitHub Actions.
-
-## 📓 2026-07-06 — فاز ۳: SMS کانال notification — اکانت ۱
-**چه شد:** پیامک به‌عنوان کانال موازی سیستم notifications v2 وصل شد. هیچ رفتار موجودی نشکست.
-- **Wire `{ sms: true }`** در همه‌ی `notifyAdmins()` callها: `transactions/approve` (low_stock + high_value_tx جدید)، `purchase-orders/receive` (po_received)، `inventory/vouchers/import` (voucher_pending). `cheque.dueSoon` از `notify(null)` به `notifyAdmins()` تبدیل شد.
-- **`high_value_tx`** اولین پیاده‌سازی — بعد از approve تراکنش، threshold از notification_rules می‌خواند؛ اگر amount≥threshold → notifyAdmins + sms.
-- **API جدید**: `GET /api/sms/log`، `GET/PATCH /api/admin/sms-settings`، `POST /api/sms/test-notify`.
-- **SmsPane کامل**: ۴ بخش — تنظیمات cap/dedup، مدیریت شماره SuperAdminها، toggleهای per-rule، جدول sms_log + دکمه تست کامل.
-- **`db-sms-phase3-migration.sql`**: seed قانون `sms.test_notify`.
-**فایل‌ها:** `db-sms-phase3-migration.sql`, `app/api/sms/log/route.ts`, `app/api/sms/test-notify/route.ts`, `app/api/admin/sms-settings/route.ts`, `app/api/transactions/[id]/approve/route.ts`, `app/api/cheques/route.ts`, `app/api/purchase-orders/[id]/receive/route.ts`, `app/api/inventory/vouchers/import/route.ts`, `app/api/users/route.ts`, `components/settings/SmsPane.tsx`
-**Build:** tsc ✅ · build ✅. Commit: 69500c7
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۴ migration در pgAdmin. **فاز ۴** موتور کارآگاه: `lib/detective/`، `anomaly_findings` table، ۶ قانون. یادآوری: `DETECTIVE_SCAN_SECRET` در GitHub Actions.
 
 
