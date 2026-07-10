@@ -9,3 +9,4 @@ export { FlashReportCard } from './FlashReportCard';
 export { AnomalyBanner } from './AnomalyBanner';
 export { AttentionWidget } from './AttentionWidget';
 export { HRSummaryCard } from './HRSummaryCard';
+export { RecruitmentWidget } from './RecruitmentWidget';

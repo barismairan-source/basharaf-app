@@ -16,6 +16,7 @@ import {
   AnomalyBanner,
   AttentionWidget,
   HRSummaryCard,
+  RecruitmentWidget,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import {
@@ -144,6 +145,7 @@ export default function DashboardPage() {
           <div className="space-y-2">
             <div className="text-[11.5px] text-stone-400 font-medium">اقدامات فوری</div>
             <AttentionWidget />
+            {isAdmin && <RecruitmentWidget />}
           </div>
         )}
 
