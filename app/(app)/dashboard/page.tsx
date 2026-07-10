@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wallet, TrendingUp, TrendingDown, Clock, CheckCircle2 } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, Clock, CheckCircle2, Users2 } from 'lucide-react';
 import { useAppStore } from '@/store';
 import {
   KPICard,
@@ -17,6 +17,7 @@ import {
   AttentionWidget,
   HRSummaryCard,
   RecruitmentWidget,
+  DashCard,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import { fmt } from '@/lib/utils';
@@ -195,27 +196,19 @@ export default function DashboardPage() {
 
             {/* وضعیت شرکا */}
             {canSeeContacts && activeContacts.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-[12px] text-stone-600 font-medium">وضعیت شرکا</div>
-                  <button
-                    type="button"
-                    onClick={() => router.push('/contacts')}
-                    className="text-[11px] text-stone-400 hover:text-stone-700 transition-colors"
-                  >
-                    مشاهده همه ←
-                  </button>
-                </div>
+              <DashCard
+                title="وضعیت شرکا"
+                icon={Users2}
+                iconBg="bg-violet-50"
+                iconColor="text-violet-600"
+                onViewAll={() => router.push('/contacts')}
+                bodyClass={allPartnersSettled ? 'p-4' : 'p-4'}
+              >
                 {allPartnersSettled ? (
-                  <button
-                    type="button"
-                    onClick={() => router.push('/contacts')}
-                    className="w-full flex items-center gap-2 px-4 h-10 rounded-lg bg-emerald-50 border border-emerald-100 text-[12.5px] text-emerald-700 text-right hover:opacity-80 transition-opacity"
-                  >
+                  <div className="flex items-center gap-2 text-[12.5px] text-emerald-700">
                     <CheckCircle2 size={14} strokeWidth={1.75} className="shrink-0" />
-                    <span className="flex-1">همه‌ی طرف‌حساب‌ها تسویه‌اند ✓</span>
-                    <span className="text-[11px] opacity-70 shrink-0">مشاهده ←</span>
-                  </button>
+                    <span>همه‌ی طرف‌حساب‌ها تسویه‌اند</span>
+                  </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                     {partnerCards.map((c) => (
@@ -223,7 +216,7 @@ export default function DashboardPage() {
                         key={c.id}
                         type="button"
                         onClick={() => router.push('/contacts')}
-                        className="bg-white border border-stone-200 rounded-lg p-4 text-right hover:border-stone-300 transition-colors"
+                        className="bg-stone-50 hover:bg-stone-100 rounded-lg px-4 py-3 text-right transition-colors"
                       >
                         <div className="text-[11px] text-stone-500 truncate mb-1.5">{c.name}</div>
                         <div
@@ -245,7 +238,7 @@ export default function DashboardPage() {
                     ))}
                   </div>
                 )}
-              </div>
+              </DashCard>
             )}
           </div>
         )}
