@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.11.0-dashboard-phase2` |
+| **نسخه** | `0.12.0-dashboard-phase3` |
 | **آخرین به‌روزرسانی** | 2026-07-10 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `refactor/dashboard-phase2` — آماده merge بعد از تست. |
+| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱. تست دستی داشبورد دسکتاپ+موبایل — بررسی سه لایه، AttentionWidget، وضعیت شرکا. ۲. تصمیم در مورد Sparklines (mock). ۳. Merge branch به main. |
-| **بلاک‌شده/منتظر کاربر** | تأیید merge + تصمیم Sparklines. |
+| **کار بعدی پیشنهادی** | ۱. تست دستی: FlashReportCard — delta زیر فروش/فاکتور/Prime Cost (به‌خصوص چراغ‌راهنمای معکوس Prime Cost). ۲. تست ویجت داوطلبان: حالت بدون داوطلب (null)، حالت با داوطلب و امتیاز. ۳. تصمیم Sparklines (هنوز mock). |
+| **بلاک‌شده/منتظر کاربر** | تصمیم Sparklines (mock یا حذف یا اتصال واقعی). |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -52,6 +52,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-10 — داشبورد فاز ۳: روند درصدی + ویجت داوطلبان (v0.12.0) — اکانت ۱
+**چه شد:**
+- **FlashReport: روند درصدی**: دو فیلد جدید در `FlashReportData`: `invoiceCountPctChange` (درصد تغییر تعداد فاکتور نسبت به هفته‌ی قبل) و `primeCostPctChange` (تفاوت نقطه‌ای Prime Cost % — عدد منفی = بهبود). محاسبه در `getFlashReport()` بدون query اضافه — از `lastWeek` که قبلاً fetch می‌شد.
+- **FlashReportCard: چراغ‌راهنما**: `DeltaBadge` با prop `invert` — برای Prime Cost %، افت = سبز (خوب)، رشد = قرمز (بد). Delta زیر تعداد فاکتور و زیر Prime Cost % نشان داده می‌شود (unit: "پوینت" برای Prime Cost، "٪" برای بقیه).
+- **ویجت داوطلبان تازه**: `/api/dashboard/applicants` — درخواست‌های `new` در ۷ روز اخیر، max 4 ردیف + totalNew. `RecruitmentWidget.tsx` — امتیاز ۵ ستاره inline با optimistic update + rollback. فقط برای SuperAdmin، فقط اگر `hasActivity=true`. Null-safe: `currentScore != null && n <= currentScore`.
+- Merge به main + push انجام شد.
+**فایل‌ها:** `lib/reports/flashReport.ts`، `components/dashboard/FlashReportCard.tsx`، `app/api/dashboard/applicants/route.ts` (جدید)، `components/dashboard/RecruitmentWidget.tsx` (جدید)، `components/dashboard/index.ts`، `app/(app)/dashboard/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱. تست بصری FlashReportCard (delta‌ها، به‌خصوص رنگ معکوس Prime Cost). ۲. تست ویجت داوطلبان (بدون داوطلب → نباید نمایش داشته باشد؛ با داوطلب → ستاره‌ها کار کنند). ۳. تصمیم Sparklines.
 
 ## 📓 2026-07-10 — داشبورد فاز ۲: معماری سه‌لایه (v0.11.0) — اکانت ۱
 **چه شد:**
