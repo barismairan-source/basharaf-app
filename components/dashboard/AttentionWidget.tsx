@@ -7,10 +7,10 @@ import {
   ClipboardList, ShieldAlert, CheckCircle2,
   type LucideIcon,
 } from 'lucide-react';
-import { Card, CardBody } from '@/components/ui';
 import { fmt } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { canAccessSection } from '@/lib/auth/permissions';
+import { DashCard } from './DashCard';
 
 interface OverviewData {
   inventory: { lowStockCount: number; };
@@ -156,37 +156,32 @@ export function AttentionWidget() {
   }
 
   return (
-    <Card>
-      <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-stone-100">
-        <span className="text-[13px] font-medium text-stone-800">نیازمند توجه شما</span>
-        {urgentCount > 0 && (
-          <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-rose-100 text-rose-700 text-[10px] font-medium tabular-nums">
-            {fmt(urgentCount)}
-          </span>
-        )}
-      </div>
-      <CardBody className="py-2">
-        <ul>
-          {sorted.map((item) => {
-            const Icon = item.icon;
-            return (
-              <li key={item.id} className={item.mobileHide ? 'hidden sm:block' : undefined}>
-                <button
-                  type="button"
-                  onClick={() => router.push(item.href)}
-                  className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-stone-50/80 transition-colors text-right"
-                >
-                  <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${item.iconClass}`}>
-                    <Icon size={14} strokeWidth={1.75} />
-                  </div>
-                  <span className="text-[12.5px] text-stone-700 flex-1">{item.text}</span>
-                  <span className="text-[11px] text-stone-400 shrink-0" aria-hidden="true">←</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </CardBody>
-    </Card>
+    <DashCard
+      title="نیازمند توجه شما"
+      badge={urgentCount}
+      badgeClass="bg-rose-100 text-rose-700"
+      bodyClass="py-2"
+    >
+      <ul>
+        {sorted.map((item) => {
+          const Icon = item.icon;
+          return (
+            <li key={item.id} className={item.mobileHide ? 'hidden sm:block' : undefined}>
+              <button
+                type="button"
+                onClick={() => router.push(item.href)}
+                className="w-full flex items-center gap-3 py-2 px-1 rounded-lg hover:bg-stone-50/80 transition-colors text-right"
+              >
+                <div className={`w-7 h-7 rounded-md flex items-center justify-center shrink-0 ${item.iconClass}`}>
+                  <Icon size={14} strokeWidth={1.75} />
+                </div>
+                <span className="text-[12.5px] text-stone-700 flex-1">{item.text}</span>
+                <span className="text-[11px] text-stone-400 shrink-0" aria-hidden="true">←</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </DashCard>
   );
 }

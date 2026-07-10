@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users } from 'lucide-react';
-import { Card, CardBody, Chip, Empty } from '@/components/ui';
+import { Chip, Empty } from '@/components/ui';
+import { DashCard } from './DashCard';
 import { fmt } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { canAccessSection } from '@/lib/auth/permissions';
@@ -67,17 +68,15 @@ export function HRSummaryCard() {
   }
 
   return (
-    <Card
+    <DashCard
+      title="پرسنل و حقوق"
+      icon={Users}
+      iconBg="bg-sky-50"
+      iconColor="text-sky-600"
       className="cursor-pointer hover:border-stone-300 transition-colors"
-      onClick={() => router.push('/payroll')}
+      bodyClass="p-5"
     >
-      <div className="flex items-center gap-2 px-5 py-3.5 border-b border-stone-100">
-        <div className="w-7 h-7 rounded-md flex items-center justify-center bg-sky-50 text-sky-600 shrink-0">
-          <Users size={14} strokeWidth={1.75} />
-        </div>
-        <span className="text-[13px] font-medium text-stone-800">پرسنل و حقوق</span>
-      </div>
-      <CardBody>
+      <div onClick={() => router.push('/payroll')} className="cursor-pointer">
         <div className="flex items-center justify-between text-[12px] mb-3">
           <span className="text-stone-500">پرسنل فعال</span>
           <span className="tabular-nums text-stone-800 font-medium">{fmt(hr.activeEmployees)} نفر</span>
@@ -100,7 +99,7 @@ export function HRSummaryCard() {
             <Empty icon={Users} title="هنوز دوره‌ای ثبت نشده" sub="" />
           )}
         </div>
-      </CardBody>
-    </Card>
+      </div>
+    </DashCard>
   );
 }
