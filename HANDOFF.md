@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.10.3-dashboard-fix` |
+| **نسخه** | `0.11.0-dashboard-phase2` |
 | **آخرین به‌روزرسانی** | 2026-07-10 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. main branch. |
+| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `refactor/dashboard-phase2` — آماده merge بعد از تست. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | تست دستی داشبورد دسکتاپ+موبایل (KPI کوتاه، وضعیت مالی، BranchSummary hover). |
-| **بلاک‌شده/منتظر کاربر** | تأیید تست بصری داشبورد. |
+| **کار بعدی پیشنهادی** | ۱. تست دستی داشبورد دسکتاپ+موبایل — بررسی سه لایه، AttentionWidget، وضعیت شرکا. ۲. تصمیم در مورد Sparklines (mock). ۳. Merge branch به main. |
+| **بلاک‌شده/منتظر کاربر** | تأیید merge + تصمیم Sparklines. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -52,6 +52,20 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-10 — داشبورد فاز ۲: معماری سه‌لایه (v0.11.0) — اکانت ۱
+**چه شد:**
+- **AnomalyBanner** (جدید): نوار هشدار باریک rose/amber زیر FlashReportCard. فقط اگر یافته‌ی باز high یا medium در anomaly_findings وجود داشته باشد رندر می‌شود — وگرنه `null` (فضا نمی‌گیرد).
+- **AttentionWidget** (جدید): جایگزین `OperationsStrip` + بخش‌های مالی/انبار `UnifiedOverview`. یک fetch به `/api/dashboard/overview` + یک fetch به `/api/anomaly/findings/counts` (برای SuperAdmin). لیست اولویت‌بندی‌شده: anomaly high > pending tx > low stock > open PO > equipment > tasks. Max 5 آیتم؛ آیتم‌های ۴-۵ روی موبایل با `hidden sm:block` پنهان هستند. اگر همه صفر بود: پیام سبز "همه چیز خوب است".
+- **HRSummaryCard** (جدید): خلاصه‌ی پرسنل/حقوق در لایه ۳ (از `/api/dashboard/overview`).
+- **page.tsx**: بازنویسی کامل با ساختار سه‌لایه. بخش جدید «وضعیت شرکا» از `store.contacts` (کانتکت‌های فعال، مرتب از بیشترین قدرمطلق، max ۶ کارت، رنگ emerald/rose/stone بر اساس جهت موجودی).
+- `UnifiedOverview` و `OperationsStrip` از export index حذف شدند (فایل‌ها محفوظ برای مرجع).
+- **گزارش Sparklines**: `lib/sparklines.ts` داده‌های hardcode/mock است — به تراکنش واقعی وصل نیست. منتظر تصمیم کاربر.
+- **Cheques dueSoon**: در این فاز نیامد (endpoint جدید نیاز دارد) — فاز ۳.
+**فایل‌ها:** `components/dashboard/AnomalyBanner.tsx` (جدید)، `components/dashboard/AttentionWidget.tsx` (جدید)، `components/dashboard/HRSummaryCard.tsx` (جدید)، `components/dashboard/index.ts` (به‌روز)، `app/(app)/dashboard/page.tsx` (بازنویسی کامل)
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
+**ناتمام:** — Branch: `refactor/dashboard-phase2` — منتظر تست و merge.
+**برای جلسه‌ی بعد:** ۱. تست بصری دسکتاپ+موبایل — سه لایه، AttentionWidget، شرکا، AnomalyBanner (اگر یافته باشد). ۲. تصمیم Sparklines. ۳. Merge به main.
 
 ## 📓 2026-07-10 — اصلاح داشبورد: تکرار، فرمت، نام‌گذاری (v0.10.3) — اکانت ۱
 **چه شد:**
