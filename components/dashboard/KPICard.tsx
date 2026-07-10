@@ -1,6 +1,7 @@
 import { type LucideIcon } from 'lucide-react';
 import { Sparkline } from '@/components/ui';
 import { fmt } from '@/lib/utils';
+import { formatMoneyShort } from '@/lib/design/format';
 import { COLORS } from '@/lib/colors';
 import { cn } from '@/lib/utils';
 
@@ -122,16 +123,14 @@ export function KPICard({
       </div>
 
       {/* Value */}
-      <div className="flex items-baseline gap-1.5">
-        <div
-          className={cn(
-            'text-[24px] font-medium tabular-nums leading-none',
-            isNegative ? 'text-rose-700' : 'text-stone-900'
-          )}
-        >
-          {fmt(Math.abs(value))}
-        </div>
-        <div className="text-[11px] text-muted">تومان</div>
+      <div
+        className={cn(
+          'text-[22px] font-medium tabular-nums leading-none',
+          isNegative ? 'text-rose-700' : 'text-stone-900'
+        )}
+        title={`${fmt(Math.abs(value))} تومان`}
+      >
+        {formatMoneyShort(Math.abs(value))}
       </div>
 
       {/* Sparkline (اختیاری) */}

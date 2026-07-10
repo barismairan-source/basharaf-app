@@ -170,7 +170,7 @@ export default function AnomalyPage() {
       <div className="flex items-center gap-2">
         <ShieldAlert size={18} strokeWidth={1.5} className="text-stone-600" />
         <div>
-          <h1 className="text-[18px] font-medium text-stone-900">کارآگاه مالی</h1>
+          <h1 className="text-[18px] font-medium text-stone-900">دستیار مالی</h1>
           <p className="text-[11.5px] text-muted mt-0.5">یافته‌های مشکوک شناسایی‌شده توسط موتور تحلیل</p>
         </div>
       </div>

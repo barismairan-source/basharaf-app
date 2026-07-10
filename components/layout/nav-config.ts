@@ -76,7 +76,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     label: 'تحلیل و گزارش',
     items: [
       { href: '/reports',  label: 'گزارش‌ها',      icon: BarChart3,   roles: ['SuperAdmin', 'BranchUser'] },
-      { href: '/anomaly',  label: 'کارآگاه مالی',   icon: ShieldAlert, roles: ['SuperAdmin'], hasBadge: true },
+      { href: '/anomaly',  label: 'دستیار مالی',    icon: ShieldAlert, roles: ['SuperAdmin'], hasBadge: true },
       { href: '/logs',     label: 'لاگ سیستم',     icon: ScrollText,  roles: ['SuperAdmin'] },
     ],
   },

@@ -85,7 +85,7 @@ export function DetectivePane() {
       <div>
         <h2 className="text-[14px] font-medium text-stone-900 flex items-center gap-2">
           <ShieldAlert size={15} strokeWidth={1.5} className="text-stone-500" />
-          قوانین کارآگاه مالی
+          قوانین دستیار مالی
         </h2>
         <p className="text-[12px] text-muted mt-0.5">روشن/خاموش کردن قوانین و تنظیم آستانه‌ها بدون نیاز به deploy.</p>
       </div>

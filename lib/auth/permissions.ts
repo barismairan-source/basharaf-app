@@ -52,7 +52,7 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   { key: 'orders',       label: 'سفارش‌های بیرون‌بر', defaultRoles: ['SuperAdmin', 'BranchUser', 'Chef'] },
   { key: 'recruitment',  label: 'استخدام',           defaultRoles: ['SuperAdmin'] },
   { key: 'logs',         label: 'لاگ سیستم',         defaultRoles: ['SuperAdmin'] },
-  { key: 'anomaly',      label: 'کارآگاه مالی',       defaultRoles: ['SuperAdmin'] },
+  { key: 'anomaly',      label: 'دستیار مالی',         defaultRoles: ['SuperAdmin'] },
   { key: 'settings',     label: 'تنظیمات',           defaultRoles: ['SuperAdmin', 'BranchUser'] },
 ];
 

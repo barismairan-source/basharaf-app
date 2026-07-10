@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import { Card, CardHeader, CardBody, Empty } from '@/components/ui';
 import { fmt } from '@/lib/utils';
+import { formatMoneyShort } from '@/lib/design/format';
 import { Building2, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -66,11 +66,11 @@ export function BranchSummary({ data, onBranchClick }: BranchSummaryProps) {
                 <div className="flex items-center gap-4 text-[11.5px] tabular-nums">
                   <div className="hidden sm:flex flex-col items-end">
                     <div className="text-[10px] text-muted">درآمد</div>
-                    <div className="text-emerald-700">{fmt(row.income)}</div>
+                    <div className="text-emerald-700" title={`${fmt(row.income)} تومان`}>{formatMoneyShort(row.income)}</div>
                   </div>
                   <div className="hidden sm:flex flex-col items-end">
                     <div className="text-[10px] text-muted">هزینه</div>
-                    <div className="text-rose-700">{fmt(row.expense)}</div>
+                    <div className="text-rose-700" title={`${fmt(row.expense)} تومان`}>{formatMoneyShort(row.expense)}</div>
                   </div>
                   <div className="flex flex-col items-end">
                     <div className="text-[10px] text-muted">موجودی</div>
@@ -80,8 +80,9 @@ export function BranchSummary({ data, onBranchClick }: BranchSummaryProps) {
                         row.balance < 0 && 'text-rose-700',
                         row.balance === 0 && 'text-stone-500'
                       )}
+                      title={`${fmt(row.balance)} تومان`}
                     >
-                      {fmt(row.balance)}
+                      {formatMoneyShort(Math.abs(row.balance))}
                     </div>
                   </div>
                   <ArrowLeft

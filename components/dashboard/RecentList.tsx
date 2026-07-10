@@ -141,7 +141,7 @@ export function RecentList({ transactions, limit = 5 }: RecentListProps) {
                           isRejected && 'line-through'
                         )}
                       >
-                        {isIncome ? '+' : '−'} {fmt(tx.amount)}
+                        {fmt(tx.amount)}
                       </div>
                       <Chip tone={statusMeta.chipTone} className="hidden sm:inline-flex">
                         {statusMeta.label}

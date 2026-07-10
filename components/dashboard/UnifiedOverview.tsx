@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   PackageSearch,
   AlertTriangle,
-  ArrowUpRight,
-  ArrowDownLeft,
   Users,
   Wallet2,
   type LucideIcon,
@@ -191,44 +189,29 @@ export function UnifiedOverview() {
           )}
         </SectionCard>}
 
-        {/* ─── ۲) فعالیت مالی اخیر ─── */}
+        {/* ─── ۲) وضعیت مالی ─── */}
         {canSeeFinance && <SectionCard
           icon={Wallet2}
           iconClass="bg-emerald-50 text-emerald-600"
-          title="فعالیت مالی اخیر"
+          title="وضعیت مالی"
           onClick={() => router.push('/transactions')}
           badge={finance.pendingTransactions > 0 ? (
             <Chip tone="amber">{`${finance.pendingTransactions} در انتظار`}</Chip>
-          ) : undefined}
+          ) : <Chip tone="green">به‌روز</Chip>}
         >
-          {finance.recentTransactions.length === 0 ? (
+          {finance.pendingTransactions === 0 ? (
             <Empty
               icon={Wallet2}
-              title="هنوز تراکنشی نیست"
-              sub="آخرین فعالیت‌های مالی اینجا نمایش داده می‌شوند."
+              title="هیچ تراکنشی در انتظار نیست"
+              sub="آخرین تراکنش‌ها را در صفحه تراکنش‌ها ببینید."
             />
           ) : (
-            <ul className="space-y-1.5">
-              {finance.recentTransactions.map((tx) => {
-                const isIncome = tx.type === 'income';
-                const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
-                return (
-                  <li key={tx.id} className="flex items-center justify-between gap-2 text-[12px]">
-                    <span className="flex items-center gap-1.5 min-w-0">
-                      <Icon
-                        size={12}
-                        strokeWidth={1.75}
-                        className={cn('shrink-0', isIncome ? 'text-emerald-500' : 'text-rose-500')}
-                      />
-                      <span className="truncate text-stone-700">{tx.title}</span>
-                    </span>
-                    <span className={cn('tabular-nums shrink-0', isIncome ? 'text-emerald-700' : 'text-rose-700')}>
-                      {isIncome ? '+' : '−'}{fmt(tx.amount)}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="flex flex-col items-center justify-center py-4 gap-1.5">
+              <div className="text-[40px] font-medium tabular-nums text-amber-600 leading-none">
+                {fmt(finance.pendingTransactions)}
+              </div>
+              <div className="text-[12px] text-stone-500">تراکنش در انتظار تأیید</div>
+            </div>
           )}
         </SectionCard>}
 
