@@ -19,12 +19,6 @@ import {
   RecruitmentWidget,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
-import {
-  SPARK_BALANCE,
-  SPARK_INCOME,
-  SPARK_EXPENSE,
-  SPARK_PENDING,
-} from '@/lib/sparklines';
 import { fmt } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import { formatBranchName } from '@/lib/design/format';
@@ -163,7 +157,6 @@ export default function DashboardPage() {
                 label="موجودی (تراکنش‌ها)"
                 value={metrics.balance}
                 icon={Wallet}
-                spark={SPARK_BALANCE}
                 highlightNegative
               />
               <KPICard
@@ -171,21 +164,18 @@ export default function DashboardPage() {
                 label="مجموع درآمد"
                 value={metrics.income}
                 icon={TrendingUp}
-                spark={SPARK_INCOME}
               />
               <KPICard
                 tone="expense"
                 label="مجموع هزینه"
                 value={metrics.expense}
                 icon={TrendingDown}
-                spark={SPARK_EXPENSE}
               />
               <KPICard
                 tone="pending"
                 label={`در انتظار (${new Intl.NumberFormat('fa-IR').format(metrics.pendingCount)} مورد)`}
                 value={metrics.pendingAmount}
                 icon={Clock}
-                spark={SPARK_PENDING}
               />
             </div>
 
