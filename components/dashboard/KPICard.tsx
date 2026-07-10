@@ -1,7 +1,7 @@
 import { type LucideIcon } from 'lucide-react';
 import { Sparkline } from '@/components/ui';
 import { fmt } from '@/lib/utils';
-import { formatMoneyShort } from '@/lib/design/format';
+import { formatMoneyParts } from '@/lib/design/format';
 import { COLORS } from '@/lib/colors';
 import { cn } from '@/lib/utils';
 
@@ -122,16 +122,23 @@ export function KPICard({
         </div>
       </div>
 
-      {/* Value — formatMoneyShort خودش علامت منفی + LTR isolate را مدیریت می‌کند */}
-      <div
-        className={cn(
-          'text-[22px] font-medium tabular-nums leading-none',
-          isNegative ? 'text-rose-700' : 'text-stone-900'
-        )}
-        title={`${fmt(value)} تومان`}
-      >
-        {formatMoneyShort(value)}
-      </div>
+      {/* Value — عدد و واحد جداگانه برای تایپوگرافی یکدست */}
+      {(() => {
+        const { main, unit } = formatMoneyParts(value);
+        return (
+          <div className="flex items-baseline gap-1.5" title={`${fmt(value)} تومان`}>
+            <span
+              className={cn(
+                'text-2xl font-semibold tabular-nums leading-none',
+                isNegative ? 'text-rose-700' : 'text-stone-900',
+              )}
+            >
+              {main}
+            </span>
+            <span className="text-[11px] font-normal text-stone-400 leading-none">{unit}</span>
+          </div>
+        );
+      })()}
 
       {/* Sparkline (اختیاری) */}
       {spark && spark.length > 1 && (
