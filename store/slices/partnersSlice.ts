@@ -17,6 +17,11 @@ export interface PartnersSlice {
     patch: Partial<Pick<Partner, 'fullName' | 'phone' | 'nationalId' | 'note' | 'isActive'>>
   ) => Promise<boolean>;
   deletePartner: (id: string) => Promise<boolean>;
+  addPartnerBranch: (
+    partnerId: string,
+    params: { branchId: string | null; joinedDate?: string; sharePercent?: string }
+  ) => Promise<boolean>;
+  removePartnerBranch: (partnerId: string, pbId: string) => Promise<boolean>;
 }
 
 export const createPartnersSlice: StateCreator<PartnersSlice> = (set, get) => ({
@@ -74,5 +79,40 @@ export const createPartnersSlice: StateCreator<PartnersSlice> = (set, get) => ({
 
   async deletePartner(id) {
     return get().updatePartner(id, { isActive: false });
+  },
+
+  async addPartnerBranch(partnerId, params) {
+    try {
+      const res = await fetch(`/api/partners/${partnerId}/branches`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(params),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? 'خطا');
+      }
+      await get().loadPartners();
+      return true;
+    } catch (e) {
+      set({ partnersError: e instanceof Error ? e.message : 'خطا' });
+      return false;
+    }
+  },
+
+  async removePartnerBranch(partnerId, pbId) {
+    try {
+      const res = await fetch(`/api/partners/${partnerId}/branches/${pbId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error('خطا');
+      await get().loadPartners();
+      return true;
+    } catch (e) {
+      set({ partnersError: e instanceof Error ? e.message : 'خطا' });
+      return false;
+    }
   },
 });

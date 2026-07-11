@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Banknote, Plus, PiggyBank, CreditCard, Trash2, Edit3, X, Check, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Banknote, Plus, PiggyBank, CreditCard, Trash2, Edit3, X, Check, RefreshCw, Handshake } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Select } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore } from '@/store';
@@ -13,12 +13,14 @@ const TYPE_ICONS: Record<string, typeof Banknote> = {
   cash: PiggyBank,
   bank: Banknote,
   pos: CreditCard,
+  partner_equity: Handshake,
 };
 
 const TYPE_LABELS: Record<string, string> = {
   cash: 'صندوق نقدی',
   bank: 'حساب بانکی',
   pos: 'دستگاه پوز',
+  partner_equity: 'آورده شریک',
 };
 
 export default function AccountsPage() {
@@ -44,6 +46,20 @@ export default function AccountsPage() {
     loadAccounts();
   }, [loadAccounts]);
 
+  const { operational, equity } = useMemo(() => ({
+    operational: accounts.filter(a => a.type !== 'partner_equity'),
+    equity: accounts.filter(a => a.type === 'partner_equity'),
+  }), [accounts]);
+
+  const operationalBalance = useMemo(
+    () => operational.reduce((s, a) => s + a.balance, 0),
+    [operational]
+  );
+  const equityBalance = useMemo(
+    () => equity.reduce((s, a) => s + a.balance, 0),
+    [equity]
+  );
+
   async function handleRecalculate() {
     setRecalculating(true);
     try {
@@ -62,7 +78,6 @@ export default function AccountsPage() {
   if (!hydrated || !user) return null;
 
   const isAdmin = user.role === 'SuperAdmin';
-  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
 
   async function handleAdd() {
     if (!newName.trim()) return;
@@ -91,94 +106,101 @@ export default function AccountsPage() {
     else showToast('خطا', 'danger');
   }
 
-  const columns: DataColumn<Account>[] = [
-    {
-      key: 'name',
-      label: 'حساب',
-      render: (account) => {
-        const Icon = TYPE_ICONS[account.type] ?? Banknote;
-        return (
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-md bg-stone-100 flex items-center justify-center flex-shrink-0">
-              <Icon size={16} strokeWidth={1.5} className="text-stone-600" />
+  function makeColumns(showType = false): DataColumn<Account>[] {
+    return [
+      {
+        key: 'name',
+        label: 'حساب',
+        render: (account) => {
+          const Icon = TYPE_ICONS[account.type] ?? Banknote;
+          return (
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-md bg-stone-100 flex items-center justify-center flex-shrink-0">
+                <Icon size={16} strokeWidth={1.5} className="text-stone-600" />
+              </div>
+              <div className="min-w-0">
+                {editingId === account.id ? (
+                  <Input
+                    value={editName}
+                    onChange={e => setEditName(e.target.value)}
+                    className="text-[13px]"
+                    autoFocus
+                    onKeyDown={e => e.key === 'Enter' && handleEditSave(account.id)}
+                    onClick={e => e.stopPropagation()}
+                  />
+                ) : (
+                  <div className="text-[13px] text-stone-900 font-medium truncate">{account.name}</div>
+                )}
+                <div className="text-[11px] text-muted">{TYPE_LABELS[account.type] ?? account.type}</div>
+              </div>
             </div>
-            <div className="min-w-0">
-              {editingId === account.id ? (
-                <Input
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  className="text-[13px]"
-                  autoFocus
-                  onKeyDown={e => e.key === 'Enter' && handleEditSave(account.id)}
-                  onClick={e => e.stopPropagation()}
-                />
-              ) : (
-                <div className="text-[13px] text-stone-900 font-medium truncate">{account.name}</div>
-              )}
-              <div className="text-[11px] text-muted">{TYPE_LABELS[account.type] ?? account.type}</div>
-            </div>
-          </div>
-        );
+          );
+        },
       },
-    },
-    {
-      key: 'balance',
-      label: 'موجودی',
-      render: (account) => (
-        <button
-          onClick={e => { e.stopPropagation(); window.location.href = `/accounts/${account.id}`; }}
-          className="group text-right"
-          title={`${fmt(account.balance)} تومان`}
-        >
-          <div className={cn('text-[14px] font-medium num group-hover:underline', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
-            {formatMoneyShort(account.balance)}
-          </div>
-          <div className="text-[10px] text-muted mt-0.5">مشاهده دفتر کل</div>
-        </button>
-      ),
-    },
-    ...(isAdmin ? [{
-      key: 'actions',
-      label: '',
-      mobileLabel: '',
-      render: (account: Account) => {
-        if (editingId === account.id) {
+      {
+        key: 'balance',
+        label: 'موجودی',
+        render: (account) => (
+          <button
+            onClick={e => { e.stopPropagation(); window.location.href = `/accounts/${account.id}`; }}
+            className="group text-right"
+            title={`${fmt(account.balance)} تومان`}
+          >
+            <div className={cn('text-[14px] font-medium num group-hover:underline', account.balance >= 0 ? 'text-stone-900' : 'text-rose-700')}>
+              {formatMoneyShort(account.balance)}
+            </div>
+            {account.type === 'partner_equity' && account.balance < 0 && (
+              <div className="text-[10px] text-rose-600 mt-0.5">آورده‌ی خرج‌شده</div>
+            )}
+            {account.type !== 'partner_equity' && (
+              <div className="text-[10px] text-muted mt-0.5">مشاهده دفتر کل</div>
+            )}
+          </button>
+        ),
+      },
+      ...(isAdmin ? [{
+        key: 'actions',
+        label: '',
+        mobileLabel: '',
+        render: (account: Account) => {
+          if (editingId === account.id) {
+            return (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={e => { e.stopPropagation(); handleEditSave(account.id); }}
+                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-emerald-50 text-emerald-600"
+                >
+                  <Check size={13} strokeWidth={1.5} />
+                </button>
+                <button
+                  onClick={e => { e.stopPropagation(); setEditingId(null); }}
+                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
+                >
+                  <X size={13} strokeWidth={1.5} />
+                </button>
+              </div>
+            );
+          }
           return (
             <div className="flex items-center gap-1">
               <button
-                onClick={e => { e.stopPropagation(); handleEditSave(account.id); }}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-emerald-50 text-emerald-600"
-              >
-                <Check size={13} strokeWidth={1.5} />
-              </button>
-              <button
-                onClick={e => { e.stopPropagation(); setEditingId(null); }}
+                onClick={e => { e.stopPropagation(); setEditingId(account.id); setEditName(account.name); }}
                 className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
               >
-                <X size={13} strokeWidth={1.5} />
+                <Edit3 size={13} strokeWidth={1.5} />
+              </button>
+              <button
+                onClick={e => { e.stopPropagation(); handleDelete(account.id, account.name); }}
+                className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
+              >
+                <Trash2 size={13} strokeWidth={1.5} />
               </button>
             </div>
           );
-        }
-        return (
-          <div className="flex items-center gap-1">
-            <button
-              onClick={e => { e.stopPropagation(); setEditingId(account.id); setEditName(account.name); }}
-              className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
-            >
-              <Edit3 size={13} strokeWidth={1.5} />
-            </button>
-            <button
-              onClick={e => { e.stopPropagation(); handleDelete(account.id, account.name); }}
-              className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
-            >
-              <Trash2 size={13} strokeWidth={1.5} />
-            </button>
-          </div>
-        );
-      },
-    }] as DataColumn<Account>[] : []),
-  ];
+        },
+      }] as DataColumn<Account>[] : []),
+    ];
+  }
 
   return (
     <div className="p-4 lg:p-6">
@@ -201,23 +223,47 @@ export default function AccountsPage() {
           )}
         </div>
 
-        {/* Total balance card */}
-        <Card>
-          <CardBody>
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="text-[11.5px] text-muted mb-1">مجموع موجودی همه حساب‌ها</div>
-                <div
-                  className={cn('text-[22px] sm:text-[28px] font-medium num truncate', totalBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}
-                  title={`${fmt(totalBalance)} تومان`}
-                >
-                  {formatMoneyShort(totalBalance)}
+        {/* Total balance cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Card>
+            <CardBody>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11.5px] text-muted mb-1">موجودی عملیاتی</div>
+                  <div
+                    className={cn('text-[22px] sm:text-[26px] font-medium num truncate', operationalBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}
+                    title={`${fmt(operationalBalance)} تومان`}
+                  >
+                    {formatMoneyShort(operationalBalance)}
+                  </div>
+                  <div className="text-[10px] text-muted mt-0.5">بدون آورده شرکا</div>
                 </div>
+                <Banknote size={28} strokeWidth={1} className="text-stone-300 flex-shrink-0" />
               </div>
-              <Banknote size={32} strokeWidth={1} className="text-stone-400 flex-shrink-0" />
-            </div>
-          </CardBody>
-        </Card>
+            </CardBody>
+          </Card>
+          {equity.length > 0 && (
+            <Card>
+              <CardBody>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[11.5px] text-muted mb-1">جمع آورده شرکا</div>
+                    <div
+                      className={cn('text-[22px] sm:text-[26px] font-medium num truncate', equityBalance >= 0 ? 'text-stone-900' : 'text-rose-700')}
+                      title={`${fmt(equityBalance)} تومان`}
+                    >
+                      {formatMoneyShort(equityBalance)}
+                    </div>
+                    {equityBalance < 0 && (
+                      <div className="text-[10px] text-rose-600 mt-0.5">آورده‌ی خرج‌شده</div>
+                    )}
+                  </div>
+                  <Handshake size={28} strokeWidth={1} className="text-violet-300 flex-shrink-0" />
+                </div>
+              </CardBody>
+            </Card>
+          )}
+        </div>
 
         {/* Add form */}
         {showAdd && isAdmin && (
@@ -251,13 +297,33 @@ export default function AccountsPage() {
           </Card>
         )}
 
-        {/* Accounts list */}
-        <DataList
-          columns={columns}
-          data={accounts}
-          keyExtractor={a => a.id}
-          empty={<Empty title="هنوز حسابی ثبت نشده" sub={isAdmin ? 'از دکمه بالا یک حساب اضافه کنید' : 'حسابی وجود ندارد'} icon={Banknote} />}
-        />
+        {/* ─── عملیاتی ─── */}
+        <div>
+          <div className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-3">
+            عملیاتی — نقدی · بانک · پوز
+          </div>
+          <DataList
+            columns={makeColumns()}
+            data={operational}
+            keyExtractor={a => a.id}
+            empty={<Empty title="هنوز حسابی ثبت نشده" sub={isAdmin ? 'از دکمه بالا یک حساب اضافه کنید' : 'حسابی وجود ندارد'} icon={Banknote} />}
+          />
+        </div>
+
+        {/* ─── آورده شرکا ─── */}
+        {equity.length > 0 && (
+          <div>
+            <div className="text-[11px] font-semibold text-stone-400 uppercase tracking-wide mb-3">
+              آورده شرکا — partner equity
+            </div>
+            <DataList
+              columns={makeColumns()}
+              data={equity}
+              keyExtractor={a => a.id}
+              empty={null}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

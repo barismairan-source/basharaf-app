@@ -57,12 +57,15 @@ export default function DashboardPage() {
   const transactions = useAppStore((s) => s.transactions);
   const accounts = useAppStore((s) => s.accounts);
   const contacts = useAppStore((s) => s.contacts);
+  const partners = useAppStore((s) => s.partners);
+  const partnersLoaded = useAppStore((s) => s.partnersLoaded);
+  const loadPartners = useAppStore((s) => s.loadPartners);
   const branchFilter = useAppStore((s) => s.branchFilter);
   const setBranchFilter = useAppStore((s) => s.setBranchFilter);
   const metrics = useDashboardMetrics();
 
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => { setHydrated(true); loadPartners(); }, [loadPartners]);
 
   const branchSummaryData = useMemo(() => {
     if (!user || user.role !== 'SuperAdmin' || branchFilter) return [];
@@ -96,11 +99,17 @@ export default function DashboardPage() {
   const canSeeFinance = canAccessSection(user, 'transactions');
 
   const activeContacts = canSeeContacts ? contacts.filter((c) => c.isActive) : [];
-  const partnerCards = activeContacts
-    .filter((c) => c.balance !== 0)
-    .sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
-    .slice(0, 6);
-  const allPartnersSettled = activeContacts.length > 0 && partnerCards.length === 0;
+
+  // شرکا — از partners API (نه contacts)
+  const activePartners = partners.filter(p => p.isActive);
+  // آورده هر شریک = مجموع حساب‌های partner_equity با partnerId مطابق
+  const partnerEquityAccounts = accounts.filter(a => a.type === 'partner_equity');
+  const partnerWithEquity = activePartners.map(p => ({
+    ...p,
+    equity: partnerEquityAccounts
+      .filter(a => a.partnerId === p.id)
+      .reduce((s, a) => s + a.balance, 0),
+  }));
 
   return (
     <div className="p-4 sm:p-6">
@@ -200,46 +209,47 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* وضعیت شرکا */}
-            {canSeeContacts && activeContacts.length > 0 && (
+            {/* وضعیت شرکا — منبع: partners API */}
+            {isAdmin && partnersLoaded && (
               <DashCard
                 title="وضعیت شرکا"
                 icon={Users2}
                 iconBg="bg-violet-50"
                 iconColor="text-violet-600"
-                onViewAll={() => router.push('/contacts')}
-                bodyClass={allPartnersSettled ? 'p-4' : 'p-4'}
+                onViewAll={() => router.push('/partners')}
               >
-                {allPartnersSettled ? (
-                  <div className="flex items-center gap-2 text-[12.5px] text-emerald-700">
-                    <CheckCircle2 size={14} strokeWidth={1.75} className="shrink-0" />
-                    <span>همه‌ی طرف‌حساب‌ها تسویه‌اند</span>
+                {activePartners.length === 0 ? (
+                  <div className="text-[12px] text-muted py-1">
+                    هنوز شریکی ثبت نشده
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {partnerCards.map((c) => (
+                    {partnerWithEquity.map((p) => (
                       <button
-                        key={c.id}
+                        key={p.id}
                         type="button"
-                        onClick={() => router.push('/contacts')}
+                        onClick={() => router.push(`/partners/${p.id}`)}
                         className="bg-stone-50 hover:bg-stone-100 rounded-lg px-4 py-3 text-right transition-colors"
                       >
-                        <div className="text-[11px] text-stone-500 truncate mb-1.5">{c.name}</div>
-                        <div
-                          className={cn(
-                            'text-[15px] font-semibold tabular-nums leading-none',
-                            c.balance > 0 ? 'text-emerald-700' : 'text-rose-700',
-                          )}
-                          title={`${fmt(c.balance)} تومان`}
-                        >
-                          {formatMoneyShort(c.balance)}
-                        </div>
-                        <div className={cn(
-                          'text-[10px] mt-1',
-                          c.balance > 0 ? 'text-emerald-600' : 'text-rose-600',
-                        )}>
-                          {c.balance > 0 ? 'بستانکار' : 'بدهکار'}
-                        </div>
+                        <div className="text-[11px] text-stone-500 truncate mb-1.5">{p.fullName}</div>
+                        {partnerEquityAccounts.some(a => a.partnerId === p.id) ? (
+                          <>
+                            <div
+                              className={cn(
+                                'text-[15px] font-semibold tabular-nums leading-none',
+                                p.equity >= 0 ? 'text-emerald-700' : 'text-rose-700',
+                              )}
+                              title={`${fmt(p.equity)} تومان`}
+                            >
+                              {formatMoneyShort(p.equity)}
+                            </div>
+                            <div className={cn('text-[10px] mt-1', p.equity >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                              {p.equity < 0 ? 'آورده‌ی خرج‌شده' : 'موجودی آورده'}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-[11px] text-muted mt-1">آورده ثبت نشده</div>
+                        )}
                       </button>
                     ))}
                   </div>

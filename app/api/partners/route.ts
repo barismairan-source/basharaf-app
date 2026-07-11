@@ -27,7 +27,8 @@ export async function GET() {
         branchName: schema.branches.name,
       })
       .from(schema.partnerBranches)
-      .leftJoin(schema.branches, eq(schema.branches.id, schema.partnerBranches.branchId));
+      .leftJoin(schema.branches, eq(schema.branches.id, schema.partnerBranches.branchId))
+      .where(eq(schema.partnerBranches.isActive, true));
 
     const branchMap = new Map<string, Array<{
       id: string;
