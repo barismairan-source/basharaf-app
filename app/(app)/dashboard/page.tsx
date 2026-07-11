@@ -18,6 +18,8 @@ import {
   HRSummaryCard,
   RecruitmentWidget,
   DashCard,
+  TrendChart,
+  TodayCashFlow,
 } from '@/components/dashboard';
 import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import { fmt } from '@/lib/utils';
@@ -129,6 +131,7 @@ export default function DashboardPage() {
           <div className="space-y-3">
             <SectionLabel>نبض سیستم</SectionLabel>
             <FlashReportCard />
+            <TodayCashFlow branchId={branchFilter ?? undefined} />
             <AnomalyBanner />
           </div>
         )}
@@ -178,6 +181,9 @@ export default function DashboardPage() {
                 icon={Clock}
               />
             </div>
+
+            {/* نمودار ۱۴ روزه */}
+            <TrendChart branchId={branchFilter ?? undefined} />
 
             {/* حساب‌های بانکی */}
             {accounts.length > 0 && (
