@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.16.0-ownership-faz2` |
+| **نسخه** | `0.16.1-ownership-faz3-prep` |
 | **آخرین به‌روزرسانی** | 2026-07-11 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده (در انتظار deploy). |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) |
+| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | مرحله ۳ SQL (data migration) با UUID واقعی — کاربر و Claude با هم از pgAdmin اجرا می‌کنند |
-| **بلاک‌شده/منتظر کاربر** | ⏳ تأیید deploy فاز ۲ + آماده‌شدن برای مرحله ۳ SQL |
+| **کار بعدی پیشنهادی** | کاربر بخش A فایل `db-ownership-data-migration.sql` را در pgAdmin اجرا و نام شعبه را تأیید می‌کند → سپس بخش B را اجرا می‌کند → سپس Faz 3 کد (partner_id به Drizzle) |
+| **بلاک‌شده/منتظر کاربر** | ⏳ اجرای بخش A و B فایل `db-ownership-data-migration.sql` در pgAdmin |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -62,6 +62,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-11 — Faz 3 prep — SQL data migration + bugfix (v0.16.1) — اکانت ۱
+**چه شد:**
+- `db-ownership-data-migration.sql` ساخته شد: self-contained، بدون UUID دستی، idempotent.
+  بخش A (SELECT تأییدی) → بخش B (DO block: get-or-insert partners، partner_branches، UPDATE accounts) → بخش C (SELECT نهایی).
+  برای نام شعبه از subquery استفاده شد؛ اگر نام اشتباه باشد RAISE EXCEPTION می‌دهد.
+- **bugfix**: POST /api/partners/[id]/branches — بررسی تکراری برای ستادی (branch_id=null) اشتباه بود:
+  از `isNull(schema.partnerBranches.branchId)` استفاده شد.
+- بررسی edge cases UI (بند ۳): همه حالت‌ها (قبل از migration، بعد از SQL، بعد از Faz3 code) gracefully handle می‌شوند.
+**فایل‌ها:** `db-ownership-data-migration.sql` (جدید)، `app/api/partners/[id]/branches/route.ts`
+**Build:** tsc ✅ ۰ خطا
+**ناتمام:** —
+**برای جلسه‌ی بعد:** کاربر بخش A فایل SQL را در pgAdmin اجرا می‌کند → نام دقیق شعبه را می‌بیند → اگر نام فرق دارد v_branch_name را در فایل ویرایش می‌کند → بخش B را اجرا می‌کند → خبر می‌دهد. بعد از تأیید بخش C: Faz 3 کد — partner_id به Drizzle schema accounts اضافه، API حساب‌ها partnerId واقعی برمی‌گرداند.
 
 ## 📓 2026-07-11 — مدل مالکیت: Faz 2 — UI شرکا (v0.16.0) — اکانت ۱
 **چه شد:**
