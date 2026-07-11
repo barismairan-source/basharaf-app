@@ -11,3 +11,5 @@ export { AttentionWidget } from './AttentionWidget';
 export { HRSummaryCard } from './HRSummaryCard';
 export { RecruitmentWidget } from './RecruitmentWidget';
 export { DashCard } from './DashCard';
+export { TrendChart } from './TrendChart';
+export { TodayCashFlow } from './TodayCashFlow';
