@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.13.0-dashboard-hierarchy` |
-| **آخرین به‌روزرسانی** | 2026-07-10 — اکانت: ۱ |
+| **نسخه** | `0.14.0-dashboard-dataviz` |
+| **آخرین به‌روزرسانی** | 2026-07-11 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
 | **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | تست دستی داشبورد: ① نبض سیستم فقط SuperAdmin، ② AttentionWidget در بالا، ③ KPI اعداد text-2xl، کارت‌های شرکا bg-stone-50، ⑥ RecruitmentWidget فقط status=new حداکثر ۳ ردیف بدون ستاره. موبایل ۳۹۰px: بخش‌های ① و ② کامل نمایان. |
+| **کار بعدی پیشنهادی** | تست دستی داشبورد با داده‌ی واقعی: ① TodayCashFlow فقط اگر تراکنش امروز داشته باشد. ③ TrendChart فقط اگر ≥۳ روز داده باشد (bar دوسری سبز/قرمز). ④ BranchSummary bar افقی. BreakdownCard top-5 با formatMoneyShort. |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -62,6 +62,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-11 — نمودارهای واقعی داشبورد (v0.14.0) — اکانت ۱
+**چه شد:** فاز dataviz — ۴ commit روی `feat/dashboard-dataviz` سپس merge به main:
+1. **API `/api/dashboard/trends`**: یک query `GROUP BY date` روی تراکنش‌های ۱۴ روز اخیر (createdAt). برمی‌گرداند `{days, todayIncome, todayExpense}`. حداکثر ۲ query جدید در کل فاز — این اولی و تنهاست.
+2. **TrendChart**: recharts BarChart دوسری (income=emerald, expense=rose). محور Y سمت راست. tooltip فارسی با formatMoneyShort و تاریخ جلالی. قانون: <3 روز داده → null.
+3. **TodayCashFlow**: دو کارت کوچک ورودی/خروجی امروز از همان endpoint. اگر هر دو صفر → null.
+4. **BreakdownCard**: formatMoneyShort رنگی به‌جای fmt، top-5، bar 5px. **BranchSummary**: جدول متنی → دو bar افقی نسبی (incW/expW نسبت به max). موجودی بالای ردیف.
+**فایل‌ها:** `app/api/dashboard/trends/route.ts` (جدید)، `components/dashboard/TrendChart.tsx` (جدید)، `components/dashboard/TodayCashFlow.tsx` (جدید)، `components/dashboard/index.ts`، `components/dashboard/BreakdownCard.tsx`، `components/dashboard/BranchSummary.tsx`، `app/(app)/dashboard/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست دستی با داده‌ی واقعی. TrendChart فقط اگر ≥۳ روز داشته باشد render شود (وگرنه null). tooltip hover/tap روی موبایل بررسی شود.
 
 ## 📓 2026-07-10 — بازچینی سلسله‌مراتب داشبورد (v0.13.0) — اکانت ۱
 **چه شد:** فاز hierarchy داشبورد — ۶ commit روی شاخه‌ی `refactor/dashboard-hierarchy` سپس merge به main:
@@ -115,8 +126,3 @@
 **Build:** tsc ✅ · build ✅ · 48 unit tests ✅
 **ناتمام:** —
 
-## 📓 2026-07-08 — HR UX بهبود پنل استخدام (v0.10.1) — اکانت ۱
-**چه شد:** سوال کامل در detail card، حل ~7MB payload (resumeUrl حذف → hasResume:boolean + pagination 50تایی)، endpoint دانلود رزومه برای Safari iOS، error state در /apply.
-**فایل‌ها:** `lib/recruitment/questions.ts`، `app/api/recruitment/route.ts`، `app/api/recruitment/[id]/resume/route.ts`، `recruitmentSlice.ts`، `recruitment/page.tsx`، `apply/page.tsx`
-**Build:** tsc ✅ · build ✅ · 48 unit tests ✅
-**ناتمام:** —
