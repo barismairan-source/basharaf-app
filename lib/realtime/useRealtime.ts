@@ -119,6 +119,7 @@ export function useRealtime() {
           balance: Number(row.balance ?? 0),
           isActive: row.is_active as boolean,
           branchId: (row.branch_id as string) ?? null,
+          partnerId: null,
           createdAt: String(row.created_at),
           updatedAt: String(row.updated_at),
         };

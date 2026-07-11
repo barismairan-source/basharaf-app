@@ -383,6 +383,34 @@ export const auditLog = pgTable(
 
 export type AuditLogEntry = typeof auditLog.$inferSelect;
 
+// ─── Partners (شرکا — اشخاص سرمایه‌گذار) ─────────────────────────
+/**
+ * جدول partners — شرکای مجموعه.
+ *
+ * شریک یک شخص است، نه صندوق. آورده‌ی سرمایه از طریق حساب‌های
+ * type='partner_equity' در جدول accounts ردیابی می‌شود.
+ * رابطه شریک↔شعبه در جدول partner_branches است.
+ */
+export const partners = pgTable(
+  'partners',
+  {
+    id:         uuid('id').primaryKey().defaultRandom(),
+    fullName:   text('full_name').notNull(),
+    phone:      text('phone'),
+    nationalId: text('national_id'),
+    note:       text('note'),
+    isActive:   boolean('is_active').notNull().default(true),
+    createdAt:  timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt:  timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    nameIdx:   index('partners_name_idx').on(t.fullName),
+    activeIdx: index('partners_active_idx').on(t.isActive),
+  })
+);
+
+export type Partner = typeof partners.$inferSelect;
+
 // ─── Accounts (صندوق‌ها و حساب‌های بانکی) ────────────────────────
 /**
  * جدول accounts — صندوق‌های نقدی و حساب‌های بانکی.
@@ -431,6 +459,57 @@ export const contacts = pgTable('contacts', {
 });
 
 export type Contact = typeof contacts.$inferSelect;
+
+// ─── Partner Branches (رابطه شریک↔شعبه) ──────────────────────────
+/**
+ * یک شریک می‌تواند در چند شعبه سرمایه داشته باشد.
+ * branchId=null یعنی «ستادی» (آورده به کل مجموعه، نه شعبه‌ی خاص).
+ *
+ * قرارداد UNIQUE با NULL:
+ *   Postgres دو NULL را یکتا تلقی نمی‌کند در UNIQUE constraint معمولی.
+ *   از دو partial index استفاده شده — ر.ک. db-ownership-model-migration.sql
+ */
+export const partnerBranches = pgTable(
+  'partner_branches',
+  {
+    id:           uuid('id').primaryKey().defaultRandom(),
+    partnerId:    uuid('partner_id').notNull().references(() => partners.id, { onDelete: 'restrict' }),
+    branchId:     uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }), // null=ستادی
+    sharePercent: numeric('share_percent', { precision: 5, scale: 2 }),
+    joinedDate:   text('joined_date'),
+    isActive:     boolean('is_active').notNull().default(true),
+    createdAt:    timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt:    timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    // دو partial index به‌جای UNIQUE معمولی — ر.ک. db-ownership-model-migration.sql
+    partnerBranchUniq: uniqueIndex('pb_unique_partner_branch')
+      .on(t.partnerId, t.branchId)
+      .where(sql`${t.branchId} IS NOT NULL`),
+    partnerHqUniq: uniqueIndex('pb_unique_partner_hq')
+      .on(t.partnerId)
+      .where(sql`${t.branchId} IS NULL`),
+    partnerIdx: index('pb_partner_idx').on(t.partnerId),
+    branchIdx:  index('pb_branch_idx').on(t.branchId),
+  })
+);
+
+export type PartnerBranch = typeof partnerBranches.$inferSelect;
+
+export const partnersRelations = relations(partners, ({ many }) => ({
+  branches: many(partnerBranches),
+}));
+
+export const partnerBranchesRelations = relations(partnerBranches, ({ one }) => ({
+  partner: one(partners, {
+    fields: [partnerBranches.partnerId],
+    references: [partners.id],
+  }),
+  branch: one(branches, {
+    fields: [partnerBranches.branchId],
+    references: [branches.id],
+  }),
+}));
 
 // ─── Recruitment (استخدام) ──────────────────────────────────────
 export const applicationStatusEnum = pgEnum('application_status', [

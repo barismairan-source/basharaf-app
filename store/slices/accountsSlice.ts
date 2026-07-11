@@ -47,6 +47,7 @@ export const createAccountsSlice: StateCreator<AccountsSlice> = (set, get) => ({
       balance: 0,
       isActive: true,
       branchId: params.branchId ?? null,
+      partnerId: null,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

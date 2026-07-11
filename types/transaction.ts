@@ -164,10 +164,12 @@ export type TransactionPatch = Partial<
 export interface Account {
   id: string;
   name: string;
-  type: 'cash' | 'bank' | 'pos' | string;
+  type: 'cash' | 'bank' | 'pos' | 'partner_equity' | string;
   balance: number;
   isActive: boolean;
   branchId: string | null;
+  /** در Faz 3 از DB می‌آید؛ تا آن زمان null است */
+  partnerId: string | null;
   createdAt: string;
   updatedAt: string;
 }

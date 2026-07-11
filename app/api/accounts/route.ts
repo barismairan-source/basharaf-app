@@ -7,7 +7,7 @@ import { ApiError, handleError } from '@/lib/api-error';
 
 const createSchema = z.object({
   name: z.string().min(2).max(80).transform(v => v.trim()),
-  type: z.enum(['cash', 'bank', 'pos']).default('cash'),
+  type: z.enum(['cash', 'bank', 'pos', 'partner_equity']).default('cash'),
   branchId: z.string().uuid().nullable().optional(),
 });
 
@@ -23,9 +23,10 @@ export async function GET() {
         id: a.id,
         name: a.name,
         type: a.type,
-        balance: Number(a.balance), // BigInt fix
+        balance: Number(a.balance),
         isActive: a.isActive,
         branchId: a.branchId,
+        partnerId: null, // Faz 3: از DB خواهد آمد بعد از اضافه‌شدن ستون به Drizzle
         createdAt: a.createdAt.toISOString(),
         updatedAt: a.updatedAt.toISOString(),
       })),
@@ -56,6 +57,7 @@ export async function POST(req: Request) {
         balance: Number(inserted.balance),
         isActive: inserted.isActive,
         branchId: inserted.branchId,
+        partnerId: null,
         createdAt: inserted.createdAt.toISOString(),
         updatedAt: inserted.updatedAt.toISOString(),
       }

@@ -26,3 +26,4 @@ export * from './inventory';
 export type { Cheque, ChequeStatus, ChequeKind, NewChequeInput } from './cheque';
 export * from './operations';
 export * from './ordering';
+export type { Partner, PartnerBranchAssoc } from './partner';

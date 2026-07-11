@@ -38,6 +38,7 @@ import { createReservationsSlice, type ReservationsSlice } from './slices/reserv
 import { createFeedbackSlice, type FeedbackSlice } from './slices/feedbackSlice';
 import { createOperationsSlice, type OperationsSlice } from './slices/operationsSlice';
 import { createTasksSlice, type TasksSlice } from './slices/tasksSlice';
+import { createPartnersSlice, type PartnersSlice } from './slices/partnersSlice';
 
 export type AppStore = AuthSlice &
   TransactionsSlice &
@@ -59,7 +60,8 @@ export type AppStore = AuthSlice &
   ReservationsSlice &
   FeedbackSlice &
   OperationsSlice &
-  TasksSlice & {
+  TasksSlice &
+  PartnersSlice & {
     bootstrapped: boolean;
     bootstrap: () => Promise<void>;
   };
@@ -126,6 +128,7 @@ export const useAppStore = create<AppStore>()(
       ...createFeedbackSlice(set as any, get as any, api as any),
       ...createOperationsSlice(set as any, get as any, api as any),
       ...createTasksSlice(set as any, get as any, api as any),
+      ...createPartnersSlice(set as any, get as any, api as any),
 
       transactions: [],
       users: [],
@@ -182,6 +185,9 @@ export const useAppStore = create<AppStore>()(
       tasks: [],
       tasksLoaded: false,
       tasksError: null,
+      partners: [],
+      partnersLoaded: false,
+      partnersError: null,
       bootstrapped: false,
 
       async bootstrap() {

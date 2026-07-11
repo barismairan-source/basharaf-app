@@ -7,7 +7,7 @@ import { ApiError, handleError } from '@/lib/api-error';
 
 const patchSchema = z.object({
   name: z.string().min(2).max(80).optional(),
-  type: z.enum(['cash', 'bank', 'pos']).optional(),
+  type: z.enum(['cash', 'bank', 'pos', 'partner_equity']).optional(),
   isActive: z.boolean().optional(),
 });
 
