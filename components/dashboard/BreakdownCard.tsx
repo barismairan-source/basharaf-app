@@ -1,4 +1,5 @@
 import { Card, CardHeader, CardBody, Empty } from '@/components/ui';
+import { formatMoneyShort } from '@/lib/design/format';
 import { fmt } from '@/lib/utils';
 import { PieChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -38,8 +39,11 @@ export function BreakdownCard({
 }: BreakdownCardProps) {
   const colorClasses =
     tone === 'income'
-      ? { bg: 'bg-emerald-100', fill: 'bg-emerald-500' }
-      : { bg: 'bg-rose-100', fill: 'bg-rose-500' };
+      ? { bg: 'bg-emerald-100', fill: 'bg-emerald-500', text: 'text-emerald-700' }
+      : { bg: 'bg-rose-100', fill: 'bg-rose-500', text: 'text-rose-700' };
+
+  // top-5
+  const top = data.slice(0, 5);
 
   return (
     <Card>
@@ -48,41 +52,36 @@ export function BreakdownCard({
         sub={subtitle ?? `${data.length} دسته`}
       />
       <CardBody>
-        {data.length === 0 ? (
+        {top.length === 0 ? (
           <Empty
             icon={PieChart}
             title="داده‌ای برای نمایش نیست"
             sub="بعد از تایید اولین تراکنش‌ها، تفکیک اینجا ظاهر می‌شود."
           />
         ) : (
-          <div className="space-y-3">
-            {data.map((row) => (
+          <div className="space-y-3.5">
+            {top.map((row) => (
               <div key={row.category}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <div className="text-[12.5px] text-stone-700 truncate">
+                <div className="flex items-center justify-between gap-3 mb-1.5">
+                  <div className="text-[12.5px] text-stone-700 truncate flex-1">
                     {row.category}
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <div className="text-[12px] text-stone-900 tabular-nums font-medium">
-                      {fmt(row.amount)}
+                  <div className="flex items-center gap-2.5 shrink-0">
+                    <div
+                      className={cn('text-[12px] tabular-nums font-semibold', colorClasses.text)}
+                      title={`${fmt(row.amount)} تومان`}
+                    >
+                      {formatMoneyShort(row.amount)}
                     </div>
-                    <div className="text-[10.5px] text-muted tabular-nums w-10 text-end">
+                    <div className="text-[10.5px] text-muted tabular-nums w-8 text-end">
                       {Math.round(row.percent)}٪
                     </div>
                   </div>
                 </div>
-                {/* Bar */}
-                <div
-                  className={cn(
-                    'relative h-1.5 rounded-full overflow-hidden',
-                    colorClasses.bg
-                  )}
-                >
+                {/* Bar نسبی */}
+                <div className={cn('relative h-[5px] rounded-full overflow-hidden', colorClasses.bg)}>
                   <div
-                    className={cn(
-                      'absolute top-0 start-0 h-full rounded-full transition-all',
-                      colorClasses.fill
-                    )}
+                    className={cn('absolute top-0 start-0 h-full rounded-full', colorClasses.fill)}
                     style={{ width: `${Math.max(2, row.percent)}%` }}
                   />
                 </div>
