@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
@@ -31,7 +31,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       .from(schema.partnerBranches)
       .where(
         branchId === null
-          ? and(eq(schema.partnerBranches.partnerId, params.id), eq(schema.partnerBranches.isActive, true))
+          ? and(
+              eq(schema.partnerBranches.partnerId, params.id),
+              isNull(schema.partnerBranches.branchId),
+              eq(schema.partnerBranches.isActive, true),
+            )
           : and(
               eq(schema.partnerBranches.partnerId, params.id),
               eq(schema.partnerBranches.branchId, branchId),
