@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.14.0-dashboard-dataviz` |
+| **نسخه** | `0.15.0-ownership-faz1` |
 | **آخرین به‌روزرسانی** | 2026-07-11 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ · 48 unit tests سبز |
-| **دیپلوی** | ✅ GitHub Actions فعال. همه migration‌ها روی production. Branch: `main` — push شده. |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
+| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده (در انتظار deploy). |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | تست دستی داشبورد با داده‌ی واقعی: ① TodayCashFlow فقط اگر تراکنش امروز داشته باشد. ③ TrendChart فقط اگر ≥۳ روز داده باشد (bar دوسری سبز/قرمز). ④ BranchSummary bar افقی. BreakdownCard top-5 با formatMoneyShort. |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **کار بعدی پیشنهادی** | **کاربر باید مرحله ۱ SQL را در pgAdmin اجرا کند** (فایل: `db-ownership-model-migration.sql`)، سپس خبر بدهد تا فاز ۲ (UI شرکا) شروع شود. |
+| **بلاک‌شده/منتظر کاربر** | ⏳ اجرای مرحله ۱ SQL توسط کاربر در pgAdmin |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -62,6 +62,24 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-11 — مدل مالکیت: Faz 0+1 (v0.15.0) — اکانت ۱
+**چه شد:**
+1. **Faz 0 — SQL migration**: `db-ownership-model-migration.sql` ساخته شد. مرحله ۱: جدول `partners`، جدول `partner_branches` با دو partial unique index (حل مشکل NULL uniqueness در PostgreSQL)، ستون `partner_id` nullable روی `accounts`. مرحله ۳ کامنت‌شده برای اجرای بعد از deploy.
+2. **Faz 1 — کد**:
+   - `lib/db/schema.ts`: جداول `partners` و `partnerBranches` با relations اضافه شد (partner_id روی accounts اضافه نشد — backward compat)
+   - `types/partner.ts`: Partner, PartnerBranchAssoc (فایل جدید)
+   - `Account.partnerId: string | null` اضافه شد (همه‌جا null تا Faz 3)
+   - `app/api/partners/route.ts`: GET+POST (requireAdmin)
+   - `app/api/partners/[id]/route.ts`: PATCH+DELETE (soft)
+   - accounts API: 'partner_equity' به enum اضافه شد
+   - `store/slices/partnersSlice.ts`: loadPartners, createPartner, updatePartner, deletePartner
+   - `store/index.ts`: PartnersSlice اضافه شد
+3. tsc ✅ ۰ خطا · build ✅ · دو commit جداگانه push شد.
+**فایل‌ها:** `db-ownership-model-migration.sql`، `lib/db/schema.ts`، `types/partner.ts`، `types/transaction.ts`، `types/index.ts`، `app/api/partners/route.ts`، `app/api/partners/[id]/route.ts`، `app/api/accounts/route.ts`، `app/api/accounts/[id]/route.ts`، `store/slices/partnersSlice.ts`، `store/index.ts`، `store/slices/accountsSlice.ts`، `lib/realtime/useRealtime.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ⚠️ کاربر باید مرحله ۱ SQL را در pgAdmin اجرا کند (فایل `db-ownership-model-migration.sql`، فقط تا خط `END $$;` — مرحله ۳ هنوز نه). بعد از تأیید: Faz 2 = صفحه‌ی شرکا در `/settings` یا صفحه‌ی مستقل، جایگزینی type='cash' به 'partner_equity'، فیلتر حساب‌های شریک در فرم تراکنش.
 
 ## 📓 2026-07-11 — نمودارهای واقعی داشبورد (v0.14.0) — اکانت ۱
 **چه شد:** فاز dataviz — ۴ commit روی `feat/dashboard-dataviz` سپس merge به main:
