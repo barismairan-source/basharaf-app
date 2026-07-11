@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.15.0-ownership-faz1` |
+| **نسخه** | `0.16.0-ownership-faz2` |
 | **آخرین به‌روزرسانی** | 2026-07-11 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده (در انتظار deploy). |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | **کاربر باید مرحله ۱ SQL را در pgAdmin اجرا کند** (فایل: `db-ownership-model-migration.sql`)، سپس خبر بدهد تا فاز ۲ (UI شرکا) شروع شود. |
-| **بلاک‌شده/منتظر کاربر** | ⏳ اجرای مرحله ۱ SQL توسط کاربر در pgAdmin |
+| **کار بعدی پیشنهادی** | مرحله ۳ SQL (data migration) با UUID واقعی — کاربر و Claude با هم از pgAdmin اجرا می‌کنند |
+| **بلاک‌شده/منتظر کاربر** | ⏳ تأیید deploy فاز ۲ + آماده‌شدن برای مرحله ۳ SQL |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -62,6 +62,21 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-11 — مدل مالکیت: Faz 2 — UI شرکا (v0.16.0) — اکانت ۱
+**چه شد:**
+- مرحله ۱ SQL توسط کاربر در pgAdmin اجرا و تأیید شد (partners, partner_branches, ALTER accounts).
+- **صفحه /partners**: لیست شرکا، فرم افزودن، جستجو، نمایش شعب هر شریک، لینک به پروفایل.
+- **صفحه /partners/[id]**: ویرایش inline مشخصات، مدیریت رابطه شریک↔شعبه (افزودن با JalaliDatePicker + حذف نرم)، بخش آورده سرمایه (partner_equity accounts، برچسب «آورده‌ی خرج‌شده» برای منفی).
+- **API**: POST/DELETE /api/partners/[id]/branches با bررسی تکراری و partial uniqueness.
+- **store/slices/partnersSlice.ts**: addPartnerBranch، removePartnerBranch اضافه شد.
+- **accounts page**: grouping (عملیاتی vs آورده شرکا)، totalBalance بدون equity، کارت جداگانه equity با برچسب.
+- **dashboard**: بخش «وضعیت شرکا» از partners API (نه contacts)؛ اگر خالی = یک‌خطه.
+- **nav-config**: آیتم «شرکا» با Handshake در «روابط و منابع» اضافه شد.
+**فایل‌ها:** `app/(app)/partners/page.tsx`، `app/(app)/partners/[id]/page.tsx`، `app/(app)/partners/layout.tsx`، `app/api/partners/[id]/branches/route.ts`، `app/api/partners/[id]/branches/[pbId]/route.ts`، `app/(app)/accounts/page.tsx`، `app/(app)/dashboard/page.tsx`، `components/layout/nav-config.ts`، `store/slices/partnersSlice.ts`، `app/api/partners/route.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ⚠️ مرحله ۳ SQL (data migration): درج حسین شرف + شهریار شرف در partners، درج partner_branches، UPDATE accounts.type='partner_equity' + accounts.partner_id. UUID‌ها باید از DB واقعی گرفته شوند. بعد از مرحله ۳: Faz 3 — partner_id به Drizzle schema اضافه می‌شود و API حساب‌ها partnerId واقعی برمی‌گرداند.
 
 ## 📓 2026-07-11 — مدل مالکیت: Faz 0+1 (v0.15.0) — اکانت ۱
 **چه شد:**
