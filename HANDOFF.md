@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.20.0-faz7-integrated-flow` |
+| **نسخه** | `0.20.1-cleanup-removed` |
 | **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) کاربر Settings→«پاک‌سازی طرف‌حساب» را انجام دهد → خبر دهد → commit جداگانه: حذف صفحه پاک‌سازی. ۲) migration `db-setup-flag-migration.sql` بخش B هنوز منتظر. ۳) فاز ۸ احتمالی: P&L drilldown یا disconnect‌های حسابداری. |
-| **بلاک‌شده/منتظر کاربر** | ⏳ کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد. ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
+| **کار بعدی پیشنهادی** | ۱) migration `db-setup-flag-migration.sql` بخش B در pgAdmin (is_setup + opening_date). ۲) فاز ۸ احتمالی: P&L drilldown یا disconnect‌های حسابداری. |
+| **بلاک‌شده/منتظر کاربر** | ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -63,6 +63,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-12 — حذف ابزار پاک‌سازی (v0.20.1) — اکانت ۱
+**چه شد:** کاربر پاک‌سازی طرف‌حساب‌ها را انجام داد. طبق قرار، ابزار موقت حذف شد:
+- `app/api/admin/contact-cleanup/` (کل دایرکتوری) حذف شد.
+- `components/settings/ContactCleanupPane.tsx` حذف شد.
+- `SettingsNav.tsx`: tab `contact-cleanup` و import `UserX` حذف شدند.
+- `components/settings/index.ts`: export حذف شد.
+- `app/(app)/settings/page.tsx`: import و render block حذف شدند.
+**فایل‌ها:** ۵ فایل ویرایش، ۳ فایل حذف.
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** DB migration بخش B (is_setup + opening_date). بعد فاز ۸.
 
 ## 📓 2026-07-12 — Faz 7 — جریان یکپارچه چک↔طرف‌حساب↔تراکنش↔دسته (v0.20.0) — اکانت ۱
 **چه شد:**
