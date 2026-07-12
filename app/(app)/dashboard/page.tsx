@@ -62,10 +62,21 @@ export default function DashboardPage() {
   const loadPartners = useAppStore((s) => s.loadPartners);
   const branchFilter = useAppStore((s) => s.branchFilter);
   const setBranchFilter = useAppStore((s) => s.setBranchFilter);
-  const metrics = useDashboardMetrics();
 
+  const [viewMode, setViewMode] = useState<'operational' | 'full'>('operational');
   const [hydrated, setHydrated] = useState(false);
-  useEffect(() => { setHydrated(true); loadPartners(); }, [loadPartners]);
+  const metrics = useDashboardMetrics(viewMode);
+  useEffect(() => {
+    const saved = localStorage.getItem('ba-view-mode');
+    if (saved === 'full') setViewMode('full');
+    setHydrated(true);
+    loadPartners();
+  }, [loadPartners]);
+
+  function toggleViewMode(mode: 'operational' | 'full') {
+    setViewMode(mode);
+    try { localStorage.setItem('ba-view-mode', mode); } catch {}
+  }
 
   const branchSummaryData = useMemo(() => {
     if (!user || user.role !== 'SuperAdmin' || branchFilter) return [];
@@ -160,7 +171,25 @@ export default function DashboardPage() {
             ══════════════════════════════════════════════════════════════ */}
         {!isOperational && canSeeFinance && (
           <div className="space-y-4">
-            <SectionLabel>تراز مالی</SectionLabel>
+            <div className="flex items-center justify-between">
+              <SectionLabel>تراز مالی</SectionLabel>
+              <div className="flex items-center gap-0.5 bg-stone-100 rounded-md p-0.5">
+                {(['operational', 'full'] as const).map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => toggleViewMode(m)}
+                    className={`px-3 py-1 rounded text-[11px] font-medium transition-colors ${
+                      viewMode === m
+                        ? 'bg-white text-stone-900 shadow-sm'
+                        : 'text-stone-500 hover:text-stone-700'
+                    }`}
+                  >
+                    {m === 'operational' ? 'عملیاتی' : 'کامل'}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* KPI grid — ۴ کارت هم‌ارتفاع */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
@@ -190,6 +219,12 @@ export default function DashboardPage() {
                 icon={Clock}
               />
             </div>
+
+            {viewMode === 'operational' && metrics.setupExcludedExpense > 0 && (
+              <div className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                هزینه‌های راه‌اندازی ({fmt(metrics.setupExcludedExpense)} تومان) در این نما لحاظ نشده
+              </div>
+            )}
 
             {/* نمودار ۱۴ روزه */}
             <TrendChart branchId={branchFilter ?? undefined} />

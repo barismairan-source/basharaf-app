@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.17.0-faz4-tx-form` |
+| **نسخه** | `0.18.0-faz5-operational-lens` |
 | **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) کاربر بخش A+B فایل `db-ownership-data-migration.sql` را در pgAdmin اجرا کند. ۲) بعد از تأیید: Faz 3 کد — partner_id به Drizzle schema accounts اضافه، API حساب‌ها partnerId واقعی برمی‌گرداند |
-| **بلاک‌شده/منتظر کاربر** | ⏳ اجرای بخش A و B فایل `db-ownership-data-migration.sql` در pgAdmin |
+| **کار بعدی پیشنهادی** | ۱) کاربر migration `db-setup-flag-migration.sql` را در pgAdmin اجرا کند (بخش B). ۲) دسته‌های راه‌اندازی را در Settings→دسته‌ها با آیکون Construction علامت بزند. ۳) بعد از آن: Faz 3 کد — partner_id واقعی در API حساب‌ها. |
+| **بلاک‌شده/منتظر کاربر** | ⏳ اجرای بخش B فایل `db-setup-flag-migration.sql` در pgAdmin (ALTER TABLE + UPDATE) |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -54,6 +54,7 @@
 ## 🏗 بخش ۴ — مرجع پایدار (قبل از دست‌زدن به مالی بخوان)
 
 - `accounts.balance` فیلد **cache** است: همیشه از reverse transaction‌ها محاسبه شده. هر تراکنش معکوس جا مانده = drift دائمی.
+- ⚠ **INVARIANT فاز ۵**: `accounts.balance` هرگز توسط فیلتر `is_setup` (لنز عملیاتی) تغییر نمی‌کند. این فیلتر فقط روی KPI‌های جریان مالی (income/expense/profit) در داشبورد و گزارش‌ها اثر دارد — ترازنامه مستقل است.
 - پول **bigint تومان** در DB؛ در TypeScript `number` (JS safe integer تا ۹۰۰۰ تریلیون کافی است).
 - تاریخ کاربری **جلالی text** (مثل `۱۴۰۳-۰۴-۱۵`)؛ تاریخ داخلی `timestamp` میلادی.
 - `JWT_SECRET` حتماً ≥۳۲ کاراکتر.
@@ -62,6 +63,23 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-12 — Faz 5 — لنز گزارش‌گیری «عملیاتی vs کامل» (v0.18.0) — اکانت ۱
+**چه شد:**
+- **فیلد `is_setup` روی categories**: schema + migration آماده (`db-setup-flag-migration.sql`). `Category` interface آپدیت شد. API `/categories/[id]` حالا `isSetup` را هم patch می‌کند.
+- **فیلد `opening_date` روی branches**: schema + migration آماده. `Branch` interface + validation schema آپدیت شد. API `/branches/[id]` حالا `openingDate` را هم patch می‌کند.
+- **repo/store layer**: `CategoriesRepo.update` signature عوض شد به `patch: {name?, isSetup?}`. `refsSlice.updateCategory` هم‌راستا شد. optimistic Category در `createCategory` حالا `isSetup: false` دارد.
+- **Settings → دسته‌ها**: هر ردیف هزینه یک دکمه Construction دارد — toggle `isSetup` بدون modal. اگر فعال باشد برچسب «راه‌اندازی» نمایش داده می‌شود.
+- **Settings → شعبه**: فیلد «تاریخ شروع بهره‌برداری» اختیاری در modal. در کارت شعبه نمایش داده می‌شود اگر ثبت شده باشد.
+- **API گزارش‌ها**: `excludeSetup=1` → دسته‌های `is_setup=true` از جریان مالی حذف می‌شوند. `setupExcludedExpense` در `summary` برگشت داده می‌شود. from/to از Jalali string مستقیم ارسال می‌شود (bug fix — قبلاً `new Date(jalali).toISOString()` اشتباه بود).
+- **`useDashboardMetrics`**: پارامتر `viewMode: 'operational'|'full'` دریافت می‌کند. دسته‌های `is_setup=true` از income/expense/balance و breakdown حذف می‌شوند. `setupExcludedExpense` در خروجی.
+- **داشبورد**: toggle «عملیاتی | کامل» در header بخش تراز مالی. state در `localStorage['ba-view-mode']`. disclaimer زیر KPI‌ها اگر هزینه‌ی حذف‌شده > ۰.
+- **صفحه گزارش‌ها**: همان toggle. دکمه «از افتتاح» فعال فقط اگر شعبه‌ی تکی انتخاب شده AND آن شعبه `openingDate` دارد. disclaimer زیر KPIها.
+- ⚠ **INVARIANT حفظ شد**: `accounts.balance` (ترازنامه‌ای) هرگز توسط فیلتر `is_setup` تغییر نمی‌کند — فقط جریان‌های مالی (income/expense/profit) تحت تأثیرند.
+**فایل‌ها:** `db/schema.ts`, `types/transaction.ts`, `types/branch.ts`, `lib/validations/settings.ts`, `app/api/categories/[id]/route.ts`, `app/api/branches/[id]/route.ts`, `app/api/reports/route.ts`, `lib/repos/types.ts`, `lib/repos/api.ts`, `store/slices/refsSlice.ts`, `lib/hooks/useDashboardMetrics.ts`, `components/settings/CategoriesPane.tsx`, `components/settings/BranchesPane.tsx`, `app/(app)/dashboard/page.tsx`, `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱) کاربر `db-setup-flag-migration.sql` بخش B را در pgAdmin اجرا کند. ۲) دسته‌های راه‌اندازی را در UI علامت بزند. ۳) Faz 3 کد (partner_id واقعی).
 
 ## 📓 2026-07-12 — Faz 4 — بازطراحی فرم ثبت تراکنش (v0.17.0) — اکانت ۱
 **چه شد:**

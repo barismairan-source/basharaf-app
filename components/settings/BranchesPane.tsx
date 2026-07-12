@@ -117,7 +117,13 @@ export function BranchesPane() {
                           <div className="text-[11px] text-muted mt-1.5 flex items-center gap-3 flex-wrap">
                             <span>مدیر: {b.manager}</span>
                             <span>·</span>
-                            <span>افتتاح: {b.opened}</span>
+                            <span>افتتاح ثبتی: {b.opened}</span>
+                            {b.openingDate && (
+                              <>
+                                <span>·</span>
+                                <span>شروع بهره‌برداری: {b.openingDate}</span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -215,13 +221,18 @@ function BranchModal({ mode, branch, onClose }: BranchModalProps) {
       address: branch?.address ?? '',
       manager: branch?.manager ?? '',
       opened: branch?.opened ?? '۱۴۰۵/۰۲/۳۱',
+      openingDate: branch?.openingDate ?? undefined,
     },
   });
 
   async function onSubmit(data: BranchFormInput) {
     if (!currentUser) return;
+    const normalized = {
+      ...data,
+      openingDate: data.openingDate ?? null,
+    };
     if (mode === 'add') {
-      const b = await createBranch(data, currentUser);
+      const b = await createBranch(normalized, currentUser);
       if (b) {
         showToast('شعبه اضافه شد', 'success', b.name);
         onClose();
@@ -229,7 +240,7 @@ function BranchModal({ mode, branch, onClose }: BranchModalProps) {
         showToast(branchesError ?? 'خطا در ایجاد شعبه', 'danger');
       }
     } else if (branch) {
-      const ok = await updateBranch(branch.id, data, currentUser);
+      const ok = await updateBranch(branch.id, normalized, currentUser);
       if (ok) {
         showToast('شعبه به‌روز شد', 'success', data.name);
         onClose();
@@ -307,11 +318,20 @@ function BranchModal({ mode, branch, onClose }: BranchModalProps) {
                 {...register('manager')}
               />
             </Field>
-            <Field label="تاریخ افتتاح (شمسی)" error={errors.opened?.message}>
+            <Field label="تاریخ افتتاح ثبتی (شمسی)" error={errors.opened?.message}>
               <Input
                 placeholder="۱۴۰۵/۰۲/۳۱"
                 hasError={!!errors.opened}
                 {...register('opened')}
+              />
+            </Field>
+            <Field
+              label="تاریخ شروع بهره‌برداری (اختیاری)"
+              error={errors.openingDate?.message}
+            >
+              <Input
+                placeholder="۱۴۰۵/۰۴/۰۱ — از این تاریخ «از افتتاح» در گزارش‌ها فعال می‌شود"
+                {...register('openingDate')}
               />
             </Field>
 

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2, Edit3, Tag, X, Check, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit3, Tag, X, Check, AlertCircle, Construction } from 'lucide-react';
 
 import {
   Button,
@@ -74,6 +74,7 @@ function CategoryColumn({ type, categories }: CategoryColumnProps) {
 
   const currentUser = useAppStore((s) => s.user);
   const deleteCategory = useAppStore((s) => s.deleteCategory);
+  const updateCategory = useAppStore((s) => s.updateCategory);
   const showToast = useAppStore((s) => s.showToast);
   const categoriesError = useAppStore((s) => s.categoriesError);
 
@@ -138,6 +139,12 @@ function CategoryColumn({ type, categories }: CategoryColumnProps) {
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <Chip tone={chipTone}>{c.name}</Chip>
+                    {type === 'expense' && c.isSetup && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        <Construction size={9} strokeWidth={1.5} />
+                        راه‌اندازی
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -162,6 +169,23 @@ function CategoryColumn({ type, categories }: CategoryColumnProps) {
                       </>
                     ) : (
                       <>
+                        {type === 'expense' && (
+                          <button
+                            type="button"
+                            title={c.isSetup ? 'حذف برچسب راه‌اندازی' : 'علامت‌گذاری به‌عنوان هزینه‌ی راه‌اندازی'}
+                            onClick={async () => {
+                              if (!currentUser) return;
+                              await updateCategory(type, c.id, { isSetup: !c.isSetup }, currentUser);
+                            }}
+                            className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${
+                              c.isSetup
+                                ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                                : 'text-stone-400 hover:bg-stone-100 hover:text-amber-600'
+                            }`}
+                          >
+                            <Construction size={11} strokeWidth={1.5} />
+                          </button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -246,7 +270,7 @@ function CategoryModal({ mode, type, category, onClose }: CategoryModalProps) {
         showToast(categoriesError ?? 'خطا', 'danger');
       }
     } else if (category) {
-      const ok = await updateCategory(type, category.id, data.name, currentUser);
+      const ok = await updateCategory(type, category.id, { name: data.name }, currentUser);
       if (ok) {
         showToast('دسته به‌روز شد', 'success', data.name);
         onClose();

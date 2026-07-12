@@ -18,7 +18,7 @@ import { formatMoneyShort } from '@/lib/design/format';
 import { ExportPanel } from '@/components/transactions/ExportPanel';
 
 interface ReportData {
-  summary: { income: number; expense: number; balance: number; count: number };
+  summary: { income: number; expense: number; balance: number; count: number; setupExcludedExpense?: number };
   monthly: Array<{ key: string; month: string; income: number; expense: number; balance: number; count: number }>;
   byBranch: Array<{ id: string; name: string; income: number; expense: number; balance: number }>;
   byCategory: Array<{ name: string; type: string; total: number; count: number }>;
@@ -41,23 +41,41 @@ export default function ReportsPage() {
   const [selectedBranch, setSelectedBranch] = useState('all');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [viewMode, setViewMode] = useState<'operational' | 'full'>('operational');
 
   const isAdmin = user?.role === 'SuperAdmin';
+
+  // شعبه‌ی انتخاب‌شده — برای دکمه «از افتتاح»
+  const selectedBranchObj = selectedBranch !== 'all'
+    ? branches.find(b => b.id === selectedBranch) ?? null
+    : null;
+
+  useEffect(() => {
+    const saved = localStorage.getItem('ba-view-mode');
+    if (saved === 'full') setViewMode('full');
+  }, []);
+
+  function toggleViewMode(mode: 'operational' | 'full') {
+    setViewMode(mode);
+    try { localStorage.setItem('ba-view-mode', mode); } catch {}
+  }
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (selectedBranch !== 'all') params.set('branchId', selectedBranch);
-      if (from) params.set('from', new Date(from).toISOString());
-      if (to) params.set('to', new Date(to + 'T23:59:59').toISOString());
+      // تاریخ‌های شمسی را مستقیم ارسال می‌کنیم — API مقایسه‌ی رشته‌ای روی YYYY/MM/DD انجام می‌دهد
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      if (viewMode === 'operational') params.set('excludeSetup', '1');
 
       const res = await fetch(`/api/reports?${params}`, { credentials: 'include' });
       if (res.ok) setData(await res.json());
     } finally {
       setLoading(false);
     }
-  }, [selectedBranch, from, to]);
+  }, [selectedBranch, from, to, viewMode]);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
 
@@ -74,6 +92,22 @@ export default function ReportsPage() {
             <div className="text-[12px] text-stone-500 mt-1">محاسبات روی سرور — سریع و دقیق</div>
           </div>
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 bg-stone-100 rounded-md p-0.5">
+              {(['operational', 'full'] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => toggleViewMode(m)}
+                  className={`px-3 py-1 rounded text-[11px] font-medium transition-colors ${
+                    viewMode === m
+                      ? 'bg-white text-stone-900 shadow-sm'
+                      : 'text-stone-500 hover:text-stone-700'
+                  }`}
+                >
+                  {m === 'operational' ? 'عملیاتی' : 'کامل'}
+                </button>
+              ))}
+            </div>
             <Button variant="default" size="sm" icon={Printer} onClick={() => window.print()}>
               چاپ
             </Button>
@@ -97,7 +131,32 @@ export default function ReportsPage() {
             </Field>
           )}
           <Field label="از تاریخ">
-            <JalaliDatePicker value={from} onChange={setFrom} />
+            <div className="flex gap-1.5">
+              <div className="flex-1">
+                <JalaliDatePicker value={from} onChange={setFrom} />
+              </div>
+              <button
+                type="button"
+                title={
+                  !selectedBranchObj
+                    ? 'ابتدا یک شعبه انتخاب کنید'
+                    : !selectedBranchObj.openingDate
+                    ? 'تاریخ شروع بهره‌برداری برای این شعبه ثبت نشده'
+                    : `از ${selectedBranchObj.openingDate}`
+                }
+                disabled={!selectedBranchObj?.openingDate}
+                onClick={() => {
+                  if (selectedBranchObj?.openingDate) setFrom(selectedBranchObj.openingDate);
+                }}
+                className={`px-2 py-1.5 rounded-md border text-[10.5px] whitespace-nowrap transition-colors ${
+                  selectedBranchObj?.openingDate
+                    ? 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
+                    : 'border-stone-200 bg-stone-50 text-stone-300 cursor-not-allowed'
+                }`}
+              >
+                از افتتاح
+              </button>
+            </div>
           </Field>
           <Field label="تا تاریخ">
             <JalaliDatePicker value={to} onChange={setTo} />
@@ -117,6 +176,12 @@ export default function ReportsPage() {
               <KPICard label="موجودی خالص" value={data.summary.balance} icon={Wallet}
                 color={data.summary.balance >= 0 ? 'text-stone-900' : 'text-rose-700'} />
             </div>
+
+            {viewMode === 'operational' && (data.summary.setupExcludedExpense ?? 0) > 0 && (
+              <div className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                هزینه‌های راه‌اندازی ({fmt(data.summary.setupExcludedExpense!)} تومان) در این نما لحاظ نشده
+              </div>
+            )}
 
             {/* P&L Statement */}
             <Card>

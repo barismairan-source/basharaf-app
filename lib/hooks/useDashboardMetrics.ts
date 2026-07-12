@@ -14,6 +14,9 @@ import type { Transaction } from '@/types';
  *
  * نکته‌ی محاسبه‌ی balance: فقط `status === 'approved'` در محاسبات وارد می‌شود.
  * pending و rejected در `pendingAmount` به‌صورت جداگانه شمارش می‌شوند.
+ *
+ * ⚠ INVARIANT: موجودی حساب‌ها (accounts.balance) هرگز توسط این فیلتر تغییر نمی‌کند.
+ *   فقط KPIهای جریان (income/expense/balance) و نمودارها تحت تأثیر قرار می‌گیرند.
  */
 
 export interface BreakdownItem {
@@ -50,6 +53,9 @@ export interface DashboardMetrics {
   // ─── breakdown هزینه بر اساس دسته ───
   /** ۵ دسته‌ی بزرگ هزینه + «سایر» */
   expenseBreakdown: BreakdownItem[];
+
+  /** هزینه‌های حذف‌شده از نمای عملیاتی (is_setup=true) — ۰ در نمای کامل */
+  setupExcludedExpense: number;
 }
 
 /**
@@ -59,26 +65,39 @@ export interface DashboardMetrics {
  * در هر render تکرار می‌شوند و در صفحه‌ای با ۱۰۰۰+ تراکنش، تفاوت قابل توجهی
  * در performance دارد.
  */
-export function useDashboardMetrics(): DashboardMetrics {
+export function useDashboardMetrics(
+  viewMode: 'operational' | 'full' = 'operational'
+): DashboardMetrics {
   const user = useAppStore((s) => s.user);
   const transactions = useAppStore((s) => s.transactions);
   const branchFilter = useAppStore((s) => s.branchFilter);
+  const categories = useAppStore((s) => s.categories);
 
   return useMemo(() => {
-    if (!user) {
-      return {
-        filtered: [],
-        approved: [],
-        pending: [],
-        rejected: [],
-        income: 0,
-        expense: 0,
-        balance: 0,
-        pendingAmount: 0,
-        pendingCount: 0,
-        expenseBreakdown: [],
-      };
-    }
+    const empty: DashboardMetrics = {
+      filtered: [],
+      approved: [],
+      pending: [],
+      rejected: [],
+      income: 0,
+      expense: 0,
+      balance: 0,
+      pendingAmount: 0,
+      pendingCount: 0,
+      expenseBreakdown: [],
+      setupExcludedExpense: 0,
+    };
+    if (!user) return empty;
+
+    // شناسه‌های دسته‌های راه‌اندازی — فقط در نمای عملیاتی مهم است
+    const setupCategoryIds =
+      viewMode === 'operational'
+        ? new Set(
+            [...categories.income, ...categories.expense]
+              .filter((c) => c.isSetup)
+              .map((c) => c.id)
+          )
+        : new Set<string>();
 
     // مرحله ۱: scope RBAC
     const scoped =
@@ -105,9 +124,16 @@ export function useDashboardMetrics(): DashboardMetrics {
     // مرحله ۴: aggregates
     let income = 0;
     let expense = 0;
+    let setupExcludedExpense = 0;
     for (const t of approved) {
+      const isSetupTx = setupCategoryIds.size > 0 && setupCategoryIds.has(t.category);
+      if (isSetupTx) {
+        // در نمای عملیاتی این هزینه حذف می‌شود — فقط ثبت می‌کنیم
+        if (t.type === 'expense') setupExcludedExpense += t.amount;
+        continue;
+      }
       if (t.type === 'income') income += t.amount;
-      else expense += t.amount;
+      else if (t.type === 'expense') expense += t.amount;
     }
     const balance = income - expense;
 
@@ -118,6 +144,7 @@ export function useDashboardMetrics(): DashboardMetrics {
     const expenseByCategory = new Map<string, { name: string; amount: number }>();
     for (const t of approved) {
       if (t.type !== 'expense') continue;
+      if (setupCategoryIds.size > 0 && setupCategoryIds.has(t.category)) continue;
       const existing = expenseByCategory.get(t.category);
       if (existing) {
         existing.amount += t.amount;
@@ -169,6 +196,7 @@ export function useDashboardMetrics(): DashboardMetrics {
       pendingAmount,
       pendingCount: pending.length,
       expenseBreakdown,
+      setupExcludedExpense,
     };
-  }, [user, transactions, branchFilter]);
+  }, [user, transactions, branchFilter, categories, viewMode]);
 }
