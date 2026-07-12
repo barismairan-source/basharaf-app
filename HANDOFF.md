@@ -15,8 +15,8 @@
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) migration `db-setup-flag-migration.sql` بخش B در pgAdmin (is_setup + opening_date). ۲) P&L drilldown یا disconnect‌های حسابداری. |
-| **بلاک‌شده/منتظر کاربر** | ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
+| **کار بعدی پیشنهادی** | P&L drilldown یا disconnect‌های حسابداری. دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها → آیکن Construction). |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
