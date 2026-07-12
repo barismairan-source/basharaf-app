@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.16.1-ownership-faz3-prep` |
-| **آخرین به‌روزرسانی** | 2026-07-11 — اکانت: ۱ |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) |
+| **نسخه** | `0.17.0-faz4-tx-form` |
+| **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | کاربر بخش A فایل `db-ownership-data-migration.sql` را در pgAdmin اجرا و نام شعبه را تأیید می‌کند → سپس بخش B را اجرا می‌کند → سپس Faz 3 کد (partner_id به Drizzle) |
+| **کار بعدی پیشنهادی** | ۱) کاربر بخش A+B فایل `db-ownership-data-migration.sql` را در pgAdmin اجرا کند. ۲) بعد از تأیید: Faz 3 کد — partner_id به Drizzle schema accounts اضافه، API حساب‌ها partnerId واقعی برمی‌گرداند |
 | **بلاک‌شده/منتظر کاربر** | ⏳ اجرای بخش A و B فایل `db-ownership-data-migration.sql` در pgAdmin |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -62,6 +62,18 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-12 — Faz 4 — بازطراحی فرم ثبت تراکنش (v0.17.0) — اکانت ۱
+**چه شد:**
+- **فرم `/transactions/new` بازطراحی شد**: ۵ فیلد اصلی همیشه نمایان (نوع، عنوان، مبلغ، دسته، حساب) + accordion «جزئیات بیشتر» برای ۷ فیلد فرعی (روش، طرف‌حساب، رسید، تاریخ، فاکتور، VAT، پیش‌فاکتور، یادداشت). state accordion در localStorage کلید `ba-tx-details-open`.
+- **انتخاب سلسله‌مراتبی حساب**: accounts فیلتر می‌شوند به scope شعبه انتخابی (`branchId=null || branchId=selectedBranch`). اگر حساب‌های partner_equity وجود دارند → `<optgroup>` جداگانه «آورده شرکا» با پیشوند «آورده:».
+- **pre-fill گسترش یافت**: پارامترهای `prefill_accountId` و `prefill_destAccountId` جدید اضافه شدند. اگر هر pre-fill پارامتری در URL بود → accordion خودکار باز می‌شود.
+- **دکمه «ثبت آورده» در `/partners/[id]`**: به header کارت «آورده‌ی سرمایه» اضافه شد. نام شریک و ID حساب equity را در URL `/transactions/new` pre-fill می‌کند (با name-match fallback برای قبل از Faz 3 code).
+- وقتی شعبه تغییر می‌کند، حساب‌های خارج از scope خودکار پاک می‌شوند.
+**فایل‌ها:** `app/(app)/transactions/new/page.tsx` (بازنویسی کامل)، `app/(app)/partners/[id]/page.tsx` (دکمه ثبت آورده)
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱) کاربر بخش A+B فایل `db-ownership-data-migration.sql` را در pgAdmin اجرا کند (نام شعبه تأیید → DO block اجرا). ۲) بعد از تأیید بخش C: **Faz 3 code** — `partnerId` به `accounts` در Drizzle schema اضافه، GET /api/accounts و GET /api/accounts/[id] مقدار واقعی برمی‌گردانند (به‌جای null hardcode). بعد از آن کارت آورده در `/partners/[id]` نمایش واقعی خواهد داشت.
 
 ## 📓 2026-07-11 — Faz 3 prep — SQL data migration + bugfix (v0.16.1) — اکانت ۱
 **چه شد:**

@@ -349,7 +349,32 @@ export default function PartnerDetailPage() {
 
         {/* Equity accounts */}
         <Card>
-          <CardHeader title="آورده‌ی سرمایه" />
+          <CardHeader
+            title="آورده‌ی سرمایه"
+            action={
+              partner.isActive && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  icon={Plus}
+                  onClick={() => {
+                    const equityAcc = accounts.find(
+                      a => a.type === 'partner_equity' &&
+                           (a.partnerId === partner.id || a.name.includes(partner.fullName))
+                    );
+                    const p = new URLSearchParams({
+                      prefill_type: 'transfer',
+                      prefill_title: `آورده سرمایه: ${partner.fullName}`,
+                    });
+                    if (equityAcc) p.set('prefill_destAccountId', equityAcc.id);
+                    router.push(`/transactions/new?${p.toString()}`);
+                  }}
+                >
+                  ثبت آورده
+                </Button>
+              )
+            }
+          />
           <CardBody>
             {equityAccounts.length === 0 ? (
               <div className="text-[12px] text-muted py-2">
