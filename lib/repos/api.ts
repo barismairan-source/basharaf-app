@@ -278,13 +278,13 @@ const categoriesRepo: CategoriesRepo = {
     return data.category;
   },
 
-  async update(_type, id, name) {
+  async update(_type, id, patch) {
     void _type; // type در API لازم نیست چون id منحصربه‌فرد است
     const data = await apiFetch<{ category: Category }>(
       `/api/categories/${id}`,
       {
         method: 'PATCH',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify(patch),
       }
     );
     return data.category;

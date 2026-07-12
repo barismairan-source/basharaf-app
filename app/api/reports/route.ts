@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq, and, sql, gte, lte, desc, inArray } from 'drizzle-orm';
+import { eq, and, or, sql, gte, lte, desc, inArray, isNull, notInArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
@@ -12,15 +12,17 @@ import { handleError } from '@/lib/api-error';
  * Client فقط داده‌های خلاصه‌شده دریافت می‌کند، نه هزاران ردیف raw.
  *
  * Query params:
- *   branchId? — فیلتر شعبه (SuperAdmin)
- *   from?     — تاریخ شروع ISO
- *   to?       — تاریخ پایان ISO
+ *   branchId?     — فیلتر شعبه (SuperAdmin)
+ *   from?         — تاریخ شروع جلالی (مقایسه‌ی رشته‌ای مستقیم)
+ *   to?           — تاریخ پایان جلالی
+ *   excludeSetup? — '1' → حذف دسته‌های is_setup=true از محاسبات (نمای عملیاتی)
  */
 
 const querySchema = z.object({
   branchId: z.string().uuid().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
+  excludeSetup: z.enum(['1', 'true']).optional(),
 });
 
 export async function GET(req: Request) {
@@ -32,26 +34,54 @@ export async function GET(req: Request) {
       branchId: url.searchParams.get('branchId') ?? undefined,
       from: url.searchParams.get('from') ?? undefined,
       to: url.searchParams.get('to') ?? undefined,
+      excludeSetup: url.searchParams.get('excludeSetup') ?? undefined,
     });
+
+    const operationalMode = !!params.excludeSetup;
 
     // ─── Build WHERE conditions ────────────────────────────────────
     const conditions = [
       eq(schema.transactions.status, 'approved'),
     ];
 
-    // RBAC scope
+    // RBAC scope — باید قبل از محاسبه‌ی setupExcludedExpense اضافه شود
     if (session.role === 'BranchUser' && session.branchId) {
       conditions.push(eq(schema.transactions.branchId, session.branchId));
     } else if (session.role === 'SuperAdmin' && params.branchId) {
       conditions.push(eq(schema.transactions.branchId, params.branchId));
     }
 
-    if (params.from) {
-      // فیلتر بر اساس تاریخ شمسی سند (نه زمان ثبت سیستم). مقایسه‌ی رشته‌ای روی YYYY/MM/DD درست است.
-      conditions.push(gte(schema.transactions.date, params.from));
-    }
-    if (params.to) {
-      conditions.push(lte(schema.transactions.date, params.to));
+    // فیلتر بر اساس تاریخ شمسی سند (نه زمان ثبت سیستم). مقایسه‌ی رشته‌ای روی YYYY/MM/DD درست است.
+    if (params.from) conditions.push(gte(schema.transactions.date, params.from));
+    if (params.to) conditions.push(lte(schema.transactions.date, params.to));
+
+    // در نمای عملیاتی: دسته‌های is_setup=true از جریان‌های مالی حذف می‌شوند
+    // ⚠ موجودی حساب‌ها (accounts.balance) هرگز تحت تأثیر این فیلتر قرار نمی‌گیرد
+    let setupExcludedExpense = 0;
+    if (operationalMode) {
+      const setupCats = await db
+        .select({ id: schema.categories.id })
+        .from(schema.categories)
+        .where(eq(schema.categories.isSetup, true));
+
+      if (setupCats.length > 0) {
+        const setupIds = setupCats.map(c => c.id);
+
+        // مجموع هزینه‌های حذف‌شده — همان فیلترهای RBAC و تاریخ، محدود به دسته‌های راه‌اندازی
+        const [excluded] = await db
+          .select({
+            total: sql<string>`COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0)`,
+          })
+          .from(schema.transactions)
+          .where(and(...conditions, inArray(schema.transactions.categoryId, setupIds)));
+        setupExcludedExpense = Number(excluded?.total ?? 0);
+
+        // حذف تراکنش‌های دسته‌ی راه‌اندازی از محاسبات اصلی
+        // categoryId IS NULL = انتقال وجه (مجاز) ؛ NOT IN setupIds = تراکنش عملیاتی (مجاز)
+        conditions.push(
+          or(isNull(schema.transactions.categoryId), notInArray(schema.transactions.categoryId, setupIds))!
+        );
+      }
     }
 
     const where = and(...conditions);
@@ -222,6 +252,7 @@ export async function GET(req: Request) {
         expense,
         balance: income - expense,
         count: Number(totals?.txCount ?? 0),
+        setupExcludedExpense,
       },
       pl: {
         revenue: income,

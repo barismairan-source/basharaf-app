@@ -10,6 +10,7 @@ const patchBodySchema = z.object({
   address: z.string().min(5).max(200).optional(),
   manager: z.string().min(2).max(80).optional(),
   opened: z.string().min(1).optional(),
+  openingDate: z.string().nullable().optional(),
 });
 
 export async function PATCH(

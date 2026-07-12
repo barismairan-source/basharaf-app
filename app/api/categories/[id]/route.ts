@@ -6,7 +6,8 @@ import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 
 const patchBodySchema = z.object({
-  name: z.string().min(2).max(40),
+  name: z.string().min(2).max(40).optional(),
+  isSetup: z.boolean().optional(),
 });
 
 export async function PATCH(
@@ -18,9 +19,13 @@ export async function PATCH(
     const body = await req.json();
     const input = patchBodySchema.parse(body);
 
+    const patch: { name?: string; isSetup?: boolean } = {};
+    if (input.name !== undefined) patch.name = input.name;
+    if (input.isSetup !== undefined) patch.isSetup = input.isSetup;
+
     const [updated] = await db
       .update(schema.categories)
-      .set({ name: input.name })
+      .set(patch)
       .where(eq(schema.categories.id, params.id))
       .returning();
 

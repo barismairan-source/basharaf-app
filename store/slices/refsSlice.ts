@@ -120,7 +120,7 @@ export interface CategoriesSlice {
   categoriesError: string | null;
   _setCategories: (next: CategorySet) => void;
   createCategory: (type: TransactionType, name: string, actingUser: User) => Promise<boolean>;
-  updateCategory: (type: TransactionType, id: string, name: string, actingUser: User) => Promise<boolean>;
+  updateCategory: (type: TransactionType, id: string, patch: { name?: string; isSetup?: boolean }, actingUser: User) => Promise<boolean>;
   deleteCategory: (type: TransactionType, id: string, actingUser: User) => Promise<boolean>;
 }
 
@@ -139,7 +139,7 @@ export const createCategoriesSlice =
       }
 
       const tempId = `optimistic-${Date.now()}`;
-      const optimistic: Category = { id: tempId, name };
+      const optimistic: Category = { id: tempId, name, isSetup: false };
 
       set((s) => ({
         categories: {
@@ -170,7 +170,7 @@ export const createCategoriesSlice =
       }
     },
 
-    async updateCategory(type, id, name, actingUser) {
+    async updateCategory(type, id, patch, actingUser) {
       if (!can(actingUser, 'manage:categories')) {
         set({ categoriesError: 'دسترسی ندارید' });
         return false;
@@ -182,13 +182,13 @@ export const createCategoriesSlice =
       set((s) => ({
         categories: {
           ...s.categories,
-          [type]: s.categories[type as 'income' | 'expense'].map((c) => (c.id === id ? { ...c, name } : c)),
+          [type]: s.categories[type as 'income' | 'expense'].map((c) => (c.id === id ? { ...c, ...patch } : c)),
         },
         categoriesError: null,
       }));
 
       try {
-        await deps.repo.update(type, id, name);
+        await deps.repo.update(type, id, patch);
         return true;
       } catch (e) {
         set((s) => ({

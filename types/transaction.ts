@@ -21,6 +21,7 @@ export type TransactionStatus = 'pending' | 'approved' | 'rejected' | 'proforma'
 export interface Category {
   id: string;
   name: string;
+  isSetup: boolean;
 }
 
 export interface CategorySet {

@@ -116,8 +116,8 @@ export interface CategoriesRepo {
   list(): Promise<CategorySet>;
   /** افزودن یک دسته به یک نوع (income یا expense) */
   create(type: TransactionType, name: string): Promise<Category>;
-  /** تغییر نام */
-  update(type: TransactionType, id: string, name: string): Promise<Category>;
+  /** ویرایش جزئی دسته (نام یا پرچم راه‌اندازی) */
+  update(type: TransactionType, id: string, patch: { name?: string; isSetup?: boolean }): Promise<Category>;
   /** حذف */
   delete(type: TransactionType, id: string): Promise<void>;
 }

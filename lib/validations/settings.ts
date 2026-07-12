@@ -72,6 +72,7 @@ export const branchSchema = z.object({
   opened: z
     .string({ required_error: 'تاریخ افتتاح الزامی است' })
     .min(1, 'تاریخ افتتاح الزامی است'),
+  openingDate: z.string().nullable().optional(),
 });
 
 export type BranchFormInput = z.infer<typeof branchSchema>;

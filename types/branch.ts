@@ -9,6 +9,8 @@ export interface Branch {
   name: string;
   address: string;
   manager: string;
-  /** تاریخ شمسی به شکل رشته: 'YYYY/MM/DD' با ارقام فارسی */
+  /** تاریخ شمسی — تاریخ ثبت/افتتاح شعبه */
   opened: string;
+  /** تاریخ شمسی nullable — تاریخ شروع بهره‌برداری (از این تاریخ گزارش عملیاتی شروع می‌شود) */
+  openingDate: string | null;
 }

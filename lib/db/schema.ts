@@ -66,7 +66,8 @@ export const branches = pgTable('branches', {
   name: text('name').notNull(),
   address: text('address').notNull(),
   manager: text('manager').notNull(),
-  opened: text('opened').notNull(), // Jalali string
+  opened: text('opened').notNull(), // Jalali string — تاریخ ثبت شعبه
+  openingDate: text('opening_date'), // Jalali string nullable — تاریخ شروع بهره‌برداری
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -116,6 +117,7 @@ export const categories = pgTable(
     id: uuid('id').primaryKey().defaultRandom(),
     type: txTypeEnum('type').notNull(),
     name: text('name').notNull(),
+    isSetup: boolean('is_setup').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
