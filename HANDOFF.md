@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.18.0-faz5-operational-lens` |
+| **نسخه** | `0.19.0-faz6-contact-cleanup` |
 | **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) کاربر migration `db-setup-flag-migration.sql` را در pgAdmin اجرا کند (بخش B). ۲) دسته‌های راه‌اندازی را در Settings→دسته‌ها با آیکون Construction علامت بزند. ۳) بعد از آن: Faz 3 کد — partner_id واقعی در API حساب‌ها. |
-| **بلاک‌شده/منتظر کاربر** | ⏳ اجرای بخش B فایل `db-setup-flag-migration.sql` در pgAdmin (ALTER TABLE + UPDATE) |
+| **کار بعدی پیشنهادی** | ۱) کاربر Settings→«پاک‌سازی طرف‌حساب» برود و ردیف‌ها را یکی‌یکی تصمیم بگیرد (حذف/تبدیل/نگه‌دار). ۲) بعد از اتمام پاک‌سازی به من خبر دهد → commit جداگانه: ContactCleanupPane و API آن حذف یا پشت flag رفته. ۳) migration `db-setup-flag-migration.sql` بخش B هنوز منتظر. |
+| **بلاک‌شده/منتظر کاربر** | ⏳ کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد → سپس خبر دهد تا صفحه حذف شود. ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -63,6 +63,24 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-12 — Faz 6 — ابزار پاک‌سازی طرف‌حساب (v0.19.0) — اکانت ۱
+**چه شد:**
+- **API تشخیصی**: `GET /api/admin/contact-cleanup` — query: نام | نوع | تعداد تراکنش | مانده | آخرین تراکنش (فقط contacts فعال).
+- **API اقدام**: `POST /api/admin/contact-cleanup/[id]` با body `{action: 'delete'|'convert'}`:
+  - `delete`: server-side تأیید linked_tx_count=0 و balance=0 → حذف + audit log.
+  - `convert`: atomic transaction: ۱) categoryName خالی تراکنش‌های لینک‌شده = نام contact، ۲) contactId→NULL، ۳) contact غیرفعال، ۴) audit log.
+- **UI**: `ContactCleanupPane` در Settings (superAdminOnly) — جدول با inline confirm. قوانین:
+  - balance≠0 → قفل با tooltip «مانده نسیه دارد — اول تسویه».
+  - linked=0 و balance=0 → فقط دکمه «حذف».
+  - linked>0 و balance=0 → فقط دکمه «تبدیل به دسته».
+  - «نگه‌دار» همیشه (بدون اقدام).
+- هیچ مهاجرت خودکاری نه — همه با کلیک و confirm کاربر.
+- ⚠ **قدم پایانی الزامی**: بعد از اتمام پاک‌سازی توسط کاربر، در commit جداگانه `ContactCleanupPane.tsx` + API routes آن (`/api/admin/contact-cleanup/`) حذف یا پشت `ENABLE_CONTACT_CLEANUP=true` env flag قرار گیرند تا ابزار خطرناک دائمی نشود.
+**فایل‌ها:** `app/api/admin/contact-cleanup/route.ts` (جدید)، `app/api/admin/contact-cleanup/[id]/route.ts` (جدید)، `components/settings/ContactCleanupPane.tsx` (جدید)، `components/settings/SettingsNav.tsx`، `components/settings/index.ts`، `app/(app)/settings/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** کاربر پاک‌سازی را انجام می‌دهد → خبر می‌دهد → commit جداگانه: فایل‌های پاک‌سازی حذف شوند.
 
 ## 📓 2026-07-12 — Faz 5 — لنز گزارش‌گیری «عملیاتی vs کامل» (v0.18.0) — اکانت ۱
 **چه شد:**
@@ -150,55 +168,4 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست دستی با داده‌ی واقعی. TrendChart فقط اگر ≥۳ روز داشته باشد render شود (وگرنه null). tooltip hover/tap روی موبایل بررسی شود.
 
-## 📓 2026-07-10 — بازچینی سلسله‌مراتب داشبورد (v0.13.0) — اکانت ۱
-**چه شد:** فاز hierarchy داشبورد — ۶ commit روی شاخه‌ی `refactor/dashboard-hierarchy` سپس merge به main:
-1. **DashCard**: کامپوننت مشترک wrapper برای همه کارت‌های داشبورد (title+icon+badge+viewAll header).
-2. **KPICard + formatMoneyParts**: تابع جدید `formatMoneyParts()` در `lib/design/format.ts` که عدد و «تومان» جدا برمی‌گرداند؛ KPICard حالا `text-2xl` برای عدد و `text-[11px] text-stone-400` برای واحد.
-3. **page.tsx بازنویسی کامل**: ۶ بخش با `SectionLabel`، `space-y-8`، ترتیب «۳ ثانیه‌ی اول مدیر» (نبض→توجه→مالی→عملیات→تراکنش→استخدام).
-4. **AttentionWidget + HRSummaryCard → DashCard**.
-5. **شرکا → DashCard**: icon=Users2، violet رنگ، mini-cards از border-stone به `bg-stone-50 hover:bg-stone-100`.
-6. **RecruitmentWidget ساده**: ستاره‌ها حذف، API فیلتر `eq(status, 'new')` اضافه، limit 4→3، فقط نام+حوزه.
-**فایل‌ها:** `components/dashboard/DashCard.tsx` (جدید)، `components/dashboard/index.ts`، `lib/design/format.ts`، `components/dashboard/KPICard.tsx`، `app/(app)/dashboard/page.tsx`، `components/dashboard/AttentionWidget.tsx`، `components/dashboard/HRSummaryCard.tsx`، `app/api/dashboard/applicants/route.ts`، `components/dashboard/RecruitmentWidget.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست دستی داشبورد دسکتاپ+موبایل. بررسی KPI text-2xl، کارت‌های شرکا با استایل جدید، RecruitmentWidget بدون ستاره.
-
-## 📓 2026-07-10 — داشبورد: حذف نویز empty/zero (v0.12.1) — اکانت ۱
-**چه شد:** ۶ commit مستقل روی رفتار کارت‌های خالی/صفر:
-1. Sparklines حذف (داده mock/hardcode بود — گمراه‌کننده).
-2. علامت منفی یکپارچه: `formatMoneyShort` مقدار مستقیم (بدون `Math.abs`) می‌گیرد.
-3. AttentionWidget خالی → نوار ۴۰px emerald.
-4. HRSummaryCard ۰ پرسنل → خط لینک به `/employees`.
-5. شرکا تسویه → نوار emerald.
-6. BranchSummary فقط اگر ≥۲ شعبه غیرصفر؛ BreakdownCard فقط اگر ≥۲ دسته.
-**فایل‌ها:** `lib/sparklines.ts` (حذف)، `lib/design/format.ts`، `KPICard.tsx`، `BranchSummary.tsx`، `AttentionWidget.tsx`، `HRSummaryCard.tsx`، `page.tsx`
-**Build:** tsc ✅ · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** فاز hierarchy (ترتیب و DashCard یکپارچه).
-
-## 📓 2026-07-10 — داشبورد فاز ۳: روند درصدی + ویجت داوطلبان (v0.12.0) — اکانت ۱
-**چه شد:** FlashReport دو فیلد جدید (`invoiceCountPctChange`، `primeCostPctChange`). DeltaBadge با prop `invert` برای Prime Cost. ویجت داوطلبان تازه `/api/dashboard/applicants` + `RecruitmentWidget.tsx` با ستاره‌های inline (بعداً در v0.13.0 حذف شد).
-**فایل‌ها:** `lib/reports/flashReport.ts`، `FlashReportCard.tsx`، `app/api/dashboard/applicants/route.ts`، `RecruitmentWidget.tsx`، `index.ts`، `page.tsx`
-**Build:** tsc ✅ · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست بصری FlashReportCard delta، ویجت داوطلبان.
-
-## 📓 2026-07-10 — داشبورد فاز ۲: معماری سه‌لایه (v0.11.0) — اکانت ۱
-**چه شد:** AnomalyBanner (جدید)، AttentionWidget جایگزین OperationsStrip، HRSummaryCard، بخش «وضعیت شرکا» از store.contacts. UnifiedOverview و OperationsStrip از export حذف.
-**فایل‌ها:** `AnomalyBanner.tsx`، `AttentionWidget.tsx`، `HRSummaryCard.tsx`، `index.ts`، `page.tsx`
-**Build:** tsc ✅ · build ✅ · 48 unit tests ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست بصری سه‌لایه.
-
-## 📓 2026-07-10 — اصلاح داشبورد: تکرار، فرمت، نام‌گذاری (v0.10.3) — اکانت ۱
-**چه شد:** UnifiedOverview بخش تکراری → «وضعیت مالی». علامت +/− از RecentList حذف. KPICard `formatMoneyShort` با `title` hover. «کارآگاه مالی» → «دستیار مالی» در nav/permissions/UI.
-**فایل‌ها:** `UnifiedOverview.tsx`، `RecentList.tsx`، `KPICard.tsx`، `BranchSummary.tsx`، `nav-config.ts`، `permissions.ts`، `anomaly/page.tsx`، `DetectivePane.tsx`
-**Build:** tsc ✅ · build ✅
-**ناتمام:** —
-
-## 📓 2026-07-09 — پنل استخدام v2 + باگ validation فرم (v0.10.2) — اکانت ۱
-**چه شد:** باگ ۴۰۰ در /apply (age/gender اجباری در schema سرور) رفع شد. Collapse، Q&A hierarchy، امتیاز سریع، URL فیلترها، مقایسه modal، تگ کلمات کلیدی — همه در یک بازنویسی کامل `recruitment/page.tsx`.
-**فایل‌ها:** `recruitment/page.tsx`، `lib/validations/recruitment.ts`، `app/apply/page.tsx`
-**Build:** tsc ✅ · build ✅ · 48 unit tests ✅
-**ناتمام:** —
 

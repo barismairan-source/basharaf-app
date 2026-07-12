@@ -10,6 +10,7 @@ import {
   Shield,
   MessageSquare,
   ShieldAlert,
+  UserX,
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
@@ -25,7 +26,8 @@ export type SettingsTab =
   | 'content'
   | 'security'
   | 'sms'
-  | 'detective';
+  | 'detective'
+  | 'contact-cleanup';
 
 interface TabDef {
   id: SettingsTab;
@@ -45,6 +47,7 @@ const TABS: ReadonlyArray<TabDef> = [
   { id: 'security', label: 'امنیت', icon: Shield, requires: 'settings.security' },
   { id: 'sms', label: 'پیامک', icon: MessageSquare, requires: 'settings.security' },
   { id: 'detective', label: 'قوانین کارآگاه', icon: ShieldAlert, superAdminOnly: true },
+  { id: 'contact-cleanup', label: 'پاک‌سازی طرف‌حساب', icon: UserX, superAdminOnly: true },
 ];
 
 interface SettingsNavProps {

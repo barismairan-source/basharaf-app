@@ -12,6 +12,7 @@ import {
   SecurityPane,
   SmsPane,
   DetectivePane,
+  ContactCleanupPane,
   type SettingsTab,
 } from '@/components/settings';
 import { RouterGuard } from '@/components/layout';
@@ -79,6 +80,11 @@ export default function SettingsPage() {
               </RouterGuard>
             )}
             {activeTab === 'detective' && <DetectivePane />}
+            {activeTab === 'contact-cleanup' && (
+              <RouterGuard cap="settings.security" fallbackTitle="پاک‌سازی طرف‌حساب">
+                <ContactCleanupPane />
+              </RouterGuard>
+            )}
           </div>
         </div>
       </div>

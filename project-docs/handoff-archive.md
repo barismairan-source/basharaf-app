@@ -1,5 +1,29 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-10 — بازچینی سلسله‌مراتب داشبورد (v0.13.0) — اکانت ۱
+**چه شد:** DashCard مشترک، KPICard formatMoneyParts، page.tsx ۶ بخش SectionLabel، AttentionWidget+HRSummaryCard→DashCard، شرکا mini-cards، RecruitmentWidget ساده (limit3، بدون ستاره).
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-07-10 — داشبورد: حذف نویز empty/zero (v0.12.1) — اکانت ۱
+**چه شد:** Sparklines حذف، formatMoneyShort یکپارچه، AttentionWidget/HRSummaryCard/BranchSummary/BreakdownCard conditional.
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-07-10 — داشبورد فاز ۳: روند درصدی + ویجت داوطلبان (v0.12.0) — اکانت ۱
+**چه شد:** FlashReport invoiceCountPctChange+primeCostPctChange. RecruitmentWidget اولیه (بعداً در v0.13 ساده شد).
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-07-10 — داشبورد فاز ۲: معماری سه‌لایه (v0.11.0) — اکانت ۱
+**چه شد:** AnomalyBanner، AttentionWidget، HRSummaryCard، بخش شرکا از contacts.
+**Build:** tsc ✅ · build ✅ · 48 unit tests ✅
+
+## 📓 2026-07-10 — اصلاح داشبورد (v0.10.3) — اکانت ۱
+**چه شد:** UnifiedOverview «وضعیت مالی»، KPICard formatMoneyShort، «کارآگاه» → «دستیار مالی».
+**Build:** tsc ✅ · build ✅
+
+## 📓 2026-07-09 — پنل استخدام v2 + باگ validation (v0.10.2) — اکانت ۱
+**چه شد:** باگ ۴۰۰ /apply رفع شد. Collapse، Q&A، امتیاز سریع، URL فیلترها، مقایسه modal.
+**Build:** tsc ✅ · build ✅ · 48 unit tests ✅
+
 ## 📓 2026-07-08 — HR UX بهبود پنل استخدام (v0.10.1) — اکانت ۱
 **چه شد:** سوال کامل در detail card، حل ~7MB payload (resumeUrl حذف → hasResume:boolean + pagination 50تایی)، endpoint دانلود رزومه برای Safari iOS، error state در /apply.
 **Build:** tsc ✅ · build ✅ · 48 unit tests ✅
