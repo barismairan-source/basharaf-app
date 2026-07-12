@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.20.1-cleanup-removed` |
+| **نسخه** | `0.21.0-visual-consistency` |
 | **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) migration `db-setup-flag-migration.sql` بخش B در pgAdmin (is_setup + opening_date). ۲) فاز ۸ احتمالی: P&L drilldown یا disconnect‌های حسابداری. |
+| **کار بعدی پیشنهادی** | ۱) migration `db-setup-flag-migration.sql` بخش B در pgAdmin (is_setup + opening_date). ۲) P&L drilldown یا disconnect‌های حسابداری. |
 | **بلاک‌شده/منتظر کاربر** | ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -63,6 +63,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-12 — فاز ۸ — یکدستی بصری دکمه‌ها و inputها (v0.21.0) — اکانت ۱
+**چه شد:** جایگزینی دکمه‌های `<button>` خام با `<Button>` استاندارد در ۴ صفحه کلیدی — طبق INVESTIGATION-accounting-model.md بخش ۶ (فاز D). هیچ تغییر رفتاری نداشت. تغییرات ظاهری محسوس:
+- `transactions/new`: دکمه «انصراف» حالا همارتفاع با «ثبت تراکنش» (h-11 MD بجای h-10 خام).
+- `cheques`: دکمه «چک جدید» حالا به رنگ accent آبی (بجای bg-text خاکستری تیره).
+- `accounts/[id]`: دکمه «چاپ» حالا border خاکستری استاندارد دارد.
+- `contacts`: input «نوع» در فرم افزودن حالا استایل Input کامپوننت دارد (border accent on focus).
+**فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/contacts/page.tsx`، `app/(app)/accounts/[id]/page.tsx`، `app/(app)/cheques/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** DB migration بخش B (is_setup + opening_date) در pgAdmin. بعد P&L drilldown.
 
 ## 📓 2026-07-12 — حذف ابزار پاک‌سازی (v0.20.1) — اکانت ۱
 **چه شد:** کاربر پاک‌سازی طرف‌حساب‌ها را انجام داد. طبق قرار، ابزار موقت حذف شد:
