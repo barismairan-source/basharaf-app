@@ -45,3 +45,5 @@ graphify-out/
 
 # local claude settings (machine-specific)
 .claude/settings.local.json
+
+tests/visual-audit-screenshots/
