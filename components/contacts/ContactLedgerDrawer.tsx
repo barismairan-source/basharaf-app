@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Banknote, CreditCard, FileCheck } from 'lucide-react';
+import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Banknote, CreditCard, FileCheck, Plus, FileSignature } from 'lucide-react';
 import { cn, fmt } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import type { ContactLedgerEntry } from '@/lib/db/contactLedger';
@@ -118,9 +118,14 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopImmediatePropagation();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
   }, [open, onClose]);
 
   useEffect(() => {
@@ -308,6 +313,29 @@ export function ContactLedgerDrawer({ contactId, onClose }: Props) {
                 ))}
               </ul>
             </>
+          )}
+
+          {/* اقدامات سریع */}
+          {!loading && contact && (
+            <div className="border-t border-border px-5 py-4 mt-auto">
+              <div className="text-[10.5px] text-muted mb-2.5 font-medium">اقدامات سریع</div>
+              <div className="flex flex-col gap-2">
+                <a
+                  href={`/transactions/new?prefill_contactId=${contactId}`}
+                  className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border text-[12.5px] text-text hover:bg-bg transition-colors"
+                >
+                  <Plus size={13} strokeWidth={1.5} className="text-muted" />
+                  ثبت تراکنش با این طرف‌حساب
+                </a>
+                <a
+                  href={`/cheques`}
+                  className="flex items-center gap-2 h-9 px-3 rounded-lg border border-border text-[12.5px] text-text hover:bg-bg transition-colors"
+                >
+                  <FileSignature size={13} strokeWidth={1.5} className="text-muted" />
+                  ثبت / مشاهده چک‌ها
+                </a>
+              </div>
+            </div>
           )}
         </div>
       </aside>

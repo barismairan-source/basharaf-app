@@ -18,6 +18,7 @@ import { fmt, cn } from '@/lib/utils';
 import { formatMoneyShort, formatBranchName } from '@/lib/design/format';
 import { TxDetailPanel } from '@/components/transactions/TxDetailPanel';
 import { ImportPanel } from '@/components/transactions/ImportPanel';
+import { ContactLedgerDrawer } from '@/components/contacts/ContactLedgerDrawer';
 import type { Transaction, TransactionStatus, TransactionType } from '@/types';
 
 type StatusFilter = 'all' | TransactionStatus;
@@ -78,6 +79,7 @@ export default function TransactionsPage() {
   const [sort, setSort] = useState<SortKey>('date-desc');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [openContactId, setOpenContactId] = useState<string | null>(null);
 
   useEffect(() => { setHydrated(true); }, []);
 
@@ -389,8 +391,18 @@ export default function TransactionsPage() {
 
       {openTxId && (() => {
         const tx = visible.find(t => t.id === openTxId);
-        return tx ? <TxDetailPanel tx={tx} onClose={() => openTx(null)} /> : null;
+        return tx ? (
+          <TxDetailPanel
+            tx={tx}
+            onClose={() => openTx(null)}
+            onContactClick={id => setOpenContactId(id)}
+          />
+        ) : null;
       })()}
+      <ContactLedgerDrawer
+        contactId={openContactId}
+        onClose={() => setOpenContactId(null)}
+      />
     </div>
   );
 }

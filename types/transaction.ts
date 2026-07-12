@@ -86,6 +86,8 @@ interface TransactionBase extends AuditFields {
   hasReceipt: boolean;
   /** شماره فاکتور/پیش‌فاکتور — null اگر وارد نشده باشد */
   invoiceCode?: string | null;
+  /** طرف‌حساب مرتبط — null اگر وارد نشده باشد */
+  contactId?: string | null;
 }
 
 /**

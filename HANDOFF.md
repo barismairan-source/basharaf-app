@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.19.0-faz6-contact-cleanup` |
+| **نسخه** | `0.20.0-faz7-integrated-flow` |
 | **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) کاربر Settings→«پاک‌سازی طرف‌حساب» برود و ردیف‌ها را یکی‌یکی تصمیم بگیرد (حذف/تبدیل/نگه‌دار). ۲) بعد از اتمام پاک‌سازی به من خبر دهد → commit جداگانه: ContactCleanupPane و API آن حذف یا پشت flag رفته. ۳) migration `db-setup-flag-migration.sql` بخش B هنوز منتظر. |
-| **بلاک‌شده/منتظر کاربر** | ⏳ کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد → سپس خبر دهد تا صفحه حذف شود. ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
+| **کار بعدی پیشنهادی** | ۱) کاربر Settings→«پاک‌سازی طرف‌حساب» را انجام دهد → خبر دهد → commit جداگانه: حذف صفحه پاک‌سازی. ۲) migration `db-setup-flag-migration.sql` بخش B هنوز منتظر. ۳) فاز ۸ احتمالی: P&L drilldown یا disconnect‌های حسابداری. |
+| **بلاک‌شده/منتظر کاربر** | ⏳ کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد. ⏳ `db-setup-flag-migration.sql` بخش B در pgAdmin. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -63,6 +63,21 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-12 — Faz 7 — جریان یکپارچه چک↔طرف‌حساب↔تراکنش↔دسته (v0.20.0) — اکانت ۱
+**چه شد:**
+- **`contactId` به `TransactionBase`**: تایپ TypeScript حالا `contactId?: string | null` دارد — قبلاً API برمی‌گرداند ولی تایپ نداشت.
+- **ContactLedgerDrawer — اقدامات سریع**: زیر بخش چک‌ها، دو دکمه‌ی لینک اضافه شد:
+  - «ثبت تراکنش با این طرف‌حساب» → `/transactions/new?prefill_contactId=X` (pre-fill خودکار).
+  - «ثبت / مشاهده چک‌ها» → `/cheques`.
+  - Escape handler به capture phase منتقل شد تا اگر از داخل TxDetailPanel باز شود، Escape فقط drawer را ببندد نه TxDetailPanel را.
+- **TxDetailPanel — لینک طرف‌حساب**: اگر تراکنش `contactId` داشته باشد، نام طرف‌حساب در بخش جزئیات به‌صورت کلیک‌پذیر نمایش می‌یابد (زیرخط‌دار). کلیک روی آن drawer طرف‌حساب را در همان صفحه تراکنش‌ها باز می‌کند.
+- **transactions/page.tsx**: `ContactLedgerDrawer` اضافه شد. `onContactClick` به TxDetailPanel پاس می‌شود.
+- **فرم ثبت تراکنش — `+ دسته‌ی جدید`**: دکمه‌ی `+` کنار select دسته‌بندی (فقط SuperAdmin). مودال کوچک inline — نام را می‌گیرد، POST `/api/categories` می‌زند (از طریق Zustand `createCategory`)، بعد از ساخت category جدید را auto-select می‌کند.
+**فایل‌ها:** `types/transaction.ts`، `components/contacts/ContactLedgerDrawer.tsx`، `components/transactions/TxDetailPanel.tsx`، `app/(app)/transactions/page.tsx`، `app/(app)/transactions/new/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱) کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد → خبر دهد → commit جداگانه: فایل‌های پاک‌سازی حذف شوند. ۲) DB migration بخش B. ۳) فاز ۸ احتمالی: P&L drilldown.
 
 ## 📓 2026-07-12 — Faz 6 — ابزار پاک‌سازی طرف‌حساب (v0.19.0) — اکانت ۱
 **چه شد:**

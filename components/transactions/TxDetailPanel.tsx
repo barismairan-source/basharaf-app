@@ -14,6 +14,7 @@ import {
   Tag,
   CreditCard,
   Calendar,
+  ExternalLink,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -54,9 +55,10 @@ import { cn } from '@/lib/utils';
 interface TxDetailPanelProps {
   tx: Transaction;
   onClose: () => void;
+  onContactClick?: (contactId: string) => void;
 }
 
-export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
+export function TxDetailPanel({ tx, onClose, onContactClick }: TxDetailPanelProps) {
   const user = useAppStore((s) => s.user);
   const users = useAppStore((s) => s.users);
   const categories = useAppStore((s) => s.categories);
@@ -247,6 +249,7 @@ export function TxDetailPanel({ tx, onClose }: TxDetailPanelProps) {
               approvedByName={approvedByUser?.name ?? null}
               rejectedByName={rejectedByUser?.name ?? null}
               canEdit={canEdit}
+              onContactClick={onContactClick}
             />
           )}
         </div>
@@ -351,6 +354,7 @@ interface ViewBodyProps {
   approvedByName: string | null;
   rejectedByName: string | null;
   canEdit: boolean;
+  onContactClick?: (contactId: string) => void;
 }
 
 function ViewBody({
@@ -359,9 +363,12 @@ function ViewBody({
   approvedByName,
   rejectedByName,
   canEdit,
+  onContactClick,
 }: ViewBodyProps) {
   const updateTransaction = useAppStore((s) => s.updateTransaction);
   const user = useAppStore((s) => s.user);
+  const contacts = useAppStore((s) => s.contacts);
+  const linkedContact = tx.contactId ? contacts.find(c => c.id === tx.contactId) : null;
 
   return (
     <>
@@ -383,6 +390,14 @@ function ViewBody({
         <DetailRow icon={Building2} label="شعبه" value={tx.branch} />
         <DetailRow icon={Tag} label="دسته" value={tx.categoryName} />
         <DetailRow icon={UserIcon} label="طرف معامله" value={tx.payee} />
+        {linkedContact && (
+          <DetailRow
+            icon={ExternalLink}
+            label="طرف‌حساب"
+            value={linkedContact.name}
+            onClick={onContactClick ? () => onContactClick(linkedContact.id) : undefined}
+          />
+        )}
         <DetailRow icon={CreditCard} label="روش پرداخت" value={tx.method} />
         <DetailRow icon={Calendar} label="تاریخ تراکنش" value={tx.date} />
         <DetailRow
@@ -470,9 +485,10 @@ interface DetailRowProps {
   label: string;
   value: string;
   monospace?: boolean;
+  onClick?: () => void;
 }
 
-function DetailRow({ icon: Icon, label, value, monospace }: DetailRowProps) {
+function DetailRow({ icon: Icon, label, value, monospace, onClick }: DetailRowProps) {
   return (
     <div className="flex items-start gap-3">
       <div className="w-7 h-7 rounded-md bg-stone-50 flex items-center justify-center text-stone-500 flex-shrink-0">
@@ -482,9 +498,16 @@ function DetailRow({ icon: Icon, label, value, monospace }: DetailRowProps) {
         <div className="text-[10.5px] text-muted">{label}</div>
         <div
           className={cn(
-            'text-[12.5px] text-stone-800 mt-0.5 break-words',
-            monospace && 'tabular-nums'
+            'text-[12.5px] mt-0.5 break-words',
+            monospace && 'tabular-nums',
+            onClick
+              ? 'text-accent cursor-pointer underline decoration-dotted underline-offset-2 hover:opacity-80'
+              : 'text-stone-800'
           )}
+          onClick={onClick}
+          role={onClick ? 'button' : undefined}
+          tabIndex={onClick ? 0 : undefined}
+          onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
         >
           {value}
         </div>

@@ -27,6 +27,7 @@ export default function NewTransactionPage() {
   const loadAccounts = useAppStore(s => s.loadAccounts);
   const loadContacts = useAppStore(s => s.loadContacts);
   const submitTransaction = useAppStore(s => s.submitTransaction);
+  const createCategory = useAppStore(s => s.createCategory);
   const showToast = useAppStore(s => s.showToast);
   const txError = useAppStore(s => s.txError);
   const vatRate = useAppStore(s => Number(s.appSettings['finance.vat_rate'] ?? '10'));
@@ -39,6 +40,9 @@ export default function NewTransactionPage() {
   const [invoiceCode, setInvoiceCode] = useState('');
   const [isProforma, setIsProforma] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [showNewCatModal, setShowNewCatModal] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [creatingCat, setCreatingCat] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -159,6 +163,24 @@ export default function NewTransactionPage() {
       try { localStorage.setItem('ba-tx-details-open', next ? '1' : '0'); } catch {}
       return next;
     });
+  }
+
+  async function handleCreateCategory() {
+    if (!user || !newCatName.trim()) return;
+    const catType = type === 'income' ? 'income' : 'expense';
+    setCreatingCat(true);
+    const ok = await createCategory(catType, newCatName.trim(), user);
+    setCreatingCat(false);
+    if (ok) {
+      const fresh = useAppStore.getState().categories;
+      const list = catType === 'income' ? fresh.income : fresh.expense;
+      const newCat = [...list].reverse().find(c => c.name === newCatName.trim());
+      if (newCat) setValue('category', newCat.id, { shouldValidate: true });
+      setNewCatName('');
+      setShowNewCatModal(false);
+    } else {
+      showToast('خطا در ساخت دسته', 'danger');
+    }
   }
 
   async function onSubmit(data: TransactionFormInput) {
@@ -315,10 +337,24 @@ export default function NewTransactionPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 {!isTransfer && (
                   <Field label="دسته‌بندی" error={errors.category?.message}>
-                    <Select hasError={!!errors.category} {...register('category')}>
-                      <option value="">— انتخاب دسته —</option>
-                      {visibleCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </Select>
+                    <div className="flex gap-1.5">
+                      <div className="flex-1">
+                        <Select hasError={!!errors.category} {...register('category')}>
+                          <option value="">— انتخاب دسته —</option>
+                          {visibleCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        </Select>
+                      </div>
+                      {isAdmin && (
+                        <button
+                          type="button"
+                          onClick={() => setShowNewCatModal(true)}
+                          title="دسته‌ی جدید"
+                          className="shrink-0 h-10 w-10 flex items-center justify-center rounded-md border border-dashed border-stone-300 text-stone-400 hover:border-stone-500 hover:text-stone-600 transition-colors"
+                        >
+                          <Plus size={14} strokeWidth={1.5} />
+                        </button>
+                      )}
+                    </div>
                   </Field>
                 )}
                 <Field label="شعبه" error={errors.branchId?.message}>
@@ -527,6 +563,50 @@ export default function NewTransactionPage() {
           </CardBody>
         </Card>
       </div>
+
+      {/* مودال افزودن دسته‌ی جدید */}
+      {showNewCatModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/30"
+            onClick={() => { setShowNewCatModal(false); setNewCatName(''); }}
+          />
+          <div className="relative z-10 bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs">
+            <h3 className="text-[14px] font-medium text-stone-900 mb-4">
+              دسته‌ی جدید ({type === 'income' ? 'درآمد' : 'هزینه'})
+            </h3>
+            <input
+              autoFocus
+              type="text"
+              placeholder="نام دسته‌بندی"
+              value={newCatName}
+              onChange={e => setNewCatName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(); } }}
+              className="w-full h-10 px-3 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-500 mb-4"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setShowNewCatModal(false); setNewCatName(''); }}
+                disabled={creatingCat}
+                className="h-9 px-4 text-[13px] text-muted border border-border rounded-lg hover:bg-bg transition-colors disabled:opacity-50"
+              >
+                لغو
+              </button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={handleCreateCategory}
+                loading={creatingCat}
+                disabled={!newCatName.trim()}
+              >
+                افزودن
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
