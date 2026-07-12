@@ -538,13 +538,13 @@ export default function NewTransactionPage() {
 
               {/* ─── Footer ─── */}
               <div className="flex justify-end items-center gap-3 pt-4 mt-2 border-t border-border">
-                <button
+                <Button
                   type="button"
+                  variant="default"
                   onClick={() => router.back()}
-                  className="h-10 px-4 text-[13px] text-muted border border-border rounded-lg hover:bg-bg transition-colors"
                 >
                   انصراف
-                </button>
+                </Button>
                 <Button
                   type="submit"
                   variant={isAdmin && isProforma ? 'default' : 'primary'}

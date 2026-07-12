@@ -279,12 +279,11 @@ export default function ContactsPage() {
                   <Input placeholder="نام شخص یا شرکت" value={name} onChange={e => setName(e.target.value)} />
                 </Field>
                 <Field label="نوع">
-                  <input
+                  <Input
                     list="contact-type-list"
                     placeholder="مشتری، تأمین‌کننده، ..."
                     value={type}
                     onChange={e => setType(e.target.value)}
-                    className="w-full h-10 px-3 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-500 bg-white"
                   />
                   <datalist id="contact-type-list">
                     <option value="customer">مشتری</option>

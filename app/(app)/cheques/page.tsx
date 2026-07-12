@@ -6,7 +6,7 @@ import { Plus, Edit2, Trash2, AlertTriangle, Clock, CheckCircle2, XCircle, Rotat
 import { useAppStore } from '@/store';
 import { fmt, toFa } from '@/lib/utils';
 import { getTodayJalali, jalaliToDate, isValidJalaliString } from '@/lib/jalali';
-import { JalaliDatePicker, PageHeader, Sheet } from '@/components/ui';
+import { Button, JalaliDatePicker, PageHeader, Sheet } from '@/components/ui';
 import type { Cheque, ChequeStatus, ChequeKind, Contact } from '@/types';
 
 // ── ثوابت ──────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ export default function ChequesPage() {
       <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-4">
         <PageHeader
           title="مدیریت چک"
-          actions={<button onClick={openAdd} className="flex items-center gap-1.5 bg-text text-surface px-3 py-2 rounded-lg text-[13px] min-h-[40px]"><Plus size={14} />چک جدید</button>}
+          actions={<Button variant="primary" icon={Plus} onClick={openAdd}>چک جدید</Button>}
         />
 
         {/* ─── Summary cards ─── */}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowUpCircle, ArrowDownCircle, Printer } from 'lucide-react';
-import { Card, CardBody, CardHeader, Empty, PageHeader } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, Empty, PageHeader } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 
@@ -49,10 +49,9 @@ export default function AccountLedgerPage() {
           backHref="/accounts"
           backLabel="صندوق‌ها"
           actions={
-            <button onClick={() => window.print()} className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[12px] text-muted hover:bg-bg transition-colors">
-              <Printer size={13} strokeWidth={1.5} />
+            <Button variant="default" size="sm" icon={Printer} onClick={() => window.print()}>
               <span className="hidden sm:inline">چاپ</span>
-            </button>
+            </Button>
           }
         />
 
