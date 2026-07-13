@@ -293,7 +293,7 @@ export default function EmployeesPage() {
               <Field label="تلفن">
                 <Input value={phone} onChange={e => setPhone(normalizeDigits(e.target.value))} placeholder="۰۹۱۲..." dir="ltr" />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="سمت">
                   <Select value={role} onChange={e => setRole(e.target.value as EmployeeRole)}>
                     {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
@@ -312,7 +312,7 @@ export default function EmployeesPage() {
                   setSalary(n ? n.toLocaleString('en-US') : '');
                 }} placeholder="مثلاً: 16,625,550" dir="ltr" />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="تاریخ استخدام">
                   <JalaliDatePicker value={joinDate} onChange={setJoinDate} />
                 </Field>
@@ -345,7 +345,7 @@ export default function EmployeesPage() {
                   {/* شناسه‌ها */}
                   <div>
                     <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">شناسه‌ها</div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label="شماره ملی">
                         <Input
                           value={nationalId}
@@ -373,7 +373,7 @@ export default function EmployeesPage() {
                       <Field label="نام پدر">
                         <Input value={fatherName} onChange={e => setFatherName(e.target.value)} placeholder="نام پدر" />
                       </Field>
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Field label="جنسیت">
                           <Select value={gender} onChange={e => setGender(e.target.value as Gender | '')}>
                             <option value="">— انتخاب کنید —</option>
@@ -421,7 +421,7 @@ export default function EmployeesPage() {
                   {/* مخاطب اضطراری */}
                   <div>
                     <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">مخاطب اضطراری</div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label="نام">
                         <Input value={emergencyContactName} onChange={e => setEmergencyContactName(e.target.value)} placeholder="نام و نسبت" />
                       </Field>
@@ -439,7 +439,7 @@ export default function EmployeesPage() {
                   {/* کارت بهداشت */}
                   <div>
                     <div className="text-[10.5px] text-muted font-medium mb-2 pb-1 border-b border-stone-100">کارت بهداشت</div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <Field label="شماره کارت">
                         <Input value={healthCardNumber} onChange={e => setHealthCardNumber(e.target.value)} placeholder="شماره کارت" dir="ltr" />
                       </Field>

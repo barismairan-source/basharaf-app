@@ -213,7 +213,7 @@ export default function PayrollPage() {
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">حقوق و دستمزد</h1>
             <div className="text-[12px] text-stone-500 mt-1">اجرای حقوق، محاسبه فیش، و ثبت در حسابداری</div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="default" size="sm" icon={Wallet} onClick={() => setShowEvent(true)}>مساعده/پاداش</Button>
             <Button variant="primary" size="sm" icon={Plus} onClick={() => setShowAdd(true)}>اجرای جدید</Button>
           </div>
@@ -275,7 +275,8 @@ export default function PayrollPage() {
                       {slips.length === 0 ? (
                         <div className="text-[12px] text-muted text-center py-3">فیشی نیست (اول محاسبه کنید)</div>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="overflow-x-auto">
+                        <div className="space-y-1.5 min-w-[280px]">
                           <div className="grid grid-cols-4 gap-2 text-[10px] text-muted px-2">
                             <span>کارمند</span><span className="text-left">ناخالص</span>
                             <span className="text-left">کسورات</span><span className="text-left">خالص</span>
@@ -307,6 +308,7 @@ export default function PayrollPage() {
                             <span className="text-left tabular-nums text-rose-600">{fmt(slips.reduce((a, s) => a + s.totalDeductions, 0))}</span>
                             <span className="text-left tabular-nums text-emerald-700">{fmt(slips.reduce((a, s) => a + s.netPay, 0))}</span>
                           </div>
+                        </div>
                         </div>
                       )}
                     </div>
@@ -428,7 +430,7 @@ export default function PayrollPage() {
                   {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.fullName}</option>)}
                 </Select>
               </Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Field label="نوع">
                   <Select value={evType} onChange={e => setEvType(e.target.value as any)}>
                     <option value="advance">مساعده</option>

@@ -278,7 +278,8 @@ export default function ChequesPage() {
           </div>
         ) : (
           <div className="bg-surface border border-border rounded-lg overflow-hidden">
-            <table className="w-full text-[12.5px]">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[480px] text-[12.5px]">
               <thead>
                 <tr className="border-b border-border text-muted text-[11px]">
                   <th className="text-right px-4 py-2.5 font-normal">شماره</th>
@@ -352,6 +353,7 @@ export default function ChequesPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>
