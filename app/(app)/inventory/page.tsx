@@ -279,7 +279,7 @@ export default function InventoryPage() {
             <div className="text-[13.5px] font-medium text-text">هشدار انقضا</div>
             <span className="mr-auto text-[11px] font-medium text-white bg-danger px-2 py-0.5 rounded-full">{expiry.length}</span>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-border max-h-64 overflow-y-auto">
             {expiry.map((w) => {
               const badge = w.isExpired
                 ? { label: 'منقضی', cls: 'bg-danger text-white' }
