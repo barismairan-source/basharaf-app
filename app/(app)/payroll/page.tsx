@@ -275,7 +275,8 @@ export default function PayrollPage() {
                       {slips.length === 0 ? (
                         <div className="text-[12px] text-muted text-center py-3">فیشی نیست (اول محاسبه کنید)</div>
                       ) : (
-                        <div className="space-y-1.5">
+                        <div className="overflow-x-auto">
+                        <div className="space-y-1.5 min-w-[280px]">
                           <div className="grid grid-cols-4 gap-2 text-[10px] text-muted px-2">
                             <span>کارمند</span><span className="text-left">ناخالص</span>
                             <span className="text-left">کسورات</span><span className="text-left">خالص</span>
@@ -307,6 +308,7 @@ export default function PayrollPage() {
                             <span className="text-left tabular-nums text-rose-600">{fmt(slips.reduce((a, s) => a + s.totalDeductions, 0))}</span>
                             <span className="text-left tabular-nums text-emerald-700">{fmt(slips.reduce((a, s) => a + s.netPay, 0))}</span>
                           </div>
+                        </div>
                         </div>
                       )}
                     </div>
