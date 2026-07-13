@@ -421,8 +421,8 @@ function CategoriesTab({ sections, onCreate, onUpdate, onDelete, showToast }: an
         </Card>
       )}
       <Card>
-        <CardBody className="p-0">
-          <table className="w-full">
+        <CardBody className="p-0 overflow-x-auto">
+          <table className="w-full min-w-[360px]">
             <thead className="bg-stone-50/50 border-b border-stone-100">
               <tr>
                 <th className="text-right text-[11px] text-stone-500 font-normal px-5 py-3">نام</th>
