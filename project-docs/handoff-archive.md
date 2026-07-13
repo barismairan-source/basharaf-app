@@ -1,5 +1,29 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-12 — Faz 4 — بازطراحی فرم ثبت تراکنش (v0.17.0) — اکانت ۱
+**چه شد:** فرم `/transactions/new` بازطراحی — ۵ فیلد اصلی همیشه نمایان + accordion «جزئیات بیشتر» برای ۷ فیلد فرعی. انتخاب سلسله‌مراتبی حساب با optgroup. pre-fill گسترش یافت (prefill_accountId + prefill_destAccountId). دکمه «ثبت آورده» در `/partners/[id]`.
+**فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/partners/[id]/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+
+## 📓 2026-07-11 — Faz 3 prep — SQL data migration + bugfix (v0.16.1) — اکانت ۱
+**چه شد:** `db-ownership-data-migration.sql` ساخته شد: self-contained، idempotent. بخش A تأییدی → بخش B DO block → بخش C نهایی. bugfix: بررسی تکراری partner_branches برای ستادی با isNull صحیح شد.
+**فایل‌ها:** `db-ownership-data-migration.sql`، `app/api/partners/[id]/branches/route.ts`
+**Build:** tsc ✅ ۰ خطا
+
+## 📓 2026-07-11 — مدل مالکیت: Faz 2 — UI شرکا (v0.16.0) — اکانت ۱
+**چه شد:** صفحه /partners (لیست/افزودن/جستجو/شعب)، /partners/[id] (ویرایش inline + آورده سرمایه)، accounts grouping (عملیاتی vs آورده شرکا)، dashboard بخش شرکا، nav-config.
+**فایل‌ها:** `app/(app)/partners/page.tsx`، `/[id]/page.tsx`، `/layout.tsx`، API routes، `app/(app)/accounts/page.tsx`، `app/(app)/dashboard/page.tsx`، `components/layout/nav-config.ts`، `store/slices/partnersSlice.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅
+
+## 📓 2026-07-11 — مدل مالکیت: Faz 0+1 (v0.15.0) — اکانت ۱
+**چه شد:** Faz 0: `db-ownership-model-migration.sql` — جدول partners، partner_branches با partial unique index، ستون partner_id nullable روی accounts. Faz 1: Drizzle schema، types/partner.ts، API partners CRUD، store/slices/partnersSlice.ts.
+**Build:** tsc ✅ ۰ خطا · build ✅
+
+## 📓 2026-07-11 — نمودارهای واقعی داشبورد (v0.14.0) — اکانت ۱
+**چه شد:** فاز dataviz: API `/api/dashboard/trends` (GROUP BY date 14 روز)، TrendChart (recharts BarChart)، TodayCashFlow، BreakdownCard formatMoneyShort رنگی، BranchSummary bar افقی نسبی.
+**فایل‌ها:** `app/api/dashboard/trends/route.ts`، `components/dashboard/TrendChart.tsx`، `TodayCashFlow.tsx`، `BreakdownCard.tsx`، `BranchSummary.tsx`، `app/(app)/dashboard/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
+
 ## 📓 2026-07-10 — بازچینی سلسله‌مراتب داشبورد (v0.13.0) — اکانت ۱
 **چه شد:** DashCard مشترک، KPICard formatMoneyParts، page.tsx ۶ بخش SectionLabel، AttentionWidget+HRSummaryCard→DashCard، شرکا mini-cards، RecruitmentWidget ساده (limit3، بدون ستاره).
 **Build:** tsc ✅ · build ✅

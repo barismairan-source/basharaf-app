@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.21.1-visual-audit` |
-| **آخرین به‌روزرسانی** | 2026-07-12 — اکانت: ۱ |
+| **نسخه** | `0.22.0` |
+| **آخرین به‌روزرسانی** | 2026-07-13 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — push شده. |
+| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — merge شده، push در انتظار. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) اجرای Quick Wins ممیزی بصری (فاز ۹): ۹ مورد overflow-x-auto + گریدهای responsive — `project-docs/INVESTIGATION-visual-audit.md`. ۲) دسته‌های راه‌اندازی را در UI علامت بزنید. |
-| **بلاک‌شده/منتظر کاربر** | منتظر تصمیم: آیا Quick Wins ممیزی بصری اجرا شوند؟ |
+| **کار بعدی پیشنهادی** | ۱) دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها → آیکون Construction). ۲) تست موبایل ۵ صفحه‌ی اولویت‌دار (ترتیب در ژورنال فاز ۹). ۳) P&L drilldown (فاز بعدی). |
+| **بلاک‌شده/منتظر کاربر** | تست موبایل روی گوشی واقعی (ترتیب: purchase-orders → menu → payroll → recipes → cartable). |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -63,6 +63,16 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-13 — فاز ۹ — sweep موبایل responsive (v0.22.0) — اکانت ۱
+**چه شد:** Quick Wins ممیزی بصری اجرا شد. شاخه `fix/mobile-responsive-sweep` با ۳ commit ساخته و به main merge شد. تمام تغییرات فقط className — هیچ تغییر منطق یا API نداشت.
+- **commit 1** (الگو ۱ — جداول): `cheques` table: `overflow-x-auto` + `min-w-[480px]` · `menu` categories table: `overflow-x-auto` + `min-w-[360px]`
+- **commit 2** (الگو ۲ — گریدها): `employees` modal: ۶ مورد `grid-cols-2` → `grid-cols-1 sm:grid-cols-2` · `payroll` payslip: `overflow-x-auto` wrapper + `min-w-[280px]`
+- **commit 3** (الگوهای ۳و۴): `payroll` header: `flex-wrap` · `payroll` event modal: responsive grid · `inventory` expiry list: `max-h-64 overflow-y-auto`
+**فایل‌ها:** `app/(app)/cheques/page.tsx`، `app/(app)/menu/page.tsx`، `app/(app)/employees/page.tsx`، `app/(app)/payroll/page.tsx`، `app/(app)/inventory/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱) کاربر روی گوشی واقعی ۵ صفحه را تست کند (ترتیب: purchase-orders → menu → payroll → recipes → cartable). ۲) دسته‌های راه‌اندازی در UI علامت بزند. ۳) P&L drilldown.
 
 ## 📓 2026-07-12 — ممیزی بصری/UX کد-محور (v0.21.1) — اکانت ۱
 **چه شد:** ممیزی سیستماتیک ۱۸ صفحه‌ی کلیدی پنل از روی کد TSX — بر اساس ۶ معیار (سلسله‌مراتب، فاصله‌گذاری، یکدستی، حالت خالی، موبایل، کنتراست). نمره‌گذاری ۱–۵ برای هر صفحه.
@@ -147,74 +157,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۱) کاربر `db-setup-flag-migration.sql` بخش B را در pgAdmin اجرا کند. ۲) دسته‌های راه‌اندازی را در UI علامت بزند. ۳) Faz 3 کد (partner_id واقعی).
-
-## 📓 2026-07-12 — Faz 4 — بازطراحی فرم ثبت تراکنش (v0.17.0) — اکانت ۱
-**چه شد:**
-- **فرم `/transactions/new` بازطراحی شد**: ۵ فیلد اصلی همیشه نمایان (نوع، عنوان، مبلغ، دسته، حساب) + accordion «جزئیات بیشتر» برای ۷ فیلد فرعی (روش، طرف‌حساب، رسید، تاریخ، فاکتور، VAT، پیش‌فاکتور، یادداشت). state accordion در localStorage کلید `ba-tx-details-open`.
-- **انتخاب سلسله‌مراتبی حساب**: accounts فیلتر می‌شوند به scope شعبه انتخابی (`branchId=null || branchId=selectedBranch`). اگر حساب‌های partner_equity وجود دارند → `<optgroup>` جداگانه «آورده شرکا» با پیشوند «آورده:».
-- **pre-fill گسترش یافت**: پارامترهای `prefill_accountId` و `prefill_destAccountId` جدید اضافه شدند. اگر هر pre-fill پارامتری در URL بود → accordion خودکار باز می‌شود.
-- **دکمه «ثبت آورده» در `/partners/[id]`**: به header کارت «آورده‌ی سرمایه» اضافه شد. نام شریک و ID حساب equity را در URL `/transactions/new` pre-fill می‌کند (با name-match fallback برای قبل از Faz 3 code).
-- وقتی شعبه تغییر می‌کند، حساب‌های خارج از scope خودکار پاک می‌شوند.
-**فایل‌ها:** `app/(app)/transactions/new/page.tsx` (بازنویسی کامل)، `app/(app)/partners/[id]/page.tsx` (دکمه ثبت آورده)
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۱) کاربر بخش A+B فایل `db-ownership-data-migration.sql` را در pgAdmin اجرا کند (نام شعبه تأیید → DO block اجرا). ۲) بعد از تأیید بخش C: **Faz 3 code** — `partnerId` به `accounts` در Drizzle schema اضافه، GET /api/accounts و GET /api/accounts/[id] مقدار واقعی برمی‌گردانند (به‌جای null hardcode). بعد از آن کارت آورده در `/partners/[id]` نمایش واقعی خواهد داشت.
-
-## 📓 2026-07-11 — Faz 3 prep — SQL data migration + bugfix (v0.16.1) — اکانت ۱
-**چه شد:**
-- `db-ownership-data-migration.sql` ساخته شد: self-contained، بدون UUID دستی، idempotent.
-  بخش A (SELECT تأییدی) → بخش B (DO block: get-or-insert partners، partner_branches، UPDATE accounts) → بخش C (SELECT نهایی).
-  برای نام شعبه از subquery استفاده شد؛ اگر نام اشتباه باشد RAISE EXCEPTION می‌دهد.
-- **bugfix**: POST /api/partners/[id]/branches — بررسی تکراری برای ستادی (branch_id=null) اشتباه بود:
-  از `isNull(schema.partnerBranches.branchId)` استفاده شد.
-- بررسی edge cases UI (بند ۳): همه حالت‌ها (قبل از migration، بعد از SQL، بعد از Faz3 code) gracefully handle می‌شوند.
-**فایل‌ها:** `db-ownership-data-migration.sql` (جدید)، `app/api/partners/[id]/branches/route.ts`
-**Build:** tsc ✅ ۰ خطا
-**ناتمام:** —
-**برای جلسه‌ی بعد:** کاربر بخش A فایل SQL را در pgAdmin اجرا می‌کند → نام دقیق شعبه را می‌بیند → اگر نام فرق دارد v_branch_name را در فایل ویرایش می‌کند → بخش B را اجرا می‌کند → خبر می‌دهد. بعد از تأیید بخش C: Faz 3 کد — partner_id به Drizzle schema accounts اضافه، API حساب‌ها partnerId واقعی برمی‌گرداند.
-
-## 📓 2026-07-11 — مدل مالکیت: Faz 2 — UI شرکا (v0.16.0) — اکانت ۱
-**چه شد:**
-- مرحله ۱ SQL توسط کاربر در pgAdmin اجرا و تأیید شد (partners, partner_branches, ALTER accounts).
-- **صفحه /partners**: لیست شرکا، فرم افزودن، جستجو، نمایش شعب هر شریک، لینک به پروفایل.
-- **صفحه /partners/[id]**: ویرایش inline مشخصات، مدیریت رابطه شریک↔شعبه (افزودن با JalaliDatePicker + حذف نرم)، بخش آورده سرمایه (partner_equity accounts، برچسب «آورده‌ی خرج‌شده» برای منفی).
-- **API**: POST/DELETE /api/partners/[id]/branches با bررسی تکراری و partial uniqueness.
-- **store/slices/partnersSlice.ts**: addPartnerBranch، removePartnerBranch اضافه شد.
-- **accounts page**: grouping (عملیاتی vs آورده شرکا)، totalBalance بدون equity، کارت جداگانه equity با برچسب.
-- **dashboard**: بخش «وضعیت شرکا» از partners API (نه contacts)؛ اگر خالی = یک‌خطه.
-- **nav-config**: آیتم «شرکا» با Handshake در «روابط و منابع» اضافه شد.
-**فایل‌ها:** `app/(app)/partners/page.tsx`، `app/(app)/partners/[id]/page.tsx`، `app/(app)/partners/layout.tsx`، `app/api/partners/[id]/branches/route.ts`، `app/api/partners/[id]/branches/[pbId]/route.ts`، `app/(app)/accounts/page.tsx`، `app/(app)/dashboard/page.tsx`، `components/layout/nav-config.ts`، `store/slices/partnersSlice.ts`، `app/api/partners/route.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ⚠️ مرحله ۳ SQL (data migration): درج حسین شرف + شهریار شرف در partners، درج partner_branches، UPDATE accounts.type='partner_equity' + accounts.partner_id. UUID‌ها باید از DB واقعی گرفته شوند. بعد از مرحله ۳: Faz 3 — partner_id به Drizzle schema اضافه می‌شود و API حساب‌ها partnerId واقعی برمی‌گرداند.
-
-## 📓 2026-07-11 — مدل مالکیت: Faz 0+1 (v0.15.0) — اکانت ۱
-**چه شد:**
-1. **Faz 0 — SQL migration**: `db-ownership-model-migration.sql` ساخته شد. مرحله ۱: جدول `partners`، جدول `partner_branches` با دو partial unique index (حل مشکل NULL uniqueness در PostgreSQL)، ستون `partner_id` nullable روی `accounts`. مرحله ۳ کامنت‌شده برای اجرای بعد از deploy.
-2. **Faz 1 — کد**:
-   - `lib/db/schema.ts`: جداول `partners` و `partnerBranches` با relations اضافه شد (partner_id روی accounts اضافه نشد — backward compat)
-   - `types/partner.ts`: Partner, PartnerBranchAssoc (فایل جدید)
-   - `Account.partnerId: string | null` اضافه شد (همه‌جا null تا Faz 3)
-   - `app/api/partners/route.ts`: GET+POST (requireAdmin)
-   - `app/api/partners/[id]/route.ts`: PATCH+DELETE (soft)
-   - accounts API: 'partner_equity' به enum اضافه شد
-   - `store/slices/partnersSlice.ts`: loadPartners, createPartner, updatePartner, deletePartner
-   - `store/index.ts`: PartnersSlice اضافه شد
-3. tsc ✅ ۰ خطا · build ✅ · دو commit جداگانه push شد.
-**فایل‌ها:** `db-ownership-model-migration.sql`، `lib/db/schema.ts`، `types/partner.ts`، `types/transaction.ts`، `types/index.ts`، `app/api/partners/route.ts`، `app/api/partners/[id]/route.ts`، `app/api/accounts/route.ts`، `app/api/accounts/[id]/route.ts`، `store/slices/partnersSlice.ts`، `store/index.ts`، `store/slices/accountsSlice.ts`، `lib/realtime/useRealtime.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ⚠️ کاربر باید مرحله ۱ SQL را در pgAdmin اجرا کند (فایل `db-ownership-model-migration.sql`، فقط تا خط `END $$;` — مرحله ۳ هنوز نه). بعد از تأیید: Faz 2 = صفحه‌ی شرکا در `/settings` یا صفحه‌ی مستقل، جایگزینی type='cash' به 'partner_equity'، فیلتر حساب‌های شریک در فرم تراکنش.
-
-## 📓 2026-07-11 — نمودارهای واقعی داشبورد (v0.14.0) — اکانت ۱
-**چه شد:** فاز dataviz — ۴ commit روی `feat/dashboard-dataviz` سپس merge به main:
-1. **API `/api/dashboard/trends`**: یک query `GROUP BY date` روی تراکنش‌های ۱۴ روز اخیر (createdAt). برمی‌گرداند `{days, todayIncome, todayExpense}`. حداکثر ۲ query جدید در کل فاز — این اولی و تنهاست.
-2. **TrendChart**: recharts BarChart دوسری (income=emerald, expense=rose). محور Y سمت راست. tooltip فارسی با formatMoneyShort و تاریخ جلالی. قانون: <3 روز داده → null.
-3. **TodayCashFlow**: دو کارت کوچک ورودی/خروجی امروز از همان endpoint. اگر هر دو صفر → null.
-4. **BreakdownCard**: formatMoneyShort رنگی به‌جای fmt، top-5، bar 5px. **BranchSummary**: جدول متنی → دو bar افقی نسبی (incW/expW نسبت به max). موجودی بالای ردیف.
-**فایل‌ها:** `app/api/dashboard/trends/route.ts` (جدید)، `components/dashboard/TrendChart.tsx` (جدید)، `components/dashboard/TodayCashFlow.tsx` (جدید)، `components/dashboard/index.ts`، `components/dashboard/BreakdownCard.tsx`، `components/dashboard/BranchSummary.tsx`، `app/(app)/dashboard/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅ · 48 unit tests ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست دستی با داده‌ی واقعی. TrendChart فقط اگر ≥۳ روز داشته باشد render شود (وگرنه null). tooltip hover/tap روی موبایل بررسی شود.
 
 
