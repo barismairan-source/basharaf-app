@@ -1,5 +1,15 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-12 — Faz 7 — جریان یکپارچه چک↔طرف‌حساب↔تراکنش↔دسته (v0.20.0) — اکانت ۱
+**چه شد:** contactId به TransactionBase اضافه شد. ContactLedgerDrawer: دکمه‌های quick-action (ثبت تراکنش با این طرف‌حساب، مشاهده چک‌ها). TxDetailPanel: نام طرف‌حساب کلیک‌پذیر. فرم تراکنش جدید: دکمه‌ی «+ دسته‌ی جدید» برای SuperAdmin.
+**فایل‌ها:** `types/transaction.ts`، `components/contacts/ContactLedgerDrawer.tsx`، `components/transactions/TxDetailPanel.tsx`، `app/(app)/transactions/page.tsx`، `app/(app)/transactions/new/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+
+## 📓 2026-07-12 — حذف ابزار پاک‌سازی (v0.20.1) — اکانت ۱
+**چه شد:** کاربر پاک‌سازی طرف‌حساب‌ها را انجام داد. ابزار موقت حذف شد: api/admin/contact-cleanup، ContactCleanupPane، SettingsNav tab، index.ts export.
+**فایل‌ها:** ۵ فایل ویرایش، ۳ فایل حذف.
+**Build:** tsc ✅ ۰ خطا · build ✅
+
 ## 📓 2026-07-12 — Faz 6 — ابزار پاک‌سازی طرف‌حساب (v0.19.0) — اکانت ۱
 **چه شد:** API تشخیصی GET + API اقدام POST با actions `delete`/`convert`. UI `ContactCleanupPane` در Settings (superAdminOnly). ابزار موقت بود؛ بعد از پاک‌سازی کاربر در جلسه‌ی بعد حذف شد.
 **فایل‌ها:** `app/api/admin/contact-cleanup/route.ts`، `app/api/admin/contact-cleanup/[id]/route.ts`، `components/settings/ContactCleanupPane.tsx`، `components/settings/SettingsNav.tsx`، `components/settings/index.ts`، `app/(app)/settings/page.tsx`

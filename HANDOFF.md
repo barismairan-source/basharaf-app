@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.25.0` |
+| **نسخه** | `0.26.0` |
 | **آخرین به‌روزرسانی** | 2026-07-14 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) تست P&L drilldown در مرورگر: صفحه گزارش → روی «درآمد فروش»، «COGS»، «حقوق پرسنل»، «سایر هزینه‌ها» کلیک کن — باید dropdown با تراکنش‌های زیرین باز شود. ۲) دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها). |
+| **کار بعدی پیشنهادی** | ۱) تست P&L drilldown در مرورگر: صفحه گزارش → روی «درآمد فروش»، «COGS»، «حقوق پرسنل»، «سایر هزینه‌ها» کلیک کن. ۲) دسته‌های راه‌اندازی در UI (Settings → دسته‌ها). ۳) فاز امنیتی ۱ کاملاً بسته شد — همه‌ی باگ‌های audit رفع شدند. |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -63,6 +63,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-14 — بستن کامل فاز امنیتی ۱: رفع bypass ورود دسته‌ای اقلام انبار (v0.26.0) — اکانت ۱
+**چه شد:** آخرین bypass امنیتی رفع شد: `app/api/inventory/items/import/route.ts` از `requireSession()` به `requireAdmin()` تغییر کرد. قبلاً BranchUser و Chef می‌توانستند اقلام انبار + موجودی اولیه را با status=approved و applyBalance مستقیم وارد کنند. sweep کامل همه route‌ها هم انجام شد — هیچ موارد مشابه دیگری یافت نشد (produce و PO receive intentional هستند). **فاز امنیتی ۱ کاملاً بسته شد.**
+**فایل‌ها:** `app/api/inventory/items/import/route.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست P&L drilldown در مرورگر. دسته‌های راه‌اندازی در Settings.
 
 ## 📓 2026-07-14 — رفع race condition payroll approve (v0.25.0) — اکانت ۱
 **چه شد:** آخرین approve route که خارج از transaction بود رفع شد: `app/api/payroll/runs/[id]/approve/route.ts`. SELECT FOR UPDATE داخل db.transaction + WHERE guard با `status='calculated'` روی UPDATE. P&L drilldown کد-بازی شد — کامل و صحیح، آماده تست مرورگر. Migration روی production اجرا شده تأیید شد (عکس‌های DBeaver).
@@ -126,32 +133,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** DB migration بخش B (is_setup + opening_date) در pgAdmin. بعد P&L drilldown.
-
-## 📓 2026-07-12 — حذف ابزار پاک‌سازی (v0.20.1) — اکانت ۱
-**چه شد:** کاربر پاک‌سازی طرف‌حساب‌ها را انجام داد. طبق قرار، ابزار موقت حذف شد:
-- `app/api/admin/contact-cleanup/` (کل دایرکتوری) حذف شد.
-- `components/settings/ContactCleanupPane.tsx` حذف شد.
-- `SettingsNav.tsx`: tab `contact-cleanup` و import `UserX` حذف شدند.
-- `components/settings/index.ts`: export حذف شد.
-- `app/(app)/settings/page.tsx`: import و render block حذف شدند.
-**فایل‌ها:** ۵ فایل ویرایش، ۳ فایل حذف.
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** DB migration بخش B (is_setup + opening_date). بعد فاز ۸.
-
-## 📓 2026-07-12 — Faz 7 — جریان یکپارچه چک↔طرف‌حساب↔تراکنش↔دسته (v0.20.0) — اکانت ۱
-**چه شد:**
-- **`contactId` به `TransactionBase`**: تایپ TypeScript حالا `contactId?: string | null` دارد — قبلاً API برمی‌گرداند ولی تایپ نداشت.
-- **ContactLedgerDrawer — اقدامات سریع**: زیر بخش چک‌ها، دو دکمه‌ی لینک اضافه شد:
-  - «ثبت تراکنش با این طرف‌حساب» → `/transactions/new?prefill_contactId=X` (pre-fill خودکار).
-  - «ثبت / مشاهده چک‌ها» → `/cheques`.
-  - Escape handler به capture phase منتقل شد تا اگر از داخل TxDetailPanel باز شود، Escape فقط drawer را ببندد نه TxDetailPanel را.
-- **TxDetailPanel — لینک طرف‌حساب**: اگر تراکنش `contactId` داشته باشد، نام طرف‌حساب در بخش جزئیات به‌صورت کلیک‌پذیر نمایش می‌یابد (زیرخط‌دار). کلیک روی آن drawer طرف‌حساب را در همان صفحه تراکنش‌ها باز می‌کند.
-- **transactions/page.tsx**: `ContactLedgerDrawer` اضافه شد. `onContactClick` به TxDetailPanel پاس می‌شود.
-- **فرم ثبت تراکنش — `+ دسته‌ی جدید`**: دکمه‌ی `+` کنار select دسته‌بندی (فقط SuperAdmin). مودال کوچک inline — نام را می‌گیرد، POST `/api/categories` می‌زند (از طریق Zustand `createCategory`)، بعد از ساخت category جدید را auto-select می‌کند.
-**فایل‌ها:** `types/transaction.ts`، `components/contacts/ContactLedgerDrawer.tsx`، `components/transactions/TxDetailPanel.tsx`، `app/(app)/transactions/page.tsx`، `app/(app)/transactions/new/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۱) کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد → خبر دهد → commit جداگانه: فایل‌های پاک‌سازی حذف شوند. ۲) DB migration بخش B. ۳) فاز ۸ احتمالی: P&L drilldown.
 
 
