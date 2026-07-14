@@ -47,3 +47,4 @@ graphify-out/
 .claude/settings.local.json
 
 tests/visual-audit-screenshots/
+Screenshot*
