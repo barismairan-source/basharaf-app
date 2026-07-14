@@ -15,7 +15,7 @@
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) اجرای migration `001-unique-parent-voucher-id.sql` روی DB production (ابتدا داده‌ی تکراری را بررسی کنید — دستور در فایل migration هست). ۲) تست P&L drilldown در مرورگر. ۳) payroll approve را در transaction بپیچید (`app/api/payroll/runs/[id]/approve/route.ts` — ریسک پایین، ولی سازگاری با بقیه). |
+| **کار بعدی پیشنهادی** | ۱) تست P&L drilldown در مرورگر (کلیک روی ردیف‌های سود/زیان). ۲) دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها). ۳) payroll approve را در transaction بپیچید (ریسک پایین — کم‌اولویت). |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -72,8 +72,8 @@
 - **تست‌های رگرسیون**: `tests/unit/security-guards.test.ts` — 27 تست (WAC، approve guard، voucher guard، گزارش جلالی، maker-checker، unique reversal). همه سبز ✅.
 **فایل‌ها:** `app/api/inventory/vouchers/[id]/approve/route.ts`، `app/api/transactions/[id]/approve/route.ts`، `project-docs/migrations/001-unique-parent-voucher-id.sql`، `tests/unit/security-guards.test.ts`
 **Build:** tsc ✅ ۰ خطا · build ✅ · vitest 27/27 ✅
-**ناتمام:** migration روی production اجرا نشده (در انتظار تأیید کاربر + بررسی داده‌ی تکراری).
-**برای جلسه‌ی بعد:** ۱) بررسی داده‌ی تکراری parent_voucher_id و اجرای migration. ۲) تست drilldown. ۳) payroll approve را در transaction بپیچ (کم‌اولویت).
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱) تست P&L drilldown در مرورگر. ۲) دسته‌های راه‌اندازی در UI. ۳) payroll approve در transaction (کم‌اولویت).
 
 ## 📓 2026-07-14 — ممیزی امنیتی و رفع ۵ باگ بحرانی (v0.23.0) — اکانت ۱
 **چه شد:** ممیزی کامل معماری (Principal Architect role) روی ۸ ریسک بحرانی. همه فایل‌های مرتبط مستقیماً خوانده و تأیید شدند. ۵ باگ واقعی رفع شد:
