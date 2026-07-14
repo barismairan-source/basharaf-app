@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-12 — Faz 6 — ابزار پاک‌سازی طرف‌حساب (v0.19.0) — اکانت ۱
+**چه شد:** API تشخیصی GET + API اقدام POST با actions `delete`/`convert`. UI `ContactCleanupPane` در Settings (superAdminOnly). ابزار موقت بود؛ بعد از پاک‌سازی کاربر در جلسه‌ی بعد حذف شد.
+**فایل‌ها:** `app/api/admin/contact-cleanup/route.ts`، `app/api/admin/contact-cleanup/[id]/route.ts`، `components/settings/ContactCleanupPane.tsx`، `components/settings/SettingsNav.tsx`، `components/settings/index.ts`، `app/(app)/settings/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+
 ## 📓 2026-07-12 — Faz 5 — لنز گزارش‌گیری «عملیاتی vs کامل» (v0.18.0) — اکانت ۱
 **چه شد:** فیلد `is_setup` روی categories + `opening_date` روی branches (schema + migration). API گزارش‌ها: `excludeSetup=1` → حذف دسته‌های راه‌اندازی از جریان مالی. Toggle «عملیاتی | کامل» در داشبورد و گزارش‌ها. دکمه «از افتتاح» در فیلتر تاریخ. INVARIANT: `accounts.balance` هرگز تحت تأثیر این فیلتر نیست.
 **فایل‌ها:** `db/schema.ts`, `app/api/categories/[id]/route.ts`, `app/api/branches/[id]/route.ts`, `app/api/reports/route.ts`, `lib/hooks/useDashboardMetrics.ts`, `components/settings/CategoriesPane.tsx`, `components/settings/BranchesPane.tsx`, `app/(app)/dashboard/page.tsx`, `app/(app)/reports/page.tsx`

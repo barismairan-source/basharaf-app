@@ -97,6 +97,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     const finalTotal = await db.transaction(async (dbTx) => {
+      // قفل برگه داخل transaction — جلوگیری از تأیید همزمان (SELECT FOR UPDATE)
+      const [lockedVoucher] = await dbTx.select({ status: schema.invVouchers.status })
+        .from(schema.invVouchers)
+        .where(eq(schema.invVouchers.id, params.id))
+        .for('update');
+      if (!lockedVoucher || lockedVoucher.status !== 'pending') {
+        throw new ApiError(409, 'فقط برگه‌های در انتظار قابل تأیید هستند', 'INVALID_STATE');
+      }
+
       // خطوط را با قیمت نهایی (در صورت وجود) آماده کن
       const prepared = lines.map((l) => ({
         itemId: l.itemId,
@@ -164,10 +173,10 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         });
       }
 
-      // وضعیت برگه → approved
+      // وضعیت برگه → approved (با WHERE guard — defense-in-depth)
       await dbTx.update(schema.invVouchers)
         .set({ status: 'approved', finalTotal: total, approvedBy: session.sub, approvedAt: now, updatedAt: now })
-        .where(eq(schema.invVouchers.id, params.id));
+        .where(and(eq(schema.invVouchers.id, params.id), eq(schema.invVouchers.status, 'pending')));
 
       // اتصال به حسابداری: برگه‌ی خرید → سند هزینه‌ی واقعی + کسر از صندوق
       if (kind === 'in') {

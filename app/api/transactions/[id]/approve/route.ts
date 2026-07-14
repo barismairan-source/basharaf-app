@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, or } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
@@ -38,9 +38,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         saleMeta?.lines && Array.isArray(saleMeta.lines) && saleMeta.lines.length > 0 &&
         !saleMeta.deductedAt;
 
+      // WHERE guard — defense-in-depth در کنار FOR UPDATE
       await dbTx.update(schema.transactions)
         .set({ status: 'approved', approvedBy: session.sub, approvedAt: now, updatedAt: now })
-        .where(eq(schema.transactions.id, params.id));
+        .where(and(
+          eq(schema.transactions.id, params.id),
+          or(eq(schema.transactions.status, 'pending'), eq(schema.transactions.status, 'proforma')),
+        ));
 
       await applyBalance(dbTx, current);
       if (current.contactId && current.isCredit) {

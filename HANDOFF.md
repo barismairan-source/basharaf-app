@@ -10,12 +10,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.23.0` |
+| **نسخه** | `0.24.0` |
 | **آخرین به‌روزرسانی** | 2026-07-14 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) تست P&L drilldown در مرورگر (کلیک روی ردیف‌های سود/زیان). ۲) دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها). ۳) migrate برای unique constraint روی `parent_voucher_id` در `inv_vouchers` (حفاظت کامل در برابر race condition برگشت‌برگه). |
+| **کار بعدی پیشنهادی** | ۱) اجرای migration `001-unique-parent-voucher-id.sql` روی DB production (ابتدا داده‌ی تکراری را بررسی کنید — دستور در فایل migration هست). ۲) تست P&L drilldown در مرورگر. ۳) payroll approve را در transaction بپیچید (`app/api/payroll/runs/[id]/approve/route.ts` — ریسک پایین، ولی سازگاری با بقیه). |
 | **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -63,6 +63,17 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-14 — تأیید نهایی فاز ۱ + رفع ۲ باگ اضافه + تست‌های رگرسیون (v0.24.0) — اکانت ۱
+**چه شد:** بررسی عمیق و تأیید ۶ فیکس فاز ۱ (v0.23.0). دو مشکل اضافه کشف و رفع شد:
+1. **Race condition در approve برگه انبار** (`app/api/inventory/vouchers/[id]/approve/route.ts`): همان باگ تراکنش — SELECT و status check خارج از `db.transaction()` بود، هیچ FOR UPDATE روی ردیف برگه وجود نداشت. رفع: قفل برگه با SELECT FOR UPDATE داخل transaction + WHERE guard روی UPDATE.
+2. **WHERE guard تأیید تراکنش** (`app/api/transactions/[id]/approve/route.ts`): UPDATE فاقد `WHERE status='pending'` بود. رفع: `.where(and(..., or(status='pending', status='proforma')))`.
+- **Migration**: `project-docs/migrations/001-unique-parent-voucher-id.sql` ساخته شد — UNIQUE INDEX CONCURRENTLY روی `inv_vouchers.parent_voucher_id WHERE NOT NULL`. اجرا نشده؛ دستور بررسی داده‌ی تکراری در فایل هست.
+- **تست‌های رگرسیون**: `tests/unit/security-guards.test.ts` — 27 تست (WAC، approve guard، voucher guard، گزارش جلالی، maker-checker، unique reversal). همه سبز ✅.
+**فایل‌ها:** `app/api/inventory/vouchers/[id]/approve/route.ts`، `app/api/transactions/[id]/approve/route.ts`، `project-docs/migrations/001-unique-parent-voucher-id.sql`، `tests/unit/security-guards.test.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅ · vitest 27/27 ✅
+**ناتمام:** migration روی production اجرا نشده (در انتظار تأیید کاربر + بررسی داده‌ی تکراری).
+**برای جلسه‌ی بعد:** ۱) بررسی داده‌ی تکراری parent_voucher_id و اجرای migration. ۲) تست drilldown. ۳) payroll approve را در transaction بپیچ (کم‌اولویت).
 
 ## 📓 2026-07-14 — ممیزی امنیتی و رفع ۵ باگ بحرانی (v0.23.0) — اکانت ۱
 **چه شد:** ممیزی کامل معماری (Principal Architect role) روی ۸ ریسک بحرانی. همه فایل‌های مرتبط مستقیماً خوانده و تأیید شدند. ۵ باگ واقعی رفع شد:
@@ -135,23 +146,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۱) کاربر پاک‌سازی طرف‌حساب‌ها را انجام دهد → خبر دهد → commit جداگانه: فایل‌های پاک‌سازی حذف شوند. ۲) DB migration بخش B. ۳) فاز ۸ احتمالی: P&L drilldown.
-
-## 📓 2026-07-12 — Faz 6 — ابزار پاک‌سازی طرف‌حساب (v0.19.0) — اکانت ۱
-**چه شد:**
-- **API تشخیصی**: `GET /api/admin/contact-cleanup` — query: نام | نوع | تعداد تراکنش | مانده | آخرین تراکنش (فقط contacts فعال).
-- **API اقدام**: `POST /api/admin/contact-cleanup/[id]` با body `{action: 'delete'|'convert'}`:
-  - `delete`: server-side تأیید linked_tx_count=0 و balance=0 → حذف + audit log.
-  - `convert`: atomic transaction: ۱) categoryName خالی تراکنش‌های لینک‌شده = نام contact، ۲) contactId→NULL، ۳) contact غیرفعال، ۴) audit log.
-- **UI**: `ContactCleanupPane` در Settings (superAdminOnly) — جدول با inline confirm. قوانین:
-  - balance≠0 → قفل با tooltip «مانده نسیه دارد — اول تسویه».
-  - linked=0 و balance=0 → فقط دکمه «حذف».
-  - linked>0 و balance=0 → فقط دکمه «تبدیل به دسته».
-  - «نگه‌دار» همیشه (بدون اقدام).
-- هیچ مهاجرت خودکاری نه — همه با کلیک و confirm کاربر.
-- ⚠ **قدم پایانی الزامی**: بعد از اتمام پاک‌سازی توسط کاربر، در commit جداگانه `ContactCleanupPane.tsx` + API routes آن (`/api/admin/contact-cleanup/`) حذف یا پشت `ENABLE_CONTACT_CLEANUP=true` env flag قرار گیرند تا ابزار خطرناک دائمی نشود.
-**فایل‌ها:** `app/api/admin/contact-cleanup/route.ts` (جدید)، `app/api/admin/contact-cleanup/[id]/route.ts` (جدید)، `components/settings/ContactCleanupPane.tsx` (جدید)، `components/settings/SettingsNav.tsx`، `components/settings/index.ts`، `app/(app)/settings/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** کاربر پاک‌سازی را انجام می‌دهد → خبر می‌دهد → commit جداگانه: فایل‌های پاک‌سازی حذف شوند.
 
 
