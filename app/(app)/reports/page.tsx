@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   TrendingUp, TrendingDown, Wallet, Users,
-  Building2, Download, Printer, ShoppingBag, Info, type LucideIcon,
+  Building2, Printer, ShoppingBag, Info, ChevronDown, ArrowLeft, type LucideIcon,
 } from 'lucide-react';
 import {
   Button, Card, CardBody, CardHeader, Select, Field, JalaliDatePicker,
@@ -27,6 +27,11 @@ interface ReportData {
   pl: { revenue: number; cogs: number; grossProfit: number; payroll: number; otherExpense: number; netProfit: number };
 }
 
+interface DrillItem {
+  id: string; date: string; title: string; amount: number;
+  type: string; categoryName: string | null; payee: string;
+}
+
 function toMillions(v: number) {
   if (Math.abs(v) >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
   return `${(v / 1000).toFixed(0)}K`;
@@ -42,6 +47,10 @@ export default function ReportsPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [viewMode, setViewMode] = useState<'operational' | 'full'>('operational');
+
+  const [openSegment, setOpenSegment] = useState<string | null>(null);
+  const [drillCache, setDrillCache] = useState<Record<string, { items: DrillItem[]; total: number }>>({});
+  const [drillLoading, setDrillLoading] = useState<string | null>(null);
 
   const isAdmin = user?.role === 'SuperAdmin';
 
@@ -78,6 +87,42 @@ export default function ReportsPage() {
   }, [selectedBranch, from, to, viewMode]);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
+
+  // وقتی فیلترها عوض می‌شوند، cache drilldown را پاک کن
+  useEffect(() => {
+    setDrillCache({});
+    setOpenSegment(null);
+  }, [from, to, selectedBranch, viewMode]);
+
+  function txLink(type?: string, q?: string) {
+    const p = new URLSearchParams();
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
+    if (type) p.set('type', type);
+    if (q) p.set('q', q);
+    return `/transactions?${p}`;
+  }
+
+  async function toggleDrill(segment: string, categoryName?: string) {
+    if (openSegment === segment) { setOpenSegment(null); return; }
+    setOpenSegment(segment);
+    if (drillCache[segment]) return;
+    setDrillLoading(segment);
+    try {
+      const p = new URLSearchParams({ segment });
+      if (categoryName) p.set('categoryName', categoryName);
+      if (from) p.set('from', from);
+      if (to) p.set('to', to);
+      if (selectedBranch !== 'all') p.set('branchId', selectedBranch);
+      const res = await fetch(`/api/reports/drilldown?${p}`, { credentials: 'include' });
+      if (res.ok) {
+        const d = await res.json() as { items: DrillItem[]; total: number };
+        setDrillCache(prev => ({ ...prev, [segment]: d }));
+      }
+    } finally {
+      setDrillLoading(null);
+    }
+  }
 
   if (!user) return null;
 
@@ -185,10 +230,30 @@ export default function ReportsPage() {
 
             {/* P&L Statement */}
             <Card>
-              <CardHeader title="صورت سود و زیان" sub="محاسبه بر اساس تراکنش‌های تأیید‌شده" />
+              <CardHeader title="صورت سود و زیان" sub="کلیک روی هر ردیف — مشاهده تراکنش‌های زیرین" />
               <CardBody className="space-y-0">
-                <PLRow label="درآمد فروش" value={data.pl.revenue} color="text-emerald-700" bold />
-                <PLRow label="بهای تمام‌شده‌ی فروش (COGS)" value={-data.pl.cogs} color="text-rose-600" indent />
+                <PLRow label="درآمد فروش" value={data.pl.revenue} color="text-emerald-700" bold
+                  onClick={() => toggleDrill('revenue')}
+                  isOpen={openSegment === 'revenue'}
+                />
+                <DrillSection
+                  segKey="revenue"
+                  open={openSegment === 'revenue'}
+                  loading={drillLoading === 'revenue'}
+                  drill={drillCache['revenue']}
+                  allLink={txLink('income')}
+                />
+                <PLRow label="بهای تمام‌شده‌ی فروش (COGS)" value={-data.pl.cogs} color="text-rose-600" indent
+                  onClick={() => toggleDrill('cogs')}
+                  isOpen={openSegment === 'cogs'}
+                />
+                <DrillSection
+                  segKey="cogs"
+                  open={openSegment === 'cogs'}
+                  loading={drillLoading === 'cogs'}
+                  drill={drillCache['cogs']}
+                  allLink={txLink('expense', 'بهای تمام‌شده')}
+                />
                 <PLDivider />
                 <PLRow
                   label="سود ناخالص"
@@ -197,7 +262,17 @@ export default function ReportsPage() {
                   bold
                   margin={data.pl.revenue > 0 ? Math.round((data.pl.grossProfit / data.pl.revenue) * 100) : null}
                 />
-                <PLRow label="حقوق پرسنل" value={-data.pl.payroll} color="text-rose-600" indent />
+                <PLRow label="حقوق پرسنل" value={-data.pl.payroll} color="text-rose-600" indent
+                  onClick={() => toggleDrill('payroll')}
+                  isOpen={openSegment === 'payroll'}
+                />
+                <DrillSection
+                  segKey="payroll"
+                  open={openSegment === 'payroll'}
+                  loading={drillLoading === 'payroll'}
+                  drill={drillCache['payroll']}
+                  allLink={txLink('expense', 'حقوق پرسنل')}
+                />
                 {(() => {
                   const primeCost = data.pl.cogs + data.pl.payroll;
                   const pct = data.pl.revenue > 0 ? Math.round((primeCost / data.pl.revenue) * 100) : null;
@@ -214,7 +289,17 @@ export default function ReportsPage() {
                     />
                   );
                 })()}
-                <PLRow label="سایر هزینه‌های عملیاتی" value={-data.pl.otherExpense} color="text-rose-600" indent />
+                <PLRow label="سایر هزینه‌های عملیاتی" value={-data.pl.otherExpense} color="text-rose-600" indent
+                  onClick={() => toggleDrill('other')}
+                  isOpen={openSegment === 'other'}
+                />
+                <DrillSection
+                  segKey="other"
+                  open={openSegment === 'other'}
+                  loading={drillLoading === 'other'}
+                  drill={drillCache['other']}
+                  allLink={txLink('expense')}
+                />
                 <PLDivider />
                 <PLRow
                   label="سود خالص"
@@ -341,7 +426,7 @@ export default function ReportsPage() {
             {/* Category breakdown */}
             {data.byCategory.length > 0 && (
               <Card>
-                <CardHeader title="تفکیک دسته‌بندی" />
+                <CardHeader title="تفکیک دسته‌بندی" sub="کلیک روی هر ردیف — مشاهده تراکنش‌ها" />
                 <CardBody className="p-0 overflow-x-auto">
                   <table className="w-full min-w-[360px]">
                     <thead className="bg-stone-50/50 border-b border-stone-100">
@@ -350,11 +435,12 @@ export default function ReportsPage() {
                         <th className="text-center text-[11px] text-stone-500 font-normal px-3 py-3">نوع</th>
                         <th className="text-end text-[11px] text-stone-500 font-normal px-5 py-3">مجموع</th>
                         <th className="text-center text-[11px] text-stone-500 font-normal px-3 py-3">تعداد</th>
+                        <th className="w-8" />
                       </tr>
                     </thead>
                     <tbody>
                       {data.byCategory.map((c, i) => (
-                        <tr key={i} className="border-b border-stone-50 last:border-b-0">
+                        <tr key={i} className="border-b border-stone-50 last:border-b-0 hover:bg-stone-50/60 transition-colors">
                           <td className="px-5 py-2.5"><span className="text-[12.5px] text-stone-800">{c.name}</span></td>
                           <td className="px-3 py-2.5 text-center">
                             <span className={cn('text-[10.5px] px-2 py-0.5 rounded-full', c.type === 'income' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}>
@@ -363,6 +449,15 @@ export default function ReportsPage() {
                           </td>
                           <td className="px-5 py-2.5 text-end"><span className="text-[12.5px] text-stone-700 tabular-nums">{fmt(c.total)}</span></td>
                           <td className="px-3 py-2.5 text-center"><span className="text-[12px] text-stone-500 tabular-nums">{c.count}</span></td>
+                          <td className="px-3 py-2.5 text-center">
+                            <a
+                              href={txLink(c.type !== 'transfer' ? c.type : undefined, c.name)}
+                              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors"
+                              title="مشاهده تراکنش‌ها"
+                            >
+                              <ArrowLeft size={13} strokeWidth={2} />
+                            </a>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -425,13 +520,30 @@ function PLDivider() {
   return <div className="border-t border-stone-200 my-1" />;
 }
 
-function PLRow({ label, value, color, bold, indent, margin, marginColor, tooltip }: {
+function PLRow({ label, value, color, bold, indent, margin, marginColor, tooltip, onClick, isOpen }: {
   label: string; value: number; color: string; bold?: boolean; indent?: boolean;
   margin?: number | null; marginColor?: string; tooltip?: string;
+  onClick?: () => void | Promise<void>; isOpen?: boolean;
 }) {
+  const clickable = !!onClick;
   return (
-    <div className={cn('flex items-center justify-between py-2.5 gap-4', indent && 'pl-5')}>
+    <div
+      className={cn(
+        'flex items-center justify-between py-2.5 gap-4',
+        indent && 'pl-5',
+        clickable && 'cursor-pointer hover:bg-stone-50/70 rounded-md px-2 -mx-2 transition-colors',
+      )}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+    >
       <div className="flex items-center gap-1.5 min-w-0">
+        {clickable && (
+          <ChevronDown
+            size={13}
+            strokeWidth={2}
+            className={cn('text-stone-400 shrink-0 transition-transform duration-150', isOpen && 'rotate-180')}
+          />
+        )}
         <span className={cn('text-[12.5px]', bold ? 'font-medium text-stone-900' : 'text-stone-600')}>{label}</span>
         {tooltip && (
           <span title={tooltip} className="flex-shrink-0 cursor-help">
@@ -447,6 +559,46 @@ function PLRow({ label, value, color, bold, indent, margin, marginColor, tooltip
           {value < 0 ? '(' : ''}{fmt(Math.abs(value))}{value < 0 ? ')' : ''} تومان
         </span>
       </div>
+    </div>
+  );
+}
+
+function DrillSection({ open, loading, drill, allLink }: {
+  segKey: string;
+  open: boolean;
+  loading: boolean;
+  drill?: { items: DrillItem[]; total: number };
+  allLink: string;
+}) {
+  if (!open) return null;
+  return (
+    <div className="mb-1 mr-4 border-r border-stone-200 pr-3 space-y-0.5">
+      {loading && (
+        <div className="py-3 text-[11.5px] text-stone-400 text-center">در حال بارگذاری…</div>
+      )}
+      {!loading && drill && drill.items.length === 0 && (
+        <div className="py-2 text-[11.5px] text-stone-400 text-center">تراکنشی یافت نشد</div>
+      )}
+      {!loading && drill && drill.items.map(item => (
+        <div key={item.id} className="flex items-center justify-between py-1.5 gap-2">
+          <div className="min-w-0 flex-1">
+            <span className="text-[11.5px] text-stone-600 truncate block">{item.title}</span>
+            <span className="text-[10.5px] text-stone-400">{item.date} — {item.payee}</span>
+          </div>
+          <span className="text-[12px] tabular-nums text-stone-700 shrink-0">{fmt(item.amount)}</span>
+        </div>
+      ))}
+      {!loading && drill && drill.total > drill.items.length && (
+        <div className="pt-1">
+          <a
+            href={allLink}
+            className="inline-flex items-center gap-1 text-[11px] text-stone-500 hover:text-stone-700 transition-colors"
+          >
+            مشاهده همه ({drill.total} تراکنش)
+            <ArrowLeft size={11} strokeWidth={2} />
+          </a>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq, and } from 'drizzle-orm';
 import * as XLSX from 'xlsx';
 import { db, schema } from '@/lib/db/client';
-import { requireSession } from '@/lib/auth/session';
+import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
 import { isValidJalaliString } from '@/lib/jalali';
@@ -39,7 +39,7 @@ function cell(row: Record<string, unknown>, ...keys: string[]): string {
 
 export async function POST(req: Request) {
   try {
-    const session = await requireSession();
+    const session = await requireAdmin();
 
     const formData = await req.formData();
     const file = formData.get('file') as File | null;

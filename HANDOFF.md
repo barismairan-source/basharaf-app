@@ -10,13 +10,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.22.0` |
-| **آخرین به‌روزرسانی** | 2026-07-13 — اکانت: ۱ |
+| **نسخه** | `0.23.0` |
+| **آخرین به‌روزرسانی** | 2026-07-14 — اکانت: ۱ |
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
-| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — merge شده، push در انتظار. |
+| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها → آیکون Construction). ۲) تست موبایل ۵ صفحه‌ی اولویت‌دار (ترتیب در ژورنال فاز ۹). ۳) P&L drilldown (فاز بعدی). |
-| **بلاک‌شده/منتظر کاربر** | تست موبایل روی گوشی واقعی (ترتیب: purchase-orders → menu → payroll → recipes → cartable). |
+| **کار بعدی پیشنهادی** | ۱) تست P&L drilldown در مرورگر (کلیک روی ردیف‌های سود/زیان). ۲) دسته‌های راه‌اندازی را در UI علامت بزنید (Settings → دسته‌ها). ۳) migrate برای unique constraint روی `parent_voucher_id` در `inv_vouchers` (حفاظت کامل در برابر race condition برگشت‌برگه). |
+| **بلاک‌شده/منتظر کاربر** | — |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -63,6 +63,19 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-14 — ممیزی امنیتی و رفع ۵ باگ بحرانی (v0.23.0) — اکانت ۱
+**چه شد:** ممیزی کامل معماری (Principal Architect role) روی ۸ ریسک بحرانی. همه فایل‌های مرتبط مستقیماً خوانده و تأیید شدند. ۵ باگ واقعی رفع شد:
+1. **Race condition در approve** (`app/api/transactions/[id]/approve/route.ts`): SELECT و status check به داخل `db.transaction()` منتقل شد؛ `.for('update')` اضافه شد — قفل ردیف قبل از هر بررسی.
+2. **Import bypass** (`app/api/transactions/import/route.ts`): `requireSession()` → `requireAdmin()` — کاربر غیرادمین دیگر نمی‌تواند تراکنش مستقیماً approved ثبت کند.
+3. **WAC race condition** (`lib/db/inventoryHelpers.ts`): `.for('update')` به SELECT‌های `receiveConfirmed`، `issueConfirmed`، و `stocktakeConfirmed` اضافه شد — جلوگیری از بازخوانی stale در تأیید همزمان چند برگه.
+4. **Connection pool** (`lib/db/client.ts`): الگوی singleton برای همه‌ی محیط‌ها (dev + production) — برای Liara (container پایدار، نه serverless) یک pool کافی است.
+5. **Monthly grouping اشتباه** (`app/api/reports/route.ts`): گروه‌بندی از `TO_CHAR(created_at, 'YYYY-MM')` (میلادی) به `SUBSTRING(date, 1, 7)` (جلالی) — ماه‌ها حالا با تاریخ سند تطبیق دارند نه زمان ثبت سیستم.
+- **P&L drilldown تکمیل شد**: `PLRow` props `onClick`/`isOpen` اضافه شد؛ `DrillSection` component ساخته شد. endpoint `GET /api/reports/drilldown` آماده بود از جلسه قبل.
+**فایل‌ها:** `lib/db/client.ts`، `lib/db/inventoryHelpers.ts`، `app/api/transactions/[id]/approve/route.ts`، `app/api/transactions/import/route.ts`، `app/api/reports/route.ts`، `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** ۱) تست drilldown در مرورگر. ۲) unique constraint روی `inv_vouchers.parent_voucher_id` (migration لازم) برای رفع کامل reversal race. ۳) دسته‌های راه‌اندازی در UI.
 
 ## 📓 2026-07-13 — فاز ۹ — sweep موبایل responsive (v0.22.0) — اکانت ۱
 **چه شد:** Quick Wins ممیزی بصری اجرا شد. شاخه `fix/mobile-responsive-sweep` با ۳ commit ساخته و به main merge شد. تمام تغییرات فقط className — هیچ تغییر منطق یا API نداشت.
@@ -140,22 +153,5 @@
 **Build:** tsc ✅ ۰ خطا · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** کاربر پاک‌سازی را انجام می‌دهد → خبر می‌دهد → commit جداگانه: فایل‌های پاک‌سازی حذف شوند.
-
-## 📓 2026-07-12 — Faz 5 — لنز گزارش‌گیری «عملیاتی vs کامل» (v0.18.0) — اکانت ۱
-**چه شد:**
-- **فیلد `is_setup` روی categories**: schema + migration آماده (`db-setup-flag-migration.sql`). `Category` interface آپدیت شد. API `/categories/[id]` حالا `isSetup` را هم patch می‌کند.
-- **فیلد `opening_date` روی branches**: schema + migration آماده. `Branch` interface + validation schema آپدیت شد. API `/branches/[id]` حالا `openingDate` را هم patch می‌کند.
-- **repo/store layer**: `CategoriesRepo.update` signature عوض شد به `patch: {name?, isSetup?}`. `refsSlice.updateCategory` هم‌راستا شد. optimistic Category در `createCategory` حالا `isSetup: false` دارد.
-- **Settings → دسته‌ها**: هر ردیف هزینه یک دکمه Construction دارد — toggle `isSetup` بدون modal. اگر فعال باشد برچسب «راه‌اندازی» نمایش داده می‌شود.
-- **Settings → شعبه**: فیلد «تاریخ شروع بهره‌برداری» اختیاری در modal. در کارت شعبه نمایش داده می‌شود اگر ثبت شده باشد.
-- **API گزارش‌ها**: `excludeSetup=1` → دسته‌های `is_setup=true` از جریان مالی حذف می‌شوند. `setupExcludedExpense` در `summary` برگشت داده می‌شود. from/to از Jalali string مستقیم ارسال می‌شود (bug fix — قبلاً `new Date(jalali).toISOString()` اشتباه بود).
-- **`useDashboardMetrics`**: پارامتر `viewMode: 'operational'|'full'` دریافت می‌کند. دسته‌های `is_setup=true` از income/expense/balance و breakdown حذف می‌شوند. `setupExcludedExpense` در خروجی.
-- **داشبورد**: toggle «عملیاتی | کامل» در header بخش تراز مالی. state در `localStorage['ba-view-mode']`. disclaimer زیر KPI‌ها اگر هزینه‌ی حذف‌شده > ۰.
-- **صفحه گزارش‌ها**: همان toggle. دکمه «از افتتاح» فعال فقط اگر شعبه‌ی تکی انتخاب شده AND آن شعبه `openingDate` دارد. disclaimer زیر KPIها.
-- ⚠ **INVARIANT حفظ شد**: `accounts.balance` (ترازنامه‌ای) هرگز توسط فیلتر `is_setup` تغییر نمی‌کند — فقط جریان‌های مالی (income/expense/profit) تحت تأثیرند.
-**فایل‌ها:** `db/schema.ts`, `types/transaction.ts`, `types/branch.ts`, `lib/validations/settings.ts`, `app/api/categories/[id]/route.ts`, `app/api/branches/[id]/route.ts`, `app/api/reports/route.ts`, `lib/repos/types.ts`, `lib/repos/api.ts`, `store/slices/refsSlice.ts`, `lib/hooks/useDashboardMetrics.ts`, `components/settings/CategoriesPane.tsx`, `components/settings/BranchesPane.tsx`, `app/(app)/dashboard/page.tsx`, `app/(app)/reports/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۱) کاربر `db-setup-flag-migration.sql` بخش B را در pgAdmin اجرا کند. ۲) دسته‌های راه‌اندازی را در UI علامت بزند. ۳) Faz 3 کد (partner_id واقعی).
 
 

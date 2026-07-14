@@ -11,31 +11,33 @@ import { notify, notifyAdmins, getRuleThreshold } from '@/lib/notify';
 
 /**
  * POST /api/transactions/[id]/approve — Atomic با balance update.
+ * SELECT FOR UPDATE داخل transaction — جلوگیری از race condition تأیید همزمان.
  */
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireAdmin();
-
-    const [current] = await db.select().from(schema.transactions)
-      .where(eq(schema.transactions.id, params.id)).limit(1);
-
-    if (!current) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
-    if (current.status !== 'pending' && current.status !== 'proforma') {
-      throw new ApiError(409, 'فقط تراکنش‌های در انتظار یا پیش‌فاکتور قابل تایید هستند', 'INVALID_STATE');
-    }
-
     const now = new Date();
 
-    // اتصال منو↔انبار (Batch 3 / Step 3 — backflushing):
-    // اگر تراکنش income حاوی متادیتای فروش منو باشد و قبلاً کسر نشده باشد،
-    // با تأیید آن، رسپی هر آیتم منو expand و کسر موجودی + COGS سیستمی اعمال می‌شود.
-    const saleMeta = (current.saleMeta ?? null) as { lines?: MenuSaleLine[]; deductedAt?: string } | null;
-    const shouldDeduct =
-      current.type === 'income' &&
-      saleMeta?.lines && Array.isArray(saleMeta.lines) && saleMeta.lines.length > 0 &&
-      !saleMeta.deductedAt;
+    let approvedCreatedBy: string = '';
 
     await db.transaction(async (dbTx) => {
+      // قفل ردیف قبل از هر بررسی — SELECT FOR UPDATE
+      const [current] = await dbTx.select().from(schema.transactions)
+        .where(eq(schema.transactions.id, params.id)).for('update').limit(1);
+
+      if (!current) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
+      if (current.status !== 'pending' && current.status !== 'proforma') {
+        throw new ApiError(409, 'فقط تراکنش‌های در انتظار یا پیش‌فاکتور قابل تایید هستند', 'INVALID_STATE');
+      }
+
+      approvedCreatedBy = current.createdBy;
+
+      const saleMeta = (current.saleMeta ?? null) as { lines?: MenuSaleLine[]; deductedAt?: string } | null;
+      const shouldDeduct =
+        current.type === 'income' &&
+        saleMeta?.lines && Array.isArray(saleMeta.lines) && saleMeta.lines.length > 0 &&
+        !saleMeta.deductedAt;
+
       await dbTx.update(schema.transactions)
         .set({ status: 'approved', approvedBy: session.sub, approvedAt: now, updatedAt: now })
         .where(eq(schema.transactions.id, params.id));
@@ -51,7 +53,6 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         );
 
         if (result.totalCogs > 0) {
-          // ثبت تراکنش هزینه‌ی COGS — یک رکورد دفترداری صرف (هیچ حسابی/صندوقی را اثر نمی‌گذارد)
           const [cogsTx] = await dbTx.insert(schema.transactions).values({
             type: 'expense',
             title: `بهای تمام‌شده‌ی کالای فروخته‌شده — ${current.title}`,
@@ -62,7 +63,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             branchId: current.branchId,
             branchName: current.branchName,
             method: 'انبار',
-            accountId: null, // COGS روی موجودی صندوق اثر نمی‌گذارد — صرفاً ثبت در دفاتر
+            accountId: null,
             vatAmount: 0,
             isCredit: false,
             date: current.date,
@@ -73,7 +74,6 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             approvedAt: now,
           }).returning();
 
-          // علامت‌گذاری deductedAt روی همان تراکنش فروش — جلوگیری از کسر تکراری (idempotency)
           await dbTx.update(schema.transactions)
             .set({ saleMeta: { ...saleMeta, deductedAt: now.toISOString(), cogsTransactionId: cogsTx?.id ?? null, deductionLines: result.deductionLines } })
             .where(eq(schema.transactions.id, params.id));
@@ -102,7 +102,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       .where(eq(schema.transactions.id, params.id)).limit(1);
     if (!updated) throw new ApiError(500, 'خطا', 'UPDATE_FAILED');
 
-    if (updated.createdBy !== session.sub) {
+    if (approvedCreatedBy !== session.sub) {
       await notify({
         type: 'approved',
         title: 'تراکنش تایید شد ✓',
@@ -110,12 +110,11 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         txId: updated.id,
         actionUrl: `/transactions`,
         entityId: updated.id,
-        userId: updated.createdBy,
+        userId: approvedCreatedBy,
         ruleKey: 'pending_approval',
       });
     }
 
-    // بررسی تراکنش مبلغ بالا — اعلان + پیامک به ادمین‌ها
     const highValueThreshold = await getRuleThreshold('high_value_tx');
     if (highValueThreshold !== null && updated.amount >= highValueThreshold) {
       await notifyAdmins({

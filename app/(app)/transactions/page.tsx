@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Search, Receipt, Clock, CheckCircle2, XCircle,
   ArrowUpRight, ArrowDownLeft, Printer, ArrowLeftRight, Plus,
@@ -63,6 +63,7 @@ function jalaliToISO(jalali: string): string | null {
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [hydrated, setHydrated] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +82,19 @@ export default function TransactionsPage() {
   const [dateTo, setDateTo] = useState('');
   const [openContactId, setOpenContactId] = useState<string | null>(null);
 
-  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => {
+    setHydrated(true);
+    const q = searchParams.get('q');
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+    const type = searchParams.get('type') as TypeFilter | null;
+    if (q) setSearch(q);
+    if (from) setDateFrom(from);
+    if (to) setDateTo(to);
+    if (type && ['income', 'expense', 'transfer'].includes(type)) setTypeFilter(type);
+  // فقط یک بار روی mount اجرا می‌شود
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const filtered = useMemo(() => {
     let result = [...visible];

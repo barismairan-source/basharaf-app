@@ -114,15 +114,8 @@ function createClient() {
   return postgres(url, baseOptions);
 }
 
-// Singleton — جلوگیری از multiple connection در dev HMR
+// Singleton — یک pool برای کل process (Liara container، نه serverless)
 function getDb() {
-  if (process.env.NODE_ENV === 'production') {
-    // در production هر بار یک connection جدید (serverless)
-    const client = createClient();
-    return drizzle(client, { schema });
-  }
-
-  // در dev از cache استفاده می‌کنیم
   if (!globalThis.__basharaf_db) {
     globalThis.__basharaf_postgres = createClient();
     globalThis.__basharaf_db = drizzle(globalThis.__basharaf_postgres, { schema });

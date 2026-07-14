@@ -100,34 +100,35 @@ export async function GET(req: Request) {
     const expense = Number(totals?.totalExpense ?? 0);
 
     // ─── ۲. Monthly aggregation ────────────────────────────────────
-    // از date field که Jalali string است، ماه را extract می‌کنیم
-    // فرمت: ۱۴۰۵/۰۲/۳۱ → substring(6,2) = '۰۲'
-    // چون ارقام فارسی هستند، از created_at (Gregorian) برای sort استفاده می‌کنیم
+    // گروه‌بندی بر اساس ماه جلالی (date field) نه ماه میلادی (created_at)
+    // فرمت date: '۱۴۰۵/۰۲/۳۱' → SUBSTRING(date,1,7) = '۱۴۰۵/۰۲'
     const monthlyRaw = await db
       .select({
-        month: sql<string>`TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran', 'YYYY-MM')`,
+        month: sql<string>`SUBSTRING(date, 1, 7)`,
         income: sql<string>`COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0)`,
         expense: sql<string>`COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0)`,
         count: sql<string>`COUNT(*)`,
       })
       .from(schema.transactions)
       .where(where)
-      .groupBy(sql`TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran', 'YYYY-MM')`)
-      .orderBy(sql`TO_CHAR(created_at AT TIME ZONE 'Asia/Tehran', 'YYYY-MM') ASC`)
+      .groupBy(sql`SUBSTRING(date, 1, 7)`)
+      .orderBy(sql`SUBSTRING(date, 1, 7) ASC`)
       .limit(24); // حداکثر ۲ سال
 
+    // ماه‌های جلالی — کلید: ارقام فارسی (مطابق فرمت date)
     const MONTH_FA: Record<string, string> = {
-      '01': 'فروردین', '02': 'اردیبهشت', '03': 'خرداد',
-      '04': 'تیر', '05': 'مرداد', '06': 'شهریور',
-      '07': 'مهر', '08': 'آبان', '09': 'آذر',
-      '10': 'دی', '11': 'بهمن', '12': 'اسفند',
+      '۰۱': 'فروردین', '۰۲': 'اردیبهشت', '۰۳': 'خرداد',
+      '۰۴': 'تیر', '۰۵': 'مرداد', '۰۶': 'شهریور',
+      '۰۷': 'مهر', '۰۸': 'آبان', '۰۹': 'آذر',
+      '۱۰': 'دی', '۱۱': 'بهمن', '۱۲': 'اسفند',
     };
 
     const monthly = monthlyRaw.map(r => {
-      const [year, mon] = r.month.split('-');
+      // r.month = '۱۴۰۵/۰۲'
+      const [year, mon] = r.month.split('/');
       return {
         key: r.month,
-        month: `${MONTH_FA[mon ?? '01'] ?? mon} ${year?.slice(2)}`,
+        month: `${MONTH_FA[mon ?? '۰۱'] ?? mon} ${year?.slice(2)}`,
         income: Number(r.income),
         expense: Number(r.expense),
         balance: Number(r.income) - Number(r.expense),

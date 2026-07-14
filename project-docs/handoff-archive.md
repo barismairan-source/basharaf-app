@@ -1,5 +1,10 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-12 — Faz 5 — لنز گزارش‌گیری «عملیاتی vs کامل» (v0.18.0) — اکانت ۱
+**چه شد:** فیلد `is_setup` روی categories + `opening_date` روی branches (schema + migration). API گزارش‌ها: `excludeSetup=1` → حذف دسته‌های راه‌اندازی از جریان مالی. Toggle «عملیاتی | کامل» در داشبورد و گزارش‌ها. دکمه «از افتتاح» در فیلتر تاریخ. INVARIANT: `accounts.balance` هرگز تحت تأثیر این فیلتر نیست.
+**فایل‌ها:** `db/schema.ts`, `app/api/categories/[id]/route.ts`, `app/api/branches/[id]/route.ts`, `app/api/reports/route.ts`, `lib/hooks/useDashboardMetrics.ts`, `components/settings/CategoriesPane.tsx`, `components/settings/BranchesPane.tsx`, `app/(app)/dashboard/page.tsx`, `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+
 ## 📓 2026-07-12 — Faz 4 — بازطراحی فرم ثبت تراکنش (v0.17.0) — اکانت ۱
 **چه شد:** فرم `/transactions/new` بازطراحی — ۵ فیلد اصلی همیشه نمایان + accordion «جزئیات بیشتر» برای ۷ فیلد فرعی. انتخاب سلسله‌مراتبی حساب با optgroup. pre-fill گسترش یافت (prefill_accountId + prefill_destAccountId). دکمه «ثبت آورده» در `/partners/[id]`.
 **فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/partners/[id]/page.tsx`

@@ -66,7 +66,7 @@ export async function receiveConfirmed(
   const [it] = await tx.select({
     q: schema.invItems.qtyBase,
     a: schema.invItems.avgCostPerBase,
-  }).from(schema.invItems).where(eq(schema.invItems.id, itemId));
+  }).from(schema.invItems).where(eq(schema.invItems.id, itemId)).for('update');
   if (!it) return;
 
   const oldQty = n(it.q);
@@ -100,7 +100,7 @@ export async function issueConfirmed(
     name: schema.invItems.name,
     unit: schema.invItems.unit,
     branchId: schema.invItems.branchId,
-  }).from(schema.invItems).where(eq(schema.invItems.id, itemId));
+  }).from(schema.invItems).where(eq(schema.invItems.id, itemId)).for('update');
   if (!it) return 0;
 
   const have = n(it.q);
@@ -244,7 +244,7 @@ export async function stocktakeConfirmed(
   const [it] = await tx.select({
     q: schema.invItems.qtyBase,
     a: schema.invItems.avgCostPerBase,
-  }).from(schema.invItems).where(eq(schema.invItems.id, itemId));
+  }).from(schema.invItems).where(eq(schema.invItems.id, itemId)).for('update');
   if (!it) return { diff: 0 };
 
   const sysQty = n(it.q);
