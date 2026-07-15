@@ -62,9 +62,9 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
-## 📓 2026-07-15 — جداسازی E2E + رفع route predicate + نظافت git artifacts (v0.26.0)
-**چه شد:** ۱) `reports.spec.ts`: predicateهای regex overlapping جایگزین `url.pathname` exact match شدند — `/api/reports/drilldown` و `/api/reports` حالا قابل اشتباه نیستند. ۲) `fixtures/seed.ts` و `global-teardown.ts` بازنویسی شدند: بارگذاری `.env.local` حذف، فقط `.env.e2e` بارگذاری می‌شود، `E2E_DATABASE_URL` (نه `DATABASE_URL`)، guard اجباری `E2E_ALLOW_DB_MUTATION=1` با fail-fast پیش از اتصال DB. ۳) `.env.e2e.example` ایجاد شد. ۴) `.gitignore`: `.env.e2e` و `test-results/` اضافه شدند. ۵) `test-results/.last-run.json` از git index حذف شد (`git rm --cached`). Playwright ⛔ BLOCKED — اجرای واقعی نیاز به `.env.e2e` با `E2E_DATABASE_URL` معتبر دارد.
-**فایل‌ها:** `tests/e2e/reports.spec.ts`، `tests/e2e/fixtures/seed.ts`، `tests/e2e/global-teardown.ts`، `.env.e2e.example`، `.gitignore`، `project-docs/handoff-archive.md`
+## 📓 2026-07-15 — جداسازی کامل E2E: route predicate + env wiring + نظافت artifacts (v0.26.0)
+**چه شد:** ۱) `reports.spec.ts`: predicateهای regex overlapping جایگزین `url.pathname` exact match شدند. ۲) `fixtures/seed.ts` + `global-teardown.ts`: بارگذاری `.env.local` حذف؛ فقط `.env.e2e`؛ `E2E_DATABASE_URL`؛ guard `E2E_ALLOW_DB_MUTATION=1` با fail-fast پیش از اتصال DB. ۳) `.env.e2e.example` ایجاد شد. ۴) `.gitignore`: `.env.e2e` و `test-results/` اضافه شدند. ۵) `test-results/.last-run.json` از git index حذف شد. ۶) `playwright.config.ts`: `dotenv.config({override:false})` روی `.env.e2e` — CI variables اولویت دارند، غیاب فایل بی‌صدا نادیده گرفته می‌شود؛ `webServer.env` شامل `DATABASE_URL=E2E_DATABASE_URL` فقط وقتی مقدار موجود باشد (scoped به child process، هیچ تأثیری روی production/CI ندارد). Playwright ⛔ BLOCKED — اجرای واقعی نیاز به `.env.e2e` با `E2E_DATABASE_URL` معتبر دارد.
+**فایل‌ها:** `playwright.config.ts`، `tests/e2e/reports.spec.ts`، `tests/e2e/fixtures/seed.ts`، `tests/e2e/global-teardown.ts`، `.env.e2e.example`، `.gitignore`، `project-docs/handoff-archive.md`
 **Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅ · Playwright --list 7/7 ✅ · اجرای کامل ⛔ BLOCKED
 **ناتمام:** —
 **برای جلسه‌ی بعد:** `.env.e2e.example` را به `.env.e2e` کپی کن → `E2E_DATABASE_URL` را پر کن → `npm run test:e2e -- tests/e2e/reports.spec.ts`. سپس دسته‌های راه‌اندازی در Settings.
