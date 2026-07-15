@@ -11,11 +11,11 @@
 |---|---|
 | **نسخه** | `0.26.0` |
 | **آخرین به‌روزرسانی** | 2026-07-15 |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · build ✅ |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests 75/75 ✅ · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) تست P&L drilldown در مرورگر: صفحه گزارش → روی «درآمد فروش»، «COGS»، «حقوق پرسنل»، «سایر هزینه‌ها» کلیک کن. ۲) دسته‌های راه‌اندازی در UI (Settings → دسته‌ها). ۳) معماری اعلان: تصمیم SMS vs email → پیاده‌سازی (گزارش کامل در `project-docs/NOTIF_RECON.md`). |
-| **بلاک‌شده/منتظر کاربر** | — |
+| **کار بعدی پیشنهادی** | ۱) اجرای `tests/e2e/reports.spec.ts` — نیاز به `.env.local` با `DATABASE_URL` (برای global-setup). ۲) دسته‌های راه‌اندازی در UI (Settings → دسته‌ها). ۳) معماری اعلان: تصمیم SMS vs email. |
+| **بلاک‌شده/منتظر کاربر** | Playwright e2e — `.env.local` غایب / `DATABASE_URL` ناموجود → global-setup متوقف می‌شود. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -24,6 +24,7 @@
 ## 📋 پروتکل جلسه
 
 ### شروع هر جلسه (الزامی — به ترتیب)
+⛔ **تنها یک نشست فعال Claude Code مجاز است روی این پوشه ویرایش کند — دو نشست همزمان باز نکن.**
 1. این فایل، بخش ۰ + جدیدترین ورودی ژورنال را بخوان.
 2. `git status` بزن — اگر تغییرات commit‌نشده هست، یعنی جلسه‌ی قبل ناقص بسته شده: اول وضعیت را با کاربر روشن کن، چیزی را کورکورانه commit یا revert نکن.
 3. `git log -5 --oneline` — تطبیق بده با ژورنال.
@@ -61,10 +62,17 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-07-15 — تست رگرسیون P&L drilldown + رفع شکاف‌های مستندات (v0.26.0)
+**چه شد:** ۱) قانون «یک نشست» به `CLAUDE.md` و `HANDOFF.md` اضافه شد. ۲) وضعیت Build ورودی baseline در ژورنال اصلاح شد (از «در حال تأیید» به تأیید واقعی). ۳) قدیمی‌ترین ورودی ژورنال (فاز ۸) به `handoff-archive.md` منتقل شد. ۴) `tests/e2e/reports.spec.ts` نوشته شد — ۷ تست کاملاً mocked برای ۴ سگمنت P&L (revenue/cogs/payroll/other)، toggle باز/بسته، و لینک «مشاهده همه». ۵) تأیید مستقل از کد رفتار `toggleDrill` و `DrillSection`. Graphify: Community 2 «Financial Integrity» اتصال‌های Financial Approval State Machine ↔ Atomic Reversal ↔ WAC را نشان داد — همان nodes تحت پوشش tests/unit/security-guards.
+**فایل‌ها:** `CLAUDE.md`، `HANDOFF.md`، `project-docs/handoff-archive.md`، `tests/e2e/reports.spec.ts`
+**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅ · Playwright ⛔ (بلاک — `.env.local` غایب)
+**ناتمام:** Playwright نمی‌تواند اجرا شود — `DATABASE_URL` ناموجود → `global-setup/seed.ts` خطا می‌دهد. spec نوشته و type-check سبز است؛ برای اجرا `DATABASE_URL` را در `.env.local` ست کن.
+**برای جلسه‌ی بعد:** `.env.local` بساز یا `DATABASE_URL` ست کن → `npm run test:e2e -- tests/e2e/reports.spec.ts` را اجرا کن. سپس دسته‌های راه‌اندازی در Settings.
+
 ## 📓 2026-07-15 — استقرار جریان کاری تک‌نشست + نظافت مستندات (v0.26.0)
 **چه شد:** حذف پروتکل دو-اکانت و یکسان‌سازی با جریان کاری تک Claude Code. فایل‌های حذف/بایگانی‌شده: `setup-two-accounts.sh` (ریشه)، `project-docs/SKILL.md` → `project-docs/archive/SKILL-v0.9.5-legacy.md`، `project-docs/handoff.md` → `project-docs/archive/handoff-v9-legacy.md`. Migration خالی بازگردانده شد (`git checkout`). `project-docs/README.md` (ایندکس مستندات) ایجاد شد. `NOTIF_RECON.md` حفظ شد. نسخه‌ی package.json به `0.26.0` همگام‌سازی شد.
 **فایل‌ها:** `CLAUDE.md`، `HANDOFF.md`، `SKILL.md` (تازه)، `project-docs/handoff.md` (redirect)، `project-docs/README.md`، `project-docs/archive/` (جدید)، `project-docs/NOTIF_RECON.md`، `package.json`
-**Build:** در حال تأیید
+**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۱) تست P&L drilldown در مرورگر. ۲) دسته‌های راه‌اندازی در Settings. ۳) تصمیم معماری اعلان (SMS/email).
 
@@ -106,11 +114,3 @@
 **Build:** tsc ✅ ۰ خطا · build ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** تست موبایل واقعی + دسته‌های راه‌اندازی + P&L drilldown.
-
-## 📓 2026-07-12 — فاز ۸ — یکدستی بصری + ممیزی UX (v0.21.0–v0.21.1) — اکانت ۱
-**چه شد:** جایگزینی دکمه‌های خام با Button استاندارد در ۴ صفحه. ممیزی ۱۸ صفحه از روی کد — مشکل اصلی موبایل (۳.۲/۵).
-**فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/contacts/page.tsx`، `app/(app)/accounts/[id]/page.tsx`، `app/(app)/cheques/page.tsx`، `project-docs/INVESTIGATION-visual-audit.md`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** Quick Wins موبایل.
-

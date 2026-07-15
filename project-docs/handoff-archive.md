@@ -1,5 +1,12 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-12 — فاز ۸ — یکدستی بصری + ممیزی UX (v0.21.0–v0.21.1) — اکانت ۱
+**چه شد:** جایگزینی دکمه‌های خام با Button استاندارد در ۴ صفحه. ممیزی ۱۸ صفحه از روی کد — مشکل اصلی موبایل (۳.۲/۵).
+**فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/contacts/page.tsx`، `app/(app)/accounts/[id]/page.tsx`، `app/(app)/cheques/page.tsx`، `project-docs/INVESTIGATION-visual-audit.md`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** Quick Wins موبایل.
+
 ## 📓 2026-07-12 — Faz 7 — جریان یکپارچه چک↔طرف‌حساب↔تراکنش↔دسته (v0.20.0) — اکانت ۱
 **چه شد:** contactId به TransactionBase اضافه شد. ContactLedgerDrawer: دکمه‌های quick-action (ثبت تراکنش با این طرف‌حساب، مشاهده چک‌ها). TxDetailPanel: نام طرف‌حساب کلیک‌پذیر. فرم تراکنش جدید: دکمه‌ی «+ دسته‌ی جدید» برای SuperAdmin.
 **فایل‌ها:** `types/transaction.ts`، `components/contacts/ContactLedgerDrawer.tsx`، `components/transactions/TxDetailPanel.tsx`، `app/(app)/transactions/page.tsx`، `app/(app)/transactions/new/page.tsx`
