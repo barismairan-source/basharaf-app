@@ -9,13 +9,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.26.0` |
+| **نسخه** | `0.27.0` |
 | **آخرین به‌روزرسانی** | 2026-07-15 |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests 75/75 ✅ · build ✅ |
-| **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
+| **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests 85/85 ✅ · build ✅ |
+| **دیپلوی** | ⚠️ commit محلی — push عمداً انجام نشده (دستور صریح کاربر). migration اجرا نشده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) فایل `.env.e2e` بساز (از `.env.e2e.example` کپی کن، `E2E_DATABASE_URL` را پر کن) → `npm run test:e2e -- tests/e2e/reports.spec.ts`. ۲) دسته‌های راه‌اندازی در Settings. ۳) معماری اعلان: SMS vs email. |
-| **بلاک‌شده/منتظر کاربر** | Playwright e2e ⛔ — `.env.e2e` غایب → seed بلافاصله خطا می‌دهد پیش از اتصال به DB. برای رفع: `.env.e2e.example` را به `.env.e2e` کپی کن و `E2E_DATABASE_URL` را پر کن. |
+| **کار بعدی پیشنهادی** | ۱) migration را اجرا کن: `project-docs/migrations/db-recruitment-notification-rule.sql` روی DB (DBeaver). ۲) `git push` بزن تا فیچر deploy شود. ۳) یک فرم استخدام تست بزن و بررسی کن اعلان در پنل ظاهر می‌شود. ۴) `.env.e2e` بساز → E2E tests. |
+| **بلاک‌شده/منتظر کاربر** | push عمداً نشده — منتظر تأیید کاربر · migration اجرا نشده — منتظر تأیید · Playwright e2e ⛔ — `.env.e2e` غایب |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -62,6 +62,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-07-15 — notification فاز ۱: اعلان in-app هنگام ثبت استخدام (v0.27.0)
+**چه شد:** ۱) `lib/recruitment/notify.ts`: `buildRecruitmentSub()` خالص (فقط نام + برچسب فارسی بخش؛ بدون شماره، رزومه، پاسخ‌ها، یا سایر فیلدهای حساس) + `fireRecruitmentNotification()` (fire-and-forget؛ خطا → logEvent، هرگز به caller نمی‌رسد). ۲) `app/api/recruitment/route.ts`: `returning()` از یک ستون به چهار ستون (`id, firstName, lastName, area`) گسترش یافت؛ `fireRecruitmentNotification(row)` قبل از `return 201` فراخوانی می‌شود. ۳) `tests/unit/recruitment-notification.test.ts` (۶ تست): helper tests — `notifyAdmins` یک بار با entityId صدا می‌خورد، rejection propagate نمی‌شود، شماره، رزومه، یا فیلدهای حساس در sub نیستند. ۴) `tests/unit/recruitment-route.test.ts` (۴ تست): partial mock — real `fireRecruitmentNotification` با spy؛ mock فقط `notifyAdmins` و `logEvent`؛ وقتی `notifyAdmins` reject کند `logEvent` با `level:'warn'` صدا می‌خورد و route هنوز 201 برمی‌گرداند؛ `spyFire.mock.calls[0][0]` دقیقاً `DB_ROW` است (بدون شماره، رزومه، پاسخ‌ها، یا سایر فیلدهای حساس). ۵) `project-docs/migrations/db-recruitment-notification-rule.sql`: INSERT ایمن با `ON CONFLICT DO NOTHING`. ۶) نسخه → `0.27.0`. **⚠️ migration اجرا نشده. push نشده — دستور صریح کاربر.**
+**فایل‌ها:** `lib/recruitment/notify.ts`، `app/api/recruitment/route.ts`، `tests/unit/recruitment-notification.test.ts`، `tests/unit/recruitment-route.test.ts`، `project-docs/migrations/db-recruitment-notification-rule.sql`، `package.json`، `package-lock.json`، `project-docs/handoff-archive.md`
+**Build:** tsc ✅ ۰ خطا · tests 85/85 ✅ · build ✅ · commit محلی ✅ · push ⛔ (عمدی)
+**ناتمام:** migration روی DB اجرا نشده — بدون آن toggle `notification_rules` وجود ندارد (فیچر کار می‌کند اما غیرقابل کنترل از Settings). push انجام نشده.
+**برای جلسه‌ی بعد:** ۱) migration اجرا کن (DBeaver → SQL file → run). ۲) `git push` (deploy خودکار). ۳) فرم تست بزن و اعلان را در پنل بررسی کن. ۴) `.env.e2e` بساز → E2E tests. ۵) دسته‌های راه‌اندازی در Settings.
+
 ## 📓 2026-07-15 — جداسازی کامل E2E: route predicate + env wiring + نظافت artifacts (v0.26.0)
 **چه شد:** ۱) `reports.spec.ts`: predicateهای regex overlapping جایگزین `url.pathname` exact match شدند. ۲) `fixtures/seed.ts` + `global-teardown.ts`: بارگذاری `.env.local` حذف؛ فقط `.env.e2e`؛ `E2E_DATABASE_URL`؛ guard `E2E_ALLOW_DB_MUTATION=1` با fail-fast پیش از اتصال DB. ۳) `.env.e2e.example` ایجاد شد. ۴) `.gitignore`: `.env.e2e` و `test-results/` اضافه شدند. ۵) `test-results/.last-run.json` از git index حذف شد. ۶) `playwright.config.ts`: `dotenv.config({override:false})` روی `.env.e2e` — CI variables اولویت دارند، غیاب فایل بی‌صدا نادیده گرفته می‌شود؛ `webServer.env` شامل `DATABASE_URL=E2E_DATABASE_URL` فقط وقتی مقدار موجود باشد (scoped به child process، هیچ تأثیری روی production/CI ندارد). Playwright ⛔ BLOCKED — اجرای واقعی نیاز به `.env.e2e` با `E2E_DATABASE_URL` معتبر دارد.
 **فایل‌ها:** `playwright.config.ts`، `tests/e2e/reports.spec.ts`، `tests/e2e/fixtures/seed.ts`، `tests/e2e/global-teardown.ts`، `.env.e2e.example`، `.gitignore`، `project-docs/handoff-archive.md`
@@ -107,11 +114,4 @@
 **Build:** tsc ✅ ۰ خطا · build ✅ · vitest 27/27 ✅
 **ناتمام:** —
 **برای جلسه‌ی بعد:** ۱) تست P&L drilldown در مرورگر. ۲) دسته‌های راه‌اندازی در UI.
-
-## 📓 2026-07-14 — ممیزی امنیتی و رفع ۵ باگ بحرانی (v0.23.0) — اکانت ۱
-**چه شد:** ممیزی کامل معماری روی ۸ ریسک بحرانی. همه فایل‌های مرتبط مستقیماً خوانده و تأیید شدند. ۵ باگ واقعی رفع شد: race condition approve، import bypass، WAC race، connection pool singleton، monthly Jalali grouping. P&L drilldown تکمیل شد.
-**فایل‌ها:** `lib/db/client.ts`، `lib/db/inventoryHelpers.ts`، `app/api/transactions/[id]/approve/route.ts`، `app/api/transactions/import/route.ts`، `app/api/reports/route.ts`، `app/(app)/reports/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** unique constraint migration + drilldown مرورگر + دسته‌های راه‌اندازی.
 

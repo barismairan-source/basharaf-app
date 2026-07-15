@@ -7,6 +7,7 @@ import { applicationCreateSchema } from '@/lib/validations/recruitment';
 import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import type { FieldSnapshot } from '@/lib/recruitment/form-types';
 import { SYSTEM_FIELD_COLUMN_MAP } from '@/lib/recruitment/form-types';
+import { fireRecruitmentNotification } from '@/lib/recruitment/notify';
 
 /**
  * POST /api/recruitment — عمومی (متقاضی login ندارد). ثبت یک درخواست استخدام.
@@ -74,9 +75,18 @@ export async function POST(req: Request) {
         customFields,
         fieldSnapshot,
       })
-      .returning({ id: schema.jobApplications.id });
+      .returning({
+        id: schema.jobApplications.id,
+        firstName: schema.jobApplications.firstName,
+        lastName: schema.jobApplications.lastName,
+        area: schema.jobApplications.area,
+      });
 
     if (!row) throw new ApiError(500, 'خطا در ثبت درخواست', 'INSERT_FAILED');
+
+    // اعلان fire-and-forget — خطای notification هرگز پاسخ 201 را تغییر نمی‌دهد
+    fireRecruitmentNotification(row);
+
     return NextResponse.json({ ok: true, id: row.id }, { status: 201 });
   } catch (e) {
     return handleError(e);

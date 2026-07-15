@@ -1,5 +1,12 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-14 — ممیزی امنیتی و رفع ۵ باگ بحرانی (v0.23.0) — اکانت ۱
+**چه شد:** ممیزی کامل معماری روی ۸ ریسک بحرانی. همه فایل‌های مرتبط مستقیماً خوانده و تأیید شدند. ۵ باگ واقعی رفع شد: race condition approve، import bypass، WAC race، connection pool singleton، monthly Jalali grouping. P&L drilldown تکمیل شد.
+**فایل‌ها:** `lib/db/client.ts`، `lib/db/inventoryHelpers.ts`، `app/api/transactions/[id]/approve/route.ts`، `app/api/transactions/import/route.ts`، `app/api/reports/route.ts`، `app/(app)/reports/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** unique constraint migration + drilldown مرورگر + دسته‌های راه‌اندازی.
+
 ## 📓 2026-07-13 — فاز ۹ — sweep موبایل responsive (v0.22.0) — اکانت ۱
 **چه شد:** Quick Wins ممیزی بصری اجرا شد. شاخه `fix/mobile-responsive-sweep` با ۳ commit ساخته و به main merge شد. تمام تغییرات فقط className.
 **فایل‌ها:** `app/(app)/cheques/page.tsx`، `app/(app)/menu/page.tsx`، `app/(app)/employees/page.tsx`، `app/(app)/payroll/page.tsx`، `app/(app)/inventory/page.tsx`
