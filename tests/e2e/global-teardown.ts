@@ -2,12 +2,17 @@ import postgres from 'postgres';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load E2E-specific env only. Never load .env.local — that file carries production credentials.
+dotenv.config({ path: path.resolve(process.cwd(), '.env.e2e') });
 
 export default async function globalTeardown() {
-  const url = process.env.DATABASE_URL;
+  if (process.env.E2E_ALLOW_DB_MUTATION !== '1') {
+    console.warn('[teardown] E2E_ALLOW_DB_MUTATION not set — skipping cleanup');
+    return;
+  }
+  const url = process.env.E2E_DATABASE_URL;
   if (!url) {
-    console.warn('[teardown] DATABASE_URL not set — skipping cleanup');
+    console.warn('[teardown] E2E_DATABASE_URL not set — skipping cleanup');
     return;
   }
 
@@ -16,7 +21,6 @@ export default async function globalTeardown() {
   });
 
   try {
-    // پاک کردن همه رکوردهای با [TEST] در title — فقط داده‌های test
     const deleted = await sql`
       DELETE FROM transactions WHERE title LIKE '%[TEST]%' RETURNING id
     `;

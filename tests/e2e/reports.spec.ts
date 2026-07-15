@@ -54,26 +54,30 @@ function drilldownBody(segment: string): string {
 
 test.describe('گزارش مالی — P&L drilldown', () => {
   test.beforeEach(async ({ page }) => {
-    // ① Register drilldown route FIRST so it takes priority over the general
-    //   /api/reports route (Playwright routes are matched FIFO).
-    await page.route(/\/api\/reports\/drilldown/, async (route) => {
-      const url = new URL(route.request().url());
-      const segment = url.searchParams.get('segment') ?? '';
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: drilldownBody(segment),
-      });
-    });
+    // Drilldown route: exact pathname match prevents any overlap with /api/reports.
+    await page.route(
+      (url) => url.pathname === '/api/reports/drilldown',
+      async (route) => {
+        const segment = new URL(route.request().url()).searchParams.get('segment') ?? '';
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: drilldownBody(segment),
+        });
+      },
+    );
 
-    // ② General reports route — matched only when drilldown route does not.
-    await page.route(/\/api\/reports/, async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify(REPORT_MOCK),
-      });
-    });
+    // Main reports route: exact pathname match.
+    await page.route(
+      (url) => url.pathname === '/api/reports',
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(REPORT_MOCK),
+        });
+      },
+    );
 
     await page.goto('/reports');
     await expect(page.getByText('صورت سود و زیان')).toBeVisible();
@@ -91,9 +95,8 @@ test.describe('گزارش مالی — P&L drilldown', () => {
     test(`کلیک روی «${label}» — segment=${segment} درخواست می‌شود و آیتم نمایان می‌شود`, async ({ page }) => {
       const row = page.getByRole('button', { name: label });
 
-      // Capture the drilldown request to verify correct segment param.
       const [req] = await Promise.all([
-        page.waitForRequest(/\/api\/reports\/drilldown/),
+        page.waitForRequest((r) => new URL(r.url()).pathname === '/api/reports/drilldown'),
         row.click(),
       ]);
 
@@ -104,16 +107,14 @@ test.describe('گزارش مالی — P&L drilldown', () => {
 
   // ── toggle: opening another segment closes the previous one ───────────────
   test('باز کردن سگمنت دوم، سگمنت اول را می‌بندد', async ({ page }) => {
-    // Open revenue
     await Promise.all([
-      page.waitForRequest(/\/api\/reports\/drilldown/),
+      page.waitForRequest((r) => new URL(r.url()).pathname === '/api/reports/drilldown'),
       page.getByRole('button', { name: 'درآمد فروش' }).click(),
     ]);
     await expect(page.getByText('فروش سالن اردیبهشت')).toBeVisible();
 
-    // Open payroll — revenue should close
     await Promise.all([
-      page.waitForRequest(/\/api\/reports\/drilldown/),
+      page.waitForRequest((r) => new URL(r.url()).pathname === '/api/reports/drilldown'),
       page.getByRole('button', { name: 'حقوق پرسنل' }).click(),
     ]);
     await expect(page.getByText('فروش سالن اردیبهشت')).not.toBeVisible();
@@ -125,12 +126,12 @@ test.describe('گزارش مالی — P&L drilldown', () => {
     const row = page.getByRole('button', { name: 'حقوق پرسنل' });
 
     await Promise.all([
-      page.waitForRequest(/\/api\/reports\/drilldown/),
+      page.waitForRequest((r) => new URL(r.url()).pathname === '/api/reports/drilldown'),
       row.click(),
     ]);
     await expect(page.getByText('حقوق اردیبهشت')).toBeVisible();
 
-    // Second click — no new request expected (cache hit), segment closes
+    // Second click — cache hit, no new network request, segment closes.
     await row.click();
     await expect(page.getByText('حقوق اردیبهشت')).not.toBeVisible();
   });
@@ -139,20 +140,19 @@ test.describe('گزارش مالی — P&L drilldown', () => {
   test('وقتی total > تعداد آیتم‌ها لینک «مشاهده همه» نمایش داده می‌شود', async ({ page }) => {
     // revenue: total=3, items.length=1 → link must appear
     await Promise.all([
-      page.waitForRequest(/\/api\/reports\/drilldown/),
+      page.waitForRequest((r) => new URL(r.url()).pathname === '/api/reports/drilldown'),
       page.getByRole('button', { name: 'درآمد فروش' }).click(),
     ]);
 
     const viewAllLink = page.getByRole('link', { name: /مشاهده همه/ });
     await expect(viewAllLink).toBeVisible();
-    // Link must point to /transactions with type=income filter
     const href = await viewAllLink.getAttribute('href');
     expect(href).toMatch(/\/transactions/);
     expect(href).toMatch(/type=income/);
 
     // cogs: total=1, items.length=1 → no link
     await Promise.all([
-      page.waitForRequest(/\/api\/reports\/drilldown/),
+      page.waitForRequest((r) => new URL(r.url()).pathname === '/api/reports/drilldown'),
       page.getByRole('button', { name: 'بهای تمام‌شده‌ی فروش (COGS)' }).click(),
     ]);
     await expect(page.getByRole('link', { name: /مشاهده همه/ })).not.toBeVisible();

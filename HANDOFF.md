@@ -14,8 +14,8 @@
 | **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests 75/75 ✅ · build ✅ |
 | **دیپلوی** | ✅ GitHub Actions فعال. Branch: `main` — آماده push. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) اجرای `tests/e2e/reports.spec.ts` — نیاز به `.env.local` با `DATABASE_URL` (برای global-setup). ۲) دسته‌های راه‌اندازی در UI (Settings → دسته‌ها). ۳) معماری اعلان: تصمیم SMS vs email. |
-| **بلاک‌شده/منتظر کاربر** | Playwright e2e — `.env.local` غایب / `DATABASE_URL` ناموجود → global-setup متوقف می‌شود. |
+| **کار بعدی پیشنهادی** | ۱) فایل `.env.e2e` بساز (از `.env.e2e.example` کپی کن، `E2E_DATABASE_URL` را پر کن) → `npm run test:e2e -- tests/e2e/reports.spec.ts`. ۲) دسته‌های راه‌اندازی در Settings. ۳) معماری اعلان: SMS vs email. |
+| **بلاک‌شده/منتظر کاربر** | Playwright e2e ⛔ — `.env.e2e` غایب → seed بلافاصله خطا می‌دهد پیش از اتصال به DB. برای رفع: `.env.e2e.example` را به `.env.e2e` کپی کن و `E2E_DATABASE_URL` را پر کن. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -61,6 +61,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-15 — جداسازی E2E + رفع route predicate + نظافت git artifacts (v0.26.0)
+**چه شد:** ۱) `reports.spec.ts`: predicateهای regex overlapping جایگزین `url.pathname` exact match شدند — `/api/reports/drilldown` و `/api/reports` حالا قابل اشتباه نیستند. ۲) `fixtures/seed.ts` و `global-teardown.ts` بازنویسی شدند: بارگذاری `.env.local` حذف، فقط `.env.e2e` بارگذاری می‌شود، `E2E_DATABASE_URL` (نه `DATABASE_URL`)، guard اجباری `E2E_ALLOW_DB_MUTATION=1` با fail-fast پیش از اتصال DB. ۳) `.env.e2e.example` ایجاد شد. ۴) `.gitignore`: `.env.e2e` و `test-results/` اضافه شدند. ۵) `test-results/.last-run.json` از git index حذف شد (`git rm --cached`). Playwright ⛔ BLOCKED — اجرای واقعی نیاز به `.env.e2e` با `E2E_DATABASE_URL` معتبر دارد.
+**فایل‌ها:** `tests/e2e/reports.spec.ts`، `tests/e2e/fixtures/seed.ts`، `tests/e2e/global-teardown.ts`، `.env.e2e.example`، `.gitignore`، `project-docs/handoff-archive.md`
+**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅ · Playwright --list 7/7 ✅ · اجرای کامل ⛔ BLOCKED
+**ناتمام:** —
+**برای جلسه‌ی بعد:** `.env.e2e.example` را به `.env.e2e` کپی کن → `E2E_DATABASE_URL` را پر کن → `npm run test:e2e -- tests/e2e/reports.spec.ts`. سپس دسته‌های راه‌اندازی در Settings.
 
 ## 📓 2026-07-15 — تست رگرسیون P&L drilldown + رفع شکاف‌های مستندات (v0.26.0)
 **چه شد:** ۱) قانون «یک نشست» به `CLAUDE.md` و `HANDOFF.md` اضافه شد. ۲) وضعیت Build ورودی baseline در ژورنال اصلاح شد (از «در حال تأیید» به تأیید واقعی). ۳) قدیمی‌ترین ورودی ژورنال (فاز ۸) به `handoff-archive.md` منتقل شد. ۴) `tests/e2e/reports.spec.ts` نوشته شد — ۷ تست کاملاً mocked برای ۴ سگمنت P&L (revenue/cogs/payroll/other)، toggle باز/بسته، و لینک «مشاهده همه». ۵) تأیید مستقل از کد رفتار `toggleDrill` و `DrillSection`. Graphify: Community 2 «Financial Integrity» اتصال‌های Financial Approval State Machine ↔ Atomic Reversal ↔ WAC را نشان داد — همان nodes تحت پوشش tests/unit/security-guards.
@@ -108,9 +115,3 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** unique constraint migration + drilldown مرورگر + دسته‌های راه‌اندازی.
 
-## 📓 2026-07-13 — فاز ۹ — sweep موبایل responsive (v0.22.0) — اکانت ۱
-**چه شد:** Quick Wins ممیزی بصری اجرا شد. شاخه `fix/mobile-responsive-sweep` با ۳ commit ساخته و به main merge شد. تمام تغییرات فقط className.
-**فایل‌ها:** `app/(app)/cheques/page.tsx`، `app/(app)/menu/page.tsx`، `app/(app)/employees/page.tsx`، `app/(app)/payroll/page.tsx`، `app/(app)/inventory/page.tsx`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست موبایل واقعی + دسته‌های راه‌اندازی + P&L drilldown.

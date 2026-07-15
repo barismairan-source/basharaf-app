@@ -1,5 +1,12 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-13 — فاز ۹ — sweep موبایل responsive (v0.22.0) — اکانت ۱
+**چه شد:** Quick Wins ممیزی بصری اجرا شد. شاخه `fix/mobile-responsive-sweep` با ۳ commit ساخته و به main merge شد. تمام تغییرات فقط className.
+**فایل‌ها:** `app/(app)/cheques/page.tsx`، `app/(app)/menu/page.tsx`، `app/(app)/employees/page.tsx`، `app/(app)/payroll/page.tsx`، `app/(app)/inventory/page.tsx`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست موبایل واقعی + دسته‌های راه‌اندازی + P&L drilldown.
+
 ## 📓 2026-07-12 — فاز ۸ — یکدستی بصری + ممیزی UX (v0.21.0–v0.21.1) — اکانت ۱
 **چه شد:** جایگزینی دکمه‌های خام با Button استاندارد در ۴ صفحه. ممیزی ۱۸ صفحه از روی کد — مشکل اصلی موبایل (۳.۲/۵).
 **فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `app/(app)/contacts/page.tsx`، `app/(app)/accounts/[id]/page.tsx`، `app/(app)/cheques/page.tsx`، `project-docs/INVESTIGATION-visual-audit.md`

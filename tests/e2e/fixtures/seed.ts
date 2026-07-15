@@ -3,14 +3,27 @@ import bcrypt from 'bcryptjs';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+// Load E2E-specific env only. Never load .env.local — that file carries production credentials.
+dotenv.config({ path: path.resolve(process.cwd(), '.env.e2e') });
 
 export const TEST_USER_EMAIL = 'test@basharaf.app';
 export const TEST_USER_PASSWORD = 'Test1234!';
 
 export async function seedTestUser(): Promise<void> {
-  const url = process.env.DATABASE_URL;
-  if (!url) throw new Error('[seed] DATABASE_URL not set');
+  // Fail before connecting if explicit opt-in is absent.
+  if (process.env.E2E_ALLOW_DB_MUTATION !== '1') {
+    throw new Error(
+      '[seed] E2E_ALLOW_DB_MUTATION=1 is required. ' +
+      'Set it in .env.e2e to confirm this is a development or test database.',
+    );
+  }
+  const url = process.env.E2E_DATABASE_URL;
+  if (!url) {
+    throw new Error(
+      '[seed] E2E_DATABASE_URL is not set. ' +
+      'Add it to .env.e2e (never to .env.local).',
+    );
+  }
 
   const sql = postgres(url, {
     ssl: process.env.DATABASE_SSL === 'require' ? 'require' : false,

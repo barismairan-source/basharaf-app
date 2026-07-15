@@ -48,3 +48,9 @@ graphify-out/
 
 tests/visual-audit-screenshots/
 Screenshot*
+
+# E2E secrets (never commit the real env; .env.e2e.example is safe to commit)
+.env.e2e
+
+# Playwright output artifacts
+test-results/
