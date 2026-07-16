@@ -1,5 +1,29 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-07-15 — تست رگرسیون P&L drilldown + رفع شکاف‌های مستندات (v0.26.0)
+**چه شد:** ۱) قانون «یک نشست» به `CLAUDE.md` و `HANDOFF.md` اضافه شد. ۲) وضعیت Build ورودی baseline در ژورنال اصلاح شد (از «در حال تأیید» به تأیید واقعی). ۳) قدیمی‌ترین ورودی ژورنال (فاز ۸) به `handoff-archive.md` منتقل شد. ۴) `tests/e2e/reports.spec.ts` نوشته شد — ۷ تست کاملاً mocked برای ۴ سگمنت P&L. ۵) تأیید مستقل از کد رفتار `toggleDrill` و `DrillSection`. Graphify: Community 2 «Financial Integrity» اتصال‌های Financial Approval State Machine ↔ Atomic Reversal ↔ WAC را نشان داد.
+**فایل‌ها:** `CLAUDE.md`، `HANDOFF.md`، `project-docs/handoff-archive.md`، `tests/e2e/reports.spec.ts`
+**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅ · Playwright ⛔ (بلاک — `.env.local` غایب)
+**ناتمام:** Playwright نمی‌تواند اجرا شود — `DATABASE_URL` ناموجود.
+**برای جلسه‌ی بعد:** `.env.local` بساز یا `DATABASE_URL` ست کن.
+
+## 📓 2026-07-15 — استقرار جریان کاری تک‌نشست + نظافت مستندات (v0.26.0)
+**چه شد:** حذف پروتکل دو-اکانت و یکسان‌سازی با جریان کاری تک Claude Code. فایل‌های حذف/بایگانی‌شده: `setup-two-accounts.sh`، `project-docs/SKILL.md` → `project-docs/archive/SKILL-v0.9.5-legacy.md`، `project-docs/handoff.md` → `project-docs/archive/handoff-v9-legacy.md`. `project-docs/README.md` (ایندکس مستندات) ایجاد شد. نسخه‌ی package.json به `0.26.0` همگام‌سازی شد.
+**فایل‌ها:** `CLAUDE.md`، `HANDOFF.md`، `SKILL.md`، `project-docs/README.md`، `package.json`
+**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅
+
+## 📓 2026-07-14 — بستن کامل فاز امنیتی ۱: رفع bypass ورود دسته‌ای اقلام انبار (v0.26.0)
+**چه شد:** آخرین bypass امنیتی رفع شد: `app/api/inventory/items/import/route.ts` از `requireSession()` به `requireAdmin()` تغییر کرد. قبلاً BranchUser و Chef می‌توانستند اقلام انبار + موجودی اولیه را با status=approved و applyBalance مستقیم وارد کنند. sweep کامل همه route‌ها هم انجام شد. **فاز امنیتی ۱ کاملاً بسته شد.**
+**فایل‌ها:** `app/api/inventory/items/import/route.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅
+
+## 📓 2026-07-14 — رفع race condition payroll approve (v0.25.0)
+**چه شد:** آخرین approve route که خارج از transaction بود رفع شد: `app/api/payroll/runs/[id]/approve/route.ts`. SELECT FOR UPDATE داخل db.transaction + WHERE guard با `status='calculated'` روی UPDATE. P&L drilldown کد-بازی شد — کامل و صحیح، آماده تست مرورگر. Migration روی production اجرا شده تأیید شد (عکس‌های DBeaver).
+**فایل‌ها:** `app/api/payroll/runs/[id]/approve/route.ts`
+**Build:** tsc ✅ ۰ خطا · build ✅
+**ناتمام:** —
+**برای جلسه‌ی بعد:** تست P&L drilldown در مرورگر. دسته‌های راه‌اندازی در Settings.
+
 ## 📓 2026-07-14 — ممیزی امنیتی و رفع ۵ باگ بحرانی (v0.23.0) — اکانت ۱
 **چه شد:** ممیزی کامل معماری روی ۸ ریسک بحرانی. همه فایل‌های مرتبط مستقیماً خوانده و تأیید شدند. ۵ باگ واقعی رفع شد: race condition approve، import bypass، WAC race، connection pool singleton، monthly Jalali grouping. P&L drilldown تکمیل شد.
 **فایل‌ها:** `lib/db/client.ts`، `lib/db/inventoryHelpers.ts`، `app/api/transactions/[id]/approve/route.ts`، `app/api/transactions/import/route.ts`، `app/api/reports/route.ts`، `app/(app)/reports/page.tsx`
@@ -1089,3 +1113,12 @@ Commit: 8d8f288. lib/reports/flashReport.ts + FlashReportCard + /api/reports/fla
 
 ## 📓 2026-07-06 — ماژول مدیریت چک + ضایعات با دلیل — اکانت ۱
 Commits: ce170cf + 5944e32. cheques جدول + صفحه + API + ContactLedger. wasteReason به inv_voucher_lines. migrations: db-waste-reason + db-cheques.
+
+## 📓 2026-07-14 — تأیید نهایی فاز ۱ + رفع ۲ باگ اضافه + تست‌های رگرسیون (v0.24.0) — اکانت ۱
+**چه شد:** بررسی عمیق و تأیید ۶ فیکس فاز ۱ (v0.23.0). دو مشکل اضافه کشف و رفع شد:
+1. Race condition در approve برگه انبار: رفع با SELECT FOR UPDATE داخل transaction + WHERE guard.
+2. WHERE guard تأیید تراکنش: UPDATE فاقد WHERE status='pending' بود.
+Migration 001-unique-parent-voucher-id.sql ساخته و روی production اجرا شد.
+tests/unit/security-guards.test.ts: 27 تست سبز ✅.
+**فایل‌ها:** app/api/inventory/vouchers/[id]/approve/route.ts، app/api/transactions/[id]/approve/route.ts، project-docs/migrations/001-unique-parent-voucher-id.sql، tests/unit/security-guards.test.ts
+**Build:** tsc ✅ · build ✅ · vitest 27/27 ✅

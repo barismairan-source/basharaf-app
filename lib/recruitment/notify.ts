@@ -39,7 +39,7 @@ export function fireRecruitmentNotification(app: {
       entityId: app.id,
     },
     undefined,
-    { sms: true },
+    { sms: true, email: true },
   ).catch(() => {
     logEvent({
       level: 'warn',

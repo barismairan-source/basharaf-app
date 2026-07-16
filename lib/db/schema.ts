@@ -225,7 +225,8 @@ export const notifications = pgTable(
     type: notifTypeEnum('type').notNull(),
     title: text('title').notNull(),
     sub: text('sub').notNull(),
-    time: text('time').notNull(), // human-friendly relative time
+    /** legacy: static relative-time text written at insert — kept for backward compat */
+    time: text('time').notNull(),
     read: boolean('read').notNull().default(false),
     txId: uuid('tx_id').references(() => transactions.id, {
       onDelete: 'cascade',
@@ -240,11 +241,22 @@ export const notifications = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+
+    // ── V2 additions ────────────────────────────────────────────
+    ruleKey:    text('rule_key'),
+    priority:   integer('priority').notNull().default(0),
+    readAt:     timestamp('read_at',     { withTimezone: true }),
+    archivedAt: timestamp('archived_at', { withTimezone: true }),
+    /** Stable per-user dedupe key: {ruleKey}:{entityId}:{userId} */
+    dedupeKey:  text('dedupe_key'),
   },
   (table) => ({
-    userIdx: index('notif_user_idx').on(table.userId),
-    txIdx: index('notif_tx_idx').on(table.txId),
-    readIdx: index('notif_read_idx').on(table.read),
+    userIdx:        index('notif_user_idx').on(table.userId),
+    txIdx:          index('notif_tx_idx').on(table.txId),
+    readIdx:        index('notif_read_idx').on(table.read),
+    userCreatedIdx: index('notif_user_created_idx').on(table.userId, table.createdAt),
+    ruleKeyIdx:     index('notif_rule_key_idx').on(table.ruleKey),
+    entityIdIdx:    index('notif_entity_id_idx').on(table.entityId),
   })
 );
 
@@ -344,11 +356,61 @@ export const notificationRules = pgTable('notification_rules', {
   description: text('description'),
   enabled: boolean('enabled').notNull().default(true),
   smsEnabled: boolean('sms_enabled').notNull().default(false),
+  /** V2: controls in-app channel independently of master enabled */
+  inAppEnabled: boolean('in_app_enabled').notNull().default(true),
+  /** V2: controls email channel (requires SMTP configured) */
+  emailEnabled: boolean('email_enabled').notNull().default(false),
   threshold: integer('threshold'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type NotificationRule = typeof notificationRules.$inferSelect;
+
+// ─── Notification Outbox ─────────────────────────────────────────
+/**
+ * Durable delivery outbox for SMS and email channels.
+ *
+ * Privacy contract:
+ * - payload stores only routing data (ruleKey, entityId, recipientId)
+ * - no phone numbers, email addresses, resumes, or form answers
+ * - last_error is stored in redacted form only
+ * - recipient_id references users.id (no address stored here)
+ */
+export const notificationOutbox = pgTable(
+  'notification_outbox',
+  {
+    id:             uuid('id').primaryKey().defaultRandom(),
+    ruleKey:        text('rule_key').notNull(),
+    notificationId: uuid('notification_id').references(() => notifications.id, { onDelete: 'set null' }),
+    /** 'sms' | 'email' */
+    channel:        text('channel').notNull(),
+    recipientId:    uuid('recipient_id').references(() => users.id, { onDelete: 'set null' }),
+    /** Non-PII routing data only */
+    payload:        jsonb('payload').notNull().default({}),
+    /** Stable dedupe key: {ruleKey}:{entityId}:{recipientId}:{channel} */
+    dedupeKey:      text('dedupe_key').notNull().unique(),
+    /** pending | processing | sent | failed | dead | skipped */
+    status:         text('status').notNull().default('pending'),
+    attempts:       integer('attempts').notNull().default(0),
+    maxAttempts:    integer('max_attempts').notNull().default(5),
+    nextAttemptAt:  timestamp('next_attempt_at', { withTimezone: true }).notNull().defaultNow(),
+    lockTime:       timestamp('lock_time',       { withTimezone: true }),
+    lockOwner:      text('lock_owner'),
+    /** Redacted error — no credentials or full stack traces */
+    lastError:      text('last_error'),
+    providerMsgId:  text('provider_msg_id'),
+    createdAt:      timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt:      timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+    sentAt:         timestamp('sent_at',    { withTimezone: true }),
+  },
+  (table) => ({
+    dueIdx:    index('notif_outbox_due_idx').on(table.nextAttemptAt, table.status),
+    statusIdx: index('notif_outbox_status_idx').on(table.status, table.createdAt),
+    lockIdx:   index('notif_outbox_lock_idx').on(table.lockTime, table.status),
+  })
+);
+
+export type NotificationOutboxRow = typeof notificationOutbox.$inferSelect;
 
 // ─── Audit Log ───────────────────────────────────────────────────
 /**
