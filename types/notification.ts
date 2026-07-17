@@ -24,7 +24,7 @@ export interface Notification {
   title: string;
   /** متن کوتاه زیرعنوان */
   sub: string;
-  /** زمان نسبی به شکل رشته: «۲ ساعت پیش» */
+  /** زمان نسبی به شکل رشته: «۲ ساعت پیش» — legacy, use createdAt for display */
   time: string;
   read: boolean;
   /** اگر اعلان مربوط به یک تراکنش است */
@@ -33,6 +33,12 @@ export interface Notification {
   actionUrl: string | null;
   /** شناسه entity مرتبط (voucher id، PO id، ...) */
   entityId: string | null;
+  /** V2 fields — present in all new rows; optional for backward compat with V1 store entries */
+  createdAt?: string;
+  readAt?: string | null;
+  archivedAt?: string | null;
+  ruleKey?: string | null;
+  priority?: number;
 }
 
 /** کنفیگ یک قانون نوتیفیکیشن در Admin */
@@ -41,6 +47,9 @@ export interface NotificationRule {
   label: string;
   description: string | null;
   enabled: boolean;
+  smsEnabled: boolean;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
   threshold: number | null;
   updatedAt: string;
 }

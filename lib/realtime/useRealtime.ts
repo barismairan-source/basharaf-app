@@ -81,19 +81,50 @@ export function useRealtime() {
         (payload) => {
           const row = payload.new as Record<string, unknown>;
           const notif: Notification = {
-            id: row.id as string,
-            type: row.type as Notification['type'],
-            title: row.title as string,
-            sub: row.sub as string,
-            time: row.time as string,
-            read: row.read as boolean,
-            txId: (row.tx_id as string) ?? null,
-            actionUrl: (row.action_url as string) ?? null,
-            entityId: (row.entity_id as string) ?? null,
+            id:         row.id as string,
+            type:       row.type as Notification['type'],
+            title:      row.title as string,
+            sub:        row.sub as string,
+            time:       (row.time as string) ?? 'به‌تازگی',
+            read:       (row.read as boolean) ?? false,
+            txId:       (row.tx_id as string) ?? null,
+            actionUrl:  (row.action_url as string) ?? null,
+            entityId:   (row.entity_id as string) ?? null,
+            createdAt:  row.created_at ? new Date(row.created_at as string).toISOString() : new Date().toISOString(),
+            readAt:     (row.read_at as string) ?? null,
+            archivedAt: (row.archived_at as string) ?? null,
+            ruleKey:    (row.rule_key as string) ?? null,
+            priority:   (row.priority as number) ?? 0,
           };
-          const current = useAppStore.getState().notifications;
-          if (current.some(n => n.id === notif.id)) return;
-          useAppStore.setState(s => ({ notifications: [notif, ...s.notifications] }));
+          // upsertNotification handles dedup and sorts; archived rows are auto-removed
+          useAppStore.getState().upsertNotification(notif);
+        }
+      )
+
+      // UPDATE: sync read/archived/unread state via single source of truth
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const row = payload.new as Record<string, unknown>;
+          const existing = useAppStore.getState().notifications.find(n => n.id === row.id);
+          const notif: Notification = {
+            id:         row.id as string,
+            type:       (row.type as Notification['type']) ?? existing?.type ?? 'info',
+            title:      (row.title as string) ?? existing?.title ?? '',
+            sub:        (row.sub as string) ?? existing?.sub ?? '',
+            time:       (row.time as string) ?? existing?.time ?? 'به‌تازگی',
+            read:       (row.read as boolean) ?? existing?.read ?? false,
+            txId:       (row.tx_id as string) ?? existing?.txId ?? null,
+            actionUrl:  (row.action_url as string) ?? existing?.actionUrl ?? null,
+            entityId:   (row.entity_id as string) ?? existing?.entityId ?? null,
+            createdAt:  row.created_at ? new Date(row.created_at as string).toISOString() : existing?.createdAt ?? new Date().toISOString(),
+            readAt:     (row.read_at as string) ?? null,
+            archivedAt: (row.archived_at as string) ?? null,
+            ruleKey:    (row.rule_key as string) ?? existing?.ruleKey ?? null,
+            priority:   (row.priority as number) ?? existing?.priority ?? 0,
+          };
+          useAppStore.getState().upsertNotification(notif);
         }
       )
 

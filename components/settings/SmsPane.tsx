@@ -3,13 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Phone, Bell, History, Settings2,
-  CheckCircle2, XCircle, RefreshCw, Send,
+  CheckCircle2, XCircle, RefreshCw, Send, ExternalLink,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useAppStore } from '@/store';
 
 // ─── types ─────────────────────────────────────────────────────────
 interface AdminRow { id: string; name: string; email: string; smsPhone: string | null }
-interface RuleRow  { key: string; label: string; description?: string | null; enabled: boolean; smsEnabled: boolean }
 interface LogRow   { id: string; phone: string; message: string; templateKey: string | null; status: string; createdAt: string }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -57,10 +57,7 @@ export function SmsPane() {
   const [phoneEdits, setPhoneEdits] = useState<Record<string, string>>({});
   const [phoneSaving, setPhoneSaving] = useState<string | null>(null);
 
-  // ── قوانین پیامک ─────────────────────────────────────────────────
-  const [rules, setRules] = useState<RuleRow[]>([]);
-  const [rulesLoading, setRulesLoading] = useState(true);
-  const [toggling, setToggling] = useState<string | null>(null);
+  // قوانین پیامک — مدیریت در صفحه مرکزی اعلان‌ها (حذف duplicate state)
 
   // ── لاگ پیامک ────────────────────────────────────────────────────
   const [logs, setLogs] = useState<LogRow[]>([]);
@@ -74,27 +71,19 @@ export function SmsPane() {
     Promise.all([
       fetch('/api/admin/sms-settings').then((r) => r.json()),
       fetch('/api/users').then((r) => r.json()),
-      fetch('/api/admin/notification-rules').then((r) => r.json()),
       fetch('/api/sms/log').then((r) => r.json()),
-    ]).then(([settings, users, rules, logs]) => {
+    ]).then(([settings, users, logs]) => {
       setCap(settings.dailyCap ?? 5);
       setDedup(settings.dedupHours ?? 2);
 
-      const superAdmins: AdminRow[] = (users.users ?? []).filter((u: AdminRow) => {
-        const fullUser = users.users?.find((x: { id: string; role: string }) => x.id === u.id);
-        return fullUser?.role === 'SuperAdmin';
-      });
-      // اگر role در users API نیست filter به جور دیگر
       const su: AdminRow[] = (users.users ?? []).filter(
         (u: { role: string }) => u.role === 'SuperAdmin'
       );
       setAdmins(su);
       setPhoneEdits(Object.fromEntries(su.map((a: AdminRow) => [a.id, a.smsPhone ?? ''])));
 
-      setRules(rules.rules ?? []);
       setLogs(logs.logs ?? []);
     }).catch(() => {}).finally(() => {
-      setRulesLoading(false);
       setLogsLoading(false);
     });
   }, [user?.id]);
@@ -141,25 +130,6 @@ export function SmsPane() {
       }
     } finally {
       setPhoneSaving(null);
-    }
-  }
-
-  // ── toggle smsEnabled ─────────────────────────────────────────────
-  async function toggleSms(key: string, current: boolean) {
-    setToggling(key);
-    try {
-      const res = await fetch('/api/admin/notification-rules', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ key, smsEnabled: !current }),
-      });
-      if (res.ok) {
-        setRules((prev) =>
-          prev.map((r) => (r.key === key ? { ...r, smsEnabled: !current } : r))
-        );
-      }
-    } finally {
-      setToggling(null);
     }
   }
 
@@ -259,12 +229,19 @@ export function SmsPane() {
       {/* ── قوانین پیامک ── */}
       <SectionCard icon={Bell} title="قوانین هشدار پیامکی">
         <p className="text-[12px] text-stone-500">
-          پیامک فقط وقتی ارسال می‌شود که هم قانون فعال باشد هم پیامک آن روشن باشد.
-          همه با پیش‌فرض خاموش شروع می‌کنند.
+          مدیریت قوانین (فعال/غیرفعال کردن پیامک به ازای هر رویداد) در صفحه‌ی مرکزی اعلان‌ها انجام می‌شود.
         </p>
 
+        <Link
+          href="/admin/settings/notifications"
+          className="flex items-center gap-2 text-[12.5px] text-indigo-600 hover:text-indigo-800 transition-colors"
+        >
+          <ExternalLink size={13} strokeWidth={1.5} />
+          مدیریت قوانین اعلان‌ها و پیامک
+        </Link>
+
         {/* تست از مسیر کامل */}
-        <div className="flex items-center gap-3 p-3 bg-stone-50 rounded-md">
+        <div className="flex items-center gap-3 p-3 bg-stone-50 rounded-md mt-2">
           <div className="flex-1 min-w-0">
             <p className="text-[12.5px] text-stone-700">تست از مسیر واقعی</p>
             <p className="text-[11px] text-stone-400">
@@ -300,44 +277,6 @@ export function SmsPane() {
             <XCircle size={13} className="shrink-0" />
             {testState.error}
           </div>
-        )}
-
-        {rulesLoading ? (
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-stone-100 rounded-md animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <ul className="divide-y divide-stone-100">
-            {rules.map((rule) => (
-              <li key={rule.key} className="flex items-center gap-3 py-3">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] text-stone-800">{rule.label}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <code className="text-[10px] text-stone-400">{rule.key}</code>
-                    {!rule.enabled && (
-                      <span className="text-[10px] text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded">قانون خاموش</span>
-                    )}
-                  </div>
-                </div>
-                <button
-                  onClick={() => toggleSms(rule.key, rule.smsEnabled)}
-                  disabled={toggling === rule.key}
-                  aria-label={rule.smsEnabled ? 'خاموش کردن پیامک' : 'روشن کردن پیامک'}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors shrink-0 ${
-                    rule.smsEnabled ? 'bg-emerald-500' : 'bg-stone-200'
-                  } ${toggling === rule.key ? 'opacity-50' : ''}`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                      rule.smsEnabled ? '-translate-x-1' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </li>
-            ))}
-          </ul>
         )}
       </SectionCard>
 

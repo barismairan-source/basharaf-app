@@ -311,14 +311,28 @@ const notificationsRepo: NotificationsRepo = {
   async markRead(id) {
     await apiFetch('/api/notifications', {
       method: 'PATCH',
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ action: 'read', id }),
+    });
+  },
+
+  async markUnread(id) {
+    await apiFetch('/api/notifications', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'unread', id }),
+    });
+  },
+
+  async archive(id) {
+    await apiFetch('/api/notifications', {
+      method: 'PATCH',
+      body: JSON.stringify({ action: 'archive', id }),
     });
   },
 
   async markAllRead() {
     await apiFetch('/api/notifications', {
       method: 'PATCH',
-      body: JSON.stringify({ markAllRead: true }),
+      body: JSON.stringify({ action: 'read-all' }),
     });
   },
 

@@ -47,7 +47,7 @@ describe('fireRecruitmentNotification — فراخوانی notifyAdmins', () => 
     expect(params.type).toBe('info');
     expect(params.title).toBe('درخواست استخدام جدید');
     expect(params.actionUrl).toBe('/recruitment');
-    expect(options).toEqual({ sms: true });
+    expect(options).toEqual({ sms: true, email: true });
   });
 });
 

@@ -130,11 +130,14 @@ export interface NotificationsRepo {
   list(): Promise<Notification[]>;
   /** علامت‌گذاری یک اعلان به‌عنوان خوانده‌شده */
   markRead(id: string): Promise<void>;
+  /** علامت‌گذاری یک اعلان به‌عنوان خوانده‌نشده */
+  markUnread(id: string): Promise<void>;
+  /** بایگانی یک اعلان */
+  archive(id: string): Promise<void>;
   /** علامت‌گذاری همه به‌عنوان خوانده‌شده */
   markAllRead(): Promise<void>;
   /**
    * افزودن اعلان جدید — معمولاً توسط system در نتیجه‌ی workflow.
-   * مثلاً وقتی BranchUser تراکنش ثبت می‌کند، یک اعلان pending برای admin می‌سازد.
    */
   create(params: Omit<Notification, 'id'>): Promise<Notification>;
 }

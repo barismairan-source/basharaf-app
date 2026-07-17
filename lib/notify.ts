@@ -1,30 +1,32 @@
 /**
- * lib/notify.ts — helper مرکزی برای ایجاد اعلان‌ها.
+ * lib/notify.ts — backward-compatible entry point for notifications.
  *
- * همه API route‌ها باید از این helper استفاده کنند تا:
- * ۱. کنفیگ NotificationRules رعایت شود (اگر قانون disabled باشد، اعلان ساخته نمی‌شود)
- * ۲. actionUrl و entityId به‌طور یکپارچه مقداردهی شوند
- * ۳. اعلان‌های SuperAdmin و کاربر ایجادکننده به درستی روت شوند
+ * V2: delegates to lib/notifications/service.ts for new callers.
+ * Existing callers (transactions, inventory, anomaly) continue to work unchanged.
+ *
+ * Public exports are unchanged — no existing route requires modification.
  */
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
-import { sendSms } from '@/lib/sms/sendSms';
+import { notifyAdminsV2 } from '@/lib/notifications/service';
+
+type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 import type { NotificationType } from '@/types';
 
 export interface NotifyParams {
   type: NotificationType;
   title: string;
   sub: string;
-  /** null → اعلان برای همه (SuperAdmin‌ها) */
+  /** null → اعلان برای همه (SuperAdmin‌ها) — deprecated in V2; use notifyAdmins */
   userId: string | null;
   txId?: string | null;
   actionUrl?: string | null;
   entityId?: string | null;
-  /** کلید قانون — اگر داده شود، ابتدا بررسی می‌شود enabled باشد */
+  /** کلید قانون */
   ruleKey?: string;
 }
 
-/** ایجاد یک اعلان (با بررسی قانون) */
+/** ایجاد یک اعلان (با بررسی قانون) — legacy single-user path */
 export async function notify(params: NotifyParams): Promise<void> {
   if (params.ruleKey) {
     const [rule] = await db
@@ -36,79 +38,77 @@ export async function notify(params: NotifyParams): Promise<void> {
   }
 
   await db.insert(schema.notifications).values({
-    type: params.type,
-    title: params.title,
-    sub: params.sub,
-    time: 'به‌تازگی',
-    read: false,
-    txId: params.txId ?? null,
+    type:      params.type,
+    title:     params.title,
+    sub:       params.sub,
+    time:      'به‌تازگی',
+    read:      false,
+    txId:      params.txId ?? null,
     actionUrl: params.actionUrl ?? null,
-    entityId: params.entityId ?? null,
-    userId: params.userId,
+    entityId:  params.entityId ?? null,
+    userId:    params.userId,
+    ruleKey:   params.ruleKey ?? null,
   });
 }
 
 export interface NotifyAdminsOptions {
-  /** اگر true باشد و قانون sms_enabled=true داشته باشد، پیامک هم ارسال می‌شود */
+  /** Enqueue SMS outbox row (requires rule.sms_enabled=true) */
   sms?: boolean;
+  /** Enqueue email outbox row (requires rule.email_enabled=true + SMTP configured) */
+  email?: boolean;
 }
 
-/** اعلان به تمام SuperAdminها (با بررسی قانون) */
+/**
+ * اعلان به تمام SuperAdminها.
+ * Delegates to V2 service when ruleKey is provided (preferred path).
+ * Falls back to direct insert when called without ruleKey (legacy callers).
+ */
 export async function notifyAdmins(
   params: Omit<NotifyParams, 'userId'>,
-  tx?: any,
+  tx?: DbTx,
   options?: NotifyAdminsOptions
 ): Promise<void> {
-  const client: typeof db = tx ?? db;
-
-  let smsEnabled = false;
   if (params.ruleKey) {
-    const [rule] = await client
-      .select({ enabled: schema.notificationRules.enabled, smsEnabled: schema.notificationRules.smsEnabled })
-      .from(schema.notificationRules)
-      .where(eq(schema.notificationRules.key, params.ruleKey))
-      .limit(1);
-    if (rule && !rule.enabled) return;
-    smsEnabled = rule?.smsEnabled ?? false;
+    return notifyAdminsV2(
+      {
+        ruleKey:   params.ruleKey,
+        type:      params.type,
+        title:     params.title,
+        sub:       params.sub,
+        actionUrl: params.actionUrl,
+        entityId:  params.entityId,
+        txId:      params.txId,
+      },
+      { sms: options?.sms, email: options?.email },
+      tx
+    );
   }
 
-  const admins = await client
-    .select({ id: schema.users.id, smsPhone: schema.users.smsPhone })
+  // Legacy fallback: no rule key — direct insert for active admins only
+  const client = tx ?? db;
+  const admins = await (client as typeof db)
+    .select({ id: schema.users.id })
     .from(schema.users)
-    .where(eq(schema.users.role, 'SuperAdmin'));
+    .where(and(eq(schema.users.role, 'SuperAdmin'), eq(schema.users.isActive, true)));
 
   if (admins.length === 0) return;
 
-  await client.insert(schema.notifications).values(
+  await (client as typeof db).insert(schema.notifications).values(
     admins.map((admin) => ({
-      type: params.type,
-      title: params.title,
-      sub: params.sub.slice(0, 255),
-      time: 'به‌تازگی',
-      read: false,
-      txId: params.txId ?? null,
+      type:      params.type,
+      title:     params.title,
+      sub:       params.sub.slice(0, 255),
+      time:      'به‌تازگی',
+      read:      false,
+      txId:      params.txId ?? null,
       actionUrl: params.actionUrl ?? null,
-      entityId: params.entityId ?? null,
-      userId: admin.id,
+      entityId:  params.entityId ?? null,
+      userId:    admin.id,
     }))
   );
-
-  // پیامک — fire-and-forget (خطا اعلان را خراب نمی‌کند)
-  if (options?.sms && smsEnabled) {
-    for (const admin of admins) {
-      if (admin.smsPhone) {
-        sendSms({
-          phone: admin.smsPhone,
-          message: `${params.title}\n${params.sub}`,
-          templateKey: params.ruleKey,
-          entityId: params.entityId ?? undefined,
-        }).catch(() => {/* fire-and-forget */});
-      }
-    }
-  }
 }
 
-/** آستانه‌ی یک قانون را برمی‌گرداند — برای مقایسه در runtime */
+/** آستانه‌ی یک قانون را برمی‌گرداند */
 export async function getRuleThreshold(key: string): Promise<number | null> {
   const [rule] = await db
     .select({ threshold: schema.notificationRules.threshold, enabled: schema.notificationRules.enabled })

@@ -9,13 +9,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.27.0` |
-| **آخرین به‌روزرسانی** | 2026-07-15 |
-| **Build/tsc** | tsc سبز ✅ (۰ خطا) · tests 85/85 ✅ · build ✅ |
-| **دیپلوی** | ⚠️ commit محلی — push عمداً انجام نشده (دستور صریح کاربر). migration اجرا نشده. |
+| **نسخه** | `0.28.0` |
+| **آخرین به‌روزرسانی** | 2026-07-17 |
+| **Build/tsc** | tsc ✅ ۰ خطا · tests 238/238 ✅ · build ✅ |
+| **دیپلوی** | ⚠️ branch `feat/notification-center-v2` push شده — آماده merge به main. migration V2 اجرا نشده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) migration را اجرا کن: `project-docs/migrations/db-recruitment-notification-rule.sql` روی DB (DBeaver). ۲) `git push` بزن تا فیچر deploy شود. ۳) یک فرم استخدام تست بزن و بررسی کن اعلان در پنل ظاهر می‌شود. ۴) `.env.e2e` بساز → E2E tests. |
-| **بلاک‌شده/منتظر کاربر** | push عمداً نشده — منتظر تأیید کاربر · migration اجرا نشده — منتظر تأیید · Playwright e2e ⛔ — `.env.e2e` غایب |
+| **کار بعدی پیشنهادی** | ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) ۶ قدم release را به ترتیب دنبال کن: env vars در Liara → migration → merge به main → verify → **یک scheduler برای processor** (هر cron HTTP کافی است — ببین ROLLOUT.md §1 step 5) → monitor. |
+| **بلاک‌شده/منتظر کاربر** | migration اجرا نشده · env vars در Liara ست نشده · scheduler تنظیم نشده · Playwright e2e ⛔ — `.env.e2e` غایب |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -62,6 +62,48 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-07-17 — اصلاح release-blocker — هم‌راستایی processor secret و scheduler (v0.28.0)
+**چه شد:** ۴ اصلاح release-blocker: ۱) `scripts/process-notifications.mjs` از `PROCESSOR_SECRET` به `NOTIFICATION_PROCESSOR_SECRET` تغییر کرد (سه موضع: comment، `process.env.*`، error message). ۲) `.env.example` — `NEXT_PUBLIC_APP_URL=https://basharaf.me` (الزامی برای لینک‌های اعلان)؛ `APP_URL=https://basharaf.me` (فقط برای script، نه برای external cron). ۳) `ROLLOUT.md` — scheduler provider-neutral شد؛ قرارداد دقیق scheduler (POST / هر دقیقه / Authorization header / timeout <60s) جایگزین ادعای «Liara Cron Job service» شد. ۴) ۴ تست جدید اضافه شد (`processor secret contract`) که ثابت می‌کنند script و route هر دو از `NOTIFICATION_PROCESSOR_SECRET` استفاده می‌کنند و `process.env.PROCESSOR_SECRET` وجود ندارد. نتیجه: 234→238 تست.
+**فایل‌ها:** `scripts/process-notifications.mjs`، `.env.example`، `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md`، `tests/unit/notification-center-v2.test.ts`، `HANDOFF.md`
+**Build:** tsc ✅ ۰ خطا · tests 238/238 ✅ · build ✅ · git diff --check ✅
+**ناتمام:** migration اجرا نشده · env vars در Liara ست نشده · scheduler تنظیم نشده
+**برای جلسه‌ی بعد:** ROLLOUT.md §1 step 5 بخوان → یک HTTP scheduler انتخاب کن → env vars → migration → merge.
+
+## 📓 2026-07-16 — تکمیل کامل NC V2 — ۱۱ بخش + commit/push آماده (v0.28.0)
+**چه شد:** تکمیل نهایی Notification Center V2 در ۱۱ بخش: ۱) `notificationsSlice.ts` بازنویسی کامل — `viewRemove`/`viewPrepend` helpers، `_setNotifications` با `serverUnreadCount?` اختیاری، همه mutationها viewIds را به‌روز می‌کنند، rollback delta-based (نه absolute restore). ۲) `page.tsx` — `serverUnreadCount` از store (نه filter local). ۳+۴) `provider-status/route.ts` + `notification-rules/route.ts` — `isEmailConfigured()` canonical. ۵) `channels/email.ts` — JSDoc اصلاح شد. ۶) `processor.ts` — `buildSmsMessage` link-too-long bug رفع شد. ۷) `db-notification-center-v2.sql` — schema-qualified catalog checks، FK repair برای CASCADE/NO ACTION/RESTRICT/غایب، ۳ CHECK constraint جدید (attempts≥0، max_attempts>0، attempts≤max). ۸) `scripts/process-notifications.mjs` — اسکریپت processor با timeout 50s؛ ⚠️ Liara Next.js cron blocker گزارش شد. ۹) `.env.example` — provider-neutral DB، `KAVENEGAR_API_KEY`، `SMS_DRY_RUN`، `APP_URL`. ۱۰) تست‌های جدید (۲۷): field-level SMTP، SMS boundary، store unread count، bell view، delta rollback، service active rule، API routes. نتیجه: 207→234 تست. ۱۱) مستندات: ROLLOUT.md (6-step release + Liara cron blocker)، NC-V2-CHANGES-ANALYSIS.md (دور سوم).
+**فایل‌ها:** `store/slices/notificationsSlice.ts`، `app/(app)/notifications/page.tsx`، `app/api/admin/notifications/provider-status/route.ts`، `app/api/admin/notification-rules/route.ts`، `lib/notifications/channels/email.ts`، `lib/notifications/processor.ts`، `project-docs/migrations/db-notification-center-v2.sql`، `scripts/process-notifications.mjs` (جدید)، `.env.example`، `tests/unit/notification-center-v2.test.ts`، `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md`، `project-docs/NC-V2-CHANGES-ANALYSIS.md`، `HANDOFF.md`، `project-docs/handoff-archive.md`
+**Build:** tsc ✅ ۰ خطا · tests 234/234 ✅ · build ✅ · git diff --check ✅
+**ناتمام:** push نشده — منتظر تأیید کاربر برای commit+push
+**برای جلسه‌ی بعد:** ۱) ROLLOUT.md بخوان — ۶ قدم release. ۲) env vars در Liara. ۳) migration اجرا. ۴) push. ۵) ⚠️ Liara Cron Job service بساز.
+
+## 📓 2026-07-16 — تست‌های رفتاری NC V2 — ۳۷ تست جدید، کد تولید مستقیم (v0.28.0)
+**چه شد:** ۳۷ تست رفتاری به `tests/unit/notification-center-v2.test.ts` افزوده شد. همه تست‌ها کد تولیدی واقعی را import و اجرا می‌کنند (بدون re-implementation). پوشش: ۱) `cursor.ts` — UUID validation، size limit >512 bytes. ۲) `rules.ts` — shouldEnqueueEmail فقط از DB rule تبعیت می‌کند نه SMTP. ۳) `processor.ts` — buildSmsMessage، link ایمن/ناایمن، truncation صحیح. ۴) `channels/email.ts` — SMTP absent → status='failed' (retryable، نه 'skipped'). ۵) store — Bell fetch با `setViewPage` page cursor را پاک نمی‌کند؛ append به یک view روی view دیگر اثر نمی‌گذارد. ۶) store rollback — concurrent realtime event بعد از rollback یک item حذف نمی‌شود. ۷) process route (`app/api/internal/notifications/process/route.ts`) — secret missing → 503؛ اشتباه → 401؛ درست → 200؛ error پاک نمی‌کند. ۸) `service.ts` — disabled rule → هیچ insert اجرا نمی‌شود؛ outerTx → db.transaction صدا زده نمی‌شود. ۹) `retry.ts` — nextDayMidnightTehran همیشه > now؛ Tehran midnight 00:00 صحیح است. نتیجه: ۸۵→۱۲۲ تست در nc-v2، جمع کل ۱۷۰→۲۰۷. tsc ✅ build ✅.
+**فایل‌ها:** `tests/unit/notification-center-v2.test.ts`، `HANDOFF.md`
+**Build:** tsc ✅ ۰ خطا · tests 207/207 ✅ · build ✅ · push ⛔ (عمدی — دستور کاربر)
+**ناتمام:** push نشده · migration `db-notification-center-v2.sql` روی DB اجرا نشده · Playwright e2e ⛔ (`.env.e2e` غایب)
+**برای جلسه‌ی بعد:** ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) migration را روی DB اجرا کن. ۳) `NOTIFICATION_PROCESSOR_SECRET` + `MAIL_*` vars در Liara ست کن. ۴) push کن.
+
+## 📓 2026-07-16 — ممیزی مستقل ۹‌بخشی NC V2 — تمام ایرادها اصلاح شد (v0.28.0)
+**چه شد:** ممیزی مستقل ۹ ایراد حیاتی پیدا کرد. همه در همین جلسه اصلاح شد (بدون commit/push — دستور صریح کاربر). خلاصه: ۱) **eventKey contract** — پارامتر اجباری `eventKey: string` به `EnqueueOutboxParams` افزوده شد؛ محاسبه یک‌بار در `notifyWithClient` انجام می‌شود (`idempotencyKey ?? entityId ?? randomUUID()`). ۲) **TX passthrough** — `notifyWithClient(params, options, client)` معرفی شد؛ همه reads (resolveRule، query ادمین‌ها) و writes (notification + outbox) از یک client تراکنش‌محور استفاده می‌کنند. ۳) **Channel contract** — default هر channel `true` است؛ قانون DB تنها arbiter ارسال واقعی است؛ `lib/recruitment/notify.ts` حالا `{ sms: true, email: true }` اعلام می‌کند. ۴) **امنیت URL** — `isSafeActionUrl` حالا `//evil`، `///path`، `ftp:`، `javascript:`، `data:` را رد می‌کند؛ فقط relative (بدون `//`) یا absolute با `http/https` + origin match مجاز است. ۵) **Outbox queue** — compound cursor `(updatedAt, id)` DEsc با base64 JSON؛ retry-one فقط برای `dead/failed`؛ 422 برای `sent/processing`؛ summary stats (pending, processing, dead, sentToday, oldestPendingAgeSeconds, smsConfigured, emailConfigured)؛ UI per-row retry + load-more واقعی. ۶) **Realtime/store** — store single source of truth؛ `upsertNotification` برای INSERT/UPDATE realtime؛ `markNotificationUnread`، `archiveNotification` با optimistic rollback؛ Bell و page هر دو از store می‌خوانند. ۷) **تست‌ها** — 170/170 سبز؛ cursor codec از `lib/notifications/cursor.ts` import می‌شود (بدون re-implementation)؛ 85 تست جدید در `notification-center-v2.test.ts`. ۸) **حریم خصوصی** — `recipientId` از `OutboxPayload` حذف شد؛ کامنت‌های نادرست اصلاح شد. ۹) **Migration idempotency** — CHECK constraints از `CREATE TABLE IF NOT EXISTS` خارج و در بلاک‌های `DO $ BEGIN IF NOT EXISTS` قرار گرفتند.
+**فایل‌ها:** `lib/notifications/outbox.ts`، `lib/notifications/service.ts`، `lib/notifications/types.ts`، `lib/notifications/templates.ts`، `lib/notifications/cursor.ts` (جدید)، `lib/notify.ts`، `lib/recruitment/notify.ts`، `lib/repos/types.ts`، `lib/repos/api.ts`، `store/slices/notificationsSlice.ts`، `app/api/admin/notification-outbox/route.ts`، `app/(app)/notifications/page.tsx`، `components/layout/NotificationsBell.tsx`، `lib/realtime/useRealtime.ts`، `project-docs/migrations/db-notification-center-v2.sql`، `tests/unit/notification-center-v2.test.ts`، `tests/unit/recruitment-notification.test.ts`، `project-docs/NC-V2-CHANGES-ANALYSIS.md`، `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md`
+**Build:** tsc ✅ ۰ خطا · tests 170/170 ✅ · build ✅ · playwright --list ✅ 22 تست · git diff --check ✅ · push ⛔ (عمدی)
+**ناتمام:** push نشده · migration `db-notification-center-v2.sql` روی DB اجرا نشده · env vars در Liara ست نشده
+**برای جلسه‌ی بعد:** ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) migration را روی DB اجرا کن. ۳) `NOTIFICATION_PROCESSOR_SECRET` + `MAIL_*` vars در Liara ست کن. ۴) push کن (deploy خودکار).
+
+## 📓 2026-07-16 — اصلاح ۱۵‌گانه Notification Center V2 — production-ready (v0.28.0)
+**چه شد:** تمام ۱۵ بخش اصلاح جامع روی branch `feat/notification-center-v2` اعمال شد (بدون commit/push — دستور صریح کاربر). بخش‌ها: ۱) payload شامل title/sub/actionUrl (processor دیگر به notification_id لوک‌آپ نمی‌کند). ۲) eventKey null-safe: `entityId ?? idempotencyKey ?? randomUUID()` — هر call null-entity، key یکتا می‌گیرد. ۳) TX passthrough از `notifyAdmins` تا `runBatch`. ۴) فیلتر `isActive=true` روی query ادمین‌ها؛ `recipient_id` nullable + SET NULL (حذف کاربر audit را خراب نمی‌کند). ۵) Compound keyset cursor (base64 JSON `{at,id}`) + DB COUNT برای unread + invalid cursor → 400. ۶) atomic UPDATE...RETURNING؛ `isSafeActionUrl` مقایسه origin (نه prefix)؛ `constantTimeEqual` به `lib/notifications/secret.ts` منتقل شد؛ لو دادن error detail حذف شد. ۷) `capExceeded: boolean` در `DeliveryResult`؛ retry cap به Tehran midnight (`nextDayMidnightTehran`). ۸) migration: backfill حذف، seed به DO NOTHING تبدیل، CHECK constraints نام‌گذاری شد. ۹) SMTP guard در rules PATCH؛ endpoint status provider؛ SmsPane duplicate حذف + Link جایگزین. ۱۰) pagination outbox + masked recipient + per-row retry. ۱۱) useRealtime V2 fields. ۱۲) types به‌روز. ۱۳) تست‌ها ۵۴→۶۳ (148/148 ✅). ۱۴) ROLLOUT.md ایجاد. ۱۵) gate: tsc ✅، build ✅.
+**فایل‌ها:** `lib/notifications/secret.ts` (جدید)، `lib/notifications/outbox.ts`، `lib/notifications/service.ts`، `lib/notifications/retry.ts`، `lib/notifications/processor.ts`، `lib/notifications/templates.ts`، `lib/notifications/channels/sms.ts`، `lib/notifications/types.ts`، `lib/notify.ts`، `lib/db/schema.ts`، `app/api/notifications/route.ts`، `app/api/internal/notifications/process/route.ts`، `app/api/admin/notification-outbox/route.ts`، `app/api/admin/notification-rules/route.ts`، `app/api/admin/notifications/provider-status/route.ts` (جدید)، `components/settings/SmsPane.tsx`، `lib/realtime/useRealtime.ts`، `types/notification.ts`، `tests/unit/notification-center-v2.test.ts`، `project-docs/migrations/db-notification-center-v2.sql`، `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` (جدید)
+**Build:** tsc ✅ ۰ خطا · tests 148/148 ✅ · build ✅ · git diff --check ✅ · push ⛔ (عمدی)
+**ناتمام:** push نشده · migration `db-notification-center-v2.sql` روی DB اجرا نشده · env vars در Liara ست نشده
+**برای جلسه‌ی بعد:** ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) migration را روی DB اجرا کن. ۳) `NOTIFICATION_PROCESSOR_SECRET` + `MAIL_*` vars در Liara ست کن. ۴) push کن (deploy خودکار).
+
+## 📓 2026-07-16 — Notification Center V2 (v0.28.0) — branch feat/notification-center-v2
+**چه شد:** پیاده‌سازی کامل Notification Center V2 روی branch محلی (هرگز push نشده): ۱) **فاز ۳** — `app/api/notifications/route.ts` بازنویسی کامل: ownership guard (user_id=session.sub روی همه queries)، keyset pagination (cursor-based)، Zod validation، فیلتر all/unread/archived/type، action read/unread/archive/read-all، 404 بدون لو دادن وجود row دیگران. ۲) **فاز ۵** — `app/api/internal/notifications/process/route.ts`: POST-only, constant-time secret comparison (timingSafeEqual), delegate به processOutboxBatch(). ۳) **فاز ۶** — SMTP + processor secret در `.env.example`. ۴) **فاز ۷** — `NotificationsBell.tsx` بازنویسی: fetch از API هنگام باز شدن، optimistic read/unread/archive با rollback، mark-all-read، فیلتر all/unread، grouping (امروز/دیروز/قدیمی‌تر)، relative time از createdAt، accessibility کامل (aria-*, focus management، reduced-motion). ۵) **فاز ۸** — `app/(app)/notifications/page.tsx`: inbox کامل با pagination، همه actions، loading/error states. ۶) **فاز ۹** — `useRealtime.ts`: اضافه شد UPDATE handler برای notifications (sync read state + حذف archived از store). ۷) **فاز ۱۰** — admin page با tabs (قوانین + صف ارسال)، channel controls (in-app/email toggle)، outbox monitoring، retry-dead. ۸) **فاز ۱۲** — `tests/unit/notification-center-v2.test.ts`: ۵۴ تست covering retry schedule، redaction، templates، outbox dedupe keys، processor secret. ۹) **فاز ۱۳** — نسخه ۰.۲۸.۰.
+**فایل‌ها:** `app/api/notifications/route.ts`، `app/api/internal/notifications/process/route.ts`، `app/api/admin/notification-outbox/route.ts`، `app/api/admin/notification-rules/route.ts`، `app/(app)/notifications/page.tsx`، `app/(admin)/admin/settings/notifications/page.tsx`، `components/layout/NotificationsBell.tsx`، `lib/notifications/channels/email.ts`، `lib/notifications/redaction.ts`، `lib/realtime/useRealtime.ts`، `tests/unit/notification-center-v2.test.ts`، `.env.example`، `package.json`، `package-lock.json`
+**Build:** tsc ✅ ۰ خطا · tests 139/139 ✅ · build پندینگ (اجرا نشده) · push ⛔ (عمدی — دستور صریح)
+**ناتمام:** migration `db-notification-center-v2.sql` اجرا نشده · push نشده · build تأیید نشده
+**برای جلسه‌ی بعد:** ۱) `npm run build` بزن. ۲) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۳) migration را روی DB اجرا کن. ۴) SMTP + processor vars را در Liara ست کن. ۵) push را تأیید کن.
+
 ## 📓 2026-07-15 — notification فاز ۱: اعلان in-app هنگام ثبت استخدام (v0.27.0)
 **چه شد:** ۱) `lib/recruitment/notify.ts`: `buildRecruitmentSub()` خالص (فقط نام + برچسب فارسی بخش؛ بدون شماره، رزومه، پاسخ‌ها، یا سایر فیلدهای حساس) + `fireRecruitmentNotification()` (fire-and-forget؛ خطا → logEvent، هرگز به caller نمی‌رسد). ۲) `app/api/recruitment/route.ts`: `returning()` از یک ستون به چهار ستون (`id, firstName, lastName, area`) گسترش یافت؛ `fireRecruitmentNotification(row)` قبل از `return 201` فراخوانی می‌شود. ۳) `tests/unit/recruitment-notification.test.ts` (۶ تست): helper tests — `notifyAdmins` یک بار با entityId صدا می‌خورد، rejection propagate نمی‌شود، شماره، رزومه، یا فیلدهای حساس در sub نیستند. ۴) `tests/unit/recruitment-route.test.ts` (۴ تست): partial mock — real `fireRecruitmentNotification` با spy؛ mock فقط `notifyAdmins` و `logEvent`؛ وقتی `notifyAdmins` reject کند `logEvent` با `level:'warn'` صدا می‌خورد و route هنوز 201 برمی‌گرداند؛ `spyFire.mock.calls[0][0]` دقیقاً `DB_ROW` است (بدون شماره، رزومه، پاسخ‌ها، یا سایر فیلدهای حساس). ۵) `project-docs/migrations/db-recruitment-notification-rule.sql`: INSERT ایمن با `ON CONFLICT DO NOTHING`. ۶) نسخه → `0.27.0`. **⚠️ migration اجرا نشده. push نشده — دستور صریح کاربر.**
 **فایل‌ها:** `lib/recruitment/notify.ts`، `app/api/recruitment/route.ts`، `tests/unit/recruitment-notification.test.ts`، `tests/unit/recruitment-route.test.ts`، `project-docs/migrations/db-recruitment-notification-rule.sql`، `package.json`، `package-lock.json`، `project-docs/handoff-archive.md`
@@ -76,42 +118,5 @@
 **ناتمام:** —
 **برای جلسه‌ی بعد:** `.env.e2e.example` را به `.env.e2e` کپی کن → `E2E_DATABASE_URL` را پر کن → `npm run test:e2e -- tests/e2e/reports.spec.ts`. سپس دسته‌های راه‌اندازی در Settings.
 
-## 📓 2026-07-15 — تست رگرسیون P&L drilldown + رفع شکاف‌های مستندات (v0.26.0)
-**چه شد:** ۱) قانون «یک نشست» به `CLAUDE.md` و `HANDOFF.md` اضافه شد. ۲) وضعیت Build ورودی baseline در ژورنال اصلاح شد (از «در حال تأیید» به تأیید واقعی). ۳) قدیمی‌ترین ورودی ژورنال (فاز ۸) به `handoff-archive.md` منتقل شد. ۴) `tests/e2e/reports.spec.ts` نوشته شد — ۷ تست کاملاً mocked برای ۴ سگمنت P&L (revenue/cogs/payroll/other)، toggle باز/بسته، و لینک «مشاهده همه». ۵) تأیید مستقل از کد رفتار `toggleDrill` و `DrillSection`. Graphify: Community 2 «Financial Integrity» اتصال‌های Financial Approval State Machine ↔ Atomic Reversal ↔ WAC را نشان داد — همان nodes تحت پوشش tests/unit/security-guards.
-**فایل‌ها:** `CLAUDE.md`، `HANDOFF.md`، `project-docs/handoff-archive.md`، `tests/e2e/reports.spec.ts`
-**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅ · Playwright ⛔ (بلاک — `.env.local` غایب)
-**ناتمام:** Playwright نمی‌تواند اجرا شود — `DATABASE_URL` ناموجود → `global-setup/seed.ts` خطا می‌دهد. spec نوشته و type-check سبز است؛ برای اجرا `DATABASE_URL` را در `.env.local` ست کن.
-**برای جلسه‌ی بعد:** `.env.local` بساز یا `DATABASE_URL` ست کن → `npm run test:e2e -- tests/e2e/reports.spec.ts` را اجرا کن. سپس دسته‌های راه‌اندازی در Settings.
-
-## 📓 2026-07-15 — استقرار جریان کاری تک‌نشست + نظافت مستندات (v0.26.0)
-**چه شد:** حذف پروتکل دو-اکانت و یکسان‌سازی با جریان کاری تک Claude Code. فایل‌های حذف/بایگانی‌شده: `setup-two-accounts.sh` (ریشه)، `project-docs/SKILL.md` → `project-docs/archive/SKILL-v0.9.5-legacy.md`، `project-docs/handoff.md` → `project-docs/archive/handoff-v9-legacy.md`. Migration خالی بازگردانده شد (`git checkout`). `project-docs/README.md` (ایندکس مستندات) ایجاد شد. `NOTIF_RECON.md` حفظ شد. نسخه‌ی package.json به `0.26.0` همگام‌سازی شد.
-**فایل‌ها:** `CLAUDE.md`، `HANDOFF.md`، `SKILL.md` (تازه)، `project-docs/handoff.md` (redirect)، `project-docs/README.md`، `project-docs/archive/` (جدید)، `project-docs/NOTIF_RECON.md`، `package.json`
-**Build:** tsc ✅ ۰ خطا · tests 75/75 ✅ · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۱) تست P&L drilldown در مرورگر. ۲) دسته‌های راه‌اندازی در Settings. ۳) تصمیم معماری اعلان (SMS/email).
-
-## 📓 2026-07-14 — بستن کامل فاز امنیتی ۱: رفع bypass ورود دسته‌ای اقلام انبار (v0.26.0) — اکانت ۱
-**چه شد:** آخرین bypass امنیتی رفع شد: `app/api/inventory/items/import/route.ts` از `requireSession()` به `requireAdmin()` تغییر کرد. قبلاً BranchUser و Chef می‌توانستند اقلام انبار + موجودی اولیه را با status=approved و applyBalance مستقیم وارد کنند. sweep کامل همه route‌ها هم انجام شد — هیچ موارد مشابه دیگری یافت نشد (produce و PO receive intentional هستند). **فاز امنیتی ۱ کاملاً بسته شد.**
-**فایل‌ها:** `app/api/inventory/items/import/route.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست P&L drilldown در مرورگر. دسته‌های راه‌اندازی در Settings.
-
-## 📓 2026-07-14 — رفع race condition payroll approve (v0.25.0) — اکانت ۱
-**چه شد:** آخرین approve route که خارج از transaction بود رفع شد: `app/api/payroll/runs/[id]/approve/route.ts`. SELECT FOR UPDATE داخل db.transaction + WHERE guard با `status='calculated'` روی UPDATE. P&L drilldown کد-بازی شد — کامل و صحیح، آماده تست مرورگر. Migration روی production اجرا شده تأیید شد (عکس‌های DBeaver).
-**فایل‌ها:** `app/api/payroll/runs/[id]/approve/route.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** تست P&L drilldown در مرورگر (کلیک روی ردیف‌های سود/زیان در صفحه گزارش). دسته‌های راه‌اندازی در Settings.
-
-## 📓 2026-07-14 — تأیید نهایی فاز ۱ + رفع ۲ باگ اضافه + تست‌های رگرسیون (v0.24.0) — اکانت ۱
-**چه شد:** بررسی عمیق و تأیید ۶ فیکس فاز ۱ (v0.23.0). دو مشکل اضافه کشف و رفع شد:
-1. **Race condition در approve برگه انبار** (`app/api/inventory/vouchers/[id]/approve/route.ts`): همان باگ تراکنش — SELECT و status check خارج از `db.transaction()` بود، هیچ FOR UPDATE روی ردیف برگه وجود نداشت. رفع: قفل برگه با SELECT FOR UPDATE داخل transaction + WHERE guard روی UPDATE.
-2. **WHERE guard تأیید تراکنش** (`app/api/transactions/[id]/approve/route.ts`): UPDATE فاقد `WHERE status='pending'` بود. رفع: `.where(and(..., or(status='pending', status='proforma')))`.
-- **Migration**: `project-docs/migrations/001-unique-parent-voucher-id.sql` ساخته شد — UNIQUE INDEX CONCURRENTLY روی `inv_vouchers.parent_voucher_id WHERE NOT NULL`. اجرا روی production انجام شد (تأییدشده).
-- **تست‌های رگرسیون**: `tests/unit/security-guards.test.ts` — 27 تست (WAC، approve guard، voucher guard، گزارش جلالی، maker-checker، unique reversal). همه سبز ✅.
-**فایل‌ها:** `app/api/inventory/vouchers/[id]/approve/route.ts`، `app/api/transactions/[id]/approve/route.ts`، `project-docs/migrations/001-unique-parent-voucher-id.sql`، `tests/unit/security-guards.test.ts`
-**Build:** tsc ✅ ۰ خطا · build ✅ · vitest 27/27 ✅
-**ناتمام:** —
-**برای جلسه‌ی بعد:** ۱) تست P&L drilldown در مرورگر. ۲) دسته‌های راه‌اندازی در UI.
+<!-- archived to project-docs/handoff-archive.md: 2026-07-14 payroll approve + تأیید نهایی فاز ۱ v0.24.0 + 2026-07-14 فاز امنیتی ۱ + 2026-07-15 استقرار جریان تک‌نشست + 2026-07-15 تست رگرسیون P&L -->
 
