@@ -146,7 +146,7 @@ export default function FinancialPeriodsPage() {
           </h2>
         </div>
         <div className="px-5 py-4 space-y-4">
-          <div className="flex items-end gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             {/* Year */}
             <div className="flex-1">
               <label className="block text-[11.5px] text-stone-400 mb-1.5">سال شمسی</label>

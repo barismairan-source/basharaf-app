@@ -355,7 +355,7 @@ function OutboxTab() {
 
       {/* Provider readiness */}
       {summary && (
-        <div className="flex gap-3 text-[11px]">
+        <div className="flex flex-wrap gap-3 text-[11px]">
           <span className={cn('px-2 py-1 rounded', summary.smsConfigured ? 'bg-emerald-900/30 text-emerald-400' : 'bg-stone-800 text-stone-500')}>
             SMS: {summary.smsConfigured ? 'پیکربندی‌شده' : 'پیکربندی‌نشده'}
           </span>
@@ -496,7 +496,7 @@ export default function NotificationRulesPage() {
     patch(key, { [field]: value });
 
   return (
-    <div className="p-6 max-w-2xl space-y-6" dir="rtl">
+    <div className="max-w-2xl space-y-6" dir="rtl">
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>

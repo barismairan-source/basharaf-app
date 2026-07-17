@@ -40,28 +40,30 @@ export default async function AdminDashboardPage() {
           {recentAudit.length === 0 ? (
             <p className="text-stone-500 text-sm p-6 text-center">هنوز رویدادی ثبت نشده</p>
           ) : (
+            <div className="overflow-x-auto">
             <table className="w-full text-sm text-right">
               <thead className="bg-stone-800 text-stone-400 text-xs">
                 <tr>
-                  <th className="px-4 py-2.5">رویداد</th>
-                  <th className="px-4 py-2.5">کاربر</th>
-                  <th className="px-4 py-2.5">IP</th>
-                  <th className="px-4 py-2.5">زمان</th>
+                  <th className="px-4 py-2.5 whitespace-nowrap">رویداد</th>
+                  <th className="px-4 py-2.5 whitespace-nowrap">کاربر</th>
+                  <th className="px-4 py-2.5 whitespace-nowrap">IP</th>
+                  <th className="px-4 py-2.5 whitespace-nowrap">زمان</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-800">
                 {recentAudit.map(r => (
                   <tr key={r.id} className="text-stone-300">
-                    <td className="px-4 py-2.5 font-mono text-xs">{r.action}</td>
-                    <td className="px-4 py-2.5 text-stone-400">{r.userId ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-stone-500">{r.ip ?? '—'}</td>
-                    <td className="px-4 py-2.5 text-stone-500 text-xs">
+                    <td className="px-4 py-2.5 font-mono text-xs whitespace-nowrap">{r.action}</td>
+                    <td className="px-4 py-2.5 text-stone-400 whitespace-nowrap">{r.userId ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-stone-500 whitespace-nowrap">{r.ip ?? '—'}</td>
+                    <td className="px-4 py-2.5 text-stone-500 text-xs whitespace-nowrap">
                       {r.createdAt ? new Date(r.createdAt).toLocaleString('fa-IR') : '—'}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </div>
       </div>
