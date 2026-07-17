@@ -9,13 +9,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `0.28.0` |
-| **آخرین به‌روزرسانی** | 2026-07-17 |
-| **Build/tsc** | tsc ✅ ۰ خطا · tests 238/238 ✅ · build ✅ |
-| **دیپلوی** | ⚠️ branch `feat/notification-center-v2` push شده — آماده merge به main. migration V2 اجرا نشده. |
+| **نسخه** | `0.28.1` |
+| **آخرین به‌روزرسانی** | 2026-07-18 |
+| **Build/tsc** | tsc ✅ ۰ خطا · tests 236/238 (۲ خطای preexisting بی‌ربط — نگاه کن به بخش ناتمام) · build ✅ |
+| **دیپلوی** | ✅ V2 کامل روی main + production: env vars تنظیم شده، migration تأیید شد، merge/push انجام شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) ۶ قدم release را به ترتیب دنبال کن: env vars در Liara → migration → merge به main → verify → **یک scheduler برای processor** (هر cron HTTP کافی است — ببین ROLLOUT.md §1 step 5) → monitor. |
-| **بلاک‌شده/منتظر کاربر** | migration اجرا نشده · env vars در Liara ست نشده · scheduler تنظیم نشده · Playwright e2e ⛔ — `.env.e2e` غایب |
+| **کار بعدی پیشنهادی** | commit + push فایل `instrumentation.ts` (اگر هنوز نشده) → بعد از دیپلوی، لاگ‌های Liara را چند دقیقه بعد چک کن که scheduler داخلی هر ۱ دقیقه در حال tick زدنه بدون خطا. |
+| **بلاک‌شده/منتظر کاربر** | Playwright e2e ⛔ — `.env.e2e` غایب |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -61,6 +61,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-18 — راه‌اندازی NC V2 در production + scheduler لوکال داخل‌پروسه (v0.28.1)
+**چه شد:** ۱) تأیید شد env vars (`NEXT_PUBLIC_APP_URL`, `NOTIFICATION_PROCESSOR_SECRET`, `MAIL_*` Resend) قبلاً در پنل Liara ست شده بودن. ۲) تأیید شد `feat/notification-center-v2` قبلاً به `main` merge/push شده و دیپلوی موفق بوده. ۳) migration `db-notification-center-v2.sql` روی production DB تأیید شد که قبلاً اجرا شده (خروجی "already exists, skipping" برای همه‌ی ستون‌ها/ایندکس‌ها). ۴) تلاش برای scheduler خارجی (cron-job.org) با timeout مواجه شد — علت احتمالی: عدم دسترسی شبکه‌ی سرویس‌های بین‌المللی به هاست ایرانی Liara (تحریم/فیلترینگ). GET مستقیم از مرورگر کاربر به همون آدرس بلافاصله ۴۰۵ برگردوند (یعنی سرور کاملاً سالم و در دسترس بود، فقط دسترسی cron-job.org مشکل داشت). ۵) **راه‌حل نهایی:** فایل `instrumentation.ts` در ریشه‌ی پروژه اضافه شد — با هوک `register()` نیتیو Next.js 14، وقتی سرور بالا میاد یک `setInterval` هر ۶۰ ثانیه مستقیم `processOutboxBatch()` را در همان پروسه صدا می‌زند (بدون هیچ HTTP call یا سرویس بیرونی — کاملاً لوکال، مصون از هر مشکل شبکه‌ی بین‌المللی). دارای guard تکرارنشدن هم‌زمان (`isRunning`) و try/catch با `logEvent`. Endpoint `/api/internal/notifications/process` دست‌نخورده باقی ماند (برای trigger دستی/آینده).
+**فایل‌ها:** `instrumentation.ts` (جدید)، `HANDOFF.md`
+**Build:** tsc ✅ ۰ خطا · build ✅ · tests 236/238 (۲ شکست preexisting و بی‌ربط در `nextDayMidnightTehran` — باگ لبه‌ای نزدیک نیمه‌شب تهران، spawn شده به‌صورت task جدا، به این تغییر ربطی نداره)
+**ناتمام:** بعد از push، هنوز لاگ production را برای اولین tickهای موفق scheduler چک نکرده‌ایم.
+**برای جلسه‌ی بعد:** ۱) چند دقیقه بعد از دیپلوی، لاگ‌های Liara (`liara logs`) را چک کن که scheduler داخلی بدون خطا در حال اجراست. ۲) اگر cron-job.org job ساخته شده، حذفش کن چون دیگر لازم نیست. ۳) باگ `nextDayMidnightTehran` را در فرصت جدا رفع کن (task جدا spawn شده).
 
 ## 📓 2026-07-17 — اصلاح release-blocker — هم‌راستایی processor secret و scheduler (v0.28.0)
 **چه شد:** ۴ اصلاح release-blocker: ۱) `scripts/process-notifications.mjs` از `PROCESSOR_SECRET` به `NOTIFICATION_PROCESSOR_SECRET` تغییر کرد (سه موضع: comment، `process.env.*`، error message). ۲) `.env.example` — `NEXT_PUBLIC_APP_URL=https://basharaf.me` (الزامی برای لینک‌های اعلان)؛ `APP_URL=https://basharaf.me` (فقط برای script، نه برای external cron). ۳) `ROLLOUT.md` — scheduler provider-neutral شد؛ قرارداد دقیق scheduler (POST / هر دقیقه / Authorization header / timeout <60s) جایگزین ادعای «Liara Cron Job service» شد. ۴) ۴ تست جدید اضافه شد (`processor secret contract`) که ثابت می‌کنند script و route هر دو از `NOTIFICATION_PROCESSOR_SECRET` استفاده می‌کنند و `process.env.PROCESSOR_SECRET` وجود ندارد. نتیجه: 234→238 تست.
