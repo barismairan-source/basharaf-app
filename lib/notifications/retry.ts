@@ -64,7 +64,7 @@ export function nextDayMidnightTehran(now: Date = new Date()): Date {
     timeZone: 'Asia/Tehran',
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', second: '2-digit',
-    hour12: false,
+    hourCycle: 'h23',
   }).formatToParts(now);
 
   const get = (type: string): number =>
@@ -73,7 +73,9 @@ export function nextDayMidnightTehran(now: Date = new Date()): Date {
   const tY = get('year');
   const tM = get('month');
   const tD = get('day');
-  const tH = get('hour');
+  // hourCycle 'h23' guarantees 00-23; still normalize defensively against
+  // ICU implementations that report midnight as 24 under hour12:false.
+  const tH = get('hour') % 24;
   const tMin = get('minute');
   const tSec = get('second');
 

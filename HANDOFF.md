@@ -11,10 +11,10 @@
 |---|---|
 | **نسخه** | `0.28.1` |
 | **آخرین به‌روزرسانی** | 2026-07-18 |
-| **Build/tsc** | tsc ✅ ۰ خطا · tests 236/238 (۲ خطای preexisting بی‌ربط — نگاه کن به بخش ناتمام) · build ✅ |
+| **Build/tsc** | tsc ✅ ۰ خطا · tests 238/238 ✅ · build ✅ |
 | **دیپلوی** | ✅ V2 کامل روی main + production: env vars تنظیم شده، migration تأیید شد، merge/push انجام شده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | commit + push فایل `instrumentation.ts` (اگر هنوز نشده) → بعد از دیپلوی، لاگ‌های Liara را چند دقیقه بعد چک کن که scheduler داخلی هر ۱ دقیقه در حال tick زدنه بدون خطا. |
+| **کار بعدی پیشنهادی** | بعد از دیپلوی این commit، لاگ‌های Liara را چند دقیقه بعد چک کن که scheduler داخلی (`instrumentation.ts`) هر ۱ دقیقه در حال tick زدنه بدون خطا. |
 | **بلاک‌شده/منتظر کاربر** | Playwright e2e ⛔ — `.env.e2e` غایب |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -64,10 +64,11 @@
 
 ## 📓 2026-07-18 — راه‌اندازی NC V2 در production + scheduler لوکال داخل‌پروسه (v0.28.1)
 **چه شد:** ۱) تأیید شد env vars (`NEXT_PUBLIC_APP_URL`, `NOTIFICATION_PROCESSOR_SECRET`, `MAIL_*` Resend) قبلاً در پنل Liara ست شده بودن. ۲) تأیید شد `feat/notification-center-v2` قبلاً به `main` merge/push شده و دیپلوی موفق بوده. ۳) migration `db-notification-center-v2.sql` روی production DB تأیید شد که قبلاً اجرا شده (خروجی "already exists, skipping" برای همه‌ی ستون‌ها/ایندکس‌ها). ۴) تلاش برای scheduler خارجی (cron-job.org) با timeout مواجه شد — علت احتمالی: عدم دسترسی شبکه‌ی سرویس‌های بین‌المللی به هاست ایرانی Liara (تحریم/فیلترینگ). GET مستقیم از مرورگر کاربر به همون آدرس بلافاصله ۴۰۵ برگردوند (یعنی سرور کاملاً سالم و در دسترس بود، فقط دسترسی cron-job.org مشکل داشت). ۵) **راه‌حل نهایی:** فایل `instrumentation.ts` در ریشه‌ی پروژه اضافه شد — با هوک `register()` نیتیو Next.js 14، وقتی سرور بالا میاد یک `setInterval` هر ۶۰ ثانیه مستقیم `processOutboxBatch()` را در همان پروسه صدا می‌زند (بدون هیچ HTTP call یا سرویس بیرونی — کاملاً لوکال، مصون از هر مشکل شبکه‌ی بین‌المللی). دارای guard تکرارنشدن هم‌زمان (`isRunning`) و try/catch با `logEvent`. Endpoint `/api/internal/notifications/process` دست‌نخورده باقی ماند (برای trigger دستی/آینده).
-**فایل‌ها:** `instrumentation.ts` (جدید)، `HANDOFF.md`
-**Build:** tsc ✅ ۰ خطا · build ✅ · tests 236/238 (۲ شکست preexisting و بی‌ربط در `nextDayMidnightTehran` — باگ لبه‌ای نزدیک نیمه‌شب تهران، spawn شده به‌صورت task جدا، به این تغییر ربطی نداره)
+**چه شد (ادامه):** حین verify کردن دیپلوی، ۲ تست `nextDayMidnightTehran` fail شدن (preexisting، نه از تغییر بالا). ریشه‌یابی شد: `Intl.DateTimeFormat` با `hour12: false` درست در ساعت نیمه‌شب تهران، مقدار ساعت را `24` برمی‌گرداند (نه `00` — quirk شناخته‌شده‌ی ICU)، که باعث می‌شد محاسبه‌ی offset تهران ۲۴ ساعت اضافه حساب شود و نتیجه در گذشته بیفتد. این باگ می‌توانست job تست `unit-test` در GitHub Actions را دقیقاً حوالی نیمه‌شب fail کند و **دیپلوی را بلاک کند** (چون `deploy` به `unit-test` وابسته است) — پس در همین جلسه رفع شد: در `lib/notifications/retry.ts`، `hour12: false` به `hourCycle: 'h23'` تغییر کرد + نرمال‌سازی دفاعی `% 24` روی مقدار ساعت.
+**فایل‌ها:** `instrumentation.ts` (جدید)، `lib/notifications/retry.ts`، `HANDOFF.md`، `package.json`، `package-lock.json`
+**Build:** tsc ✅ ۰ خطا · build ✅ · tests 238/238 ✅
 **ناتمام:** بعد از push، هنوز لاگ production را برای اولین tickهای موفق scheduler چک نکرده‌ایم.
-**برای جلسه‌ی بعد:** ۱) چند دقیقه بعد از دیپلوی، لاگ‌های Liara (`liara logs`) را چک کن که scheduler داخلی بدون خطا در حال اجراست. ۲) اگر cron-job.org job ساخته شده، حذفش کن چون دیگر لازم نیست. ۳) باگ `nextDayMidnightTehran` را در فرصت جدا رفع کن (task جدا spawn شده).
+**برای جلسه‌ی بعد:** ۱) چند دقیقه بعد از دیپلوی، لاگ‌های Liara (`liara logs`) را چک کن که scheduler داخلی بدون خطا در حال اجراست. ۲) اگر cron-job.org job ساخته شده، حذفش کن چون دیگر لازم نیست.
 
 ## 📓 2026-07-17 — اصلاح release-blocker — هم‌راستایی processor secret و scheduler (v0.28.0)
 **چه شد:** ۴ اصلاح release-blocker: ۱) `scripts/process-notifications.mjs` از `PROCESSOR_SECRET` به `NOTIFICATION_PROCESSOR_SECRET` تغییر کرد (سه موضع: comment، `process.env.*`، error message). ۲) `.env.example` — `NEXT_PUBLIC_APP_URL=https://basharaf.me` (الزامی برای لینک‌های اعلان)؛ `APP_URL=https://basharaf.me` (فقط برای script، نه برای external cron). ۳) `ROLLOUT.md` — scheduler provider-neutral شد؛ قرارداد دقیق scheduler (POST / هر دقیقه / Authorization header / timeout <60s) جایگزین ادعای «Liara Cron Job service» شد. ۴) ۴ تست جدید اضافه شد (`processor secret contract`) که ثابت می‌کنند script و route هر دو از `NOTIFICATION_PROCESSOR_SECRET` استفاده می‌کنند و `process.env.PROCESSOR_SECRET` وجود ندارد. نتیجه: 234→238 تست.
