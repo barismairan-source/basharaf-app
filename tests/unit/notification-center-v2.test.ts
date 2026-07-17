@@ -1497,3 +1497,40 @@ describe('notification-rules PATCH — SMTP guard rejects emailEnabled without S
     expect(res.status).toBe(401);
   });
 });
+
+// ─── secret contract — script and route use same env var ─────────
+// Static source-code verification: proves scripts/process-notifications.mjs
+// and app/api/internal/notifications/process/route.ts both reference the
+// canonical NOTIFICATION_PROCESSOR_SECRET variable name.
+
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+describe('processor secret contract — script and API route use the same env var', () => {
+  const root = resolve(import.meta.dirname, '../..');
+
+  it('process route reads NOTIFICATION_PROCESSOR_SECRET', () => {
+    const src = readFileSync(resolve(root, 'app/api/internal/notifications/process/route.ts'), 'utf-8');
+    expect(src).toContain('NOTIFICATION_PROCESSOR_SECRET');
+  });
+
+  it('process-notifications.mjs reads NOTIFICATION_PROCESSOR_SECRET', () => {
+    const src = readFileSync(resolve(root, 'scripts/process-notifications.mjs'), 'utf-8');
+    expect(src).toContain('NOTIFICATION_PROCESSOR_SECRET');
+  });
+
+  it('process-notifications.mjs does NOT reference the old PROCESSOR_SECRET name', () => {
+    const src = readFileSync(resolve(root, 'scripts/process-notifications.mjs'), 'utf-8');
+    // Must not contain a bare `process.env.PROCESSOR_SECRET` reference.
+    // The regex excludes the canonical NOTIFICATION_PROCESSOR_SECRET from matching.
+    expect(src).not.toMatch(/process\.env\.PROCESSOR_SECRET(?!_)/);
+  });
+
+  it('both files reference exactly the same variable name', () => {
+    const routeSrc  = readFileSync(resolve(root, 'app/api/internal/notifications/process/route.ts'), 'utf-8');
+    const scriptSrc = readFileSync(resolve(root, 'scripts/process-notifications.mjs'), 'utf-8');
+    const VAR = 'NOTIFICATION_PROCESSOR_SECRET';
+    expect(routeSrc).toContain(VAR);
+    expect(scriptSrc).toContain(VAR);
+  });
+});

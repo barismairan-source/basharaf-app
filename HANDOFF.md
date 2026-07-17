@@ -10,12 +10,12 @@
 | | |
 |---|---|
 | **نسخه** | `0.28.0` |
-| **آخرین به‌روزرسانی** | 2026-07-16 |
-| **Build/tsc** | tsc ✅ ۰ خطا · tests 234/234 ✅ · build ✅ |
-| **دیپلوی** | ⚠️ branch محلی `feat/notification-center-v2` — آماده commit/push. migration V2 اجرا نشده. |
+| **آخرین به‌روزرسانی** | 2026-07-17 |
+| **Build/tsc** | tsc ✅ ۰ خطا · tests 238/238 ✅ · build ✅ |
+| **دیپلوی** | ⚠️ branch `feat/notification-center-v2` push شده — آماده merge به main. migration V2 اجرا نشده. |
 | **کار نیمه‌تمام (in-progress)** | — |
-| **کار بعدی پیشنهادی** | ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) ۶ قدم release را به ترتیب دنبال کن (env vars → migration → push → verify → cron → monitor). ۳) ⚠️ Liara cron blocker: Liara Next.js platform از cron field پشتیبانی نمی‌کند — باید Liara Cron Job service جداگانه بسازی. |
-| **بلاک‌شده/منتظر کاربر** | migration اجرا نشده · env vars در Liara ست نشده · Liara cron blocker · Playwright e2e ⛔ — `.env.e2e` غایب |
+| **کار بعدی پیشنهادی** | ۱) `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md` بخوان. ۲) ۶ قدم release را به ترتیب دنبال کن: env vars در Liara → migration → merge به main → verify → **یک scheduler برای processor** (هر cron HTTP کافی است — ببین ROLLOUT.md §1 step 5) → monitor. |
+| **بلاک‌شده/منتظر کاربر** | migration اجرا نشده · env vars در Liara ست نشده · scheduler تنظیم نشده · Playwright e2e ⛔ — `.env.e2e` غایب |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -61,6 +61,13 @@
 ---
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
+
+## 📓 2026-07-17 — اصلاح release-blocker — هم‌راستایی processor secret و scheduler (v0.28.0)
+**چه شد:** ۴ اصلاح release-blocker: ۱) `scripts/process-notifications.mjs` از `PROCESSOR_SECRET` به `NOTIFICATION_PROCESSOR_SECRET` تغییر کرد (سه موضع: comment، `process.env.*`، error message). ۲) `.env.example` — `NEXT_PUBLIC_APP_URL=https://basharaf.me` (الزامی برای لینک‌های اعلان)؛ `APP_URL=https://basharaf.me` (فقط برای script، نه برای external cron). ۳) `ROLLOUT.md` — scheduler provider-neutral شد؛ قرارداد دقیق scheduler (POST / هر دقیقه / Authorization header / timeout <60s) جایگزین ادعای «Liara Cron Job service» شد. ۴) ۴ تست جدید اضافه شد (`processor secret contract`) که ثابت می‌کنند script و route هر دو از `NOTIFICATION_PROCESSOR_SECRET` استفاده می‌کنند و `process.env.PROCESSOR_SECRET` وجود ندارد. نتیجه: 234→238 تست.
+**فایل‌ها:** `scripts/process-notifications.mjs`، `.env.example`، `project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md`، `tests/unit/notification-center-v2.test.ts`، `HANDOFF.md`
+**Build:** tsc ✅ ۰ خطا · tests 238/238 ✅ · build ✅ · git diff --check ✅
+**ناتمام:** migration اجرا نشده · env vars در Liara ست نشده · scheduler تنظیم نشده
+**برای جلسه‌ی بعد:** ROLLOUT.md §1 step 5 بخوان → یک HTTP scheduler انتخاب کن → env vars → migration → merge.
 
 ## 📓 2026-07-16 — تکمیل کامل NC V2 — ۱۱ بخش + commit/push آماده (v0.28.0)
 **چه شد:** تکمیل نهایی Notification Center V2 در ۱۱ بخش: ۱) `notificationsSlice.ts` بازنویسی کامل — `viewRemove`/`viewPrepend` helpers، `_setNotifications` با `serverUnreadCount?` اختیاری، همه mutationها viewIds را به‌روز می‌کنند، rollback delta-based (نه absolute restore). ۲) `page.tsx` — `serverUnreadCount` از store (نه filter local). ۳+۴) `provider-status/route.ts` + `notification-rules/route.ts` — `isEmailConfigured()` canonical. ۵) `channels/email.ts` — JSDoc اصلاح شد. ۶) `processor.ts` — `buildSmsMessage` link-too-long bug رفع شد. ۷) `db-notification-center-v2.sql` — schema-qualified catalog checks، FK repair برای CASCADE/NO ACTION/RESTRICT/غایب، ۳ CHECK constraint جدید (attempts≥0، max_attempts>0، attempts≤max). ۸) `scripts/process-notifications.mjs` — اسکریپت processor با timeout 50s؛ ⚠️ Liara Next.js cron blocker گزارش شد. ۹) `.env.example` — provider-neutral DB، `KAVENEGAR_API_KEY`، `SMS_DRY_RUN`، `APP_URL`. ۱۰) تست‌های جدید (۲۷): field-level SMTP، SMS boundary، store unread count، bell view، delta rollback، service active rule، API routes. نتیجه: 207→234 تست. ۱۱) مستندات: ROLLOUT.md (6-step release + Liara cron blocker)، NC-V2-CHANGES-ANALYSIS.md (دور سوم).

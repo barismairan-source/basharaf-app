@@ -1,35 +1,39 @@
 /**
  * Notification outbox processor trigger script.
  *
+ * Required env vars (must be set in the worker environment):
+ *   NOTIFICATION_PROCESSOR_SECRET  — must match the app's NOTIFICATION_PROCESSOR_SECRET
+ *   APP_URL                        — base URL of the deployed app (e.g. https://basharaf.me)
+ *
  * Usage:
- *   PROCESSOR_SECRET=<secret> node scripts/process-notifications.mjs
+ *   NOTIFICATION_PROCESSOR_SECRET=<secret> APP_URL=https://basharaf.me \
+ *     node scripts/process-notifications.mjs
  *
  * Exits 0 on success (2xx response), non-zero on error.
  * Logs only the HTTP status — never prints the secret or response body.
  *
- * ── Liara scheduling note ────────────────────────────────────────
- * The Liara Next.js platform ("platform": "next") does NOT support
- * a built-in cron field in liara.json. To schedule this script:
+ * ── Scheduling note ──────────────────────────────────────────────
+ * This script is only needed when using a Node.js worker process.
+ * Any scheduler that can make an HTTP POST request is sufficient:
  *
- *   Option A (recommended): Liara Cron Job service — create a separate
- *     cron job that calls POST /api/internal/notifications/process with
- *     the Authorization header. No local script needed.
+ *   External cron (cron-job.org, GitHub Actions, system cron, etc.)
+ *   POST https://basharaf.me/api/internal/notifications/process
+ *   Authorization: Bearer <NOTIFICATION_PROCESSOR_SECRET>
+ *   Body: (empty)
+ *   Frequency: every minute
+ *   Timeout: below 60 seconds
  *
- *   Option B: Call this script from a long-running worker process
- *     (e.g., a Liara Node.js app) on a setInterval.
+ * When using an external scheduler, APP_URL and this script are not needed.
  *
- *   Option C: Use an external cron provider (cron-job.org, GitHub Actions
- *     schedule) to POST the endpoint on a schedule.
- *
- * See ROLLOUT.md §3 for the full release checklist.
+ * See project-docs/NOTIFICATION-CENTER-V2-ROLLOUT.md for the full release checklist.
  * ─────────────────────────────────────────────────────────────────
  */
 
 const TIMEOUT_MS = 50_000;
 
-const secret = process.env.PROCESSOR_SECRET;
+const secret = process.env.NOTIFICATION_PROCESSOR_SECRET;
 if (!secret) {
-  console.error('[process-notifications] PROCESSOR_SECRET env var is required');
+  console.error('[process-notifications] NOTIFICATION_PROCESSOR_SECRET env var is required');
   process.exit(1);
 }
 

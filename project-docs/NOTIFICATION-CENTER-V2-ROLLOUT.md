@@ -8,18 +8,43 @@
 2. **Run migration** `project-docs/migrations/db-notification-center-v2.sql` on production DB
 3. **Merge / push** `feat/notification-center-v2` → triggers deploy on Liara
 4. **Verify** deploy succeeded: check Liara build log + app health
-5. **Configure processor scheduling** — ⚠️ Liara Next.js platform (`"platform":"next"`) has NO built-in cron field. Pick one:
-   - **Option A (recommended)**: Create a Liara Cron Job service that POSTs `https://your-app.liara.run/api/internal/notifications/process` with `Authorization: Bearer <NOTIFICATION_PROCESSOR_SECRET>` every minute
-   - **Option B**: External cron (cron-job.org or GitHub Actions schedule) calling the same endpoint
-   - **Option C**: Use `scripts/process-notifications.mjs` from a separate Node.js worker app
+5. **Configure processor scheduling** — the Liara Next.js platform (`"platform":"next"`) has no built-in cron support. Configure any scheduler that can make an HTTP request:
+
+   **Scheduler contract (provider-neutral):**
+   ```
+   Method:    POST
+   URL:       https://basharaf.me/api/internal/notifications/process
+   Header:    Authorization: Bearer <NOTIFICATION_PROCESSOR_SECRET>
+   Body:      (empty)
+   Frequency: every 1 minute
+   Timeout:   < 60 seconds (endpoint itself uses 50 s internally)
+   ```
+   ⚠️ Never embed the secret in the URL or logs — use only the Authorization header.
+
+   Scheduler options (any of these work):
+   - External HTTP cron service (cron-job.org, EasyCron, UptimeRobot monitors, etc.)
+   - GitHub Actions scheduled workflow calling the endpoint via `curl`
+   - System cron (`crontab`) on any always-on server running `curl`
+   - Node.js worker using `scripts/process-notifications.mjs` on a `setInterval`
+     (requires both `APP_URL` and `NOTIFICATION_PROCESSOR_SECRET` in that worker's env)
 6. **Monitor** `GET /api/admin/notification-outbox` for failed/dead rows after first run
 
 ### Environment Variables (set in Liara dashboard before step 3)
 
-#### Required — processor
+#### Required — application URLs
 ```
-NOTIFICATION_PROCESSOR_SECRET=<openssl rand -base64 32>   # min 32 chars
-APP_URL=https://your-app.liara.run                        # used by scripts/process-notifications.mjs
+NEXT_PUBLIC_APP_URL=https://basharaf.me   # links inside notifications and emails
+```
+
+#### Required — processor authentication
+```
+NOTIFICATION_PROCESSOR_SECRET=<openssl rand -base64 32>   # min 32 chars — auth for /api/internal/notifications/process
+```
+
+#### Optional — Node.js worker script only
+```
+APP_URL=https://basharaf.me   # only needed when running scripts/process-notifications.mjs;
+                              # not needed when using an external HTTP scheduler
 ```
 
 #### Required — SMTP email (provider-neutral — works with Liara Mail, Gmail, Postmark, etc.)
