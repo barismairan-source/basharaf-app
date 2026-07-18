@@ -286,6 +286,15 @@ describe('catalog — personal vs broadcast rules', () => {
     expect(isAudienceConfigurable('pending_approval')).toBe(false);
   });
 
+  it('voucher_approved (personal "your voucher was approved" notice) is a distinct key from the broadcast voucher_pending, and is not audience-configurable', () => {
+    // Regression guard: app/api/inventory/vouchers/[id]/approve/route.ts used to reuse
+    // 'voucher_pending' for this personal notice, which meant disabling the broadcast
+    // "a voucher needs approval" admin rule silently disabled this personal one too
+    // (both went through the same notification_rules.enabled gate in lib/notify.ts).
+    expect(isAudienceConfigurable('voucher_approved')).toBe(false);
+    expect(isAudienceConfigurable('voucher_pending')).toBe(true);
+  });
+
   it('high_value_tx and recruitment.new_application are audience-configurable broadcast rules', () => {
     expect(isAudienceConfigurable('high_value_tx')).toBe(true);
     expect(isAudienceConfigurable('recruitment.new_application')).toBe(true);

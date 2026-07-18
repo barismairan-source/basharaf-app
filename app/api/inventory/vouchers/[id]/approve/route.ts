@@ -269,7 +269,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         actionUrl: `/inventory/cartable`,
         entityId: updated.id,
         userId: updated.createdBy,
-        ruleKey: 'voucher_pending',
+        ruleKey: 'voucher_approved',
       });
     }
 
