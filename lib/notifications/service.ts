@@ -13,6 +13,7 @@ import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { resolveRule, shouldSendInApp, shouldEnqueueSms, shouldEnqueueEmail } from './rules';
 import { enqueueOutbox, buildNotifDedupeKey } from './outbox';
+import { fetchAudienceTargets, fetchCandidateUsers, resolveAudience } from './audience';
 import { logEvent } from '@/lib/logger';
 import { redactError } from './redaction';
 import type { NotifyAdminsParams, NotifyAdminsChannelOptions } from './types';
@@ -20,21 +21,54 @@ import type { NotifyAdminsParams, NotifyAdminsChannelOptions } from './types';
 type DbTx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Client = DbTx | typeof db;
 
+/**
+ * Resolves per-channel recipients (each channel may have its own audience —
+ * see lib/notifications/audience.ts) then writes in-app rows and enqueues
+ * outbox rows. Every recipient here has already passed the eligibility gate
+ * (active, has the rule's required access, has a usable address for the
+ * channel) — no further filtering happens at write time.
+ */
 async function runBatch(
   params: NotifyAdminsParams,
-  options: NotifyAdminsChannelOptions,
-  admins: Array<{ id: string; smsPhone: string | null }>,
   eventKey: string,
   doInApp: boolean,
   doSms: boolean,
   doEmail: boolean,
   client: Client
 ): Promise<void> {
-  for (const admin of admins) {
+  const eventBranchId = params.branchId ?? null;
+
+  const [targets, users] = await Promise.all([
+    fetchAudienceTargets(params.ruleKey, client),
+    fetchCandidateUsers(client),
+  ]);
+
+  const inAppIds = new Set(
+    doInApp
+      ? resolveAudience({ ruleKey: params.ruleKey, channel: 'in_app', targets, users, eventBranchId })
+          .filter((r) => r.eligible).map((r) => r.userId)
+      : []
+  );
+  const smsIds = new Set(
+    doSms
+      ? resolveAudience({ ruleKey: params.ruleKey, channel: 'sms', targets, users, eventBranchId })
+          .filter((r) => r.eligible).map((r) => r.userId)
+      : []
+  );
+  const emailIds = new Set(
+    doEmail
+      ? resolveAudience({ ruleKey: params.ruleKey, channel: 'email', targets, users, eventBranchId })
+          .filter((r) => r.eligible).map((r) => r.userId)
+      : []
+  );
+
+  const allRecipientIds = new Set<string>([...inAppIds, ...smsIds, ...emailIds]);
+
+  for (const userId of allRecipientIds) {
     let notifId: string | null = null;
 
-    if (doInApp) {
-      const dedupeKey = buildNotifDedupeKey(params.ruleKey, eventKey, admin.id);
+    if (inAppIds.has(userId)) {
+      const dedupeKey = buildNotifDedupeKey(params.ruleKey, eventKey, userId);
 
       const rows = await (client as typeof db)
         .insert(schema.notifications)
@@ -47,7 +81,7 @@ async function runBatch(
           txId:      params.txId ?? null,
           actionUrl: params.actionUrl ?? null,
           entityId:  params.entityId ?? null,
-          userId:    admin.id,
+          userId,
           ruleKey:   params.ruleKey,
           priority:  params.priority ?? 0,
           dedupeKey,
@@ -58,13 +92,13 @@ async function runBatch(
       notifId = rows[0]?.id ?? null;
     }
 
-    if (doSms && admin.smsPhone) {
+    if (smsIds.has(userId)) {
       await enqueueOutbox(
         {
           ruleKey:        params.ruleKey,
           eventKey,
           channel:        'sms',
-          recipientId:    admin.id,
+          recipientId:    userId,
           entityId:       params.entityId ?? null,
           notificationId: notifId,
           title:          params.title,
@@ -75,13 +109,13 @@ async function runBatch(
       );
     }
 
-    if (doEmail) {
+    if (emailIds.has(userId)) {
       await enqueueOutbox(
         {
           ruleKey:        params.ruleKey,
           eventKey,
           channel:        'email',
-          recipientId:    admin.id,
+          recipientId:    userId,
           entityId:       params.entityId ?? null,
           notificationId: notifId,
           title:          params.title,
@@ -106,27 +140,19 @@ async function notifyWithClient(
   const rule = await resolveRule(params.ruleKey, client as typeof db);
   if (!rule || !rule.enabled) return;
 
-  const admins = await (client as typeof db)
-    .select({ id: schema.users.id, smsPhone: schema.users.smsPhone })
-    .from(schema.users)
-    .where(
-      and(
-        eq(schema.users.role, 'SuperAdmin'),
-        eq(schema.users.isActive, true)
-      )
-    );
-
-  if (admins.length === 0) return;
-
   const doInApp  = shouldSendInApp(rule);
   // Caller declares channel support (defaults to true); DB rule gates actual sending
   const doSms    = shouldEnqueueSms(rule, options.sms ?? true);
   const doEmail  = shouldEnqueueEmail(rule, options.email ?? true);
 
+  if (!doInApp && !doSms && !doEmail) return;
+
   // eventKey computed ONCE, shared across all recipients and channels of this event
   const eventKey = params.idempotencyKey ?? params.entityId ?? crypto.randomUUID();
 
-  await runBatch(params, options, admins, eventKey, doInApp, doSms, doEmail, client);
+  // Recipient resolution (per-channel audience, access gating, address
+  // readiness) happens inside runBatch — see lib/notifications/audience.ts.
+  await runBatch(params, eventKey, doInApp, doSms, doEmail, client);
 }
 
 /**

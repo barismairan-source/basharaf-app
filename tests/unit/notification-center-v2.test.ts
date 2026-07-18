@@ -997,7 +997,7 @@ vi.mock('@/lib/notifications/rules', async (importOriginal) => {
 
 import { notifyAdminsV2 } from '@/lib/notifications/service';
 import { resolveRule } from '@/lib/notifications/rules';
-import { db as mockDb } from '@/lib/db/client';
+import { db as mockDb, schema as mockSchema } from '@/lib/db/client';
 
 const DISABLED_RULE = { enabled: false, inAppEnabled: false, smsEnabled: false, emailEnabled: false };
 
@@ -1338,10 +1338,20 @@ describe('service.ts — active rule: SMS and email share the same eventKey', ()
       onConflictDoNothing: () => ({ returning: vi.fn().mockResolvedValue([]) }),
     };
 
+    // fetchCandidateUsers does select(...).from(schema.users) with NO .where();
+    // fetchAudienceTargets does select(...).from(schema.notificationRuleTargets).where(...).
+    // This fake makes .from(...) both directly awaitable AND chainable with .where(),
+    // so both call shapes resolve correctly regardless of which table is queried.
+    function chainable(result: unknown[]) {
+      return { where: () => Promise.resolve(result), then: (resolve: (v: unknown[]) => void) => resolve(result) };
+    }
     const fakeTx = {
       select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockResolvedValue([{ id: 'admin-1', smsPhone: '+989000000000' }]),
+        from: vi.fn().mockImplementation((table: unknown) => {
+          if (table === mockSchema.users) {
+            return chainable([{ id: 'admin-1', role: 'SuperAdmin', isActive: true, branchId: null, email: 'admin1@example.com', smsPhone: '+989000000000', permissions: null }]);
+          }
+          return chainable([]); // no custom audience targets → resolver falls back to default (all active SuperAdmins)
         }),
       }),
       insert: vi.fn().mockImplementation((_table: unknown) => ({

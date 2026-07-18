@@ -125,6 +125,7 @@ export async function POST(req: Request) {
             actionUrl: '/cheques',
             entityId: row.id,
             ruleKey: 'cheque.dueSoon',
+            branchId,
           }, undefined, { sms: true });
         }
       }

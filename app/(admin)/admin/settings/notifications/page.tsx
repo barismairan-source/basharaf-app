@@ -5,16 +5,51 @@ import {
   Bell, Clock, AlertTriangle, AlertOctagon,
   ShoppingCart, Package, CheckCircle2, RefreshCw, DollarSign,
   Mail, MessageSquare, LayoutList, Inbox, RotateCcw, Loader2,
+  Users, ShieldAlert, FileCheck, Search as SearchIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { NotificationRule } from '@/types/notification';
+import { RecipientDrawer } from '@/components/admin/notifications/RecipientDrawer';
 
-// ─── Type extensions for V2 ───────────────────────────────────────
+// ─── Types — mirror GET /api/admin/notification-audience ──────────
 
-interface NotificationRuleV2 extends NotificationRule {
+type Channel = 'in_app' | 'sms' | 'email';
+
+interface CatalogInfo {
+  title: string;
+  description: string;
+  category: string;
+  trigger: string;
+  thresholdType: 'amount' | 'days' | 'percent' | 'count' | null;
+  thresholdUnit: string | null;
+  branchAware: boolean;
+  sensitivity: 'low' | 'medium' | 'high';
+  audienceConfigurable: boolean;
+  hiddenFromUi: boolean;
+}
+
+interface AudienceChannelSummary { recipientCount: number; custom: boolean; }
+
+interface TargetRow {
+  channel: Channel | null;
+  effect: 'include' | 'exclude';
+  targetType: 'all_active' | 'role' | 'branch' | 'event_branch' | 'user';
+  roleTarget: string | null;
+  branchTarget: string | null;
+  userTarget: string | null;
+}
+
+interface RuleWithAudience {
+  key: string;
+  enabled: boolean;
+  smsEnabled: boolean;
   inAppEnabled: boolean;
   emailEnabled: boolean;
+  threshold: number | null;
+  updatedAt: string;
+  catalog: CatalogInfo;
+  audience: Record<Channel, AudienceChannelSummary>;
+  targets: TargetRow[];
 }
 
 interface OutboxRow {
@@ -44,21 +79,26 @@ interface OutboxSummary {
 // ─── Metadata ─────────────────────────────────────────────────────
 
 const RULE_META: Record<string, { icon: LucideIcon; accent: string }> = {
-  pending_approval:       { icon: Clock,         accent: 'text-indigo-400' },
-  voucher_pending:        { icon: Package,       accent: 'text-amber-400' },
-  low_stock:              { icon: AlertTriangle, accent: 'text-amber-400' },
-  inventory_clamp:        { icon: AlertOctagon,  accent: 'text-red-400' },
-  po_received:            { icon: ShoppingCart,  accent: 'text-emerald-400' },
-  high_value_tx:          { icon: DollarSign,    accent: 'text-sky-400' },
-  'recruitment.new_application': { icon: Bell,  accent: 'text-violet-400' },
+  pending_approval:              { icon: Clock,         accent: 'text-indigo-400' },
+  voucher_pending:                { icon: Package,       accent: 'text-amber-400' },
+  low_stock:                      { icon: AlertTriangle, accent: 'text-amber-400' },
+  inventory_clamp:                { icon: AlertOctagon,  accent: 'text-red-400' },
+  po_received:                    { icon: ShoppingCart,  accent: 'text-emerald-400' },
+  high_value_tx:                  { icon: DollarSign,    accent: 'text-sky-400' },
+  'cheque.dueSoon':                { icon: FileCheck,     accent: 'text-sky-400' },
+  'recruitment.new_application':  { icon: Bell,           accent: 'text-violet-400' },
+  waste_spike:                    { icon: ShieldAlert,    accent: 'text-red-400' },
+  below_approval_limit:           { icon: ShieldAlert,    accent: 'text-red-400' },
+  consumption_spike:              { icon: ShieldAlert,    accent: 'text-amber-400' },
+  rejection_pattern:              { icon: ShieldAlert,    accent: 'text-amber-400' },
+  price_jump:                     { icon: ShieldAlert,    accent: 'text-amber-400' },
+  off_hours_activity:             { icon: ShieldAlert,    accent: 'text-stone-400' },
 };
 
-function formatThreshold(key: string, threshold: number | null): string {
+function formatThreshold(catalog: CatalogInfo, threshold: number | null): string {
   if (threshold === null) return '';
-  if (key === 'high_value_tx') {
-    return new Intl.NumberFormat('fa-IR').format(threshold) + ' تومان';
-  }
-  return new Intl.NumberFormat('fa-IR').format(threshold);
+  const n = new Intl.NumberFormat('fa-IR').format(threshold);
+  return catalog.thresholdUnit ? `${n} ${catalog.thresholdUnit}` : n;
 }
 
 const STATUS_COLOR: Record<string, string> = {
@@ -86,12 +126,14 @@ function RuleRow({
   onToggle,
   onThreshold,
   onChannelToggle,
+  onOpenRecipients,
   saving,
 }: {
-  rule: NotificationRuleV2;
+  rule: RuleWithAudience;
   onToggle: (key: string, enabled: boolean) => void;
   onThreshold: (key: string, value: number | null) => void;
-  onChannelToggle: (key: string, field: 'inAppEnabled' | 'emailEnabled', value: boolean) => void;
+  onChannelToggle: (key: string, field: 'inAppEnabled' | 'emailEnabled' | 'smsEnabled', value: boolean) => void;
+  onOpenRecipients: (key: string) => void;
   saving: string | null;
 }) {
   const meta = RULE_META[rule.key] ?? { icon: Bell, accent: 'text-stone-400' };
@@ -101,6 +143,10 @@ function RuleRow({
   const [localThreshold, setLocalThreshold] = useState(
     rule.threshold !== null ? String(rule.threshold) : ''
   );
+
+  const lastUpdated = new Date(rule.updatedAt).toLocaleDateString('fa-IR', {
+    year: 'numeric', month: 'short', day: 'numeric',
+  });
 
   return (
     <div className={cn(
@@ -113,13 +159,13 @@ function RuleRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <p className="text-[13.5px] font-medium text-stone-100">{rule.label}</p>
+          <p className="text-[13.5px] font-medium text-stone-100">{rule.catalog.title}</p>
           {!rule.enabled && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-stone-700 text-stone-400">غیرفعال</span>
           )}
         </div>
-        {rule.description && (
-          <p className="text-[12px] text-stone-500 mt-0.5">{rule.description}</p>
+        {rule.catalog.trigger && (
+          <p className="text-[12px] text-stone-500 mt-0.5">{rule.catalog.trigger}</p>
         )}
 
         {/* Channel toggles (V2) */}
@@ -133,7 +179,7 @@ function RuleRow({
                 className="w-3.5 h-3.5 accent-indigo-500 cursor-pointer"
               />
               <LayoutList size={11} className="text-stone-400" aria-hidden />
-              <span className="text-[11px] text-stone-400">داخل‌برنامه</span>
+              <span className="text-[11px] text-stone-400">داخل‌برنامه ({rule.audience.in_app.recipientCount})</span>
             </label>
             <label className="flex items-center gap-1.5 cursor-pointer">
               <input
@@ -143,12 +189,18 @@ function RuleRow({
                 className="w-3.5 h-3.5 accent-indigo-500 cursor-pointer"
               />
               <Mail size={11} className="text-stone-400" aria-hidden />
-              <span className="text-[11px] text-stone-400">ایمیل</span>
+              <span className="text-[11px] text-stone-400">ایمیل ({rule.audience.email.recipientCount})</span>
             </label>
-            <span className="flex items-center gap-1.5 opacity-50">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rule.smsEnabled}
+                onChange={(e) => onChannelToggle(rule.key, 'smsEnabled', e.target.checked)}
+                className="w-3.5 h-3.5 accent-indigo-500 cursor-pointer"
+              />
               <MessageSquare size={11} className="text-stone-400" aria-hidden />
-              <span className="text-[11px] text-stone-500">SMS (جداگانه)</span>
-            </span>
+              <span className="text-[11px] text-stone-400">پیامک ({rule.audience.sms.recipientCount})</span>
+            </label>
           </div>
         )}
 
@@ -169,11 +221,27 @@ function RuleRow({
             />
             {rule.threshold !== null && (
               <span className="text-[11px] text-stone-500">
-                {formatThreshold(rule.key, rule.threshold)}
+                {formatThreshold(rule.catalog, rule.threshold)}
               </span>
             )}
           </div>
         )}
+
+        {/* Recipients button + last update */}
+        <div className="flex items-center gap-3 mt-2.5">
+          {rule.catalog.audienceConfigurable ? (
+            <button
+              type="button"
+              onClick={() => onOpenRecipients(rule.key)}
+              className="flex items-center gap-1.5 text-[11.5px] px-2.5 py-1 rounded-md border border-stone-700 text-stone-300 hover:border-indigo-500/60 hover:text-indigo-300 transition-colors"
+            >
+              <Users size={11} aria-hidden /> گیرندگان
+            </button>
+          ) : (
+            <span className="text-[11px] text-stone-600">اعلان شخصی — قابل تنظیم گیرنده نیست</span>
+          )}
+          <span className="text-[10.5px] text-stone-600">آخرین به‌روزرسانی: {lastUpdated}</span>
+        </div>
       </div>
 
       {/* Master enable toggle */}
@@ -446,20 +514,24 @@ function OutboxTab() {
 
 export default function NotificationRulesPage() {
   const [tab, setTab] = useState<Tab>('rules');
-  const [rules, setRules] = useState<NotificationRuleV2[]>([]);
+  const [rules, setRules] = useState<RuleWithAudience[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<string | null>(null);
+  const [drawerRuleKey, setDrawerRuleKey] = useState<string | null>(null);
+  const [ruleSearch, setRuleSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/admin/notification-rules', { credentials: 'include' });
+      const res = await fetch('/api/admin/notification-audience', { credentials: 'include' });
       if (!res.ok) throw new Error('خطا در بارگذاری');
       const data = await res.json();
       setRules(data.rules ?? []);
+      setCategories(data.categories ?? []);
     } catch {
       setError('بارگذاری قوانین ناموفق بود.');
     } finally {
@@ -480,7 +552,15 @@ export default function NotificationRulesPage() {
       });
       if (!res.ok) throw new Error('خطا');
       const data = await res.json();
-      setRules((prev) => prev.map((r) => (r.key === key ? { ...r, ...data.rule } : r)));
+      setRules((prev) => prev.map((r) => (r.key === key ? {
+        ...r,
+        enabled: data.rule.enabled,
+        smsEnabled: data.rule.smsEnabled,
+        inAppEnabled: data.rule.inAppEnabled,
+        emailEnabled: data.rule.emailEnabled,
+        threshold: data.rule.threshold,
+        updatedAt: data.rule.updatedAt,
+      } : r)));
       setLastSaved(key);
       setTimeout(() => setLastSaved(null), 2000);
     } catch {
@@ -492,8 +572,18 @@ export default function NotificationRulesPage() {
 
   const handleToggle         = (key: string, enabled: boolean) => patch(key, { enabled });
   const handleThreshold      = (key: string, value: number | null) => patch(key, { threshold: value });
-  const handleChannelToggle  = (key: string, field: 'inAppEnabled' | 'emailEnabled', value: boolean) =>
+  const handleChannelToggle  = (key: string, field: 'inAppEnabled' | 'emailEnabled' | 'smsEnabled', value: boolean) =>
     patch(key, { [field]: value });
+
+  const drawerRule = rules.find((r) => r.key === drawerRuleKey) ?? null;
+
+  const visibleRules = rules.filter((r) => !r.catalog.hiddenFromUi);
+  const filteredRules = ruleSearch.trim()
+    ? visibleRules.filter((r) => r.catalog.title.toLowerCase().includes(ruleSearch.trim().toLowerCase()))
+    : visibleRules;
+  const grouped = categories
+    .map((cat) => ({ category: cat, items: filteredRules.filter((r) => r.catalog.category === cat) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <div className="max-w-2xl space-y-6" dir="rtl">
@@ -505,7 +595,7 @@ export default function NotificationRulesPage() {
             مرکز اعلان V2
           </h1>
           <p className="text-[12.5px] text-stone-500 mt-1">
-            قوانین، کانال‌ها، و وضعیت صف ارسال
+            قوانین، کانال‌ها، گیرندگان، و وضعیت صف ارسال
           </p>
         </div>
         {tab === 'rules' && (
@@ -556,6 +646,19 @@ export default function NotificationRulesPage() {
               {error}
             </div>
           )}
+
+          {!loading && rules.length > 0 && (
+            <div className="relative">
+              <SearchIcon size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-500" aria-hidden />
+              <input
+                value={ruleSearch}
+                onChange={(e) => setRuleSearch(e.target.value)}
+                placeholder="جست‌وجوی قانون..."
+                className="w-full h-9 pr-9 pl-3 rounded-lg bg-stone-900 border border-stone-800 text-[12.5px] text-stone-200 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          )}
+
           {loading ? (
             <div className="rounded-xl border border-stone-800 bg-stone-900 overflow-hidden">
               {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -574,17 +677,29 @@ export default function NotificationRulesPage() {
               <Bell size={28} className="text-stone-600 mx-auto mb-3" aria-hidden />
               <p className="text-[13px] text-stone-500">هیچ قانونی یافت نشد. Migration را اجرا کنید.</p>
             </div>
+          ) : grouped.length === 0 ? (
+            <div className="rounded-xl border border-stone-800 bg-stone-900 p-8 text-center">
+              <p className="text-[12.5px] text-stone-500">قانونی با این عبارت پیدا نشد.</p>
+            </div>
           ) : (
-            <div className="rounded-xl border border-stone-800 bg-stone-900 overflow-hidden">
-              {rules.map((rule) => (
-                <RuleRow
-                  key={rule.key}
-                  rule={rule}
-                  onToggle={handleToggle}
-                  onThreshold={handleThreshold}
-                  onChannelToggle={handleChannelToggle}
-                  saving={saving}
-                />
+            <div className="space-y-6">
+              {grouped.map((g) => (
+                <div key={g.category}>
+                  <h2 className="text-[12px] font-semibold text-stone-400 mb-2 px-1">{g.category}</h2>
+                  <div className="rounded-xl border border-stone-800 bg-stone-900 overflow-hidden">
+                    {g.items.map((rule) => (
+                      <RuleRow
+                        key={rule.key}
+                        rule={rule}
+                        onToggle={handleToggle}
+                        onThreshold={handleThreshold}
+                        onChannelToggle={handleChannelToggle}
+                        onOpenRecipients={setDrawerRuleKey}
+                        saving={saving}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -596,6 +711,19 @@ export default function NotificationRulesPage() {
 
       {/* Tab: Outbox */}
       {tab === 'outbox' && <OutboxTab />}
+
+      {/* Recipients drawer */}
+      {drawerRule && (
+        <RecipientDrawer
+          ruleKey={drawerRule.key}
+          ruleTitle={drawerRule.catalog.title}
+          branchAware={drawerRule.catalog.branchAware}
+          currentTargets={drawerRule.targets}
+          currentUpdatedAt={drawerRule.updatedAt}
+          onClose={() => setDrawerRuleKey(null)}
+          onSaved={() => { load(); }}
+        />
+      )}
     </div>
   );
 }

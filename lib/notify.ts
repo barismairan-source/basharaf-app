@@ -24,6 +24,8 @@ export interface NotifyParams {
   entityId?: string | null;
   /** کلید قانون */
   ruleKey?: string;
+  /** شعبه‌ی مرتبط با رویداد — برای targeting نوع 'event_branch' در notifyAdmins */
+  branchId?: string | null;
 }
 
 /** ایجاد یک اعلان (با بررسی قانون) — legacy single-user path */
@@ -78,6 +80,7 @@ export async function notifyAdmins(
         actionUrl: params.actionUrl,
         entityId:  params.entityId,
         txId:      params.txId,
+        branchId:  params.branchId,
       },
       { sms: options?.sms, email: options?.email },
       tx

@@ -138,7 +138,11 @@ export async function POST(req: Request) {
       }
     });
 
-    // اعلان برای ادمین‌ها
+    // اعلان برای ادمین‌ها — branchId فقط وقتی همه‌ی برگه‌های این ایمپورت
+    // مال یک شعبه باشند ست می‌شود؛ ایمپورت چندشعبه‌ای branchId=null می‌ماند.
+    const importedBranchIds = new Set(voucherList.map((v) => v.branchId));
+    const singleBranchId = importedBranchIds.size === 1 ? [...importedBranchIds][0]! : null;
+
     const { notifyAdmins } = await import('@/lib/notify');
     await notifyAdmins({
       type: 'pending',
@@ -147,6 +151,7 @@ export async function POST(req: Request) {
       txId: null,
       actionUrl: '/inventory/cartable',
       ruleKey: 'voucher_pending',
+      branchId: singleBranchId,
     }, undefined, { sms: true });
 
     return NextResponse.json({ ok: true, vouchers, imported: lineCount, errors: [] }, { status: 201 });

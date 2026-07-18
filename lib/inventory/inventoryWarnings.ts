@@ -36,6 +36,7 @@ export async function warnAndLogClamp(
       actionUrl: voucherId ? `/inventory/cartable` : `/inventory`,
       entityId: voucherId ?? undefined,
       ruleKey: 'inventory_clamp',
+      branchId,
     },
     tx
   );

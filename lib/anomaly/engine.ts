@@ -65,6 +65,7 @@ export async function saveFindings(findings: AnomalyFindingInput[]): Promise<voi
           actionUrl: '/detective',
           entityId: row.id,
           ruleKey: finding.ruleKey,
+          branchId: finding.branchId ?? null,
         },
         undefined,
         { sms: true }
@@ -77,6 +78,7 @@ export async function saveFindings(findings: AnomalyFindingInput[]): Promise<voi
         actionUrl: '/detective',
         entityId: row.id,
         ruleKey: finding.ruleKey,
+        branchId: finding.branchId ?? null,
       }).catch(() => {});
     }
   }

@@ -366,6 +366,48 @@ export const notificationRules = pgTable('notification_rules', {
 
 export type NotificationRule = typeof notificationRules.$inferSelect;
 
+// ─── Notification Rule Targets (Audience Control) ────────────────
+/**
+ * جدول notification_rule_targets — گیرندگان سفارشی هر قانون اعلان.
+ *
+ * هیچ ردیفی برای یک (rule_key, channel) = رفتار پیش‌فرض دست‌نخورده:
+ * همه‌ی SuperAdminهای فعال (سازگار با نسخه‌ی قبل). این جدول فقط پیکربندی
+ * اضافه‌ست روی همان پیش‌فرض؛ تصمیم «بدون ردیف → پیش‌فرض» در لایه‌ی
+ * اپلیکیشن گرفته می‌شود (lib/notifications/audience.ts)، نه در دیتابیس.
+ *
+ * channel=null یعنی هدف مشترک (روی هر کانالی که برایش هدف اختصاصی
+ * تعریف نشده اعمال می‌شود)؛ هدف کانال‌محور همیشه بر هدف مشترک اولویت دارد.
+ * effect='exclude' همیشه بر 'include' برای همان کاربر غالب است.
+ */
+export const notificationRuleTargets = pgTable(
+  'notification_rule_targets',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    ruleKey: text('rule_key')
+      .notNull()
+      .references(() => notificationRules.key, { onDelete: 'cascade' }),
+    /** null = shared/default target for this rule across channels */
+    channel: text('channel'),
+    /** 'include' | 'exclude' */
+    effect: text('effect').notNull().default('include'),
+    /** 'all_active' | 'role' | 'branch' | 'event_branch' | 'user' */
+    targetType: text('target_type').notNull(),
+    roleTarget: text('role_target'),
+    branchTarget: uuid('branch_target').references(() => branches.id, { onDelete: 'cascade' }),
+    userTarget: uuid('user_target').references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    ruleChannelIdx: index('notif_rule_targets_rule_channel_idx').on(table.ruleKey, table.channel),
+    branchIdx: index('notif_rule_targets_branch_idx').on(table.branchTarget),
+    userIdx: index('notif_rule_targets_user_idx').on(table.userTarget),
+  })
+);
+
+export type NotificationRuleTarget = typeof notificationRuleTargets.$inferSelect;
+export type NewNotificationRuleTarget = typeof notificationRuleTargets.$inferInsert;
+
 // ─── Notification Outbox ─────────────────────────────────────────
 /**
  * Durable delivery outbox for SMS and email channels.

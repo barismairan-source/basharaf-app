@@ -62,7 +62,10 @@ export type AuditAction =
   | 'payroll.reversed'
   | 'account.recalculated'
   | 'chq.statusChanged'
-  | 'anomaly.statusChanged';
+  | 'anomaly.statusChanged'
+  | 'notification.audience.updated'
+  | 'notification.audience.reset'
+  | 'notification.audience.copied';
 
 export async function audit(params: {
   action: AuditAction;

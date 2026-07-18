@@ -97,6 +97,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
             actionUrl: `/transactions`,
             entityId: params.id,
             ruleKey: 'low_stock',
+            branchId: current.branchId,
           }, dbTx, { sms: true });
         }
       }
@@ -129,6 +130,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         actionUrl: `/transactions`,
         entityId: updated.id,
         ruleKey: 'high_value_tx',
+        branchId: updated.branchId,
       }, undefined, { sms: true });
     }
 

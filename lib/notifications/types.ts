@@ -27,6 +27,13 @@ export interface NotifyAdminsParams {
    * Two independent calls without a stable key each get a unique UUID and are treated as separate events.
    */
   idempotencyKey?: string;
+  /**
+   * The branch this event belongs to, if any. Powers 'event_branch' audience
+   * targeting (lib/notifications/audience.ts) — a SuperAdmin can configure a
+   * rule to notify only users assigned to the branch where the event happened.
+   * null/undefined for branch-agnostic events (e.g. recruitment applications).
+   */
+  branchId?: string | null;
 }
 
 export interface NotifyAdminsChannelOptions {

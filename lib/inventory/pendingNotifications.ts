@@ -3,7 +3,7 @@ import { notifyAdmins } from '@/lib/notify';
 export async function createPendingNotifications(
   voucherId: string,
   title: string,
-  _branchId: string
+  branchId: string
 ) {
   await notifyAdmins({
     type: 'pending',
@@ -12,5 +12,6 @@ export async function createPendingNotifications(
     actionUrl: `/inventory/cartable`,
     entityId: voucherId,
     ruleKey: 'voucher_pending',
+    branchId,
   });
 }
