@@ -289,7 +289,18 @@ async function handleReplace(
     await audit({
       action: 'notification.audience.updated',
       userId: sessionUserId,
-      meta: { ruleKey, targetCount: targets.length },
+      meta: {
+        ruleKey,
+        targetCount: targets.length,
+        targets: targets.map((t) => ({
+          channel: t.channel,
+          effect: t.effect,
+          targetType: t.targetType,
+          roleTarget: t.roleTarget ?? null,
+          branchTarget: t.branchTarget ?? null,
+          userTarget: t.userTarget ?? null,
+        })),
+      },
     });
 
     return updated!;
