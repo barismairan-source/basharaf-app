@@ -233,6 +233,9 @@ export function RecipientDrawer({
       setUpdatedAt(d.rule.updatedAt);
       const copied = draft.filter((t) => t.channel === fromChannel).map((t) => ({ ...t, channel: tab }));
       setDraft((prev) => [...prev.filter((t) => t.channel !== tab), ...copied]);
+      // copy already persisted server-side (unlike include/exclude edits) — refresh the
+      // parent's rule list so `currentTargets` catches up and `dirty` clears correctly.
+      onSaved(d.rule.updatedAt);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'کپی ناموفق بود');
     } finally {
@@ -369,8 +372,8 @@ export function RecipientDrawer({
                   key={c.key}
                   type="button"
                   onClick={() => handleCopy(c.key)}
-                  disabled={saving}
-                  title={`کپی تنظیمات از ${c.label}`}
+                  disabled={saving || dirty}
+                  title={dirty ? 'ابتدا تغییرات ذخیره‌نشده را ذخیره کنید' : `کپی تنظیمات از ${c.label}`}
                   className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-stone-700 text-stone-500 hover:text-stone-200 hover:border-stone-600 transition-colors disabled:opacity-40"
                 >
                   <Copy size={11} aria-hidden /> از {c.label}
