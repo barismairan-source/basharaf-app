@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { ShieldAlert, ToggleLeft, ToggleRight, MessageSquare, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { ShieldAlert, ToggleLeft, ToggleRight, MessageSquare, ChevronDown, ChevronUp, Save, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
 interface RuleRow {
@@ -19,7 +20,7 @@ const RULE_LABELS: Record<string, string> = {
   rejection_pattern:   'تکرار ابطال',
   consumption_spike:   'مغایرت مصرف',
   below_approval_limit:'زیر سقف تأیید',
-  off_hours:           'ساعت غیرعادی',
+  off_hours_activity:  'ساعت غیرعادی',
 };
 
 export function DetectivePane() {
@@ -44,7 +45,7 @@ export function DetectivePane() {
 
   useEffect(() => { fetchRules(); }, [fetchRules]);
 
-  async function patchRule(key: string, payload: Partial<{ enabled: boolean; thresholds: Record<string, number>; smsEnabled: boolean }>) {
+  async function patchRule(key: string, payload: Partial<{ enabled: boolean; thresholds: Record<string, number> }>) {
     setSaving(key);
     try {
       await fetch(`/api/anomaly/rules/${key}`, {
@@ -90,6 +91,17 @@ export function DetectivePane() {
         <p className="text-[12px] text-muted mt-0.5">روشن/خاموش کردن قوانین و تنظیم آستانه‌ها بدون نیاز به deploy.</p>
       </div>
 
+      <p className="text-[11.5px] text-stone-500">
+        روشن/خاموش کردن پیامک و ایمیل و انتخاب گیرندگان هر قانون، در صفحه‌ی مرکزی اعلان‌ها انجام می‌شود.
+      </p>
+      <Link
+        href="/admin/settings/notifications"
+        className="flex items-center gap-2 text-[12px] text-indigo-600 hover:text-indigo-800 transition-colors"
+      >
+        <ExternalLink size={12} strokeWidth={1.5} />
+        مدیریت کانال‌ها و گیرندگان
+      </Link>
+
       <div className="space-y-2">
         {rules.map((rule) => {
           const isExpanded = expanded === rule.ruleKey;
@@ -128,14 +140,11 @@ export function DetectivePane() {
                   )}
                 </div>
 
-                {/* SMS toggle */}
-                <button
-                  type="button"
-                  onClick={() => patchRule(rule.ruleKey, { smsEnabled: !rule.smsEnabled })}
-                  disabled={isSaving}
-                  title={rule.smsEnabled ? 'خاموش کردن پیامک' : 'روشن کردن پیامک'}
+                {/* SMS status — read-only؛ تغییرش در صفحه‌ی مرکزی اعلان‌ها انجام می‌شود */}
+                <span
+                  title="برای تغییر، به «مدیریت کانال‌ها و گیرندگان» بالای صفحه برو"
                   className={cn(
-                    'flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border transition-colors disabled:opacity-50',
+                    'flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border',
                     rule.smsEnabled
                       ? 'border-blue-200 bg-blue-50 text-blue-700'
                       : 'border-stone-200 bg-stone-50 text-stone-400'
@@ -143,7 +152,7 @@ export function DetectivePane() {
                 >
                   <MessageSquare size={11} strokeWidth={1.5} />
                   {rule.smsEnabled ? 'پیامک: روشن' : 'پیامک: خاموش'}
-                </button>
+                </span>
 
                 {/* expand thresholds */}
                 {Object.keys(thresholds).length > 0 && (

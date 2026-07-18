@@ -8,37 +8,30 @@ import { ApiError, handleError } from '@/lib/api-error';
 const patchSchema = z.object({
   enabled: z.boolean().optional(),
   thresholds: z.record(z.string(), z.number()).optional(),
-  smsEnabled: z.boolean().optional(),
 });
 
 /**
  * PATCH /api/anomaly/rules/[key]
- * به‌روزرسانی enabled + thresholds قانون کارآگاه.
+ * به‌روزرسانی enabled (موتور تشخیص) + thresholds قانون کارآگاه.
+ *
+ * کانال‌های ارسال (sms/email/in-app) و گیرندگان اینجا کنترل نمی‌شوند —
+ * تنها منبع کنترل، /api/admin/notification-rules و
+ * /api/admin/notification-audience است (مرکز اعلان V2).
  */
 export async function PATCH(req: Request, { params }: { params: { key: string } }) {
   try {
     await requireAdmin();
     const input = patchSchema.parse(await req.json());
 
-    if (input.enabled !== undefined || input.thresholds !== undefined) {
-      const [updated] = await db
-        .update(schema.anomalyRules)
-        .set({
-          ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
-          ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
-        })
-        .where(eq(schema.anomalyRules.ruleKey, params.key))
-        .returning();
-      if (!updated) throw new ApiError(404, 'قانون پیدا نشد', 'NOT_FOUND');
-    }
-
-    // به‌روزرسانی smsEnabled در notification_rules
-    if (input.smsEnabled !== undefined) {
-      await db
-        .update(schema.notificationRules)
-        .set({ smsEnabled: input.smsEnabled })
-        .where(eq(schema.notificationRules.key, params.key));
-    }
+    const [updated] = await db
+      .update(schema.anomalyRules)
+      .set({
+        ...(input.enabled !== undefined ? { enabled: input.enabled } : {}),
+        ...(input.thresholds !== undefined ? { thresholds: input.thresholds } : {}),
+      })
+      .where(eq(schema.anomalyRules.ruleKey, params.key))
+      .returning();
+    if (!updated) throw new ApiError(404, 'قانون پیدا نشد', 'NOT_FOUND');
 
     return NextResponse.json({ ok: true });
   } catch (e) {
