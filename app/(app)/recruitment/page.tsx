@@ -116,6 +116,11 @@ export default function RecruitmentPage() {
   const [compareIds,   setCompareIds]   = useState<Set<string>>(new Set());
   const [showCompare,  setShowCompare]  = useState(false);
 
+  // ── دانلود گروهی رزومه ─────────────────────────────────────────────────
+  const [resumeSelectMode, setResumeSelectMode] = useState(false);
+  const [selectedResumeIds, setSelectedResumeIds] = useState<Set<string>>(new Set());
+  const [resumeZipLoading, setResumeZipLoading] = useState(false);
+
   // ── init + بارگذاری ────────────────────────────────────────────────────
   useEffect(() => {
     // خواندن فیلترهای اولیه از URL
@@ -322,6 +327,51 @@ export default function RecruitmentPage() {
     setShowCompare(false);
   }
 
+  // ── دانلود گروهی رزومه ─────────────────────────────────────────────────
+  function toggleResumeSelect(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    setSelectedResumeIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function selectAllWithResume() {
+    setSelectedResumeIds(new Set(sorted.filter(a => a.hasResume).map(a => a.id)));
+  }
+  function exitResumeSelect() {
+    setResumeSelectMode(false);
+    setSelectedResumeIds(new Set());
+  }
+  async function downloadSelectedResumes() {
+    if (selectedResumeIds.size === 0) return;
+    setResumeZipLoading(true);
+    try {
+      const res = await fetch('/api/recruitment/resumes-zip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ ids: [...selectedResumeIds] }),
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `resumes-${new Date().toISOString().slice(0, 10)}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast('رزومه‌ها دانلود شدند', 'success');
+    } catch {
+      showToast('دانلود ناموفق بود', 'danger');
+    } finally {
+      setResumeZipLoading(false);
+    }
+  }
+
   // ── رندر ───────────────────────────────────────────────────────────────
   return (
     <div className="p-4 lg:p-6">
@@ -346,6 +396,14 @@ export default function RecruitmentPage() {
               onClick={() => { if (compareMode) exitCompare(); else setCompareMode(true); }}
             >
               {compareMode ? 'خروج از مقایسه' : 'مقایسه'}
+            </Button>
+            <Button
+              variant={resumeSelectMode ? 'primary' : 'default'}
+              size="sm"
+              icon={FileText}
+              onClick={() => { if (resumeSelectMode) exitResumeSelect(); else setResumeSelectMode(true); }}
+            >
+              {resumeSelectMode ? 'خروج از انتخاب رزومه' : 'دانلود رزومه‌ها'}
             </Button>
             <Button variant="default" size="sm" icon={Wrench} onClick={() => router.push('/recruitment/form-builder')}>فرم‌ساز</Button>
             <Button variant="default" size="sm" icon={Settings2} onClick={openQuestions}>سوال‌ها</Button>
@@ -432,6 +490,30 @@ export default function RecruitmentPage() {
           </div>
         )}
 
+        {/* نوار دانلود گروهی رزومه */}
+        {resumeSelectMode && (
+          <div className="flex items-center gap-3 rounded-lg border border-stone-200 bg-stone-50 px-4 py-2.5">
+            <span className="text-[12px] text-stone-600">
+              {selectedResumeIds.size === 0
+                ? 'روی کارت‌های دارای رزومه کلیک کنید تا انتخاب شوند'
+                : `${selectedResumeIds.size} رزومه انتخاب شده`}
+            </span>
+            <div className="flex-1" />
+            <Button variant="default" size="sm" onClick={selectAllWithResume} disabled={sorted.filter(a => a.hasResume).length === 0}>
+              انتخاب همه ({sorted.filter(a => a.hasResume).length})
+            </Button>
+            <Button
+              variant="primary" size="sm" icon={Download}
+              onClick={downloadSelectedResumes}
+              disabled={selectedResumeIds.size === 0 || resumeZipLoading}
+              loading={resumeZipLoading}
+            >
+              دانلود ZIP ({selectedResumeIds.size})
+            </Button>
+            <Button variant="ghost" size="sm" icon={X} onClick={exitResumeSelect}>انصراف</Button>
+          </div>
+        )}
+
         {/* لیست داوطلبان */}
         {sorted.length === 0 ? (
           <Empty icon={UserPlus} title="درخواستی نیست" sub="هنوز فرمی ثبت نشده یا با این فیلتر چیزی پیدا نشد." />
@@ -443,17 +525,18 @@ export default function RecruitmentPage() {
               const isOpen = selectedId === a.id;
               const keywords = detectKeywords(a.answers);
               const isSelected = compareIds.has(a.id);
+              const isResumeSelected = selectedResumeIds.has(a.id);
 
               return (
-                <Card key={a.id} className={cn(isSelected && 'ring-2 ring-stone-400')}>
+                <Card key={a.id} className={cn((isSelected || isResumeSelected) && 'ring-2 ring-stone-400')}>
                   {/* ── هدر کارت ──────────────────────────────── */}
                   <div
                     className={cn(
                       'flex w-full items-start gap-3 px-4 py-3 text-right cursor-pointer select-none',
-                      compareMode && 'pl-3'
+                      (compareMode || resumeSelectMode) && 'pl-3'
                     )}
                     onClick={() => {
-                      if (compareMode) return;
+                      if (compareMode || resumeSelectMode) return;
                       setSelectedId(isOpen ? null : a.id);
                     }}
                   >
@@ -469,6 +552,24 @@ export default function RecruitmentPage() {
                       >
                         {isSelected && <Check size={10} className="text-white" strokeWidth={3} />}
                       </button>
+                    )}
+
+                    {/* چک‌باکس انتخاب رزومه — فقط اگر رزومه دارد */}
+                    {resumeSelectMode && (
+                      a.hasResume ? (
+                        <button
+                          onClick={(e) => toggleResumeSelect(a.id, e)}
+                          className={cn(
+                            'mt-0.5 h-4 w-4 flex-shrink-0 rounded border-2 transition-colors',
+                            isResumeSelected ? 'border-stone-700 bg-stone-700' : 'border-stone-300 bg-white'
+                          )}
+                          aria-label="انتخاب برای دانلود رزومه"
+                        >
+                          {isResumeSelected && <Check size={10} className="text-white" strokeWidth={3} />}
+                        </button>
+                      ) : (
+                        <div className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden />
+                      )
                     )}
 
                     <div className="min-w-0 flex-1">
