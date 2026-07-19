@@ -545,9 +545,11 @@ export function NotificationsBell() {
     return () => clearTimeout(t);
   }, [open]);
 
-  if (!user) return null;
-
   // ── Actions — all go through store (rollback handled in slice) ────
+  // Must stay above the `!user` early return below — every hook in this
+  // component has to run on every render regardless of auth state, or
+  // React throws "Rendered more hooks than during the previous render"
+  // (#310) the moment `user` transitions to/from falsy while mounted.
 
   const handleRead    = useCallback((id: string) => { markRead(id).catch(() => {}); }, [markRead]);
   const handleUnread  = useCallback((id: string) => { markUnread(id).catch(() => {}); }, [markUnread]);
@@ -557,6 +559,8 @@ export function NotificationsBell() {
   const handleFilterChange = useCallback((f: FilterValue) => {
     setFilter(f);
   }, []);
+
+  if (!user) return null;
 
   // ── Bell panel content ────────────────────────────────────────────
 
