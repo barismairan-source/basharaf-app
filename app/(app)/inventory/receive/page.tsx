@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Loader2, FileText, Plus, Trash2, FileSpreadsheet, Download, Upload, X, AlertTriangle } from 'lucide-react';
 import type { ToastTone } from '@/components/ui/Toast';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt, formatNumericInputValue } from '@/lib/utils';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, Button } from '@/components/ui';
 import { JalaliDatePicker } from '@/components/ui';
+import { IconButton } from '@/components/ui/IconButton';
 import { getTodayJalali, isValidJalaliString } from '@/lib/jalali';
 import type { InventoryItem, InvVoucherKind } from '@/types';
 
@@ -123,18 +124,33 @@ function VoucherForm({
     { itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' },
   ]);
   const [saving, setSaving] = useState(false);
+  const [linesError, setLinesError] = useState<string | null>(null);
+  const [invalidLineIdx, setInvalidLineIdx] = useState<number | null>(null);
+  const itemSelectRefs = useRef<Array<HTMLSelectElement | null>>([]);
 
   function setLine(i: number, patch: Partial<{ itemId: string; qty: string; cost: string; wasteReason: string; wasteReasonOther: string }>) {
     setLines((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+    setLinesError(null);
+    setInvalidLineIdx(null);
   }
 
   async function submit() {
     if (!branchId) { showToast('شعبه را انتخاب کنید', 'danger'); return; }
     if (!isValidJalaliString(date)) { showToast('تاریخ شمسی نامعتبر است', 'danger'); return; }
-    const valid = lines.filter(
-      (l) => l.itemId && parseInt(l.qty.replace(/\D/g, ''), 10) > 0
-    );
-    if (valid.length === 0) { showToast('حداقل یک قلم با مقدار', 'danger'); return; }
+    const isLineValid = (l: (typeof lines)[number]) => Boolean(l.itemId) && parseInt(l.qty.replace(/\D/g, ''), 10) > 0;
+    const valid = lines.filter(isLineValid);
+    if (valid.length === 0) {
+      // ردیفی که کاربر شروع به پرکردنش کرده (ولی ناقص مونده) رو نشون بده؛
+      // اگه هیچ‌کدوم دست‌نخورده هم نبودن، ردیف اول رو علامت بزن.
+      const attemptedIdx = lines.findIndex((l) => l.itemId || l.qty);
+      const idx = attemptedIdx >= 0 ? attemptedIdx : 0;
+      setInvalidLineIdx(idx);
+      setLinesError('حداقل یک قلم و مقدار معتبر وارد کنید');
+      itemSelectRefs.current[idx]?.focus();
+      return;
+    }
+    setLinesError(null);
+    setInvalidLineIdx(null);
     setSaving(true);
     try {
       await (createRepos(null as never).inventory as any).createVoucher({
@@ -170,13 +186,13 @@ function VoucherForm({
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div>
           <label className="text-[11.5px] text-muted">نوع برگه</label>
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value as InvVoucherKind)}
-            className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text h-11"
+            className="w-full h-11 border border-border rounded-lg px-3 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
           >
             {!isWarehouse && <option value="in">رسید (خرید)</option>}
             <option value="out">حواله (مصرف)</option>
@@ -189,7 +205,7 @@ function VoucherForm({
             <select
               value={branchId}
               onChange={(e) => setBranchId(e.target.value)}
-              className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text h-11"
+              className="w-full h-11 border border-border rounded-lg px-3 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
             >
               <option value="">— انتخاب —</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
@@ -206,11 +222,12 @@ function VoucherForm({
         <label className="text-[11.5px] text-muted">اقلام</label>
         {lines.map((l, i) => (
           <div key={i} className="space-y-1.5">
-            <div className="flex gap-2">
+            <div className={`flex flex-col sm:flex-row gap-2 ${invalidLineIdx === i ? 'rounded-lg ring-1 ring-danger/60 p-1.5 -m-1.5' : ''}`}>
               <select
+                ref={(el) => { itemSelectRefs.current[i] = el; }}
                 value={l.itemId}
                 onChange={(e) => setLine(i, { itemId: e.target.value })}
-                className="flex-1 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                className="w-full sm:flex-1 h-11 border border-border rounded-lg px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
               >
                 <option value="">— قلم —</option>
                 {items.map((it) => (
@@ -219,37 +236,42 @@ function VoucherForm({
                   </option>
                 ))}
               </select>
-              <input
-                value={l.qty}
-                onChange={(e) => setLine(i, { qty: formatNumericInputValue(e.target) })}
-                dir="ltr"
-                placeholder="مقدار"
-                className="w-28 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
-              />
-              {kind === 'in' && canSeePrices && (
+              <div className="flex gap-2">
                 <input
-                  value={l.cost}
-                  onChange={(e) => setLine(i, { cost: formatNumericInputValue(e.target) })}
+                  value={l.qty}
+                  onChange={(e) => setLine(i, { qty: formatNumericInputValue(e.target) })}
                   dir="ltr"
-                  placeholder="بهای واحد"
-                  className="w-28 border border-border rounded-lg px-2 py-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  placeholder="مقدار"
+                  className="flex-1 sm:flex-none sm:w-28 h-11 border border-border rounded-lg px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
                 />
-              )}
-              {lines.length > 1 && (
-                <button
-                  onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
-                  className="w-11 h-11 flex items-center justify-center text-muted hover:text-danger"
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
+                {kind === 'in' && canSeePrices && (
+                  <input
+                    value={l.cost}
+                    onChange={(e) => setLine(i, { cost: formatNumericInputValue(e.target) })}
+                    dir="ltr"
+                    placeholder="بهای واحد"
+                    className="flex-1 sm:flex-none sm:w-28 h-11 border border-border rounded-lg px-2 text-[12.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  />
+                )}
+                {lines.length > 1 && (
+                  <IconButton
+                    icon={Trash2}
+                    aria-label="حذف قلم"
+                    tone="danger"
+                    onClick={() => setLines((prev) => prev.filter((_, idx) => idx !== i))}
+                  />
+                )}
+              </div>
             </div>
+            {invalidLineIdx === i && (
+              <p className="text-[11px] text-danger">{linesError}</p>
+            )}
             {kind === 'waste' && (
-              <div className="flex gap-2 pr-1">
+              <div className="flex flex-col sm:flex-row gap-2 pr-1">
                 <select
                   value={l.wasteReason}
                   onChange={(e) => setLine(i, { wasteReason: e.target.value, wasteReasonOther: '' })}
-                  className="flex-1 border border-border rounded-lg px-2 py-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                  className="flex-1 h-11 border border-border rounded-lg px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
                 >
                   <option value="">— دلیل ضایعات (اختیاری) —</option>
                   {WASTE_REASONS.map((r) => (
@@ -261,20 +283,21 @@ function VoucherForm({
                     value={l.wasteReasonOther}
                     onChange={(e) => setLine(i, { wasteReasonOther: e.target.value })}
                     placeholder="توضیح دلیل..."
-                    className="flex-1 border border-border rounded-lg px-2 py-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                    className="flex-1 h-11 border border-border rounded-lg px-2 text-[12px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
                   />
                 )}
               </div>
             )}
           </div>
         ))}
-        <button
+        <Button
+          variant="default"
+          icon={Plus}
+          className="w-full border-dashed mt-1"
           onClick={() => setLines((prev) => [...prev, { itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' }])}
-          className="flex items-center justify-center gap-1.5 w-full py-2.5 text-[12.5px] text-muted border border-dashed border-border rounded-lg hover:bg-bg hover:text-text hover:border-text/30 transition-colors mt-1"
         >
-          <Plus size={13} />
           افزودن قلم
-        </button>
+        </Button>
       </div>
 
       <div>
@@ -282,18 +305,13 @@ function VoucherForm({
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+          className="w-full h-11 border border-border rounded-lg px-3 text-[13px] mt-1 focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
         />
       </div>
 
-      <button
-        onClick={submit}
-        disabled={saving}
-        className="flex items-center gap-1.5 bg-text text-surface px-4 py-2.5 rounded-lg text-[13px] disabled:opacity-50 min-h-[44px]"
-      >
-        {saving ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+      <Button variant="primary" icon={FileText} loading={saving} onClick={submit} className="w-full sm:w-auto">
         ثبت برگه
-      </button>
+      </Button>
     </div>
   );
 }

@@ -35,9 +35,9 @@ export function Toast({ data }: ToastProps) {
   const isDanger = data.tone === 'danger';
   return (
     <div
-      role="status"
-      aria-live="polite"
-      className="bg-stone-900 text-white rounded-md px-4 py-3 flex items-center gap-3 shadow-toast min-w-[280px] max-w-md animate-slide-up"
+      role={isDanger ? 'alert' : 'status'}
+      aria-live={isDanger ? 'assertive' : 'polite'}
+      className="w-full sm:w-auto bg-stone-900 text-white rounded-md px-4 py-3 flex items-center gap-3 shadow-toast sm:min-w-[280px] max-w-md animate-slide-up"
     >
       <div
         className={cn(

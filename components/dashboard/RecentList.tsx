@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { Card, CardHeader, CardBody, Empty, Chip } from '@/components/ui';
 import { useAppStore } from '@/store';
-import { fmt } from '@/lib/utils';
+import { formatSignedMoney } from '@/lib/design/format';
 import type { Transaction } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -141,7 +141,7 @@ export function RecentList({ transactions, limit = 5 }: RecentListProps) {
                           isRejected && 'line-through'
                         )}
                       >
-                        {fmt(tx.amount)}
+                        {formatSignedMoney(isIncome ? tx.amount : -tx.amount, { showPlus: true, short: true })}
                       </div>
                       <Chip tone={statusMeta.chipTone} className="hidden sm:inline-flex">
                         {statusMeta.label}

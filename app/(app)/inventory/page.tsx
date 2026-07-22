@@ -10,7 +10,7 @@ import {
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import { canAccessSection } from '@/lib/auth/permissions';
-import { Card } from '@/components/ui';
+import { Card, Skeleton } from '@/components/ui';
 
 interface ExceptionsData {
   stalePending: { count: number };
@@ -143,7 +143,7 @@ export default function InventoryPage() {
     ? [
         { label: 'برگه‌های معلق',  count: exceptions.stalePending.count,   warn: exceptions.stalePending.count > 0 },
         { label: 'کمبود موجودی',   count: exceptions.belowMin.count,        warn: exceptions.belowMin.count > 0 },
-        { label: 'هشدار clamp',    count: exceptions.clampWarnings.count,   warn: exceptions.clampWarnings.count > 0 },
+        { label: 'کسر بیش از موجودی', count: exceptions.clampWarnings.count,   warn: exceptions.clampWarnings.count > 0 },
         { label: 'برگشت‌های معلق', count: exceptions.pendingReversals.count, warn: exceptions.pendingReversals.count > 0 },
       ]
     : [];
@@ -231,9 +231,18 @@ export default function InventoryPage() {
 
       {/* ─── وضعیت امروز ─── */}
       {excLoading && !exceptions && (
-        <Card>
-          <div className="py-8 flex justify-center">
-            <div className="w-5 h-5 border-2 border-border border-t-accent rounded-full animate-spin" />
+        <Card aria-busy="true">
+          <span className="sr-only">در حال بارگذاری وضعیت امروز…</span>
+          <div className="px-5 py-3.5 border-b border-border">
+            <Skeleton.Line w="w-24" h="h-4" />
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-x-reverse divide-border">
+            {Array.from({ length: 4 }, (_, i) => (
+              <div key={i} className="px-4 py-4 flex flex-col items-center gap-1.5">
+                <Skeleton.Line w="w-8" h="h-6" />
+                <Skeleton.Line w="w-14" h="h-3" />
+              </div>
+            ))}
           </div>
         </Card>
       )}

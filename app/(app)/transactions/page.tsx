@@ -15,7 +15,7 @@ import {
 import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore, useVisibleTransactions } from '@/store';
 import { fmt, cn } from '@/lib/utils';
-import { formatMoneyShort, formatBranchName } from '@/lib/design/format';
+import { formatMoneyShort, formatSignedMoney, formatBranchName } from '@/lib/design/format';
 import { TxDetailPanel } from '@/components/transactions/TxDetailPanel';
 import { ImportPanel } from '@/components/transactions/ImportPanel';
 import { ContactLedgerDrawer } from '@/components/contacts/ContactLedgerDrawer';
@@ -188,13 +188,15 @@ export default function TransactionsPage() {
       cellClassName: 'text-left',
       render: (tx) => {
         const typeM = TYPE_META[tx.type] ?? TYPE_META['expense']!;
-        const sign = tx.type === 'expense' ? '−' : tx.type === 'income' ? '+' : '⇄';
+        const signedAmount = tx.type === 'expense' ? -tx.amount : tx.amount;
         return (
           <span
             className={cn('text-[12.5px] font-medium num', typeM.color, tx.status === 'rejected' && 'opacity-50')}
             title={fmt(tx.amount)}
           >
-            {sign}{formatMoneyShort(tx.amount)}
+            {tx.type === 'transfer'
+              ? <span dir="ltr">⇄ {formatMoneyShort(tx.amount)}</span>
+              : formatSignedMoney(signedAmount, { showPlus: true, short: true })}
           </span>
         );
       },
@@ -388,7 +390,9 @@ export default function TransactionsPage() {
                   </td>
                   <td className="px-3 py-1.5 text-gray-500">{tx.categoryName || '—'}</td>
                   <td className="px-3 py-1.5 text-left tabular-nums">
-                    {tx.type === 'expense' ? '−' : tx.type === 'income' ? '+' : '⇄'}{fmt(tx.amount)} تومان
+                    {tx.type === 'transfer'
+                      ? <span dir="ltr">⇄ {fmt(tx.amount)} تومان</span>
+                      : formatSignedMoney(tx.type === 'expense' ? -tx.amount : tx.amount, { showPlus: true })}
                   </td>
                   <td className="px-3 py-1.5 text-gray-500">{tx.date}</td>
                   <td className="px-3 py-1.5">

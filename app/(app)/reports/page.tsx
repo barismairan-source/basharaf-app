@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
-import { formatMoneyShort } from '@/lib/design/format';
+import { formatMoneyShort, formatMoneyParts } from '@/lib/design/format';
 import { ExportPanel } from '@/components/transactions/ExportPanel';
 
 interface ReportData {
@@ -131,7 +131,7 @@ export default function ReportsPage() {
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 print:hidden">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 print:hidden">
           <div>
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">گزارش مالی</h1>
             <div className="text-[12px] text-stone-500 mt-1">محاسبات روی سرور — سریع و دقیق</div>
@@ -176,32 +176,41 @@ export default function ReportsPage() {
             </Field>
           )}
           <Field label="از تاریخ">
-            <div className="flex gap-1.5">
-              <div className="flex-1">
-                <JalaliDatePicker value={from} onChange={setFrom} />
-              </div>
-              <button
-                type="button"
-                title={
-                  !selectedBranchObj
-                    ? 'ابتدا یک شعبه انتخاب کنید'
-                    : !selectedBranchObj.openingDate
-                    ? 'تاریخ شروع بهره‌برداری برای این شعبه ثبت نشده'
-                    : `از ${selectedBranchObj.openingDate}`
-                }
-                disabled={!selectedBranchObj?.openingDate}
-                onClick={() => {
-                  if (selectedBranchObj?.openingDate) setFrom(selectedBranchObj.openingDate);
-                }}
-                className={`px-2 py-1.5 rounded-md border text-[10.5px] whitespace-nowrap transition-colors ${
-                  selectedBranchObj?.openingDate
-                    ? 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
-                    : 'border-stone-200 bg-stone-50 text-stone-300 cursor-not-allowed'
-                }`}
-              >
-                از افتتاح
-              </button>
-            </div>
+            {(() => {
+              const openingExplanation = !selectedBranchObj
+                ? 'ابتدا یک شعبه انتخاب کنید'
+                : !selectedBranchObj.openingDate
+                ? 'تاریخ شروع بهره‌برداری برای این شعبه ثبت نشده'
+                : `از ${selectedBranchObj.openingDate}`;
+              return (
+                <div>
+                  <div className="flex gap-1.5">
+                    <div className="flex-1">
+                      <JalaliDatePicker value={from} onChange={setFrom} />
+                    </div>
+                    <button
+                      type="button"
+                      title={openingExplanation}
+                      disabled={!selectedBranchObj?.openingDate}
+                      onClick={() => {
+                        if (selectedBranchObj?.openingDate) setFrom(selectedBranchObj.openingDate);
+                      }}
+                      className={`px-2 py-1.5 rounded-md border text-[10.5px] whitespace-nowrap transition-colors ${
+                        selectedBranchObj?.openingDate
+                          ? 'border-stone-300 bg-white text-stone-700 hover:bg-stone-50'
+                          : 'border-stone-200 bg-stone-50 text-stone-300 cursor-not-allowed'
+                      }`}
+                    >
+                      از افتتاح
+                    </button>
+                  </div>
+                  {/* title روی موبایل با تپ دیده نمی‌شود — این متن همیشه قابل مشاهده است */}
+                  {!selectedBranchObj?.openingDate && (
+                    <p className="mt-1 text-[10.5px] text-stone-400">{openingExplanation}</p>
+                  )}
+                </div>
+              );
+            })()}
           </Field>
           <Field label="تا تاریخ">
             <JalaliDatePicker value={to} onChange={setTo} />
@@ -620,6 +629,7 @@ function TakeawayStat({ label, value, icon: Icon }: { label: string; value: stri
 function KPICard({ label, value, icon: Icon, color }: {
   label: string; value: number; icon: LucideIcon; color: string;
 }) {
+  const { main, unit } = formatMoneyParts(value);
   return (
     <Card>
       <CardBody>
@@ -628,9 +638,9 @@ function KPICard({ label, value, icon: Icon, color }: {
           <Icon size={14} strokeWidth={1.5} className="text-muted" />
         </div>
         <div className={cn('text-[22px] font-medium tabular-nums', color)} title={`${fmt(value)} تومان`}>
-          {formatMoneyShort(value)}
+          {main}
         </div>
-        <div className="text-[10.5px] text-muted mt-1">تومان</div>
+        <div className="text-[10.5px] text-muted mt-1">{unit}</div>
       </CardBody>
     </Card>
   );

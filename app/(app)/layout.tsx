@@ -18,8 +18,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Content column: Header pinned at top, main scrolls below */}
         <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
           <Header />
-          {/* pb-20: space for BottomTabBar (64px) + safe-area (~16px) on mobile */}
-          <main className="flex-1 overflow-y-auto overflow-x-hidden pb-20 md:pb-0">
+          {/* BottomTabBar واقعاً h-16 (4rem) است؛ به‌جای عدد ثابت، دقیقاً همون
+              ارتفاع + safe-area واقعی دستگاه رو رزرو می‌کنیم — نه یک تخمین. */}
+          <main className="flex-1 overflow-y-auto overflow-x-hidden pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
             <BootstrapGuard>
               {children}
             </BootstrapGuard>
