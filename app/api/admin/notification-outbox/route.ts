@@ -112,7 +112,6 @@ export async function GET(req: Request) {
       .leftJoin(schema.users, eq(schema.notificationOutbox.recipientId, schema.users.id))
       .where(
         and(
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           sql`${schema.notificationOutbox.status} IN ('failed', 'dead')` as any,
           cursorWhere
         )

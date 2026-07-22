@@ -65,10 +65,8 @@ export function isEmailConfigured(): boolean {
 
 // ─── Singleton transporter ───────────────────────────────────────
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _transporter: nodemailer.Transporter<any> | null = null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function getTransporter(): nodemailer.Transporter<any> {
   if (_transporter) return _transporter;
 
