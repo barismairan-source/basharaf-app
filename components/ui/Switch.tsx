@@ -44,8 +44,8 @@ export function Switch({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         'relative w-9 h-5 rounded-full transition-colors flex-shrink-0',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 focus-visible:ring-offset-1',
-        checked ? 'bg-stone-900' : 'bg-stone-200',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+        checked ? 'bg-primary' : 'bg-stone-200',
         disabled && 'opacity-60 cursor-not-allowed',
         className
       )}

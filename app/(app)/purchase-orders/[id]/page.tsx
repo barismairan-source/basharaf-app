@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowRight, ShoppingCart, Pencil, Check, X, Send, Ban, Plus, Trash2, PackageCheck } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker, Textarea } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker, Textarea, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, formatNumericInputValue } from '@/lib/utils';
 import type { InventoryItem, PoStatus } from '@/types';
@@ -69,6 +69,7 @@ export default function PurchaseOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const confirm = useConfirm();
 
   const user = useAppStore(s => s.user);
   const branches = useAppStore(s => s.branches);
@@ -170,7 +171,7 @@ export default function PurchaseOrderDetailPage() {
 
   async function handleDelete() {
     if (!po) return;
-    if (!window.confirm('این سفارش خرید (پیش‌نویس) حذف شود؟')) return;
+    if (!(await confirm({ title: 'این سفارش خرید (پیش‌نویس) حذف شود؟', danger: true, confirmLabel: 'حذف' }))) return;
     setDeleting(true);
     const ok = await deletePurchaseOrder(po.id);
     setDeleting(false);

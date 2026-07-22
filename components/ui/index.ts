@@ -15,6 +15,7 @@ export {
   type CardHeaderProps,
 } from './Card';
 export { Checkbox, type CheckboxProps } from './Checkbox';
+export { ConfirmProvider, useConfirm, type ConfirmOptions } from './ConfirmDialog';
 export { Chip, type ChipProps } from './Chip';
 export { DataList, type DataListProps, type DataListColumn } from './DataList';
 export { Dot, type DotProps } from './Dot';

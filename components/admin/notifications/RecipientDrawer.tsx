@@ -6,6 +6,7 @@ import {
   CheckCircle2, AlertTriangle, ShieldAlert, Mail, MessageSquare, LayoutList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/components/ui';
 
 // ─── Types (mirror the API shapes in app/api/admin/notification-audience) ──
 
@@ -103,6 +104,7 @@ function sameTarget(a: TargetRow, b: TargetRow): boolean {
 export function RecipientDrawer({
   ruleKey, ruleTitle, branchAware, currentTargets, currentUpdatedAt, onClose, onSaved,
 }: RecipientDrawerProps) {
+  const confirm = useConfirm();
   const [tab, setTab] = useState<Channel>('in_app');
   const [draft, setDraft] = useState<TargetRow[]>(currentTargets);
   const [updatedAt, setUpdatedAt] = useState(currentUpdatedAt);
@@ -244,7 +246,7 @@ export function RecipientDrawer({
   }
 
   async function handleReset() {
-    if (!window.confirm('گیرندگان این قانون به حالت پیش‌فرض (مدیران کل فعال) بازگردانده شود؟')) return;
+    if (!(await confirm({ title: 'گیرندگان این قانون به حالت پیش‌فرض (مدیران کل فعال) بازگردانده شود؟', confirmLabel: 'بازگردانی' }))) return;
     setSaving(true);
     setError(null);
     try {
@@ -267,8 +269,8 @@ export function RecipientDrawer({
     }
   }
 
-  function handleClose() {
-    if (dirty && !window.confirm('تغییرات ذخیره‌نشده از بین می‌روند. بستن؟')) return;
+  async function handleClose() {
+    if (dirty && !(await confirm({ title: 'تغییرات ذخیره‌نشده از بین می‌روند. بستن؟', danger: true, confirmLabel: 'بستن' }))) return;
     onClose();
   }
 

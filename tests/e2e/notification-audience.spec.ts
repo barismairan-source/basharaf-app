@@ -158,8 +158,11 @@ test.describe('Super Admin — مدیریت گیرندگان اعلان', () => 
     await page.getByRole('button', { name: 'گیرندگان' }).first().click();
     await page.getByRole('button', { name: 'سفارشی' }).click();
 
-    page.once('dialog', (d) => d.accept());
+    // ConfirmDialog (شامل React، نه window.confirm بومی) — دکمه‌ی تأیید همون alertdialog رو بزن
     await page.getByRole('button', { name: 'انصراف' }).click();
+    const confirmDialog = page.getByRole('alertdialog');
+    await expect(confirmDialog).toBeVisible();
+    await confirmDialog.getByRole('button', { name: 'بستن' }).click();
     await expect(page.getByRole('dialog', { name: /گیرندگان/ })).not.toBeVisible();
   });
 

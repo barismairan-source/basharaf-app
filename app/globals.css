@@ -118,6 +118,24 @@ select {
   background-position: left 0.6rem center;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Reduced motion — respect the OS-level accessibility preference.
+   Tailwind's `animate-*` utilities and any transition/transform still
+   run at full speed by default; this clamps them to near-instant for
+   users who've asked for it, without removing the resulting state
+   change (content still appears/moves, just without the motion).
+   ───────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Print styles ──────────────────────────────────────────── */
 @media print {
   @page {

@@ -9,6 +9,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useConfirm } from '@/components/ui';
 import { RecipientDrawer } from '@/components/admin/notifications/RecipientDrawer';
 
 // ─── Types — mirror GET /api/admin/notification-audience ──────────
@@ -268,6 +269,7 @@ function RuleRow({
 // ─── Outbox tab ────────────────────────────────────────────────────
 
 function OutboxTab() {
+  const confirm = useConfirm();
   const [summary, setSummary] = useState<OutboxSummary | null>(null);
   const [counts, setCounts] = useState<Record<string, number>>({});
   const [rows, setRows] = useState<OutboxRow[]>([]);
@@ -316,7 +318,7 @@ function OutboxTab() {
   useEffect(() => { load(); }, [load]);
 
   const handleRetryDead = useCallback(async () => {
-    if (!window.confirm(`تلاش مجدد برای همه ردیف‌های مُرده؟`)) return;
+    if (!(await confirm({ title: 'تلاش مجدد برای همه ردیف‌های مُرده؟', confirmLabel: 'تلاش مجدد' }))) return;
     setRetrying(true);
     try {
       const res = await fetch('/api/admin/notification-outbox', {
@@ -335,7 +337,7 @@ function OutboxTab() {
     } finally {
       setRetrying(false);
     }
-  }, [load]);
+  }, [load, confirm]);
 
   const handleRetryOne = useCallback(async (id: string) => {
     setRetryingOne(id);
