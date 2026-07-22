@@ -27,7 +27,7 @@ vi.mock('@/lib/auth/session', async (importOriginal) => {
   return { ...actual, requireAdmin: mockRequireAdmin };
 });
 
-import { sanitizeFilename } from '@/app/api/recruitment/resumes-zip/route';
+import { sanitizeFilename } from '@/lib/recruitment/resumeZip';
 import { POST } from '@/app/api/recruitment/resumes-zip/route';
 import { UnauthorizedError } from '@/lib/auth/session';
 

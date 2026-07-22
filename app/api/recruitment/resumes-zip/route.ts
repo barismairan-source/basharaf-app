@@ -5,15 +5,11 @@ import JSZip from 'jszip';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { sanitizeFilename } from '@/lib/recruitment/resumeZip';
 
 const bodySchema = z.object({
   ids: z.array(z.string().uuid()).min(1).max(200),
 });
-
-/** فقط برای نام فایل — کاراکترهای غیرمجاز فایل‌سیستم را حذف می‌کند. */
-export function sanitizeFilename(name: string): string {
-  return name.replace(/[/\\?%*:|"<>]/g, '').trim().slice(0, 80) || 'resume';
-}
 
 /**
  * POST /api/recruitment/resumes-zip — فقط SuperAdmin.
