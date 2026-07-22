@@ -112,6 +112,48 @@ test.describe('ConfirmDialog — replaces window.confirm', () => {
   });
 });
 
+test.describe('Shared IconButton — consistency sweep', () => {
+  const ACCOUNTS_MOCK = {
+    accounts: [
+      { id: 'a1', name: 'صندوق شعبه مرکزی', type: 'cash', balance: 12_000_000, branchId: null, branchName: 'شعبه مرکزی' },
+    ],
+  };
+
+  test('row actions are icon-only IconButtons with mandatory aria-label, keyboard-activatable', async ({ page }) => {
+    await mockCommonRoutes(page);
+    await page.route((url) => url.pathname === '/api/accounts', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ACCOUNTS_MOCK) });
+    });
+    await page.goto('/accounts');
+
+    const editBtn = page.getByRole('button', { name: 'ویرایش نام' });
+    const deleteBtn = page.getByRole('button', { name: 'حذف حساب' });
+    await expect(editBtn).toBeVisible();
+    await expect(deleteBtn).toBeVisible();
+
+    // Enter/Space activation via keyboard, not just click
+    await editBtn.focus();
+    await expect(editBtn).toBeFocused();
+    await page.keyboard.press('Enter');
+    // entering edit mode swaps the row actions to Check/Cancel — a distinct
+    // aria-labelled pair, proving the keyboard-triggered click actually fired
+    await expect(page.getByRole('button', { name: 'ذخیره' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'انصراف' })).toBeVisible();
+  });
+
+  test('visible focus ring on Tab navigation', async ({ page }) => {
+    await mockCommonRoutes(page);
+    await page.route((url) => url.pathname === '/api/accounts', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(ACCOUNTS_MOCK) });
+    });
+    await page.goto('/accounts');
+    const editBtn = page.getByRole('button', { name: 'ویرایش نام' });
+    await editBtn.focus();
+    const outline = await editBtn.evaluate((el) => getComputedStyle(el).boxShadow);
+    expect(outline).not.toBe('none');
+  });
+});
+
 test.describe('Reduced motion — respected', () => {
   test('animations collapse to near-instant when prefers-reduced-motion is set', async ({ page }) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });

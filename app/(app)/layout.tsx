@@ -1,7 +1,7 @@
 import { Header, Sidebar, ToastContainer, BottomTabBar } from '@/components/layout';
 import { BootstrapGuard } from '@/components/auth/BootstrapGuard';
 import { ImpersonationBanner } from '@/components/admin/ImpersonationBanner';
-import { ConfirmProvider } from '@/components/ui';
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
 
 /**
  * App Shell — fixed-height viewport container.

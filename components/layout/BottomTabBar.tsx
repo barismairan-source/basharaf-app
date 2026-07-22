@@ -7,7 +7,7 @@ import { MoreHorizontal, LogOut, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
-import { Avatar, Sheet } from '@/components/ui';
+import { Avatar, Sheet, IconButton } from '@/components/ui';
 import {
   NAV_GROUPS, BOTTOM_NAV_HREFS, SETTINGS_NAV_ITEM, QUICK_ACTIONS,
   isNavItemActive, type NavItem,
@@ -150,14 +150,7 @@ function MoreSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
             <div className="text-[12px] font-medium text-text truncate">{user.name}</div>
             <div className="text-[10.5px] text-muted truncate" dir="ltr">{user.email}</div>
           </div>
-          <button
-            type="button"
-            onClick={handleLogout}
-            title="خروج از حساب"
-            className="w-9 h-9 flex items-center justify-center rounded-md text-muted hover:text-danger hover:bg-danger-subtle transition-colors flex-shrink-0"
-          >
-            <LogOut size={15} strokeWidth={1.5} />
-          </button>
+          <IconButton icon={LogOut} aria-label="خروج از حساب" tone="danger" onClick={handleLogout} />
         </div>
       </div>
     </Sheet>

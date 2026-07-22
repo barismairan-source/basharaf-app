@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { BrandMark, Avatar } from '@/components/ui';
+import { BrandMark, Avatar, IconButton } from '@/components/ui';
 import { cn, toFa } from '@/lib/utils';
 import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
 import {
@@ -258,14 +258,7 @@ export function SidebarContent({
           {collapsed ? (
             <div className="flex flex-col items-center gap-1.5">
               <Avatar initials={user.initials} role={user.role} size="sm" />
-              <button
-                type="button"
-                onClick={handleLogout}
-                title="خروج از حساب"
-                className="w-8 h-8 flex items-center justify-center rounded-md text-muted hover:text-danger hover:bg-danger-subtle transition-colors"
-              >
-                <LogOut size={14} strokeWidth={1.5} />
-              </button>
+              <IconButton icon={LogOut} aria-label="خروج از حساب" tone="danger" onClick={handleLogout} />
             </div>
           ) : (
             <div className="flex items-center gap-2">
@@ -274,14 +267,7 @@ export function SidebarContent({
                 <div className="text-[11.5px] text-text font-medium truncate">{user.name}</div>
                 <div className="text-[10.5px] text-muted truncate" dir="ltr">{user.email}</div>
               </div>
-              <button
-                type="button"
-                onClick={handleLogout}
-                title="خروج از حساب"
-                className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md text-muted hover:text-danger hover:bg-danger-subtle transition-colors"
-              >
-                <LogOut size={14} strokeWidth={1.5} />
-              </button>
+              <IconButton icon={LogOut} aria-label="خروج از حساب" tone="danger" size="xs" className="flex-shrink-0" onClick={handleLogout} />
             </div>
           )}
         </div>

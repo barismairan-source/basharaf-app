@@ -6,7 +6,8 @@ import {
   CheckCircle2, AlertTriangle, ShieldAlert, Mail, MessageSquare, LayoutList,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useConfirm } from '@/components/ui';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { IconButton } from '@/components/ui/IconButton';
 
 // ─── Types (mirror the API shapes in app/api/admin/notification-audience) ──
 
@@ -297,14 +298,7 @@ export function RecipientDrawer({
           <div className="min-w-0">
             <p className="text-[13.5px] font-medium text-stone-100 truncate">گیرندگان — {ruleTitle}</p>
           </div>
-          <button
-            type="button"
-            onClick={handleClose}
-            aria-label="بستن"
-            className="w-8 h-8 flex items-center justify-center rounded-md text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors flex-shrink-0"
-          >
-            <X size={16} />
-          </button>
+          <IconButton icon={X} aria-label="بستن" dark onClick={handleClose} />
         </div>
 
         {/* Channel tabs */}

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Banknote, Plus, PiggyBank, CreditCard, Trash2, Edit3, X, Check, RefreshCw, Handshake } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Select } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Select, IconButton } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
@@ -166,35 +166,27 @@ export default function AccountsPage() {
           if (editingId === account.id) {
             return (
               <div className="flex items-center gap-1">
-                <button
+                <IconButton
+                  icon={Check} aria-label="ذخیره" tone="success" size="xs"
                   onClick={e => { e.stopPropagation(); handleEditSave(account.id); }}
-                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-emerald-50 text-emerald-600"
-                >
-                  <Check size={13} strokeWidth={1.5} />
-                </button>
-                <button
+                />
+                <IconButton
+                  icon={X} aria-label="انصراف" size="xs"
                   onClick={e => { e.stopPropagation(); setEditingId(null); }}
-                  className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
-                >
-                  <X size={13} strokeWidth={1.5} />
-                </button>
+                />
               </div>
             );
           }
           return (
             <div className="flex items-center gap-1">
-              <button
+              <IconButton
+                icon={Edit3} aria-label="ویرایش نام" size="xs"
                 onClick={e => { e.stopPropagation(); setEditingId(account.id); setEditName(account.name); }}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-50 text-muted"
-              >
-                <Edit3 size={13} strokeWidth={1.5} />
-              </button>
-              <button
+              />
+              <IconButton
+                icon={Trash2} aria-label="حذف حساب" tone="danger" size="xs"
                 onClick={e => { e.stopPropagation(); handleDelete(account.id, account.name); }}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
-              >
-                <Trash2 size={13} strokeWidth={1.5} />
-              </button>
+              />
             </div>
           );
         },

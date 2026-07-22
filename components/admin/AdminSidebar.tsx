@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, ClipboardList, Bell, CalendarDays, ArrowRight, Menu, X } from 'lucide-react';
 import { APP_VERSION } from '@/lib/version';
+import { IconButton } from '@/components/ui/IconButton';
 
 const NAV = [
   { href: '/admin', label: 'داشبورد ادمین', icon: LayoutDashboard, exact: true },
@@ -63,14 +64,7 @@ export function AdminSidebar() {
     <>
       {/* نوار بالای موبایل — جایگزین سایدبار ثابت زیر md */}
       <div className="md:hidden flex items-center justify-between px-3 h-14 bg-stone-900 border-b border-stone-800 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => setMobileOpen(true)}
-          aria-label="باز کردن منو"
-          className="w-9 h-9 flex items-center justify-center rounded-md text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors"
-        >
-          <Menu size={18} />
-        </button>
+        <IconButton icon={Menu} aria-label="باز کردن منو" size="md" dark onClick={() => setMobileOpen(true)} />
         <span className="text-xs font-bold tracking-widest text-stone-500 uppercase">Super Admin</span>
         <span className="w-9" aria-hidden />
       </div>
@@ -100,14 +94,7 @@ export function AdminSidebar() {
           >
             <div className="flex items-center justify-between px-4 mb-4">
               <span className="text-xs font-bold tracking-widest text-stone-500 uppercase">Super Admin</span>
-              <button
-                type="button"
-                onClick={() => setMobileOpen(false)}
-                aria-label="بستن منو"
-                className="w-8 h-8 flex items-center justify-center rounded-md text-stone-400 hover:bg-stone-800 hover:text-stone-100 transition-colors"
-              >
-                <X size={16} />
-              </button>
+              <IconButton icon={X} aria-label="بستن منو" dark onClick={() => setMobileOpen(false)} />
             </div>
             <NavLinks pathname={pathname} onNavClick={() => setMobileOpen(false)} />
             <SidebarFooter onNavClick={() => setMobileOpen(false)} />

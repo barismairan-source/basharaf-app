@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Users, Plus, Trash2, ArrowUpCircle, ArrowDownCircle, Pencil, Check, X } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Chip } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, DataList, Empty, Field, Input, Chip, IconButton } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
 import { useAppStore } from '@/store';
 import { fmt, cn, normalizeDigits } from '@/lib/utils';
@@ -187,36 +187,19 @@ export default function ContactsPage() {
         if (editId === c.id) {
           return (
             <div className="flex items-center justify-center gap-1">
-              <button
+              <IconButton
+                icon={Check} aria-label="ذخیره" tone="success" size="xs"
                 onClick={() => saveEdit(c.id)}
                 disabled={saving || !editName.trim() || !editType.trim()}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-emerald-50 text-emerald-600 disabled:opacity-40"
-              >
-                <Check size={13} strokeWidth={2} />
-              </button>
-              <button
-                onClick={cancelEdit}
-                className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 text-muted"
-              >
-                <X size={13} strokeWidth={2} />
-              </button>
+              />
+              <IconButton icon={X} aria-label="انصراف" size="xs" onClick={cancelEdit} />
             </div>
           );
         }
         return (
           <div className="flex items-center justify-center gap-1">
-            <button
-              onClick={() => startEdit(c)}
-              className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-600"
-            >
-              <Pencil size={12} strokeWidth={1.5} />
-            </button>
-            <button
-              onClick={() => handleDelete(c.id)}
-              className="w-7 h-7 flex items-center justify-center rounded hover:bg-rose-50 text-muted hover:text-rose-600"
-            >
-              <Trash2 size={13} strokeWidth={1.5} />
-            </button>
+            <IconButton icon={Pencil} aria-label="ویرایش طرف‌حساب" size="xs" onClick={() => startEdit(c)} />
+            <IconButton icon={Trash2} aria-label="حذف طرف‌حساب" tone="danger" size="xs" onClick={() => handleDelete(c.id)} />
           </div>
         );
       },

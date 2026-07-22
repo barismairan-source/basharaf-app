@@ -9,7 +9,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useConfirm } from '@/components/ui';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
+import { IconButton } from '@/components/ui/IconButton';
 import { RecipientDrawer } from '@/components/admin/notifications/RecipientDrawer';
 
 // ─── Types — mirror GET /api/admin/notification-audience ──────────
@@ -379,15 +380,13 @@ function OutboxTab() {
             وضعیت کانال SMS و ایمیل — پردازش توسط processor داخلی
           </p>
         </div>
-        <button
-          type="button"
+        <IconButton
+          icon={RefreshCw}
+          aria-label="بارگذاری مجدد"
           onClick={load}
-          disabled={loading}
-          title="بارگذاری مجدد"
-          className="w-8 h-8 flex items-center justify-center rounded-md text-stone-500 hover:text-stone-200 hover:bg-stone-800 transition-colors"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} aria-hidden />
-        </button>
+          loading={loading}
+          dark
+        />
       </div>
 
       {error && (
@@ -601,15 +600,13 @@ export default function NotificationRulesPage() {
           </p>
         </div>
         {tab === 'rules' && (
-          <button
-            type="button"
+          <IconButton
+            icon={RefreshCw}
+            aria-label="بارگذاری مجدد"
             onClick={load}
-            disabled={loading}
-            className="w-8 h-8 flex items-center justify-center rounded-md text-stone-500 hover:text-stone-200 hover:bg-stone-800 transition-colors"
-            title="بارگذاری مجدد"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} aria-hidden />
-          </button>
+            loading={loading}
+            dark
+          />
         )}
       </div>
 

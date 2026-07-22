@@ -12,6 +12,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAppStore } from '@/store';
+import { IconButton } from '@/components/ui/IconButton';
 import { cn } from '@/lib/utils';
 import type { NotificationType } from '@/types';
 
@@ -344,14 +345,7 @@ function PanelHeader({
             </button>
           )}
           {showClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="بستن اعلان‌ها"
-              className="w-8 h-8 flex items-center justify-center rounded-md text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
-            >
-              <X size={16} aria-hidden />
-            </button>
+            <IconButton icon={X} aria-label="بستن اعلان‌ها" onClick={onClose} />
           )}
         </div>
       </div>

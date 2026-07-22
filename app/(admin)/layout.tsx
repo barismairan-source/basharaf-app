@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getRealAdminSession } from '@/lib/auth/session';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { ConfirmProvider } from '@/components/ui';
+import { ConfirmProvider } from '@/components/ui/ConfirmDialog';
 
 export const metadata = { title: 'مدیریت کل' };
 

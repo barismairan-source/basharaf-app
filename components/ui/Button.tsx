@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * و در صورت اضافه کردن variant جدید، تلفیق با Tailwind class‌ها
  * هیچ‌گونه conflict ایجاد نمی‌کند (به لطف tailwind-merge در cn).
  */
-const buttonVariants = cva(
+export const buttonVariants = cva(
   'inline-flex items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
   {
     variants: {
@@ -33,6 +33,9 @@ const buttonVariants = cva(
         // md و lg حداقل ۴۴px — هدف لمسی موبایل (WCAG 2.5.5)
         md: 'h-11 px-4 text-[13px] gap-2',
         lg: 'h-12 px-5 text-[13.5px] gap-2',
+        // دقیقاً هم‌ارتفاع با Input/Select (h-10) — برای ردیف‌های فرم/فیلتر
+        // که دکمه باید کنار یک فیلد قرار بگیرد و لبه‌ی پایین/بالا هم‌تراز شود.
+        field: 'h-10 px-4 text-[13px] gap-2',
       },
     },
     defaultVariants: {

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { IconButton } from '@/components/ui/IconButton';
 import type { NotificationType } from '@/types';
 
 // ─── Types ────────────────────────────────────────────────────────
@@ -153,34 +154,22 @@ function NotifRow({
         <div className="flex items-center gap-1 mt-1">
           {!isArchived && (
             n.read ? (
-              <button
-                type="button"
+              <IconButton
+                icon={MailOpen} aria-label="علامت‌گذاری به‌عنوان خوانده‌نشده" size="xs"
                 onClick={(e) => { e.stopPropagation(); e.preventDefault(); onUnread(n.id); }}
-                title="علامت‌گذاری به‌عنوان خوانده‌نشده"
-                className="w-7 h-7 flex items-center justify-center rounded text-stone-400 hover:text-stone-700 hover:bg-stone-200/70 transition-colors"
-              >
-                <MailOpen size={13} aria-hidden />
-              </button>
+              />
             ) : (
-              <button
-                type="button"
+              <IconButton
+                icon={CheckCheck} aria-label="علامت‌گذاری به‌عنوان خوانده‌شده" size="xs"
                 onClick={(e) => { e.stopPropagation(); e.preventDefault(); onRead(n.id); }}
-                title="علامت‌گذاری به‌عنوان خوانده‌شده"
-                className="w-7 h-7 flex items-center justify-center rounded text-stone-400 hover:text-stone-700 hover:bg-stone-200/70 transition-colors"
-              >
-                <CheckCheck size={13} aria-hidden />
-              </button>
+              />
             )
           )}
           {!isArchived && (
-            <button
-              type="button"
+            <IconButton
+              icon={Archive} aria-label="بایگانی" size="xs"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); onArchive(n.id); }}
-              title="بایگانی"
-              className="w-7 h-7 flex items-center justify-center rounded text-stone-400 hover:text-stone-700 hover:bg-stone-200/70 transition-colors"
-            >
-              <Archive size={13} aria-hidden />
-            </button>
+            />
           )}
         </div>
       </div>
