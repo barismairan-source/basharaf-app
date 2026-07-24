@@ -70,7 +70,7 @@ export function CardHeader({
       {...props}
     >
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] text-stone-800">{title}</div>
+        <div className="text-[13.5px] text-text">{title}</div>
         {sub && (
           <div className="text-[11.5px] text-muted mt-0.5">{sub}</div>
         )}

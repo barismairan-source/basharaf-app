@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { X, Printer, ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, FileText, Banknote, CreditCard, FileCheck, Plus, FileSignature } from 'lucide-react';
 import { cn, fmt } from '@/lib/utils';
-import { formatMoneyShort } from '@/lib/design/format';
+import { formatMoneyShort, formatSignedMoney } from '@/lib/design/format';
 import type { ContactLedgerEntry } from '@/lib/db/contactLedger';
 
 interface ContactInfo {
@@ -35,7 +35,6 @@ function EntryRow({ entry }: { entry: ContactLedgerEntry }) {
   const isIncome = entry.type === 'income';
   const Icon = isIncome ? ArrowUpRight : ArrowDownLeft;
   const amtColor = isIncome ? 'text-ok' : 'text-danger';
-  const sign = isIncome ? '+' : '−';
   const statusMeta = STATUS_LABEL[entry.status] ?? { label: entry.status, color: 'text-muted' };
 
   return (
@@ -45,7 +44,7 @@ function EntryRow({ entry }: { entry: ContactLedgerEntry }) {
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[12.5px] text-text truncate">{entry.title}</span>
           <span className={cn('text-[12.5px] font-medium num shrink-0', amtColor)}>
-            {sign}{formatMoneyShort(entry.amount)}
+            {formatSignedMoney(isIncome ? entry.amount : -entry.amount, { showPlus: true, short: true })}
           </span>
         </div>
         <div className="flex items-center gap-2 mt-0.5">

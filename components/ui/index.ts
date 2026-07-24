@@ -36,6 +36,8 @@ export { Select, type SelectProps } from './Select';
 export { Sheet, type SheetProps } from './Sheet';
 export { Sparkline, type SparklineProps } from './Sparkline';
 export { StatusPill, type StatusPillProps } from './StatusPill';
+// StatusBadge = نام مستعار StatusPill (همان کامپوننت) — برای همگرایی نام‌گذاری Product UI V2.
+export { StatusPill as StatusBadge, type StatusPillProps as StatusBadgeProps } from './StatusPill';
 export { Switch, type SwitchProps } from './Switch';
 export {
   Th,
@@ -57,3 +59,12 @@ export { IconButton, type IconButtonProps } from './IconButton';
 export { ButtonLink, type ButtonLinkProps } from './ButtonLink';
 export { Skeleton } from './Skeleton';
 export { ThemeProvider, ACCENT_PRESETS } from './ThemeProvider';
+
+// ─── Product UI V2 — layout primitives ─────────────────────────────────
+export { PageShell, type PageShellProps } from './PageShell';
+export { PageToolbar, type PageToolbarProps } from './PageToolbar';
+export { FilterToolbar, type FilterToolbarProps } from './FilterToolbar';
+export { MetricGrid, type MetricGridProps } from './MetricGrid';
+export { FormSection, type FormSectionProps } from './FormSection';
+export { StickyActionBar, type StickyActionBarProps } from './StickyActionBar';
+export { InlineNotice, type InlineNoticeProps, type InlineNoticeTone } from './InlineNotice';

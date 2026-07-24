@@ -27,7 +27,8 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref
   ) => {
-    const height = variant === 'auth' ? 'h-12' : 'h-10';
+    // 44px لمسی روی موبایل، 40px فشرده از sm به بالا (همون contract در Select/Textarea)
+    const height = variant === 'auth' ? 'h-12' : 'h-11 sm:h-10';
     const fontSize = 'text-[13.5px]';
 
     return (
@@ -36,7 +37,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           'relative rounded-lg border bg-surface transition-colors',
           hasError
             ? 'border-danger'
-            : 'border-border focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/20',
+            : 'border-border focus-within:border-accent focus-within:ring-2 focus-within:ring-accent/40',
           disabled && 'bg-bg opacity-60',
           className
         )}

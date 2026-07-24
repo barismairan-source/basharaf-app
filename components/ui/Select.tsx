@@ -24,11 +24,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           disabled={disabled}
           className={cn(
-            'appearance-none w-full h-10 pr-3 pl-9 rounded-lg border bg-surface',
+            'appearance-none w-full h-11 sm:h-10 pr-3 pl-9 rounded-lg border bg-surface',
             'text-[13.5px] text-text focus:outline-none transition-colors',
             hasError
               ? 'border-danger focus:border-danger'
-              : 'border-border focus:border-accent focus:ring-2 focus:ring-accent/20',
+              : 'border-border focus:border-accent focus:ring-2 focus:ring-accent/40',
             disabled
               ? 'bg-bg opacity-60 cursor-not-allowed text-muted'
               : 'cursor-pointer'

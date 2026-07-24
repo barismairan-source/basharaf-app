@@ -26,6 +26,9 @@ import { fmt } from '@/lib/utils';
 import { formatMoneyShort } from '@/lib/design/format';
 import { formatBranchName } from '@/lib/design/format';
 import { MetricCard } from '@/components/ui';
+import { PageShell } from '@/components/ui/PageShell';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+import { MetricGrid } from '@/components/ui/MetricGrid';
 import { canAccessSection } from '@/lib/auth/permissions';
 import { cn } from '@/lib/utils';
 
@@ -123,23 +126,20 @@ export default function DashboardPage() {
   }));
 
   return (
-    <div className="p-4 sm:p-6">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <PageShell type="data" className="space-y-8">
 
         {/* ─── Header ─── */}
-        <div className="flex items-end justify-between gap-4">
-          <div>
-            <h1 className="text-[20px] font-semibold text-stone-900 tracking-tight">داشبورد</h1>
-            <div className="text-[12px] text-stone-500 mt-0.5">
-              {isAdmin
-                ? branchFilter
-                  ? `نمایش: ${formatBranchName(branches.find((b) => b.id === branchFilter) ?? { name: '—' })}`
-                  : 'نمایش: همه شعب'
-                : `شعبه: ${formatBranchName(branches.find((b) => b.id === user.assignedBranch) ?? { name: '—' })}`}
-            </div>
-          </div>
-          {isAdmin && <BranchPicker />}
-        </div>
+        <PageToolbar
+          title="داشبورد"
+          sub={
+            isAdmin
+              ? branchFilter
+                ? `نمایش: ${formatBranchName(branches.find((b) => b.id === branchFilter) ?? { name: '—' })}`
+                : 'نمایش: همه شعب'
+              : `شعبه: ${formatBranchName(branches.find((b) => b.id === user.assignedBranch) ?? { name: '—' })}`
+          }
+          actions={isAdmin ? <BranchPicker /> : undefined}
+        />
 
         {/* ─── نقش‌محور: Warehouse / Chef ─── */}
         {isOperational && <RoleHome role={user.role} />}
@@ -191,8 +191,10 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* KPI grid — ۴ کارت هم‌ارتفاع */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+            {/* KPI grid — ۴ کارت هم‌ارتفاع؛ auto-fit/minmax به‌جای breakpoint ثابت
+                تا در عرض‌های عریض (۱۴۴۰-۱۹۲۰px) بین ۴ کارت به‌طور یکنواخت پخش شود
+                نه این‌که با فاصله‌ی خالی سمت چپ/راست بماند. */}
+            <MetricGrid minCardWidth={180} className="items-stretch">
               <KPICard
                 tone="balance"
                 label="موجودی (تراکنش‌ها)"
@@ -218,7 +220,7 @@ export default function DashboardPage() {
                 value={metrics.pendingAmount}
                 icon={Clock}
               />
-            </div>
+            </MetricGrid>
 
             {viewMode === 'operational' && metrics.setupExcludedExpense > 0 && (
               <div className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
@@ -350,7 +352,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-      </div>
-    </div>
+    </PageShell>
   );
 }

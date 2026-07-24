@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Search, Receipt, Clock, CheckCircle2, XCircle,
@@ -13,6 +13,9 @@ import {
   DataList, MetricCard, StatusPill,
 } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
+import { PageShell } from '@/components/ui/PageShell';
+import { PageToolbar } from '@/components/ui/PageToolbar';
+import { MetricGrid } from '@/components/ui/MetricGrid';
 import { useAppStore, useVisibleTransactions } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 import { formatMoneyShort, formatSignedMoney, formatBranchName } from '@/lib/design/format';
@@ -65,7 +68,6 @@ export default function TransactionsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [hydrated, setHydrated] = useState(false);
-  const printRef = useRef<HTMLDivElement>(null);
 
   const user = useAppStore(s => s.user);
   const branches = useAppStore(s => s.branches);
@@ -225,29 +227,30 @@ export default function TransactionsPage() {
   ];
 
   return (
-    <div className="p-4 lg:p-6 print:p-2" ref={printRef}>
-      <div className="max-w-6xl mx-auto space-y-4">
+    <>
+    <PageShell type="data" className="p-4 lg:p-6 print:p-2 space-y-4">
 
         {/* Header */}
-        <div className="flex flex-wrap items-end justify-between gap-3 print:hidden">
-          <div>
-            <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">تراکنش‌ها</h1>
-            <div className="text-[12px] text-muted mt-1">{filtered.length} تراکنش</div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button variant="primary" size="sm" icon={Plus} onClick={() => router.push('/transactions/new')}>
-              ثبت تراکنش
-            </Button>
-            <ImportPanel onDone={() => window.location.reload()} />
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[12px] text-muted hover:text-text transition-colors"
-            >
-              <Printer size={13} strokeWidth={1.5} />
-              <span className="hidden sm:inline">چاپ</span>
-            </button>
-          </div>
-        </div>
+        <PageToolbar
+          className="print:hidden"
+          title="تراکنش‌ها"
+          sub={`${filtered.length} تراکنش`}
+          actions={
+            <>
+              <Button variant="primary" size="sm" icon={Plus} onClick={() => router.push('/transactions/new')}>
+                ثبت تراکنش
+              </Button>
+              <ImportPanel onDone={() => window.location.reload()} />
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-border text-[12px] text-muted hover:text-text transition-colors"
+              >
+                <Printer size={13} strokeWidth={1.5} />
+                <span className="hidden sm:inline">چاپ</span>
+              </button>
+            </>
+          }
+        />
 
         {/* Print header */}
         <div className="hidden print:block mb-4">
@@ -258,7 +261,7 @@ export default function TransactionsPage() {
         </div>
 
         {/* Summary bar — MetricCard (S4: عدد کامل در title) */}
-        <div className="grid grid-cols-3 gap-3 print:hidden">
+        <MetricGrid minCardWidth={180} className="print:hidden">
           <div title={`${fmt(totalIncome)} تومان`}>
             <MetricCard label="درآمد (تأییدشده)" value={totalIncome} sparkColor="#15803d" />
           </div>
@@ -268,7 +271,7 @@ export default function TransactionsPage() {
           <div title={`${fmt(balance)} تومان`}>
             <MetricCard label="موجودی" value={balance} sparkColor={balance >= 0 ? '#15803d' : '#be123c'} />
           </div>
-        </div>
+        </MetricGrid>
 
         {/* Summary bar print-only (بدون کامپوننت) */}
         <div className="hidden print:grid grid-cols-3 gap-2 print:gap-2">
@@ -404,7 +407,7 @@ export default function TransactionsPage() {
           </table>
         </div>
 
-      </div>
+    </PageShell>
 
       {openTxId && (() => {
         const tx = visible.find(t => t.id === openTxId);
@@ -420,6 +423,6 @@ export default function TransactionsPage() {
         contactId={openContactId}
         onClose={() => setOpenContactId(null)}
       />
-    </div>
+    </>
   );
 }

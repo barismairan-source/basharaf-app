@@ -76,6 +76,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
         ref={ref}
         type={type}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         title={title ?? ariaLabel}
         className={cn(
           box,

@@ -283,6 +283,7 @@ export default function TasksPage() {
               <SegFilter
                 value={mineOnly}
                 onChange={setMineOnly}
+                aria-label="نمایش کارها"
                 options={[
                   { value: 'all', label: 'همه' },
                   { value: 'mine', label: 'کارهای من' },

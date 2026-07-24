@@ -38,6 +38,9 @@ export function Sheet({
   maxHeight = '80vh',
   className,
 }: SheetProps) {
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  const triggerRef = React.useRef<HTMLElement | null>(null);
+
   // قفل اسکرول body وقتی sheet باز است
   React.useEffect(() => {
     if (open) {
@@ -50,11 +53,38 @@ export function Sheet({
     };
   }, [open]);
 
-  // بستن با کلید Escape
+  // مدیریت focus: باز شدن → فوکوس داخل پنل؛ بسته شدن → برگشت به عنصر triggerکننده.
+  // بدون این، کاربر کیبورد/screen reader بعد از باز شدن sheet «پشت» backdrop باقی می‌ماند.
+  React.useEffect(() => {
+    if (open) {
+      triggerRef.current = document.activeElement as HTMLElement | null;
+      panelRef.current?.focus();
+    } else {
+      triggerRef.current?.focus();
+    }
+  }, [open]);
+
+  // بستن با کلید Escape + قفل Tab داخل پنل (focus trap)
   React.useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusable = panel.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -74,8 +104,10 @@ export function Sheet({
 
       {/* panel */}
       <div
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
           'fixed inset-x-0 bottom-0 z-50 bg-surface rounded-t-2xl shadow-modal',

@@ -12,6 +12,8 @@ export interface PageHeaderProps {
   backLabel?: string;
   /** دکمه‌های سمت چپ (در RTL: انتهای هدر) */
   actions?: React.ReactNode;
+  /** پیش‌فرض true — برای صفحات سطح‌بالا بدون ناوبری برگشت، false بده (یا از PageToolbar استفاده کن) */
+  showBack?: boolean;
   /** در صفحات print نادیده گرفته می‌شود */
   className?: string;
 }
@@ -32,6 +34,7 @@ export function PageHeader({
   onBack,
   backLabel = 'بازگشت',
   actions,
+  showBack = true,
   className = '',
 }: PageHeaderProps) {
   const router = useRouter();
@@ -44,15 +47,17 @@ export function PageHeader({
 
   return (
     <div className={`flex items-center gap-3 print:hidden ${className}`}>
-      <button
-        type="button"
-        onClick={handleBack}
-        className="flex items-center gap-1 text-[12px] text-muted hover:text-text transition-colors min-h-[44px] px-1 shrink-0"
-        aria-label={backLabel}
-      >
-        <ArrowRight size={14} strokeWidth={1.5} aria-hidden="true" />
-        <span className="hidden sm:inline">{backLabel}</span>
-      </button>
+      {showBack && (
+        <button
+          type="button"
+          onClick={handleBack}
+          className="flex items-center gap-1 text-[12px] text-muted hover:text-text transition-colors min-h-[44px] px-1 shrink-0"
+          aria-label={backLabel}
+        >
+          <ArrowRight size={14} strokeWidth={1.5} aria-hidden="true" />
+          <span className="hidden sm:inline">{backLabel}</span>
+        </button>
+      )}
 
       <h1 className="flex-1 text-[17px] font-semibold text-text truncate">
         {title}

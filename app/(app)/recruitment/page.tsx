@@ -9,6 +9,8 @@ import {
   Loader2, UserCheck, Wrench, ChevronDown, GitCompareArrows,
 } from 'lucide-react';
 import { Button, ButtonLink, Card, CardBody, Input, Select, Empty, Chip, Textarea, SegFilter } from '@/components/ui';
+import { PageShell } from '@/components/ui/PageShell';
+import { PageToolbar } from '@/components/ui/PageToolbar';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import {
@@ -374,47 +376,48 @@ export default function RecruitmentPage() {
 
   // ── رندر ───────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 lg:p-6">
-      <div className="mx-auto max-w-5xl space-y-5">
+    <PageShell type="data" className="space-y-5">
 
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <h1 className="text-[20px] font-medium tracking-tight text-stone-900">استخدام</h1>
-            <div className="mt-1 text-[12px] text-stone-500">
+        <PageToolbar
+          title="استخدام"
+          sub={
+            <>
               {sorted.length !== (applicationsTotal || applications.length)
                 ? `${sorted.length} از ${applicationsTotal || applications.length} درخواست`
                 : `${applicationsTotal || applications.length} درخواست`}
               {' '}· <bdi dir="ltr">/apply</bdi>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-            <Button
-              variant={compareMode ? 'primary' : 'default'}
-              size="sm"
-              icon={GitCompareArrows}
-              onClick={() => { if (compareMode) exitCompare(); else setCompareMode(true); }}
-            >
-              {compareMode ? 'خروج از مقایسه' : 'مقایسه'}
-            </Button>
-            <Button
-              variant={resumeSelectMode ? 'primary' : 'default'}
-              size="sm"
-              icon={FileText}
-              onClick={() => { if (resumeSelectMode) exitResumeSelect(); else setResumeSelectMode(true); }}
-            >
-              {resumeSelectMode ? 'خروج از انتخاب رزومه' : 'دانلود رزومه‌ها'}
-            </Button>
-            <Button variant="default" size="sm" icon={Wrench} onClick={() => router.push('/recruitment/form-builder')}>فرم‌ساز</Button>
-            <Button variant="default" size="sm" icon={Settings2} onClick={openQuestions}>سوال‌ها</Button>
-            <ButtonLink href="/apply" target="_blank" rel="noopener noreferrer" variant="default" size="sm" icon={ExternalLink}>
-              فرم
-            </ButtonLink>
-            <Button variant="default" size="sm" icon={Download} onClick={exportXlsx} disabled={sorted.length === 0}>
-              اکسل
-            </Button>
-          </div>
-        </div>
+            </>
+          }
+          actions={
+            <>
+              <Button
+                variant={compareMode ? 'primary' : 'default'}
+                size="sm"
+                icon={GitCompareArrows}
+                onClick={() => { if (compareMode) exitCompare(); else setCompareMode(true); }}
+              >
+                {compareMode ? 'خروج از مقایسه' : 'مقایسه'}
+              </Button>
+              <Button
+                variant={resumeSelectMode ? 'primary' : 'default'}
+                size="sm"
+                icon={FileText}
+                onClick={() => { if (resumeSelectMode) exitResumeSelect(); else setResumeSelectMode(true); }}
+              >
+                {resumeSelectMode ? 'خروج از انتخاب رزومه' : 'دانلود رزومه‌ها'}
+              </Button>
+              <Button variant="default" size="sm" icon={Wrench} onClick={() => router.push('/recruitment/form-builder')}>فرم‌ساز</Button>
+              <Button variant="default" size="sm" icon={Settings2} onClick={openQuestions}>سوال‌ها</Button>
+              <ButtonLink href="/apply" target="_blank" rel="noopener noreferrer" variant="default" size="sm" icon={ExternalLink}>
+                فرم
+              </ButtonLink>
+              <Button variant="default" size="sm" icon={Download} onClick={exportXlsx} disabled={sorted.length === 0}>
+                اکسل
+              </Button>
+            </>
+          }
+        />
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-2">
@@ -422,6 +425,7 @@ export default function RecruitmentPage() {
           <SegFilter
             value={statusFilter}
             onChange={(v) => { setStatusFilter(v); updateUrl({ status: v }); }}
+            aria-label="فیلتر وضعیت"
             options={STATUS_FILTERS}
           />
 
@@ -869,8 +873,7 @@ export default function RecruitmentPage() {
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </PageShell>
   );
 }
 

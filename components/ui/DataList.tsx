@@ -5,6 +5,14 @@ import { cn } from '@/lib/utils';
 import { Th, Td, TableContainer } from './Table';
 import { Empty } from './Empty';
 
+/** Enter/Space روی یک ردیف role=button — تنها راه فعال‌سازی onRowClick با کیبورد. */
+function handleRowKeyDown(e: React.KeyboardEvent, onActivate: () => void) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    onActivate();
+  }
+}
+
 export interface DataColumn<T extends object> {
   /** شناسه یکتا — برای key در React */
   key: string;
@@ -92,9 +100,12 @@ function DataList<T extends object>({
           <div
             key={keyExtractor(row)}
             onClick={onRowClick ? () => onRowClick(row) : undefined}
+            role={onRowClick ? 'button' : undefined}
+            tabIndex={onRowClick ? 0 : undefined}
+            onKeyDown={onRowClick ? (e) => handleRowKeyDown(e, () => onRowClick(row)) : undefined}
             className={cn(
               'bg-surface border border-border rounded-lg overflow-hidden',
-              onRowClick && 'cursor-pointer active:bg-bg',
+              onRowClick && 'cursor-pointer active:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
               rowClassName?.(row),
             )}
           >
@@ -135,9 +146,12 @@ function DataList<T extends object>({
               <tr
                 key={keyExtractor(row)}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={onRowClick ? (e) => handleRowKeyDown(e, () => onRowClick(row)) : undefined}
                 className={cn(
                   'transition-colors',
-                  onRowClick && 'cursor-pointer hover:bg-bg',
+                  onRowClick && 'cursor-pointer hover:bg-bg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40',
                   rowClassName?.(row),
                 )}
               >

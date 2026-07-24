@@ -16,8 +16,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           'text-[13.5px] text-text placeholder:text-muted/60',
           'focus:outline-none focus:ring-2 resize-none leading-7 transition-colors',
           hasError
-            ? 'border-danger focus:border-danger focus:ring-danger/20'
-            : 'border-border focus:border-accent focus:ring-accent/20',
+            ? 'border-danger focus:border-danger focus:ring-danger/40'
+            : 'border-border focus:border-accent focus:ring-accent/40',
           className
         )}
         {...props}
