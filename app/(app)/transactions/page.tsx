@@ -90,10 +90,12 @@ export default function TransactionsPage() {
     const from = searchParams.get('from');
     const to = searchParams.get('to');
     const type = searchParams.get('type') as TypeFilter | null;
+    const status = searchParams.get('status') as StatusFilter | null;
     if (q) setSearch(q);
     if (from) setDateFrom(from);
     if (to) setDateTo(to);
     if (type && ['income', 'expense', 'transfer'].includes(type)) setTypeFilter(type);
+    if (status && ['pending', 'approved', 'rejected', 'proforma'].includes(status)) setStatusFilter(status);
   // فقط یک بار روی mount اجرا می‌شود
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

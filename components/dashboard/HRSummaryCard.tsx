@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users } from 'lucide-react';
 import { Chip, Empty } from '@/components/ui';
@@ -8,6 +7,7 @@ import { DashCard } from './DashCard';
 import { fmt } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { canAccessSection } from '@/lib/auth/permissions';
+import type { DashboardOverviewData } from './overviewTypes';
 
 const PAYROLL_STATUS_LABELS: Record<string, string> = {
   draft: 'پیش‌نویس',
@@ -16,41 +16,29 @@ const PAYROLL_STATUS_LABELS: Record<string, string> = {
   posted: 'ثبت‌شده',
 };
 
-interface HRData {
-  hr: {
-    activeEmployees: number;
-    latestPayrollRun: {
-      periodYearMonth: string;
-      status: string;
-      branchName: string | null;
-    } | null;
-  };
+interface Props {
+  overview: DashboardOverviewData | null;
+  overviewLoading: boolean;
 }
 
 /**
- * HRSummaryCard — خلاصه‌ی وضعیت پرسنل و حقوق در لایه ۳ داشبورد.
- * داده از /api/dashboard/overview می‌آید (همان endpoint که AttentionWidget هم استفاده می‌کند).
+ * HRSummaryCard — خلاصه‌ی وضعیت پرسنل و حقوق.
+ * `overview` را از صفحه‌ی داشبورد به‌عنوان prop می‌گیرد — همان
+ * `/api/dashboard/overview` که AttentionWidget/OperationalQueues هم
+ * استفاده می‌کنند، یک‌بار fetch می‌شود، نه هرکدام جدا.
  */
-export function HRSummaryCard() {
+export function HRSummaryCard({ overview, overviewLoading }: Props) {
   const router = useRouter();
   const user = useAppStore((s) => s.user);
-  const [data, setData] = useState<HRData | null>(null);
-
   const canSeeHr = canAccessSection(user, 'payroll') || canAccessSection(user, 'employees');
 
-  useEffect(() => {
-    if (!canSeeHr) return;
-    let cancelled = false;
-    fetch('/api/dashboard/overview', { credentials: 'include', cache: 'no-store' })
-      .then((r) => r.ok ? r.json() : null)
-      .then((d: HRData | null) => { if (!cancelled && d) setData(d); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [canSeeHr]);
+  if (!canSeeHr) return null;
+  if (overviewLoading) {
+    return <div className="h-[100px] rounded-xl bg-stone-100 animate-pulse" aria-busy="true"><span className="sr-only">در حال بارگذاری وضعیت پرسنل…</span></div>;
+  }
+  if (!overview) return null;
 
-  if (!canSeeHr || !data) return null;
-
-  const { hr } = data;
+  const { hr } = overview;
 
   // ۰ پرسنل فعال → یک خط باریک با لینک به /employees
   if (hr.activeEmployees === 0) {
@@ -73,10 +61,14 @@ export function HRSummaryCard() {
       icon={Users}
       iconBg="bg-sky-50"
       iconColor="text-sky-600"
-      className="cursor-pointer hover:border-stone-300 transition-colors"
-      bodyClass="p-5"
+      bodyClass="p-0"
     >
-      <div onClick={() => router.push('/payroll')} className="cursor-pointer">
+      {/* button به‌جای div+onClick — قبلاً فقط با ماوس قابل‌فعال‌سازی بود */}
+      <button
+        type="button"
+        onClick={() => router.push('/payroll')}
+        className="w-full text-right p-5 hover:bg-stone-50/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-inset"
+      >
         <div className="flex items-center justify-between text-[12px] mb-3">
           <span className="text-stone-500">پرسنل فعال</span>
           <span className="tabular-nums text-stone-800 font-medium">{fmt(hr.activeEmployees)} نفر</span>
@@ -99,7 +91,7 @@ export function HRSummaryCard() {
             <Empty icon={Users} title="هنوز دوره‌ای ثبت نشده" sub="" />
           )}
         </div>
-      </div>
+      </button>
     </DashCard>
   );
 }

@@ -1,47 +1,55 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Wallet, TrendingUp, TrendingDown, Clock, CheckCircle2, Users2 } from 'lucide-react';
-import { useAppStore } from '@/store';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Users2, Wallet } from 'lucide-react';
+import { useAppStore, useVisibleTransactions } from '@/store';
 import {
   KPICard,
   BranchPicker,
   BreakdownCard,
   BranchSummary,
+  type BranchSummaryRow,
   RecentList,
   DashboardSkeleton,
   RoleHome,
   FlashReportCard,
-  AnomalyBanner,
   AttentionWidget,
   HRSummaryCard,
   RecruitmentWidget,
   DashCard,
   TrendChart,
-  TodayCashFlow,
+  DashboardScopeBar,
+  FinancialPosition,
+  type FinancialPositionData,
+  OperationalQueues,
+  type DashboardOverviewData,
 } from '@/components/dashboard';
-import { useDashboardMetrics } from '@/lib/hooks/useDashboardMetrics';
 import { fmt } from '@/lib/utils';
-import { formatMoneyShort } from '@/lib/design/format';
-import { formatBranchName } from '@/lib/design/format';
-import { MetricCard } from '@/components/ui';
+import { formatMoneyShort, formatBranchName } from '@/lib/design/format';
 import { PageShell } from '@/components/ui/PageShell';
 import { PageToolbar } from '@/components/ui/PageToolbar';
-import { MetricGrid } from '@/components/ui/MetricGrid';
 import { canAccessSection } from '@/lib/auth/permissions';
 import { cn } from '@/lib/utils';
+import { resolvePeriod, type PeriodKey } from '@/lib/reports/periodResolve';
 
 /**
  * Dashboard — صفحه‌ی اصلی سیستم.
  *
- * ترتیب بخش‌ها (فاز hierarchy):
- * ① نبض سیستم  — FlashReportCard + AnomalyBanner (SuperAdmin)
- * ② نیازمند توجه — AttentionWidget
- * ③ تراز مالی   — KPI + حساب‌ها + شرکا
- * ④ عملیاتی     — پرسنل + مقایسه شعب + تفکیک هزینه
- * ⑤ آخرین تراکنش‌ها
- * ⑥ داوطلبان تازه (SuperAdmin، انتهای صفحه)
+ * معماری اطلاعات (بازطراحی):
+ * ⓪ هدر — عنوان + انتخاب شعبه + انتخاب بازه + آخرین به‌روزرسانی + رفرش
+ * ① نیازمند توجه — لیست اولویت‌بندی‌شده یا نوار «همه‌چیز مرتب است»
+ * ② وضعیت امروز — فروش/فاکتور/میانگین/بهای تمام‌شده/ضایعات/نسبت هزینه مستقیم
+ * ③ تراز مالی — جریان خالص دوره (نه موجودی!) + موجودی واقعی حساب‌ها (جدا)
+ * ④ روند — نمودار با انتخاب بازه‌ی خودش (۱۴/۳۰/۹۰ روز) + مقایسه با دوره‌ی قبل
+ * ⑤ مقایسه شعب — فروش/هزینه/بهای تمام‌شده/ضایعات/جریان خالص
+ * ⑥ صف‌های عملیاتی — تأییدهای معلق، برگه‌های انبار، کمبود موجودی، PO باز، تعمیرات، وظایف
+ * ⑦ پرسنل و شرکا — خلاصه‌ی HR + داوطلبان تازه + آورده‌ی شرکا
+ *
+ * تمام aggregateهای مالی (تراز، مقایسه‌ی شعب، تفکیک هزینه) از یک fetch
+ * مشترک به `/api/reports` می‌آیند — نه محاسبه‌ی client-side روی کل آرایه‌ی
+ * تراکنش‌ها (که با هزاران تراکنش کند و در واقع «بارگذاری همه برای جمع
+ * زدن» بود).
  */
 
 /** عنوان کوچک بالای هر بخش — یکدست در همه‌جا */
@@ -53,13 +61,24 @@ function SectionLabel({ children }: { children: string }) {
   );
 }
 
+interface ReportsResponse extends FinancialPositionData {
+  byBranch: Array<{ id: string; name: string; income: number; expense: number; balance: number }>;
+  byCategory: Array<{ name: string; type: string; total: number; count: number }>;
+}
+
+interface BranchCogsWasteResponse {
+  branches: Array<{ branchId: string; cogsEstimate: number; waste: number }>;
+}
+
+const VALID_PERIODS: PeriodKey[] = ['today', '7d', '30d', 'custom'];
+
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const user = useAppStore((s) => s.user);
   const branches = useAppStore((s) => s.branches);
-  const transactions = useAppStore((s) => s.transactions);
+  const visibleTransactions = useVisibleTransactions();
   const accounts = useAppStore((s) => s.accounts);
-  const contacts = useAppStore((s) => s.contacts);
   const partners = useAppStore((s) => s.partners);
   const partnersLoaded = useAppStore((s) => s.partnersLoaded);
   const loadPartners = useAppStore((s) => s.loadPartners);
@@ -68,67 +87,157 @@ export default function DashboardPage() {
 
   const [viewMode, setViewMode] = useState<'operational' | 'full'>('operational');
   const [hydrated, setHydrated] = useState(false);
-  const metrics = useDashboardMetrics(viewMode);
+  const [period, setPeriod] = useState<PeriodKey>('7d');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const [reportsData, setReportsData] = useState<ReportsResponse | null>(null);
+  const [reportsLoading, setReportsLoading] = useState(true);
+  const [branchCogsWaste, setBranchCogsWaste] = useState<BranchCogsWasteResponse['branches'] | null>(null);
+  const [overview, setOverview] = useState<DashboardOverviewData | null>(null);
+  const [overviewLoading, setOverviewLoading] = useState(true);
+
+  // ── hydration اولیه: localStorage (viewMode قدیمی) + URL (شعبه/بازه) ──
   useEffect(() => {
-    const saved = localStorage.getItem('ba-view-mode');
-    if (saved === 'full') setViewMode('full');
+    const savedViewMode = localStorage.getItem('ba-view-mode');
+    if (savedViewMode === 'full') setViewMode('full');
+
+    const urlBranch = searchParams.get('branch');
+    const urlPeriod = searchParams.get('period') as PeriodKey | null;
+    const urlFrom = searchParams.get('from');
+    const urlTo = searchParams.get('to');
+    if (urlBranch) setBranchFilter(urlBranch);
+    if (urlPeriod && VALID_PERIODS.includes(urlPeriod)) setPeriod(urlPeriod);
+    if (urlFrom) setCustomFrom(urlFrom);
+    if (urlTo) setCustomTo(urlTo);
+
     setHydrated(true);
     loadPartners();
-  }, [loadPartners]);
+    // فقط یک‌بار روی mount — تغییرات بعدی period/branchFilter را effect جدا به URL می‌نویسد
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function toggleViewMode(mode: 'operational' | 'full') {
     setViewMode(mode);
     try { localStorage.setItem('ba-view-mode', mode); } catch {}
   }
 
-  const branchSummaryData = useMemo(() => {
-    if (!user || user.role !== 'SuperAdmin' || branchFilter) return [];
-    return branches.map((b) => {
-      const branchTxs = transactions.filter(
-        (t) => t.branchId === b.id && t.status === 'approved'
-      );
-      let income = 0;
-      let expense = 0;
-      for (const t of branchTxs) {
-        if (t.type === 'income') income += t.amount;
-        else expense += t.amount;
-      }
-      return { branchId: b.id, branchName: b.name, income, expense, balance: income - expense };
-    });
-  }, [user, branches, transactions, branchFilter]);
+  // ── همگام‌سازی scope (شعبه + بازه) با URL ──
+  useEffect(() => {
+    if (!hydrated) return;
+    const sp = new URLSearchParams();
+    if (branchFilter) sp.set('branch', branchFilter);
+    if (period !== '7d') sp.set('period', period);
+    if (period === 'custom') {
+      if (customFrom) sp.set('from', customFrom);
+      if (customTo) sp.set('to', customTo);
+    }
+    const qs = sp.toString();
+    router.replace(`/dashboard${qs ? '?' + qs : ''}`, { scroll: false });
+  }, [hydrated, branchFilter, period, customFrom, customTo, router]);
+
+  const isAdmin = user?.role === 'SuperAdmin';
+  const isOperational = user?.role === 'Warehouse' || user?.role === 'Chef';
+  const canSeeFinance = canAccessSection(user, 'transactions');
+
+  const effectiveBranchId = isAdmin ? branchFilter : (user?.assignedBranch ?? null);
+  const resolved = useMemo(
+    () => resolvePeriod(period, customFrom, customTo),
+    [period, customFrom, customTo]
+  );
+
+  // ── fetch مشترک /api/reports — منبع تراز مالی + مقایسه‌ی شعب + تفکیک هزینه ──
+  const loadReports = useCallback((signal: AbortSignal) => {
+    if (!resolved || !canSeeFinance) return Promise.resolve();
+    setReportsLoading(true);
+    const params = new URLSearchParams({ from: resolved.fromJalali, to: resolved.toJalali });
+    if (effectiveBranchId) params.set('branchId', effectiveBranchId);
+    if (viewMode === 'operational') params.set('excludeSetup', '1');
+    return fetch(`/api/reports?${params}`, { credentials: 'include', cache: 'no-store', signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: ReportsResponse | null) => { if (!signal.aborted) setReportsData(d); })
+      .catch(() => {})
+      .finally(() => { if (!signal.aborted) setReportsLoading(false); });
+  }, [resolved, effectiveBranchId, viewMode, canSeeFinance]);
+
+  // ── fetch مکمل COGS/ضایعات به‌تفکیک شعبه (فقط SuperAdmin + بدون فیلتر شعبه) ──
+  const loadBranchCogsWaste = useCallback((signal: AbortSignal) => {
+    if (!resolved || !isAdmin || branchFilter) { setBranchCogsWaste(null); return Promise.resolve(); }
+    const params = new URLSearchParams({ from: resolved.fromJalali, to: resolved.toJalali });
+    return fetch(`/api/dashboard/branch-comparison?${params}`, { credentials: 'include', cache: 'no-store', signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: BranchCogsWasteResponse | null) => { if (!signal.aborted) setBranchCogsWaste(d?.branches ?? null); })
+      .catch(() => {});
+  }, [resolved, isAdmin, branchFilter]);
+
+  // ── fetch مشترک /api/dashboard/overview — منبع AttentionWidget + HRSummaryCard +
+  // OperationalQueues. قبلاً هر سه این‌ها مستقل همین endpoint را fetch می‌کردند
+  // (سه درخواست تکراری برای یک داده روی یک صفحه) — حالا یک‌بار اینجا.
+  const loadOverview = useCallback((signal: AbortSignal) => {
+    if (isOperational) { setOverviewLoading(false); return Promise.resolve(); }
+    setOverviewLoading(true);
+    const params = new URLSearchParams();
+    if (effectiveBranchId) params.set('branchId', effectiveBranchId);
+    const qs = params.toString();
+    return fetch(`/api/dashboard/overview${qs ? '?' + qs : ''}`, { credentials: 'include', cache: 'no-store', signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: DashboardOverviewData | null) => { if (!signal.aborted) setOverview(d); })
+      .catch(() => {})
+      .finally(() => { if (!signal.aborted) setOverviewLoading(false); });
+  }, [isOperational, effectiveBranchId]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const ctrl = new AbortController();
+    Promise.all([loadReports(ctrl.signal), loadBranchCogsWaste(ctrl.signal), loadOverview(ctrl.signal)])
+      .then(() => { if (!ctrl.signal.aborted) setLastUpdated(new Date()); });
+    return () => ctrl.abort();
+  }, [hydrated, loadReports, loadBranchCogsWaste, loadOverview, refreshTick]);
 
   if (!hydrated || !user) return <DashboardSkeleton />;
 
-  const breakdownForCard = metrics.expenseBreakdown.map((item) => ({
-    category: item.name,
-    amount: item.amount,
-    percent: item.percent,
-  }));
+  // RecentList: RBAC-scoped (useVisibleTransactions) + فیلتر شعبه‌ی هدر روی آن — دقیقاً
+  // همان scope که قبلاً useDashboardMetrics تولید می‌کرد، نه آرایه‌ی خام‌ِ همه‌ی شعب.
+  const recentTransactions = branchFilter && isAdmin
+    ? visibleTransactions.filter((t) => t.branchId === branchFilter)
+    : visibleTransactions;
 
-  const isAdmin = user.role === 'SuperAdmin';
-  const isOperational = user.role === 'Warehouse' || user.role === 'Chef';
-  const nonZeroBranches = branchSummaryData.filter((b) => b.income > 0 || b.expense > 0);
-  const showBranchSummary = isAdmin && !branchFilter && nonZeroBranches.length >= 2;
-  const canSeeContacts = canAccessSection(user, 'contacts');
-  const canSeeFinance = canAccessSection(user, 'transactions');
+  const breakdownForCard = (reportsData?.byCategory ?? [])
+    .filter((c) => c.type === 'expense')
+    .map((c) => ({ category: c.name, amount: c.total, percent: 0 }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, 5);
+  const breakdownTotal = breakdownForCard.reduce((s, c) => s + c.amount, 0);
+  const breakdownWithPercent = breakdownForCard.map((c) => ({ ...c, percent: breakdownTotal > 0 ? (c.amount / breakdownTotal) * 100 : 0 }));
 
-  const activeContacts = canSeeContacts ? contacts.filter((c) => c.isActive) : [];
+  const branchSummaryData: BranchSummaryRow[] = (reportsData?.byBranch ?? []).map((b) => {
+    const cw = branchCogsWaste?.find((x) => x.branchId === b.id);
+    return {
+      branchId: b.id,
+      branchName: b.name,
+      income: b.income,
+      expense: b.expense,
+      netFlow: b.balance,
+      cogsEstimate: cw?.cogsEstimate,
+      waste: cw?.waste,
+    };
+  });
+  const showBranchSummary = isAdmin && !branchFilter && branchSummaryData.length >= 2;
 
-  // شرکا — از partners API (نه contacts)
-  const activePartners = partners.filter(p => p.isActive);
-  // آورده هر شریک = مجموع حساب‌های partner_equity با partnerId مطابق
-  const partnerEquityAccounts = accounts.filter(a => a.type === 'partner_equity');
-  const partnerWithEquity = activePartners.map(p => ({
+  // شرکا — از partners API (نه contacts). آورده‌ی هر شریک = مجموع حساب‌های partner_equity با partnerId مطابق
+  const activePartners = partners.filter((p) => p.isActive);
+  const partnerEquityAccounts = accounts.filter((a) => a.type === 'partner_equity');
+  const partnerWithEquity = activePartners.map((p) => ({
     ...p,
-    equity: partnerEquityAccounts
-      .filter(a => a.partnerId === p.id)
-      .reduce((s, a) => s + a.balance, 0),
+    equity: partnerEquityAccounts.filter((a) => a.partnerId === p.id).reduce((s, a) => s + a.balance, 0),
   }));
 
   return (
     <PageShell type="data" className="space-y-8">
 
-        {/* ─── Header ─── */}
+        {/* ─── هدر ─── */}
         <PageToolbar
           title="داشبورد"
           sub={
@@ -140,35 +249,38 @@ export default function DashboardPage() {
           }
           actions={isAdmin ? <BranchPicker /> : undefined}
         />
+        <DashboardScopeBar
+          period={period}
+          onPeriodChange={setPeriod}
+          customFrom={customFrom}
+          customTo={customTo}
+          onCustomFromChange={setCustomFrom}
+          onCustomToChange={setCustomTo}
+          lastUpdated={lastUpdated}
+          refreshing={reportsLoading}
+          onRefresh={() => setRefreshTick((t) => t + 1)}
+        />
 
         {/* ─── نقش‌محور: Warehouse / Chef ─── */}
         {isOperational && <RoleHome role={user.role} />}
 
-        {/* ══════════════════════════════════════════════════════════════
-            ① نبض سیستم (SuperAdmin)
-            ══════════════════════════════════════════════════════════════ */}
-        {isAdmin && (
-          <div className="space-y-3">
-            <SectionLabel>نبض سیستم</SectionLabel>
-            <FlashReportCard />
-            <TodayCashFlow branchId={branchFilter ?? undefined} />
-            <AnomalyBanner />
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════
-            ② نیازمند توجه
-            ══════════════════════════════════════════════════════════════ */}
+        {/* ══════ ① نیازمند توجه ══════ */}
         {!isOperational && (
           <div className="space-y-3">
             <SectionLabel>نیازمند توجه</SectionLabel>
-            <AttentionWidget />
+            <AttentionWidget overview={overview} overviewLoading={overviewLoading} />
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════
-            ③ تراز مالی — KPI + حساب‌ها + شرکا
-            ══════════════════════════════════════════════════════════════ */}
+        {/* ══════ ② وضعیت امروز (SuperAdmin) ══════ */}
+        {isAdmin && (
+          <div className="space-y-3">
+            <SectionLabel>وضعیت امروز</SectionLabel>
+            <FlashReportCard branchId={branchFilter ?? undefined} />
+          </div>
+        )}
+
+        {/* ══════ ③ تراز مالی ══════ */}
         {!isOperational && canSeeFinance && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
@@ -180,9 +292,7 @@ export default function DashboardPage() {
                     type="button"
                     onClick={() => toggleViewMode(m)}
                     className={`px-3 py-1 rounded text-[11px] font-medium transition-colors ${
-                      viewMode === m
-                        ? 'bg-white text-stone-900 shadow-sm'
-                        : 'text-stone-500 hover:text-stone-700'
+                      viewMode === m ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-700'
                     }`}
                   >
                     {m === 'operational' ? 'عملیاتی' : 'کامل'}
@@ -191,62 +301,72 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* KPI grid — ۴ کارت هم‌ارتفاع؛ auto-fit/minmax به‌جای breakpoint ثابت
-                تا در عرض‌های عریض (۱۴۴۰-۱۹۲۰px) بین ۴ کارت به‌طور یکنواخت پخش شود
-                نه این‌که با فاصله‌ی خالی سمت چپ/راست بماند. */}
-            <MetricGrid minCardWidth={180} className="items-stretch">
-              <KPICard
-                tone="balance"
-                label="موجودی (تراکنش‌ها)"
-                value={metrics.balance}
-                icon={Wallet}
-                highlightNegative
-              />
-              <KPICard
-                tone="income"
-                label="مجموع درآمد"
-                value={metrics.income}
-                icon={TrendingUp}
-              />
-              <KPICard
+            <FinancialPosition data={reportsData} loading={reportsLoading} excludeSetup={viewMode === 'operational'} />
+
+            {breakdownWithPercent.length >= 2 && (
+              <BreakdownCard
+                title="تفکیک هزینه"
+                subtitle={`${breakdownWithPercent.length} دسته — بازه‌ی انتخابی`}
                 tone="expense"
-                label="مجموع هزینه"
-                value={metrics.expense}
-                icon={TrendingDown}
+                data={breakdownWithPercent}
               />
-              <KPICard
-                tone="pending"
-                label={`در انتظار (${new Intl.NumberFormat('fa-IR').format(metrics.pendingCount)} مورد)`}
-                value={metrics.pendingAmount}
-                icon={Clock}
-              />
-            </MetricGrid>
-
-            {viewMode === 'operational' && metrics.setupExcludedExpense > 0 && (
-              <div className="text-[11.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                هزینه‌های راه‌اندازی ({fmt(metrics.setupExcludedExpense)} تومان) در این نما لحاظ نشده
-              </div>
             )}
 
-            {/* نمودار ۱۴ روزه */}
-            <TrendChart branchId={branchFilter ?? undefined} />
-
-            {/* حساب‌های بانکی */}
+            {/* موجودی واقعی حساب‌ها — STOCK لحظه‌ای، جدا از جریان دوره‌ی بالا */}
             {accounts.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                {accounts.slice(0, 4).map((a) => (
-                  <div key={a.id} title={`${fmt(a.balance)} تومان`}>
-                    <MetricCard
-                      label={a.name}
-                      value={a.balance}
-                      sparkColor={a.balance >= 0 ? '#15803d' : '#be123c'}
-                    />
-                  </div>
-                ))}
+              <div className="space-y-2">
+                <div className="text-[11px] text-muted">موجودی واقعی حساب‌ها (لحظه‌ای، مستقل از بازه‌ی انتخابی)</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {accounts.slice(0, 4).map((a) => (
+                    <div key={a.id} title={`${fmt(a.balance)} تومان`}>
+                      <KPICard
+                        tone="balance"
+                        label={a.name}
+                        value={a.balance}
+                        icon={Wallet}
+                        highlightNegative
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
+          </div>
+        )}
 
-            {/* وضعیت شرکا — منبع: partners API */}
+        {/* ══════ ④ روند ══════ */}
+        {!isOperational && canSeeFinance && (
+          <TrendChart branchId={branchFilter ?? undefined} />
+        )}
+
+        {/* ══════ ⑤ مقایسه شعب ══════ */}
+        {showBranchSummary && (
+          <BranchSummary
+            data={branchSummaryData}
+            onBranchClick={(id) => {
+              setBranchFilter(id);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {/* ══════ ⑥ صف‌های عملیاتی ══════ */}
+        {!isOperational && (
+          <div className="space-y-3">
+            <SectionLabel>صف‌های عملیاتی</SectionLabel>
+            <OperationalQueues overview={overview} overviewLoading={overviewLoading} />
+          </div>
+        )}
+
+        {/* ══════ ⑦ پرسنل و شرکا ══════ */}
+        {!isOperational && (
+          <div className="space-y-4">
+            <SectionLabel>پرسنل و شرکا</SectionLabel>
+
+            <HRSummaryCard overview={overview} overviewLoading={overviewLoading} />
+
+            {isAdmin && <RecruitmentWidget />}
+
             {isAdmin && partnersLoaded && (
               <DashCard
                 title="وضعیت شرکا"
@@ -256,39 +376,41 @@ export default function DashboardPage() {
                 onViewAll={() => router.push('/partners')}
               >
                 {activePartners.length === 0 ? (
-                  <div className="text-[12px] text-muted py-1">
-                    هنوز شریکی ثبت نشده
-                  </div>
+                  <div className="text-[12px] text-muted py-1">هنوز شریکی ثبت نشده</div>
                 ) : (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {partnerWithEquity.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => router.push(`/partners/${p.id}`)}
-                        className="bg-stone-50 hover:bg-stone-100 rounded-lg px-4 py-3 text-right transition-colors"
-                      >
-                        <div className="text-[11px] text-stone-500 truncate mb-1.5">{p.fullName}</div>
-                        {partnerEquityAccounts.some(a => a.partnerId === p.id) ? (
-                          <>
-                            <div
-                              className={cn(
-                                'text-[15px] font-semibold tabular-nums leading-none',
-                                p.equity >= 0 ? 'text-emerald-700' : 'text-rose-700',
-                              )}
-                              title={`${fmt(p.equity)} تومان`}
-                            >
-                              {formatMoneyShort(p.equity)}
-                            </div>
-                            <div className={cn('text-[10px] mt-1', p.equity >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
-                              {p.equity < 0 ? 'آورده‌ی خرج‌شده' : 'موجودی آورده'}
-                            </div>
-                          </>
-                        ) : (
-                          <div className="text-[11px] text-muted mt-1">آورده ثبت نشده</div>
-                        )}
-                      </button>
-                    ))}
+                    {partnerWithEquity.map((p) => {
+                      const configured = partnerEquityAccounts.some((a) => a.partnerId === p.id);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => router.push(`/partners/${p.id}`)}
+                          className="bg-stone-50 hover:bg-stone-100 rounded-lg px-4 py-3 text-right transition-colors"
+                        >
+                          <div className="text-[11px] text-stone-500 truncate mb-1.5">{p.fullName}</div>
+                          {configured ? (
+                            <>
+                              <div
+                                className={cn(
+                                  'text-[15px] font-semibold tabular-nums leading-none',
+                                  p.equity >= 0 ? 'text-emerald-700' : 'text-rose-700',
+                                )}
+                                title={`${fmt(p.equity)} تومان`}
+                              >
+                                {formatMoneyShort(p.equity)}
+                              </div>
+                              <div className={cn('text-[10px] mt-1', p.equity >= 0 ? 'text-emerald-600' : 'text-rose-600')}>
+                                {p.equity < 0 ? 'آورده‌ی خرج‌شده' : 'موجودی آورده'}
+                              </div>
+                            </>
+                          ) : (
+                            // آورده تنظیم نشده — به‌جای مقدار گمراه‌کننده (مثلاً «۰ تومان»)، اقدام تکمیل داده
+                            <div className="text-[11px] text-accent mt-1">تنظیم آورده ←</div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </DashCard>
@@ -296,60 +418,18 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════════════════════
-            ④ عملیاتی — پرسنل + مقایسه شعب + تفکیک هزینه
-            ══════════════════════════════════════════════════════════════ */}
+        {/* ══════ آخرین تراکنش‌ها ══════ */}
         {!isOperational && canSeeFinance && (
-          <div className="space-y-4">
-            <SectionLabel>عملیات</SectionLabel>
-
-            <HRSummaryCard />
-
-            {showBranchSummary && (
-              <BranchSummary
-                data={nonZeroBranches}
-                onBranchClick={(id) => {
-                  setBranchFilter(id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
-            )}
-
-            {metrics.filtered.length > 0 && breakdownForCard.length >= 2 && (
-              <BreakdownCard
-                title="تفکیک هزینه"
-                subtitle={`${breakdownForCard.length} دسته`}
-                tone="expense"
-                data={breakdownForCard}
-              />
-            )}
-          </div>
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════
-            ⑤ آخرین تراکنش‌ها
-            ══════════════════════════════════════════════════════════════ */}
-        {!isOperational && canSeeFinance && (
-          metrics.filtered.length > 0 ? (
+          recentTransactions.length > 0 ? (
             <div className="space-y-3">
               <SectionLabel>آخرین تراکنش‌ها</SectionLabel>
-              <RecentList transactions={metrics.filtered} limit={6} />
+              <RecentList transactions={recentTransactions} limit={6} />
             </div>
           ) : (
             <div className="text-center text-[12px] text-muted py-8">
               هنوز هیچ تراکنشی برای نمایش وجود ندارد.
             </div>
           )
-        )}
-
-        {/* ══════════════════════════════════════════════════════════════
-            ⑥ داوطلبان تازه (SuperAdmin — انتهای صفحه)
-            ══════════════════════════════════════════════════════════════ */}
-        {isAdmin && (
-          <div className="space-y-3">
-            <SectionLabel>استخدام</SectionLabel>
-            <RecruitmentWidget />
-          </div>
         )}
 
     </PageShell>
