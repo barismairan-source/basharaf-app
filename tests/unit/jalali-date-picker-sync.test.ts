@@ -47,12 +47,23 @@ describe('parseJalali — تشخیص تغییر واقعی external value', () =
   });
 });
 
-describe('parseJalali — ورودی نامعتبر/خالی', () => {
-  it('رشته‌ی خالی → null (نه throw)', () => {
+describe('parseJalali — ورودی نامعتبر/خالی → null (سخت‌گیرانه)', () => {
+  it('رشته‌ی خالی → null', () => {
     expect(parseJalali('')).toBeNull();
   });
 
   it('رشته‌ی نامعتبر → null (نه throw)', () => {
     expect(() => parseJalali('not-a-date')).not.toThrow();
+    expect(parseJalali('not-a-date')).toBeNull();
+  });
+
+  it('ماه/روز خارج از محدوده که react-date-object بی‌صدا نرمال‌سازی می‌کند (۱۴۰۵/۱۳/۴۰) → null', () => {
+    // خود کتابخانه isValid=true و ۱۴۰۶/۰۲/۰۹ برمی‌گرداند (rollover بی‌صدا)؛
+    // چک round-trip دقیق در parseJalali این را رد می‌کند.
+    expect(parseJalali('۱۴۰۵/۱۳/۴۰')).toBeNull();
+  });
+
+  it('ماه/روز صفر (۱۴۰۵/۰۰/۰۰) که نرمال می‌شود → null', () => {
+    expect(parseJalali('۱۴۰۵/۰۰/۰۰')).toBeNull();
   });
 });

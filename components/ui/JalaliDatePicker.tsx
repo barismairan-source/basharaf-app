@@ -8,11 +8,21 @@ import persian from 'react-date-object/calendars/persian';
 import persian_fa from 'react-date-object/locales/persian_fa';
 import { cn } from '@/lib/utils';
 
-/** فرض: value به فرمت 'YYYY/MM/DD' با ارقام فارسی است. export شده برای تست واحد. */
+/**
+ * فرض: value به فرمت 'YYYY/MM/DD' با ارقام فارسی است. export شده برای تست واحد.
+ *
+ * سخت‌گیرانه: react-date-object ورودی خارج از محدوده (مثل ماه ۱۳ یا روز ۴۰)
+ * را throw یا isValid=false نمی‌کند — بی‌صدا نرمال‌سازی می‌کند (۱۴۰۵/۱۳/۴۰ →
+ * ۱۴۰۶/۰۲/۰۹). تنها راه رد این ورودی‌ها، تطبیق دقیق round-trip فرمت است:
+ * اگر فرمت‌شده‌ی خروجی دقیقاً همان رشته‌ی ورودی نباشد، ورودی نامعتبر بوده.
+ */
 export function parseJalali(value: string): DateObject | null {
   if (!value) return null;
   try {
-    return new DateObject({ calendar: persian, locale: persian_fa, date: value, format: 'YYYY/MM/DD' });
+    const parsed = new DateObject({ calendar: persian, locale: persian_fa, date: value, format: 'YYYY/MM/DD' });
+    if (!parsed.isValid) return null;
+    if (parsed.format('YYYY/MM/DD') !== value) return null;
+    return parsed;
   } catch {
     return null;
   }

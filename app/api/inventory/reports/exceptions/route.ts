@@ -6,6 +6,26 @@ import { requireSession, ForbiddenError } from '@/lib/auth/session';
 import { canAccessSection } from '@/lib/auth/permissions';
 import { handleError } from '@/lib/api-error';
 
+/**
+ * meta در audit_log یک ستون JSON متنی آزاد است — ممکن است رکوردهای قدیمی/
+ * دستکاری‌شده JSON نامعتبر، null، یک primitive، یا آرایه باشند. هیچ‌کدام
+ * نباید کل request را با 500 بترکاند؛ فقط باید نادیده گرفته شوند (شیء خالی
+ * → itemId/shortfall/voucherId همه falsy → branchId undefined → از فیلتر
+ * شعبه به‌طور طبیعی حذف می‌شود).
+ */
+function safeParseMeta(raw: string | null): Record<string, unknown> {
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
@@ -54,7 +74,7 @@ export async function GET(req: Request) {
         gt(schema.auditLog.createdAt, cutoff7d),
       ));
     const clampWarnings = clampWarningsRaw
-      .map(w => ({ ...w, parsedMeta: w.meta ? JSON.parse(w.meta) : {} }))
+      .map(w => ({ ...w, parsedMeta: safeParseMeta(w.meta) }))
       .filter(w => w.parsedMeta.branchId === effectiveBranchId);
 
     // ۳. اقلام زیر حداقل موجودی
