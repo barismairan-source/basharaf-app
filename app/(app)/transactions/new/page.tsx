@@ -133,6 +133,16 @@ export default function NewTransactionPage() {
   const categoryValue = watch('category');
   const isTransfer = type === 'transfer';
 
+  /**
+   * فقط ref/name را از register می‌گیریم (برای setFocus)، بدون spread کامل —
+   * چون onChange/onBlur خودِ register با DOM string کار می‌کنند و روی blur
+   * مقدار عددیِ درستی که با setValue ست کردیم رو با رشته‌ی خام input (که
+   * amount را number می‌خواهد) بازنویسی می‌کنند → خطای «Expected number,
+   * received string» هنگام submit. کنترل مقدار کاملاً دستی (amountDisplay +
+   * setValue) است؛ register فقط برای اتصال ref لازم است.
+   */
+  const amountFieldRegister = register('amount');
+
   // حساب‌های محدوده‌ی شعبه انتخابی: ستادی (null) + همان شعبه
   const scopedAccounts = useMemo(() => {
     if (!branchId) return accounts;
@@ -417,7 +427,8 @@ export default function NewTransactionPage() {
                 <Field label="مبلغ" error={errors.amount?.message}>
                   <div className="relative">
                     <Input
-                      {...register('amount')}
+                      ref={amountFieldRegister.ref}
+                      name={amountFieldRegister.name}
                       type="text"
                       inputMode="numeric"
                       dir="ltr"
