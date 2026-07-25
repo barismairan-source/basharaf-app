@@ -70,3 +70,4 @@ export { StickyActionBar, type StickyActionBarProps } from './StickyActionBar';
 export { InlineNotice, type InlineNoticeProps, type InlineNoticeTone } from './InlineNotice';
 export { Popover, type PopoverProps } from './Popover';
 export { Disclosure, type DisclosureProps } from './Disclosure';
+export { Tabs, TabPanel, type TabsProps, type TabItem, type TabPanelProps } from './Tabs';

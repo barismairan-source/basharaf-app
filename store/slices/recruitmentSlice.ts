@@ -38,16 +38,17 @@ export const createRecruitmentSlice: StateCreator<RecruitmentSlice> = (set, get)
   applicationsPage: 1,
 
   async loadApplications() {
+    set({ applicationsError: null });
     try {
       const res = await fetch(`/api/recruitment?page=1&limit=${PAGE_LIMIT}`, { credentials: 'include' });
       if (!res.ok) {
-        set({ applicationsLoaded: true });
+        set({ applicationsLoaded: true, applicationsError: 'خطا در دریافت لیست داوطلبان' });
         return;
       }
       const data = (await res.json()) as { applications: JobApplication[]; total: number };
       set({ applications: data.applications, applicationsTotal: data.total, applicationsPage: 1, applicationsLoaded: true });
     } catch {
-      set({ applicationsLoaded: true });
+      set({ applicationsLoaded: true, applicationsError: 'خطا در دریافت لیست داوطلبان' });
     }
   },
 
