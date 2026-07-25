@@ -1,24 +1,39 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ChevronDown, Plus, Save } from 'lucide-react';
+import { Plus, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 import {
-  Button, Card, CardBody, Field,
-  Input, JalaliDatePicker, Label, Select, Textarea, Toggle,
+  Button, Card, CardBody, Checkbox, Disclosure, Field,
+  Input, InlineNotice, JalaliDatePicker, Label, PageHeader, PageShell,
+  Select, StickyActionBar, Textarea, Toggle,
 } from '@/components/ui';
+import { useConfirm } from '@/components/ui/ConfirmDialog';
 import { useAppStore } from '@/store';
 import { COLORS } from '@/lib/colors';
 import { getTodayJalali } from '@/lib/jalali';
-import { cn, formatAmountInput, parseAmount } from '@/lib/utils';
+import { cn, fmt, formatAmountInput, parseAmount } from '@/lib/utils';
 import { transactionSchema, type TransactionFormInput } from '@/lib/validations/transaction';
+
+/** ترتیب رفتن فوکوس به اولین فیلد نامعتبر — فقط فیلدهایی که ref واقعی RHF دارند (JalaliDatePicker ref ندارد). */
+const FOCUS_ORDER: Array<keyof TransactionFormInput> = ['amount', 'title', 'category', 'branchId', 'method'];
+
+const FIELD_LABELS: Partial<Record<keyof TransactionFormInput, string>> = {
+  amount: 'مبلغ',
+  title: 'عنوان تراکنش',
+  category: 'دسته‌بندی',
+  branchId: 'شعبه',
+  method: 'روش پرداخت',
+  date: 'تاریخ',
+};
 
 export default function NewTransactionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const confirm = useConfirm();
   const user = useAppStore(s => s.user);
   const branches = useAppStore(s => s.branches);
   const categories = useAppStore(s => s.categories);
@@ -43,6 +58,9 @@ export default function NewTransactionPage() {
   const [showNewCatModal, setShowNewCatModal] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [creatingCat, setCreatingCat] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+
+  const isSubmittingRef = useRef(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -80,15 +98,17 @@ export default function NewTransactionPage() {
     if (prefillType || prefillAmount || prefillTitle || prefillNote || prefillContactId || prefillAccountId || prefillDestAccountId) {
       setDetailsOpen(true);
     }
+  // فقط یک بار روی mount اجرا می‌شود
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isAdmin = user?.role === 'SuperAdmin';
   const defaultBranchId = user?.role === 'BranchUser' ? (user.assignedBranch ?? '') : (branches[0]?.id ?? '');
   const branchLocked = user?.role === 'BranchUser';
+  const initialDate = useMemo(() => getTodayJalali(), []);
 
   const {
-    register, handleSubmit, setValue, watch,
+    register, handleSubmit, setValue, watch, setFocus,
     formState: { errors, isSubmitting }, reset,
   } = useForm<TransactionFormInput>({
     resolver: zodResolver(transactionSchema),
@@ -100,7 +120,7 @@ export default function NewTransactionPage() {
       branchId: defaultBranchId,
       method: 'نقد',
       receipt: '',
-      date: getTodayJalali(),
+      date: initialDate,
       note: '',
       hasReceipt: false,
       accountId: accounts[0]?.id ?? '',
@@ -110,6 +130,7 @@ export default function NewTransactionPage() {
 
   const type = watch('type');
   const branchId = watch('branchId');
+  const categoryValue = watch('category');
   const isTransfer = type === 'transfer';
 
   // حساب‌های محدوده‌ی شعبه انتخابی: ستادی (null) + همان شعبه
@@ -152,10 +173,59 @@ export default function NewTransactionPage() {
     if (!isTransfer) setValue('category', '');
   }, [type, setValue, isTransfer]);
 
+  // خطای دسته‌بندی با تغییر نوع/انتخاب دسته پاک می‌شود
+  useEffect(() => {
+    setCategoryError(null);
+  }, [type, categoryValue]);
+
   const visibleCategories = useMemo(
     () => isTransfer ? [] : (type === 'income' ? categories.income : categories.expense),
     [type, categories, isTransfer]
   );
+
+  // ─── تشخیص تغییرات ذخیره‌نشده — برای هشدار خروج ───────────────────
+  const watchedTitle = watch('title');
+  const watchedNote = watch('note');
+  const watchedReceipt = watch('receipt');
+  const watchedMethod = watch('method');
+  const watchedDestAccount = watch('destinationAccountId' as any);
+  const watchedDate = watch('date');
+
+  const isFormDirty = Boolean(
+    watchedTitle?.trim() ||
+    amountDisplay ||
+    categoryValue ||
+    watchedNote?.trim() ||
+    watchedReceipt?.trim() ||
+    watchedDestAccount ||
+    includeVat || isCredit || contactId || invoiceCode || isProforma ||
+    (watchedMethod && watchedMethod !== 'نقد') ||
+    (watchedDate && watchedDate !== initialDate)
+  );
+
+  useEffect(() => {
+    function handleBeforeUnload(e: BeforeUnloadEvent) {
+      if (!isFormDirty) return;
+      e.preventDefault();
+      e.returnValue = '';
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isFormDirty]);
+
+  async function handleCancel() {
+    if (isFormDirty) {
+      const ok = await confirm({
+        title: 'تغییرات ذخیره‌نشده از بین می‌رود',
+        description: 'اگر خارج شوید، اطلاعاتی که در این فرم وارد کرده‌اید ذخیره نخواهد شد.',
+        confirmLabel: 'خروج بدون ذخیره',
+        cancelLabel: 'ادامه ویرایش',
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    router.back();
+  }
 
   function toggleDetails() {
     setDetailsOpen(prev => {
@@ -183,68 +253,85 @@ export default function NewTransactionPage() {
     }
   }
 
+  /** اولین فیلد نامعتبر (خطای zod) را فوکوس می‌کند — برای دسترس‌پذیری «رفتن به خطا». */
+  function onInvalid(errs: typeof errors) {
+    setCategoryError(null);
+    const firstKey = FOCUS_ORDER.find(k => errs[k]);
+    if (firstKey) setFocus(firstKey);
+  }
+
   async function onSubmit(data: TransactionFormInput) {
-    if (!user) return;
+    if (!user || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
 
-    const isTransferType = data.type === 'transfer';
-    const cat = isTransferType ? null : visibleCategories.find(c => c.id === data.category);
-    const branch = branches.find(b => b.id === data.branchId);
+    try {
+      const isTransferType = data.type === 'transfer';
+      const cat = isTransferType ? null : visibleCategories.find(c => c.id === data.category);
+      const branch = branches.find(b => b.id === data.branchId);
 
-    if (!isTransferType && !cat) {
-      showToast('یک دسته‌بندی انتخاب کنید', 'danger');
-      return;
-    }
-    if (!branch) {
-      showToast('شعبه نامعتبر است', 'danger');
-      return;
-    }
+      if (!isTransferType && !cat) {
+        setCategoryError('یک دسته‌بندی انتخاب کنید');
+        showToast('یک دسته‌بندی انتخاب کنید', 'danger');
+        setFocus('category');
+        return;
+      }
+      setCategoryError(null);
+      if (!branch) {
+        showToast('شعبه نامعتبر است', 'danger');
+        setFocus('branchId');
+        return;
+      }
 
-    const vatAmount = includeVat ? Math.round((data.amount * vatRate) / 100) : 0;
+      const vatAmount = includeVat ? Math.round((data.amount * vatRate) / 100) : 0;
 
-    const selectedContact = contacts.find((c) => c.id === contactId);
-    const payeeValue = selectedContact?.name || data.title || '—';
+      const selectedContact = contacts.find((c) => c.id === contactId);
+      const payeeValue = selectedContact?.name || data.title || '—';
 
-    const tx = await submitTransaction(
-      {
-        type: data.type,
-        title: data.title,
-        category: data.category ?? '',
-        amount: data.amount,
-        payee: payeeValue,
-        branchId: data.branchId,
-        method: data.method,
-        receipt: data.receipt,
-        date: data.date,
-        note: data.note,
-        hasReceipt: data.hasReceipt ?? false,
-        accountId: (data as any).accountId || undefined,
-        destinationAccountId: (data as any).destinationAccountId || undefined,
-        contactId: contactId || undefined,
-        vatAmount,
-        isCredit,
-        invoiceCode: invoiceCode.trim() || null,
-        initialStatus: isAdmin && isProforma ? 'proforma' : 'pending',
-      },
-      user,
-      cat?.name ?? 'انتقال وجه',
-      branch.name
-    );
+      const tx = await submitTransaction(
+        {
+          type: data.type,
+          title: data.title,
+          category: data.category ?? '',
+          amount: data.amount,
+          payee: payeeValue,
+          branchId: data.branchId,
+          method: data.method,
+          receipt: data.receipt,
+          date: data.date,
+          note: data.note,
+          hasReceipt: data.hasReceipt ?? false,
+          accountId: (data as any).accountId || undefined,
+          destinationAccountId: (data as any).destinationAccountId || undefined,
+          contactId: contactId || undefined,
+          vatAmount,
+          isCredit,
+          invoiceCode: invoiceCode.trim() || null,
+          initialStatus: isAdmin && isProforma ? 'proforma' : 'pending',
+        },
+        user,
+        cat?.name ?? 'انتقال وجه',
+        branch.name
+      );
 
-    if (tx) {
-      const msg = tx.status === 'proforma'
-        ? 'پیش‌فاکتور ثبت شد'
-        : tx.status === 'approved'
-          ? 'تراکنش ثبت و تایید شد'
-          : 'تراکنش ثبت شد — در انتظار تایید';
-      showToast(msg, 'success', tx.title);
-      reset();
-      setAmountDisplay('');
-      setIncludeVat(false);
-      setIsCredit(false);
-      setContactId('');
-      setInvoiceCode('');
-      setIsProforma(false);
-      router.push('/transactions');
+      if (tx) {
+        const msg = tx.status === 'proforma'
+          ? 'پیش‌فاکتور ثبت شد'
+          : tx.status === 'approved'
+            ? 'تراکنش ثبت و تایید شد'
+            : 'تراکنش ثبت شد — در انتظار تایید';
+        showToast(msg, 'success', tx.title);
+        reset();
+        setAmountDisplay('');
+        setIncludeVat(false);
+        setIsCredit(false);
+        setContactId('');
+        setInvoiceCode('');
+        setIsProforma(false);
+        router.push('/transactions');
+      }
+      // اگر tx null بود (خطای API/سرور)، هیچ مقداری پاک نمی‌شود — txError از استور نمایش داده می‌شود
+    } finally {
+      isSubmittingRef.current = false;
     }
   }
 
@@ -275,303 +362,291 @@ export default function NewTransactionPage() {
     );
   }
 
-  return (
-    <div className="p-4 lg:p-6">
-      <div className="max-w-3xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">ثبت تراکنش</h1>
-          <div className="text-[12px] text-stone-500 mt-1">
-            {isAdmin ? 'تراکنش شما فوری تایید می‌شود' : 'تراکنش برای تایید مدیر ارسال می‌شود'}
-          </div>
-        </div>
+  // ─── پیام زمینه‌ی تایید — بدون افشای جزئیات سیاست داخلی ───────────
+  const approvalNotice = isAdmin && isProforma
+    ? 'به‌عنوان پیش‌فاکتور ثبت می‌شود — تا تایید نهایی، روی موجودی صندوق یا مانده‌ی طرف‌حساب تأثیری ندارد.'
+    : isAdmin
+      ? 'این تراکنش بلافاصله ثبت و روی موجودی صندوق اعمال می‌شود.'
+      : 'این تراکنش برای تایید مدیر ارسال می‌شود؛ تا تایید نهایی روی موجودی صندوق اثر نمی‌گذارد.';
 
+  const watchedAmount = watch('amount');
+  const vatPreview = includeVat ? Math.round((watchedAmount * vatRate) / 100) : 0;
+
+  const errorEntries = FOCUS_ORDER
+    .map(k => ({
+      key: k,
+      label: FIELD_LABELS[k] ?? k,
+      message: k === 'category' ? (categoryError ?? errors.category?.message) : (errors as Record<string, { message?: string } | undefined>)[k]?.message,
+    }))
+    .filter(e => Boolean(e.message));
+
+  return (
+    <PageShell type="detail" className="space-y-4">
+      <PageHeader title="ثبت تراکنش" backHref="/transactions" />
+
+      <InlineNotice tone="info">{approvalNotice}</InlineNotice>
+
+      <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <Card>
           <CardBody>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div className="space-y-5">
 
-              {/* ─── Error ─── */}
-              {txError && (
-                <div className="p-3 rounded-lg bg-danger-subtle border border-danger/20 text-danger text-[12.5px]">
-                  {txError}
+              {/* ─── خطای سرور ─── */}
+              {txError && <InlineNotice tone="danger">{txError}</InlineNotice>}
+
+              {/* ─── خلاصه‌ی خطاهای اعتبارسنجی (پس از تلاش ناموفق) ─── */}
+              {errorEntries.length > 0 && (
+                <InlineNotice tone="danger" title="لطفاً موارد زیر را برطرف کنید">
+                  <ul className="list-disc pr-4 space-y-0.5">
+                    {errorEntries.map(e => (
+                      <li key={e.key}>{e.label}: {e.message}</li>
+                    ))}
+                  </ul>
+                </InlineNotice>
+              )}
+
+              {/* ─── ① اطلاعات اصلی تراکنش ─── */}
+              <div className="space-y-4">
+                <div>
+                  <Label>نوع تراکنش</Label>
+                  <Toggle
+                    value={type}
+                    onChange={v => setValue('type', v as any, { shouldDirty: true })}
+                    aria-label="نوع تراکنش"
+                    className="w-full"
+                    options={[
+                      { value: 'expense', label: 'هزینه', dot: COLORS.expense },
+                      { value: 'income', label: 'درآمد', dot: COLORS.income },
+                      { value: 'transfer', label: 'انتقال وجه', dot: COLORS.neutral },
+                    ]}
+                  />
                 </div>
-              )}
 
-              {/* ─── CORE ① نوع تراکنش ─── */}
-              <div>
-                <Label>نوع تراکنش</Label>
-                <Toggle
-                  value={type}
-                  onChange={v => setValue('type', v as any)}
-                  className="w-full"
-                  options={[
-                    { value: 'expense', label: 'هزینه', dot: COLORS.expense },
-                    { value: 'income', label: 'درآمد', dot: COLORS.income },
-                    { value: 'transfer', label: 'انتقال وجه', dot: COLORS.neutral },
-                  ]}
-                />
-              </div>
-
-              {/* ─── CORE ② عنوان + مبلغ ─── */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                <Field label="عنوان تراکنش" error={errors.title?.message}>
-                  <Input placeholder="مثلاً: خرید گوشت" hasError={!!errors.title} {...register('title')} />
+                {/* مبلغ — قوی‌ترین فیلد فرم */}
+                <Field label="مبلغ" error={errors.amount?.message}>
+                  <div className="relative">
+                    <Input
+                      {...register('amount')}
+                      type="text"
+                      inputMode="numeric"
+                      dir="ltr"
+                      placeholder="۰"
+                      aria-label="مبلغ (تومان)"
+                      value={amountDisplay}
+                      hasError={!!errors.amount}
+                      onChange={e => {
+                        const formatted = formatAmountInput(e.target.value);
+                        setAmountDisplay(formatted);
+                        setValue('amount', parseAmount(formatted), { shouldValidate: true, shouldDirty: true });
+                      }}
+                      className="h-14 sm:h-16 pl-16 text-[22px] sm:text-[26px] font-semibold tabular-nums text-left"
+                    />
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[12.5px] text-muted pointer-events-none">
+                      تومان
+                    </span>
+                  </div>
                 </Field>
-                <Field label="مبلغ (تومان)" error={errors.amount?.message}>
-                  <Input
-                    type="text"
-                    inputMode="numeric"
-                    dir="ltr"
-                    placeholder="۰"
-                    value={amountDisplay}
-                    hasError={!!errors.amount}
-                    onChange={e => {
-                      const formatted = formatAmountInput(e.target.value);
-                      setAmountDisplay(formatted);
-                      setValue('amount', parseAmount(formatted), { shouldValidate: true });
-                    }}
-                  />
-                </Field>
-              </div>
 
-              {/* ─── CORE ③ دسته + شعبه ─── */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                {!isTransfer && (
-                  <Field label="دسته‌بندی" error={errors.category?.message}>
-                    <div className="flex gap-1.5">
-                      <div className="flex-1">
-                        <Select hasError={!!errors.category} {...register('category')}>
-                          <option value="">— انتخاب دسته —</option>
-                          {visibleCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </Select>
-                      </div>
-                      {isAdmin && (
-                        <button
-                          type="button"
-                          onClick={() => setShowNewCatModal(true)}
-                          title="دسته‌ی جدید"
-                          className="shrink-0 h-10 w-10 flex items-center justify-center rounded-md border border-dashed border-stone-300 text-stone-400 hover:border-stone-500 hover:text-stone-600 transition-colors"
-                        >
-                          <Plus size={14} strokeWidth={1.5} />
-                        </button>
-                      )}
-                    </div>
+                <div className={cn('grid grid-cols-1 gap-x-6 gap-y-4', !isTransfer && 'md:grid-cols-2')}>
+                  <Field label="عنوان تراکنش" error={errors.title?.message}>
+                    <Input placeholder="مثلاً: خرید گوشت" aria-label="عنوان تراکنش" hasError={!!errors.title} {...register('title')} />
                   </Field>
-                )}
-                <Field label="شعبه" error={errors.branchId?.message}>
-                  <Select {...register('branchId')} disabled={branchLocked}>
-                    {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                  </Select>
-                </Field>
+                  {!isTransfer && (
+                    <Field label="دسته‌بندی" error={categoryError ?? errors.category?.message}>
+                      <div className="flex gap-1.5">
+                        <div className="flex-1">
+                          <Select aria-label="دسته‌بندی" hasError={!!(categoryError ?? errors.category)} {...register('category')}>
+                            <option value="">— انتخاب دسته —</option>
+                            {visibleCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </Select>
+                        </div>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewCatModal(true)}
+                            title="افزودن دسته‌بندی جدید"
+                            aria-label="افزودن دسته‌بندی جدید"
+                            className="shrink-0 h-10 w-10 flex items-center justify-center rounded-md border border-dashed border-stone-300 text-stone-400 hover:border-stone-500 hover:text-stone-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
+                          >
+                            <Plus size={14} strokeWidth={1.5} aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                    </Field>
+                  )}
+                </div>
               </div>
 
-              {/* ─── CORE ④ صندوق / حساب ─── */}
-              <Field
-                label={isTransfer ? 'صندوق مبدا' : 'صندوق / حساب'}
-                helper={accounts.length === 0 ? 'ابتدا از صفحه صندوق‌ها یک حساب بسازید' : undefined}
-              >
-                <Select {...register('accountId' as any)}>
-                  {accountOptions('— بدون صندوق (تأثیری بر موجودی ندارد) —')}
-                </Select>
-              </Field>
+              {/* ─── ② مسیر مالی ─── */}
+              <div className="space-y-4 border-t border-border pt-5">
+                <h2 className="text-[13px] font-medium text-text">مسیر مالی</h2>
 
-              {/* ─── CORE ⑤ صندوق مقصد (فقط transfer) ─── */}
-              {isTransfer && (
-                <Field label="صندوق مقصد">
-                  <Select {...register('destinationAccountId' as any)}>
-                    {accountOptions('— انتخاب صندوق مقصد —')}
-                  </Select>
-                </Field>
-              )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <Field label="شعبه" error={errors.branchId?.message}>
+                    <Select aria-label="شعبه" {...register('branchId')} disabled={branchLocked}>
+                      {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </Select>
+                  </Field>
+                  <Field label="روش پرداخت" error={errors.method?.message}>
+                    <Select aria-label="روش پرداخت" {...register('method')}>
+                      <option value="نقد">نقد</option>
+                      <option value="کارت به کارت">کارت به کارت</option>
+                      <option value="دستگاه پوز">دستگاه پوز</option>
+                      <option value="حواله بانکی">حواله بانکی</option>
+                      <option value="چک">چک</option>
+                    </Select>
+                  </Field>
+                </div>
 
-              {/* ─── Accordion Toggle ─── */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-stone-200" />
-                <button
-                  type="button"
-                  onClick={toggleDetails}
-                  className="flex items-center gap-1 text-[11.5px] text-stone-400 hover:text-stone-600 transition-colors select-none"
-                >
-                  جزئیات بیشتر
-                  <ChevronDown
-                    size={13}
-                    strokeWidth={1.5}
-                    className={cn('transition-transform', detailsOpen && 'rotate-180')}
-                  />
-                </button>
-                <div className="flex-1 h-px bg-stone-200" />
-              </div>
-
-              {/* ─── Accordion Body ─── */}
-              {detailsOpen && (
-                <div className="space-y-5">
-
-                  {/* روش پرداخت */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                    <Field label="روش پرداخت" error={errors.method?.message}>
-                      <Select {...register('method')}>
-                        <option value="نقد">نقد</option>
-                        <option value="کارت به کارت">کارت به کارت</option>
-                        <option value="دستگاه پوز">دستگاه پوز</option>
-                        <option value="حواله بانکی">حواله بانکی</option>
-                        <option value="چک">چک</option>
+                <div className={cn('grid grid-cols-1 gap-x-6 gap-y-4', isTransfer && 'md:grid-cols-2')}>
+                  <Field
+                    label={isTransfer ? 'صندوق مبدا' : 'صندوق / حساب'}
+                    helper={accounts.length === 0 ? 'ابتدا از صفحه صندوق‌ها یک حساب بسازید' : undefined}
+                  >
+                    <Select aria-label={isTransfer ? 'صندوق مبدا' : 'صندوق / حساب'} {...register('accountId' as any)}>
+                      {accountOptions('— بدون صندوق (تأثیری بر موجودی ندارد) —')}
+                    </Select>
+                  </Field>
+                  {isTransfer && (
+                    <Field label="صندوق مقصد">
+                      <Select aria-label="صندوق مقصد" {...register('destinationAccountId' as any)}>
+                        {accountOptions('— انتخاب صندوق مقصد —')}
                       </Select>
                     </Field>
-                  </div>
-
-                  {/* طرف‌حساب + نسیه */}
-                  {!isTransfer && contacts.length > 0 && (
-                    <div className="space-y-3">
-                      <Field label="طرف‌حساب (اختیاری)">
-                        <Select value={contactId} onChange={e => setContactId(e.target.value)}>
-                          <option value="">— بدون طرف‌حساب —</option>
-                          {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                        </Select>
-                      </Field>
-                      {contactId && (
-                        <label className="flex items-center gap-2 cursor-pointer pr-1">
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-border accent-accent"
-                            checked={isCredit}
-                            onChange={e => setIsCredit(e.target.checked)}
-                          />
-                          <span className="text-[12.5px] text-text">
-                            نسیه است ({type === 'income' ? 'طرف‌حساب بدهکار می‌شود' : 'ما بدهکار می‌شویم'})
-                          </span>
-                        </label>
-                      )}
-                    </div>
                   )}
+                </div>
 
-                  {/* شماره رسید + تاریخ */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
-                    <Field label="شماره رسید (اختیاری)">
-                      <Input placeholder="مثلاً: ۱۲۳۴۵۶" dir="ltr" {...register('receipt')} />
+                {!isTransfer && contacts.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+                    <Field label="طرف‌حساب (اختیاری)">
+                      <Select aria-label="طرف‌حساب" value={contactId} onChange={e => setContactId(e.target.value)}>
+                        <option value="">— بدون طرف‌حساب —</option>
+                        {contacts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </Select>
                     </Field>
-                    <Field label="تاریخ (شمسی)" error={errors.date?.message}>
-                      <JalaliDatePicker
-                        value={watch('date')}
-                        onChange={v => setValue('date', v, { shouldValidate: true })}
-                        hasError={!!errors.date}
-                      />
-                    </Field>
-                  </div>
-
-                  {/* کد فاکتور */}
-                  {!isTransfer && (
-                    <Field
-                      label="کد فاکتور / پیش‌فاکتور (اختیاری)"
-                      helper="شماره فاکتور یا کد پیگیری را اینجا وارد کنید"
-                    >
-                      <Input
-                        placeholder="مثلاً: INV-1401-001"
-                        dir="ltr"
-                        value={invoiceCode}
-                        onChange={e => setInvoiceCode(e.target.value)}
-                      />
-                    </Field>
-                  )}
-
-                  {/* VAT */}
-                  {!isTransfer && (
-                    <div className="p-3 rounded-md border border-border bg-bg space-y-2">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-border accent-accent"
-                          checked={includeVat}
-                          onChange={e => setIncludeVat(e.target.checked)}
+                    {contactId && (
+                      <div className="flex items-center min-h-[44px] md:pt-6">
+                        <Checkbox
+                          checked={isCredit}
+                          onChange={e => setIsCredit(e.target.checked)}
+                          label={`نسیه است (${type === 'income' ? 'طرف‌حساب بدهکار می‌شود' : 'ما بدهکار می‌شویم'})`}
                         />
-                        <span className="text-[12.5px] text-text">
-                          احتساب مالیات ارزش افزوده ({vatRate}٪)
-                        </span>
-                      </label>
-                      {includeVat && watch('amount') > 0 && (
-                        <div className="text-[11.5px] text-muted pr-6 space-y-0.5">
-                          <div>
-                            مبلغ مالیات:{' '}
-                            <span className="text-text tabular-nums">
-                              {new Intl.NumberFormat('fa-IR').format(Math.round((watch('amount') * vatRate) / 100))}
-                            </span>{' '}
-                            تومان
-                          </div>
-                          <div>
-                            جمع کل:{' '}
-                            <span className="text-text font-medium tabular-nums">
-                              {new Intl.NumberFormat('fa-IR').format(watch('amount') + Math.round((watch('amount') * vatRate) / 100))}
-                            </span>{' '}
-                            تومان
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
-                  {/* پیش‌فاکتور (فقط SuperAdmin) */}
-                  {isAdmin && !isTransfer && (
-                    <div className="p-3 rounded-md border border-amber-200 bg-amber-50/60 space-y-1">
-                      <label className="flex items-center gap-2 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          className="w-4 h-4 rounded border-amber-300 accent-amber-600"
+              {/* ─── ③ تاریخ ─── */}
+              <div className="border-t border-border pt-5">
+                <Field label="تاریخ (شمسی)" error={errors.date?.message} className="max-w-[220px]">
+                  <JalaliDatePicker
+                    value={watch('date')}
+                    onChange={v => setValue('date', v, { shouldValidate: true, shouldDirty: true })}
+                    hasError={!!errors.date}
+                  />
+                </Field>
+              </div>
+
+              {/* ─── ④ مالیات و وضعیت ویژه ─── */}
+              {!isTransfer && (
+                <div className="space-y-2.5 border-t border-border pt-5">
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2.5 min-h-[44px]">
+                    <Checkbox
+                      checked={includeVat}
+                      onChange={e => setIncludeVat(e.target.checked)}
+                      label={`احتساب مالیات ارزش افزوده (${vatRate}٪)`}
+                    />
+                    {includeVat && watchedAmount > 0 && (
+                      <div className="text-[11px] text-muted shrink-0 text-left tabular-nums">
+                        مالیات: <span className="text-text">{fmt(vatPreview)}</span> · جمع:{' '}
+                        <span className="text-text font-medium">{fmt(watchedAmount + vatPreview)}</span> تومان
+                      </div>
+                    )}
+                  </div>
+
+                  {isAdmin && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2.5">
+                      <div className="flex items-center min-h-[44px]">
+                        <Checkbox
                           checked={isProforma}
                           onChange={e => setIsProforma(e.target.checked)}
+                          label="ثبت به‌عنوان پیش‌فاکتور"
                         />
-                        <span className="text-[12.5px] text-amber-800 font-medium">ثبت به‌عنوان پیش‌فاکتور</span>
-                      </label>
+                      </div>
                       {isProforma && (
-                        <p className="text-[11px] text-amber-700 pr-6">
-                          پیش‌فاکتور روی موجودی صندوق یا مانده طرف‌حساب تأثیر نمی‌گذارد.
-                          برای تأثیر مالی باید بعداً تأیید شود.
+                        <p className="text-[11px] text-amber-700 pr-6 -mt-1">
+                          پیش‌فاکتور روی موجودی صندوق یا مانده طرف‌حساب تأثیر نمی‌گذارد. برای تأثیر مالی باید بعداً تایید شود.
                         </p>
                       )}
                     </div>
                   )}
-
-                  {/* توضیحات */}
-                  <Field label="توضیحات (اختیاری)">
-                    <Textarea rows={2} placeholder="یادداشت..." {...register('note')} />
-                  </Field>
-
                 </div>
               )}
 
-              {/* ─── Footer ─── */}
-              <div className="flex justify-end items-center gap-3 pt-4 mt-2 border-t border-border">
-                <Button
-                  type="button"
-                  variant="default"
-                  onClick={() => router.back()}
-                >
-                  انصراف
-                </Button>
-                <Button
-                  type="submit"
-                  variant={isAdmin && isProforma ? 'default' : 'primary'}
-                  icon={isAdmin ? Save : Plus}
-                  loading={isSubmitting}
-                >
-                  {isAdmin && isProforma
-                    ? 'ثبت پیش‌فاکتور'
-                    : isAdmin
-                      ? 'ثبت و تایید تراکنش'
-                      : 'ارسال برای تایید'}
-                </Button>
-              </div>
+              {/* ─── ⑤ جزئیات بیشتر (اختیاری) ─── */}
+              <Disclosure open={detailsOpen} onToggle={toggleDetails} label="جزئیات بیشتر" className="pt-1">
+                <Field label="شماره رسید" hint="اختیاری">
+                  <Input placeholder="مثلاً: ۱۲۳۴۵۶" dir="ltr" aria-label="شماره رسید" {...register('receipt')} />
+                </Field>
 
-            </form>
+                {!isTransfer && (
+                  <Field
+                    label="کد فاکتور / پیش‌فاکتور"
+                    hint="اختیاری"
+                    helper="شماره فاکتور یا کد پیگیری را اینجا وارد کنید"
+                  >
+                    <Input
+                      placeholder="مثلاً: INV-1401-001"
+                      dir="ltr"
+                      aria-label="کد فاکتور"
+                      value={invoiceCode}
+                      onChange={e => setInvoiceCode(e.target.value)}
+                    />
+                  </Field>
+                )}
+
+                <Field label="توضیحات" hint="اختیاری">
+                  <Textarea rows={2} placeholder="یادداشت..." aria-label="توضیحات" {...register('note')} />
+                </Field>
+              </Disclosure>
+
+            </div>
           </CardBody>
         </Card>
-      </div>
+
+        {/* ─── ⑥ نوار اکشن ثابت ─── */}
+        <StickyActionBar>
+          <Button
+            type="submit"
+            variant={isAdmin && isProforma ? 'default' : 'primary'}
+            icon={isAdmin ? Save : Plus}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          >
+            {isAdmin && isProforma
+              ? 'ثبت پیش‌فاکتور'
+              : isAdmin
+                ? 'ثبت و تایید تراکنش'
+                : 'ارسال برای تایید'}
+          </Button>
+          <Button type="button" variant="default" onClick={handleCancel} disabled={isSubmitting}>
+            انصراف
+          </Button>
+        </StickyActionBar>
+      </form>
 
       {/* مودال افزودن دسته‌ی جدید */}
       {showNewCatModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          onKeyDown={e => { if (e.key === 'Escape') { setShowNewCatModal(false); setNewCatName(''); } }}
+        >
           <div
             className="absolute inset-0 bg-black/30"
             onClick={() => { setShowNewCatModal(false); setNewCatName(''); }}
           />
-          <div className="relative z-10 bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs">
+          <div role="dialog" aria-modal="true" aria-label="دسته‌ی جدید" className="relative z-10 bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs">
             <h3 className="text-[14px] font-medium text-stone-900 mb-4">
               دسته‌ی جدید ({type === 'income' ? 'درآمد' : 'هزینه'})
             </h3>
@@ -579,6 +654,7 @@ export default function NewTransactionPage() {
               autoFocus
               type="text"
               placeholder="نام دسته‌بندی"
+              aria-label="نام دسته‌بندی"
               value={newCatName}
               onChange={e => setNewCatName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(); } }}
@@ -607,6 +683,6 @@ export default function NewTransactionPage() {
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
