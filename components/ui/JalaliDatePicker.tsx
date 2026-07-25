@@ -104,7 +104,7 @@ export function JalaliDatePicker({
         disabled && 'bg-stone-50/60 cursor-not-allowed'
       )}
     >
-      <div className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-muted z-10">
+      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted z-10">
         <CalendarIcon size={14} strokeWidth={1.5} aria-hidden="true" />
       </div>
 
@@ -120,10 +120,13 @@ export function JalaliDatePicker({
         placeholder={placeholder}
         // رشته‌ی تاریخ (YYYY/MM/DD) همیشه چپ‌به‌راست و راست‌چین بماند —
         // در متن RTL بدون این، ترتیب سال/ماه/روز و اسلش‌ها می‌تواند به‌هم بریزد.
+        // نکته: چون این input خودش direction:ltr دارد، پدینگ آیکون باید physical
+        // (pr/pl) باشد نه logical (ps/pe) — وگرنه با آیکنی که نسبت به سند RTL
+        // جای می‌گیرد ناهم‌خوان می‌شود و متن روی آیکن می‌افتد.
         style={{ direction: 'ltr', textAlign: 'right' }}
         // کلاس‌های inline برای input که picker render می‌کند
         inputClass={cn(
-          'w-full h-10 ps-10 pe-3 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none rounded-md tabular-nums',
+          'w-full h-10 pr-10 pl-3 bg-transparent text-[13.5px] text-stone-800 placeholder:text-stone-400 focus:outline-none rounded-md tabular-nums',
           disabled && 'cursor-not-allowed text-stone-500'
         )}
         // container parent (تخصیص می‌گیرد به portal)

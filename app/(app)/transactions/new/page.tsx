@@ -362,13 +362,6 @@ export default function NewTransactionPage() {
     );
   }
 
-  // ─── پیام زمینه‌ی تایید — بدون افشای جزئیات سیاست داخلی ───────────
-  const approvalNotice = isAdmin && isProforma
-    ? 'به‌عنوان پیش‌فاکتور ثبت می‌شود — تا تایید نهایی، روی موجودی صندوق یا مانده‌ی طرف‌حساب تأثیری ندارد.'
-    : isAdmin
-      ? 'این تراکنش بلافاصله ثبت و روی موجودی صندوق اعمال می‌شود.'
-      : 'این تراکنش برای تایید مدیر ارسال می‌شود؛ تا تایید نهایی روی موجودی صندوق اثر نمی‌گذارد.';
-
   const watchedAmount = watch('amount');
   const vatPreview = includeVat ? Math.round((watchedAmount * vatRate) / 100) : 0;
 
@@ -383,8 +376,6 @@ export default function NewTransactionPage() {
   return (
     <PageShell type="detail" className="space-y-4">
       <PageHeader title="ثبت تراکنش" backHref="/transactions" />
-
-      <InlineNotice tone="info">{approvalNotice}</InlineNotice>
 
       <form onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
         <Card>
@@ -439,9 +430,9 @@ export default function NewTransactionPage() {
                         setAmountDisplay(formatted);
                         setValue('amount', parseAmount(formatted), { shouldValidate: true, shouldDirty: true });
                       }}
-                      className="h-14 sm:h-16 pl-16 text-[22px] sm:text-[26px] font-semibold tabular-nums text-left"
+                      className="h-12 pl-14 text-[17px] sm:text-[18px] font-semibold tabular-nums text-left"
                     />
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[12.5px] text-muted pointer-events-none">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] text-muted pointer-events-none">
                       تومان
                     </span>
                   </div>
@@ -539,7 +530,7 @@ export default function NewTransactionPage() {
 
               {/* ─── ③ تاریخ ─── */}
               <div className="border-t border-border pt-5">
-                <Field label="تاریخ (شمسی)" error={errors.date?.message} className="max-w-[220px]">
+                <Field label="تاریخ (شمسی)" error={errors.date?.message} className="max-w-xs">
                   <JalaliDatePicker
                     value={watch('date')}
                     onChange={v => setValue('date', v, { shouldValidate: true, shouldDirty: true })}
@@ -616,7 +607,10 @@ export default function NewTransactionPage() {
         </Card>
 
         {/* ─── ⑥ نوار اکشن ثابت ─── */}
-        <StickyActionBar>
+        {/* mx-0: عرض این نوار باید دقیقاً هم‌عرض Card بالایش بماند — پیش‌فرض
+            کامپوننت (-mx-4 md:-mx-6) برای بلید-کردن تا لبه‌ی PageShell طراحی شده،
+            نه برای زیر یک Card با border/rounded مجزا (که با آن هم‌عرض نمی‌شد). */}
+        <StickyActionBar className="mx-0 md:mx-0">
           <Button
             type="submit"
             variant={isAdmin && isProforma ? 'default' : 'primary'}
