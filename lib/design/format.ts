@@ -86,3 +86,29 @@ export function formatMoneyShort(n: number): string {
 export function formatBranchName(branch: { name: string }): string {
   return branch.name.trim();
 }
+
+// ─── نام نمایشی دسته/برچسب ─────────────────────────────────────────────
+
+/**
+ * چند نام دسته/برچسب قدیمی در داده‌های ذخیره‌شده به شکل مخفف یا انگلیسی
+ * هستند (مثلاً از دوره‌ی migration اولیه). این نگاشت فقط برای NUMAYESH
+ * است — هرگز روی مقدار ذخیره‌شده در دیتابیس (category.name، مقدار خام از
+ * سرور) نمی‌نویسد. اگر مقداری اینجا نباشد، همان رشته‌ی اصلی بدون تغییر
+ * برگردانده می‌شود — یعنی یک نگاشت ناقص هرگز داده را «گم» یا خراب نمی‌کند.
+ *
+ * نمونه‌ی historically در پروژه‌های مشابه: «Pre-opening» → «پیش‌راه‌اندازی»،
+ * «A.S.P» → «میانگین فروش». اینجا فعلاً خالی است چون در این دیتابیس چنین
+ * نام خامی پیدا نشد؛ زیرساخت آماده است تا هر وقت چنین موردی کشف شد، فقط
+ * یک خط به این Record اضافه شود — نه تغییر دیتا.
+ */
+const CATEGORY_DISPLAY_ALIASES: Record<string, string> = {};
+
+/**
+ * نام نمایشی یک دسته/برچسب — مقدار ذخیره‌شده را هرگز تغییر نمی‌دهد،
+ * فقط در صورت وجود یک نام فارسیِ بهتر برای UI برمی‌گرداند.
+ *
+ * `formatCategoryDisplay('COGS')` → اگر در نگاشت نبود: `'COGS'` (بدون تغییر)
+ */
+export function formatCategoryDisplay(rawName: string): string {
+  return CATEGORY_DISPLAY_ALIASES[rawName] ?? rawName;
+}

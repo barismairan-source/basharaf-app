@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatSignedMoney, formatMoneyParts, formatMoney, formatMoneyShort } from '@/lib/design/format';
+import { formatSignedMoney, formatMoneyParts, formatMoney, formatMoneyShort, formatCategoryDisplay } from '@/lib/design/format';
 
 const MINUS = '−';
 const LRI = '⁦';
@@ -82,5 +82,15 @@ describe('formatMoney / formatMoneyShort — عدم رگرسیون رفتار ق
     const out = formatMoneyShort(-6_000_000);
     expect(out).toContain(MINUS);
     expect(out).toContain('میلیون');
+  });
+});
+
+describe('formatCategoryDisplay — نگاشت نمایشی، بدون تغییر داده‌ی خام', () => {
+  it('نام ناشناخته: بدون تغییر برمی‌گردد (نگاشت ناقص هرگز داده را گم نمی‌کند)', () => {
+    expect(formatCategoryDisplay('COGS')).toBe('COGS');
+  });
+
+  it('رشته‌ی خالی: بدون تغییر برمی‌گردد', () => {
+    expect(formatCategoryDisplay('')).toBe('');
   });
 });

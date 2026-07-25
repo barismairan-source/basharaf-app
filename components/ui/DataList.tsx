@@ -45,6 +45,15 @@ export interface DataListProps<T extends object> {
   /** کلاس اضافی برای هر ردیف/کارت (برای conditional styling مثل proforma) */
   rowClassName?: (row: T) => string | undefined;
   className?: string;
+  /**
+   * سرستون جدول دسکتاپ را هنگام اسکرول لیست‌های بلند ثابت نگه می‌دارد.
+   * برای این‌که واقعاً کار کند، جدول یک ناحیه‌ی اسکرولِ خودش (`maxHeight`)
+   * می‌گیرد — نه اسکرول کل صفحه — چون sticky نسبت به هدر sticky بالای
+   * صفحه (که ارتفاعش صفحه‌به‌صفحه فرق می‌کند) قابل پیش‌بینی نیست.
+   */
+  stickyHeader?: boolean;
+  /** فقط وقتی stickyHeader=true معنی دارد — پیش‌فرض 60vh */
+  maxHeight?: string;
 }
 
 /**
@@ -70,6 +79,8 @@ function DataList<T extends object>({
   onRowClick,
   rowClassName,
   className,
+  stickyHeader,
+  maxHeight = '60vh',
 }: DataListProps<T>): React.JSX.Element | null {
   if (loading) {
     return (
@@ -130,9 +141,17 @@ function DataList<T extends object>({
       </div>
 
       {/* ── دسکتاپ: جدول (md به بالا) ── */}
-      <TableContainer className="hidden md:block">
+      <TableContainer
+        className={cn('hidden md:block', stickyHeader && 'overflow-y-auto')}
+        style={stickyHeader ? { maxHeight } : undefined}
+      >
         <table className="w-full text-right">
-          <thead className="bg-bg border-b border-border">
+          <thead
+            className={cn(
+              'bg-bg border-b border-border',
+              stickyHeader && 'sticky top-0 z-10'
+            )}
+          >
             <tr>
               {visibleDesktop.map((col) => (
                 <Th key={col.key} className={col.headerClassName}>

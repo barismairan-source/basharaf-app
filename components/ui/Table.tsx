@@ -81,9 +81,11 @@ export function Td({ className, children, ...props }: TdProps) {
  */
 export function TableContainer({
   className,
+  style,
   children,
 }: {
   className?: string;
+  style?: React.CSSProperties;
   children: React.ReactNode;
 }) {
   return (
@@ -92,6 +94,7 @@ export function TableContainer({
         'border border-border rounded-lg bg-surface overflow-x-auto',
         className
       )}
+      style={style}
     >
       {children}
     </div>
