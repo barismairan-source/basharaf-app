@@ -456,7 +456,7 @@ export default function RecruitmentPage() {
           />
         ) : (
           <div className="space-y-2">
-            <div className="grid grid-cols-1 items-start sm:[grid-template-columns:repeat(auto-fit,minmax(360px,1fr))] gap-2.5">
+            <div className="grid grid-cols-1 sm:[grid-template-columns:repeat(auto-fit,minmax(360px,1fr))] gap-2.5">
               {sorted.map((a) => (
                 <CandidateCard
                   key={a.id}

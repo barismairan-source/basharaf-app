@@ -98,29 +98,33 @@ export function CandidateCard({
 
         {/* ناحیه‌ی هویت: نام، بخش، سن، شماره‌ی مجاز */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 h-5">
             <span className="text-[13.5px] font-medium text-text truncate">{a.firstName} {a.lastName}</span>
             {a.hasResume && <FileText size={13} className="text-muted shrink-0" aria-label="دارای رزومه" />}
           </div>
 
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          <div className="mt-1 flex items-center gap-1.5 h-5">
             <StatusPill status={a.status} label={STATUS_LABELS[a.status]} tone={STATUS_TONE[a.status]} className="text-[10.5px]" />
             {a.area && <Chip>{AREA_LABELS[a.area]}</Chip>}
-            {a.age && <span className="text-[11px] text-muted">{a.age} ساله</span>}
+            {a.age && <span className="text-[11px] text-muted shrink-0">{a.age} ساله</span>}
           </div>
 
-          {/* ناحیه‌ی عملیاتی: تماس، محل، در دسترس‌بودن، تاریخ */}
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11.5px] text-muted">
-            {canSeePhone && (
-              <span className="inline-flex items-center gap-1">
-                <span dir="ltr" className="inline-flex items-center gap-1"><Phone size={11} />{a.phone}</span>
+          {/*
+            ناحیه‌ی عملیاتی: شبکه‌ی ثابت دو-ستونه (نه flex-wrap) — طول متغیر نام
+            محله باعث می‌شد کارت‌ها بسته به طول متن، در نقاط متفاوتی بشکنند و
+            تعداد خط‌های متفاوتی داشته باشند؛ با grid ستون‌ها همیشه ثابت‌اند.
+          */}
+          <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[11.5px] text-muted">
+            {canSeePhone ? (
+              <span className="inline-flex items-center gap-1 min-w-0">
+                <span dir="ltr" className="inline-flex items-center gap-1 truncate"><Phone size={11} className="shrink-0" />{a.phone}</span>
                 <a
                   href={`tel:${a.phone}`}
                   onClick={(e) => e.stopPropagation()}
                   aria-label="تماس با داوطلب"
                   title="تماس با داوطلب"
                   className={cn(
-                    'flex items-center justify-center w-6 h-6 rounded-md transition-colors flex-shrink-0',
+                    'flex items-center justify-center w-6 h-6 rounded-md transition-colors shrink-0',
                     'text-muted hover:text-ok hover:bg-ok-subtle',
                     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1'
                   )}
@@ -128,19 +132,25 @@ export function CandidateCard({
                   <PhoneCall size={12} strokeWidth={1.5} aria-hidden="true" />
                 </a>
               </span>
-            )}
-            {a.city && <span className="inline-flex items-center gap-1"><MapPin size={11} />{a.city}</span>}
-            {(a.shiftAvailability ?? []).slice(0, 2).map((s: string) => (
-              <span key={s} className="rounded-full bg-warn-subtle px-2 py-0.5 text-[10.5px] text-warn">
-                {SHIFT_LABELS[s as keyof typeof SHIFT_LABELS] ?? s}
+            ) : <span />}
+            {a.city ? (
+              <span className="inline-flex items-center gap-1 min-w-0 truncate"><MapPin size={11} className="shrink-0" />{a.city}</span>
+            ) : <span />}
+
+            <span className="truncate">{faDate(a.createdAt)}</span>
+            {(a.shiftAvailability ?? [])[0] ? (
+              <span className="inline-flex">
+                <span className="rounded-full bg-warn-subtle px-2 py-0.5 text-[10.5px] text-warn truncate">
+                  {SHIFT_LABELS[(a.shiftAvailability ?? [])[0] as keyof typeof SHIFT_LABELS] ?? (a.shiftAvailability ?? [])[0]}
+                  {(a.shiftAvailability ?? []).length > 1 && ` +${(a.shiftAvailability ?? []).length - 1}`}
+                </span>
               </span>
-            ))}
-            <span className="shrink-0">{faDate(a.createdAt)}</span>
+            ) : <span />}
           </div>
 
           {keywords.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
-              {keywords.slice(0, 3).map((k) => (
+              {keywords.slice(0, 2).map((k) => (
                 <span key={k.label} className={cn('rounded-full px-2 py-0.5 text-[10px]', k.cls)}>{k.label}</span>
               ))}
             </div>
