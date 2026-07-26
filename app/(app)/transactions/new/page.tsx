@@ -86,7 +86,10 @@ export default function NewTransactionPage() {
       const n = parseInt(prefillAmount, 10);
       if (!isNaN(n)) {
         setValue('amount' as any, n);
-        setAmountDisplay(new Intl.NumberFormat('fa-IR').format(n));
+        // همون فرمت‌کننده‌ی مرکزی که onChange خود فیلد استفاده می‌کند — وگرنه
+        // جداکننده‌ی هزارگان بین بارگذاری اولیه (پرکردن از URL) و اولین ویرایش
+        // دستی فرق می‌کرد (Intl.NumberFormat('fa-IR') از ٬ استفاده می‌کند، نه ,).
+        setAmountDisplay(formatAmountInput(String(n)));
       }
     }
     if (prefillTitle) setValue('title' as any, prefillTitle);
@@ -651,8 +654,8 @@ export default function NewTransactionPage() {
             className="absolute inset-0 bg-black/30"
             onClick={() => { setShowNewCatModal(false); setNewCatName(''); }}
           />
-          <div role="dialog" aria-modal="true" aria-label="دسته‌ی جدید" className="relative z-10 bg-white rounded-xl shadow-2xl p-6 w-full max-w-xs">
-            <h3 className="text-[14px] font-medium text-stone-900 mb-4">
+          <div role="dialog" aria-modal="true" aria-label="دسته‌ی جدید" className="relative z-10 bg-surface rounded-xl shadow-2xl p-6 w-full max-w-xs">
+            <h3 className="text-[14px] font-medium text-text mb-4">
               دسته‌ی جدید ({type === 'income' ? 'درآمد' : 'هزینه'})
             </h3>
             <input
@@ -663,14 +666,14 @@ export default function NewTransactionPage() {
               value={newCatName}
               onChange={e => setNewCatName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(); } }}
-              className="w-full h-10 px-3 rounded-md border border-stone-200 text-[13px] focus:outline-none focus:border-stone-500 mb-4"
+              className="w-full h-10 px-3 rounded-md border border-border text-[13px] bg-surface text-text focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/40 mb-4"
             />
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => { setShowNewCatModal(false); setNewCatName(''); }}
                 disabled={creatingCat}
-                className="h-9 px-4 text-[13px] text-muted border border-border rounded-lg hover:bg-bg transition-colors disabled:opacity-50"
+                className="h-9 px-4 text-[13px] text-muted border border-border rounded-lg hover:bg-bg transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
               >
                 لغو
               </button>

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Users2, Wallet } from 'lucide-react';
+import { Users2, Wallet, RefreshCw } from 'lucide-react';
 import { useAppStore, useVisibleTransactions } from '@/store';
 import {
   KPICard,
@@ -29,6 +29,8 @@ import { fmt } from '@/lib/utils';
 import { formatMoneyShort, formatBranchName } from '@/lib/design/format';
 import { PageShell } from '@/components/ui/PageShell';
 import { PageToolbar } from '@/components/ui/PageToolbar';
+import { SegFilter } from '@/components/ui/SegFilter';
+import { InlineNotice, Button } from '@/components/ui';
 import { canAccessSection } from '@/lib/auth/permissions';
 import { cn } from '@/lib/utils';
 import { resolvePeriod, type PeriodKey } from '@/lib/reports/periodResolve';
@@ -95,9 +97,11 @@ export default function DashboardPage() {
 
   const [reportsData, setReportsData] = useState<ReportsResponse | null>(null);
   const [reportsLoading, setReportsLoading] = useState(true);
+  const [reportsError, setReportsError] = useState(false);
   const [branchCogsWaste, setBranchCogsWaste] = useState<BranchCogsWasteResponse['branches'] | null>(null);
   const [overview, setOverview] = useState<DashboardOverviewData | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
+  const [overviewError, setOverviewError] = useState(false);
 
   // ── hydration اولیه: localStorage (viewMode قدیمی) + URL (شعبه/بازه) ──
   useEffect(() => {
@@ -156,9 +160,20 @@ export default function DashboardPage() {
     if (effectiveBranchId) params.set('branchId', effectiveBranchId);
     if (viewMode === 'operational') params.set('excludeSetup', '1');
     return fetch(`/api/reports?${params}`, { credentials: 'include', cache: 'no-store', signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: ReportsResponse | null) => { if (!signal.aborted) setReportsData(d); })
-      .catch(() => {})
+      .then((r) => {
+        if (!r.ok) throw new Error('reports fetch failed');
+        return r.json();
+      })
+      .then((d: ReportsResponse) => {
+        if (signal.aborted) return;
+        setReportsData(d);
+        setReportsError(false);
+      })
+      .catch((err) => {
+        // درخواست obsolete که عمداً abort شده (فیلتر عوض شده) خطای واقعی نیست
+        if (signal.aborted || (err as { name?: string })?.name === 'AbortError') return;
+        setReportsError(true);
+      })
       .finally(() => { if (!signal.aborted) setReportsLoading(false); });
   }, [resolved, effectiveBranchId, viewMode, canSeeFinance]);
 
@@ -182,9 +197,22 @@ export default function DashboardPage() {
     if (effectiveBranchId) params.set('branchId', effectiveBranchId);
     const qs = params.toString();
     return fetch(`/api/dashboard/overview${qs ? '?' + qs : ''}`, { credentials: 'include', cache: 'no-store', signal })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d: DashboardOverviewData | null) => { if (!signal.aborted) setOverview(d); })
-      .catch(() => {})
+      .then((r) => {
+        if (!r.ok) throw new Error('overview fetch failed');
+        return r.json();
+      })
+      .then((d: DashboardOverviewData) => {
+        if (signal.aborted) return;
+        setOverview(d);
+        setOverviewError(false);
+      })
+      .catch((err) => {
+        // این fetch منبع «نیازمند توجه»/صف‌های عملیاتی/HR است — اگر بی‌صدا
+        // fail شود، کاربر «همه‌چیز مرتب است» می‌بیند درحالی‌که فقط شبکه قطع
+        // بوده؛ برای همین (برخلاف قبل) باید صریح نشان داده شود.
+        if (signal.aborted || (err as { name?: string })?.name === 'AbortError') return;
+        setOverviewError(true);
+      })
       .finally(() => { if (!signal.aborted) setOverviewLoading(false); });
   }, [isOperational, effectiveBranchId]);
 
@@ -264,6 +292,17 @@ export default function DashboardPage() {
         {/* ─── نقش‌محور: Warehouse / Chef ─── */}
         {isOperational && <RoleHome role={user.role} />}
 
+        {/* خطای مشترک /api/dashboard/overview — منبع نیازمند-توجه/صف‌ها/HR؛
+            بدون این، شکست شبکه دقیقاً شبیه «همه‌چیز مرتب است» به نظر می‌رسید. */}
+        {!isOperational && overviewError && !overviewLoading && (
+          <InlineNotice tone="danger" title="خطا در دریافت وضعیت عملیاتی">
+            <div className="flex items-center justify-between gap-3">
+              <span>«نیازمند توجه»، صف‌های عملیاتی و خلاصه‌ی پرسنل ممکن است ناقص باشند.</span>
+              <Button variant="default" size="sm" icon={RefreshCw} onClick={() => setRefreshTick((t) => t + 1)}>تلاش دوباره</Button>
+            </div>
+          </InlineNotice>
+        )}
+
         {/* ══════ ① نیازمند توجه ══════ */}
         {!isOperational && (
           <div className="space-y-3">
@@ -285,23 +324,24 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <SectionLabel>تراز مالی</SectionLabel>
-              <div className="flex items-center gap-0.5 bg-stone-100 rounded-md p-0.5">
-                {(['operational', 'full'] as const).map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => toggleViewMode(m)}
-                    className={`px-3 py-1 rounded text-[11px] font-medium transition-colors ${
-                      viewMode === m ? 'bg-white text-stone-900 shadow-sm' : 'text-stone-500 hover:text-stone-700'
-                    }`}
-                  >
-                    {m === 'operational' ? 'عملیاتی' : 'کامل'}
-                  </button>
-                ))}
-              </div>
+              <SegFilter
+                value={viewMode}
+                onChange={toggleViewMode}
+                aria-label="نمای تراز مالی"
+                options={[
+                  { value: 'operational', label: 'عملیاتی' },
+                  { value: 'full', label: 'کامل' },
+                ]}
+              />
             </div>
 
-            <FinancialPosition data={reportsData} loading={reportsLoading} excludeSetup={viewMode === 'operational'} />
+            <FinancialPosition
+              data={reportsData}
+              loading={reportsLoading}
+              error={reportsError}
+              onRetry={() => setRefreshTick((t) => t + 1)}
+              excludeSetup={viewMode === 'operational'}
+            />
 
             {breakdownWithPercent.length >= 2 && (
               <BreakdownCard
@@ -386,7 +426,7 @@ export default function DashboardPage() {
                           key={p.id}
                           type="button"
                           onClick={() => router.push(`/partners/${p.id}`)}
-                          className="bg-stone-50 hover:bg-stone-100 rounded-lg px-4 py-3 text-right transition-colors"
+                          className="bg-stone-50 hover:bg-stone-100 rounded-lg px-4 py-3 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1"
                         >
                           <div className="text-[11px] text-stone-500 truncate mb-1.5">{p.fullName}</div>
                           {configured ? (

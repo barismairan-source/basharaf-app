@@ -248,7 +248,7 @@ export function CandidateDetail({
               role="menuitem"
               onClick={() => { close(); handleDeleteClick(); }}
               disabled={deleting}
-              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-[12.5px] text-danger hover:bg-danger-subtle transition-colors disabled:opacity-50"
+              className="flex w-full items-center gap-2 px-3.5 py-2.5 text-[12.5px] text-danger hover:bg-danger-subtle transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-danger/40"
             >
               {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               حذف داوطلب

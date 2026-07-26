@@ -241,8 +241,9 @@ export default function TransactionsPage() {
                 {(close) => (
                   <div className="p-2 w-72">
                     <button
+                      type="button"
                       onClick={() => { close(); window.print(); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
                     >
                       <Printer size={14} strokeWidth={1.5} /> چاپ لیست
                     </button>
@@ -326,13 +327,13 @@ export default function TransactionsPage() {
               onChange={e => setSearchInput(e.target.value)}
               className="w-64"
             />
-            <Select value={filters.type} onChange={e => updateFilters({ type: e.target.value as TypeFilterKey })} className="h-9 text-[12px] min-w-[100px]">
+            <Select value={filters.type} onChange={e => updateFilters({ type: e.target.value as TypeFilterKey })} className="min-w-[100px]">
               <option value="all">همه انواع</option>
               <option value="income">درآمد</option>
               <option value="expense">هزینه</option>
               <option value="transfer">انتقال</option>
             </Select>
-            <Select value={filters.status} onChange={e => updateFilters({ status: e.target.value as StatusFilter })} className="h-9 text-[12px] min-w-[110px]">
+            <Select value={filters.status} onChange={e => updateFilters({ status: e.target.value as StatusFilter })} className="min-w-[110px]">
               <option value="all">همه وضعیت‌ها</option>
               <option value="approved">تایید شده</option>
               <option value="pending">در انتظار</option>
@@ -340,7 +341,7 @@ export default function TransactionsPage() {
               <option value="proforma">پیش‌فاکتور</option>
             </Select>
             {isAdmin && (
-              <Select value={filters.branchId} onChange={e => updateFilters({ branchId: e.target.value })} className="h-9 text-[12px] min-w-[110px]">
+              <Select value={filters.branchId} onChange={e => updateFilters({ branchId: e.target.value })} className="min-w-[110px]">
                 <option value="all">همه شعب</option>
                 {branches.map(b => (
                   <option key={b.id} value={b.id}>{formatBranchName(b)}</option>
@@ -361,7 +362,7 @@ export default function TransactionsPage() {
                     placeholder="مثلاً ۱۴۰۵/۰۱/۰۱"
                     value={filters.dateFrom}
                     onChange={e => updateFilters({ dateFrom: e.target.value })}
-                    className="w-full h-9 px-3 rounded-md border border-border text-[12px] focus:outline-none focus:border-accent bg-surface text-text"
+                    className="w-full h-10 px-3 rounded-md border border-border text-[12px] bg-surface text-text focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/40"
                     dir="ltr"
                   />
                 </div>
@@ -372,13 +373,13 @@ export default function TransactionsPage() {
                     placeholder="مثلاً ۱۴۰۵/۱۲/۲۹"
                     value={filters.dateTo}
                     onChange={e => updateFilters({ dateTo: e.target.value })}
-                    className="w-full h-9 px-3 rounded-md border border-border text-[12px] focus:outline-none focus:border-accent bg-surface text-text"
+                    className="w-full h-10 px-3 rounded-md border border-border text-[12px] bg-surface text-text focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/40"
                     dir="ltr"
                   />
                 </div>
                 <div>
                   <label className="block text-[10.5px] text-muted mb-1">مرتب‌سازی</label>
-                  <Select value={filters.sort} onChange={e => updateFilters({ sort: e.target.value as TransactionSortKey })} className="h-9 text-[12px] w-full">
+                  <Select value={filters.sort} onChange={e => updateFilters({ sort: e.target.value as TransactionSortKey })} className="w-full">
                     {(Object.keys(SORT_LABEL) as TransactionSortKey[]).map(k => (
                       <option key={k} value={k}>{SORT_LABEL[k]}</option>
                     ))}

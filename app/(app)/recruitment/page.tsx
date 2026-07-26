@@ -286,33 +286,37 @@ export default function RecruitmentPage() {
                 <div className="p-1.5 w-56">
                   {!selectionMode && (
                     <button
+                      type="button"
                       role="menuitem"
                       onClick={() => { close(); setSelectionMode(true); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right"
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
                     >
                       <Download size={14} strokeWidth={1.5} /> دانلود رزومه‌ها
                     </button>
                   )}
                   <button
+                    type="button"
                     role="menuitem"
                     onClick={() => { close(); router.push('/recruitment/form-builder'); }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
                   >
                     <Wrench size={14} strokeWidth={1.5} /> فرم‌ساز
                   </button>
                   <button
+                    type="button"
                     role="menuitem"
                     onClick={() => { close(); setShowQuestions(true); }}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
                   >
                     <Settings2 size={14} strokeWidth={1.5} /> سوال‌ها
                   </button>
                   <div className="border-t border-border my-1.5" />
                   <button
+                    type="button"
                     role="menuitem"
                     onClick={() => { close(); exportXlsx(); }}
                     disabled={sorted.length === 0}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right disabled:opacity-50 disabled:pointer-events-none"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right disabled:opacity-50 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
                   >
                     <Download size={14} strokeWidth={1.5} /> خروجی اکسل
                   </button>

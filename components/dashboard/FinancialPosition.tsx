@@ -1,8 +1,8 @@
 'use client';
 
-import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown, RefreshCw } from 'lucide-react';
 import { KPICard } from './KPICard';
-import { MetricGrid, Chip } from '@/components/ui';
+import { MetricGrid, Chip, Button, InlineNotice } from '@/components/ui';
 import { fmt } from '@/lib/utils';
 
 export interface FinancialPositionData {
@@ -12,6 +12,9 @@ export interface FinancialPositionData {
 interface Props {
   data: FinancialPositionData | null;
   loading: boolean;
+  /** خطای دریافت — جدا از «داده هنوز نیامده»؛ قبلاً هر دو حالت به سکوت کامل (بخش کلاً ناپدید) ختم می‌شد. */
+  error?: boolean;
+  onRetry?: () => void;
   excludeSetup: boolean;
 }
 
@@ -29,13 +32,24 @@ interface Props {
  * تفکیک هزینه به‌کار می‌برد؛ گرفتن دوباره‌ی همان داده در دو کامپوننت
  * دقیقاً همان «درخواست تکراری»ای است که این فاز باید حذف کند.
  */
-export function FinancialPosition({ data, loading, excludeSetup }: Props) {
+export function FinancialPosition({ data, loading, error, onRetry, excludeSetup }: Props) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" aria-busy="true">
         <span className="sr-only">در حال بارگذاری تراز مالی…</span>
         {[1, 2, 3].map((i) => <div key={i} className="h-28 rounded-lg bg-bg animate-pulse border border-border" />)}
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <InlineNotice tone="danger" title="خطا در دریافت تراز مالی">
+        <div className="flex items-center justify-between gap-3">
+          <span>اتصال قطع شد یا سرور پاسخ نداد.</span>
+          {onRetry && <Button variant="default" size="sm" icon={RefreshCw} onClick={onRetry}>تلاش دوباره</Button>}
+        </div>
+      </InlineNotice>
     );
   }
 
