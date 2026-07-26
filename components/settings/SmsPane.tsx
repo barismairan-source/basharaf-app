@@ -66,6 +66,13 @@ export function SmsPane() {
 
   // ── تست کامل ─────────────────────────────────────────────────────
   const [testState, setTestState] = useState<{ loading: boolean; result?: Record<string, unknown>; error?: string }>({ loading: false });
+  // ── تست متن دلخواه (بدون مسیر notify/outbox — مستقیم sendSms) ─────
+  // برای امتحان‌کردن متن‌های مختلف بدون نیاز به deploy مجدد کد؛ خصوصاً
+  // چون ملی‌پیامک روی خط خدماتی اشتراکی محتوای آزاد را فیلتر می‌کند و
+  // فقط با آزمون‌وخطا/تماس با پشتیبانی می‌شود فهمید چه متنی رد می‌شود.
+  const [customPhone, setCustomPhone] = useState('');
+  const [customMessage, setCustomMessage] = useState('');
+  const [customState, setCustomState] = useState<{ loading: boolean; result?: Record<string, unknown>; error?: string }>({ loading: false });
   // sms_enabled خودِ قانون sms.test_notify — این قانون عمداً از صفحه‌ی مرکزی
   // اعلان‌ها مخفیه (hiddenFromUi)، پس تنها راه روشن/خاموش‌کردنش همین‌جاست.
   const [testRuleSmsEnabled, setTestRuleSmsEnabled] = useState<boolean | null>(null);
@@ -171,6 +178,29 @@ export function SmsPane() {
       }
     } catch {
       setTestState({ loading: false, error: 'خطای شبکه' });
+    }
+  }
+
+  // ── ارسال متن دلخواه (مستقیم sendSms، بدون قانون/outbox) ──────────
+  async function sendCustomMessage() {
+    setCustomState({ loading: true });
+    try {
+      const res = await fetch('/api/sms/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: customPhone || undefined,
+          message: customMessage || undefined,
+        }),
+      });
+      const d = await res.json() as Record<string, unknown>;
+      if (!res.ok) setCustomState({ loading: false, error: (d.error as string) ?? 'خطا' });
+      else {
+        setCustomState({ loading: false, result: d });
+        refreshLogs();
+      }
+    } catch {
+      setCustomState({ loading: false, error: 'خطای شبکه' });
     }
   }
 
@@ -308,6 +338,61 @@ export function SmsPane() {
           <div className="flex items-center gap-2 text-[12px] text-red-700 bg-red-50 rounded-md px-3 py-2">
             <XCircle size={13} className="shrink-0" />
             {testState.error}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* ── تست متن دلخواه ── */}
+      <SectionCard icon={Send} title="تست متن دلخواه">
+        <p className="text-[12px] text-stone-500">
+          مستقیم با <code className="text-[11px] bg-stone-100 px-1 rounded">sendSms()</code> ارسال می‌شود — بدون قانون/اعلان، فقط برای امتحان‌کردن متن‌های مختلف (مثلاً وقتی provider فعلی روی محتوا محدودیت دارد).
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-[160px_1fr] gap-3">
+          <label className="space-y-1">
+            <span className="text-[12px] text-stone-600">شماره مقصد</span>
+            <input
+              type="text"
+              dir="ltr"
+              placeholder="۰۹۱۲۳۴۵۶۷۸۹"
+              value={customPhone}
+              onChange={(e) => setCustomPhone(e.target.value)}
+              className="w-full h-9 px-3 text-[13px] border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300"
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-[12px] text-stone-600">
+              متن پیامک <span className="text-stone-400">({customMessage.length}/۱۶۰)</span>
+            </span>
+            <textarea
+              maxLength={160}
+              rows={2}
+              placeholder="پیامک آزمایشی از سامانه با شرف ✔"
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              className="w-full px-3 py-2 text-[13px] border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-300 resize-none"
+            />
+          </label>
+        </div>
+        <button
+          onClick={sendCustomMessage}
+          disabled={customState.loading}
+          className="h-8 px-3 text-[11.5px] border border-stone-200 rounded-md hover:bg-white flex items-center gap-1.5 disabled:opacity-50"
+        >
+          <Send size={12} strokeWidth={1.5} />
+          {customState.loading ? '…' : 'ارسال'}
+        </button>
+        {customState.result && (
+          <div className="flex items-start gap-2 text-[12px] text-stone-600 bg-stone-50 rounded-md px-3 py-2">
+            <CheckCircle2 size={13} className="text-emerald-600 shrink-0 mt-0.5" />
+            <span>
+              وضعیت: <strong>{STATUS_LABEL[String(customState.result.status)] ?? String(customState.result.status)}</strong>
+            </span>
+          </div>
+        )}
+        {customState.error && (
+          <div className="flex items-center gap-2 text-[12px] text-red-700 bg-red-50 rounded-md px-3 py-2">
+            <XCircle size={13} className="shrink-0" />
+            {customState.error}
           </div>
         )}
       </SectionCard>
