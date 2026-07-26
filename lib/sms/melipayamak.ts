@@ -1,19 +1,24 @@
 import { redactError } from '@/lib/notifications/redaction';
 import { SMS_REQUEST_TIMEOUT_MS, type SmsSendOutcome } from './types';
 
-const MELIPAYAMAK_URL = 'https://rest.payamak-panel.com/api/SendSMS/SendSMS';
+const MELIPAYAMAK_BASE_URL = 'https://console.melipayamak.com/api/send/simple';
 
 interface MelipayamakResponseBody {
-  Value?: string;
-  RetStatus?: number;
-  StrRetStatus?: string;
+  recId?: number;
+  /** خالی/غایب یعنی موفقیت؛ فقط هنگام خطا پر می‌شود (طبق مستندات پنل: «شرح خطا در صورت بروز»). */
+  status?: string;
 }
 
 /**
- * ارسال پیامک از طریق ملی‌پیامک (rest.payamak-panel.com).
+ * ارسال پیامک از طریق ملی‌پیامک — API «ارسال پیامک ساده»ی کنسول جدید
+ * (console.melipayamak.com)، نه REST قدیمی کاربری/رمز عبور.
  *
- * قرارداد پاسخ رسمی: RetStatus=1 یعنی موفقیت؛ Value شناسه‌ی پیام (BulkID) است.
- * هر RetStatus دیگری خطا محسوب می‌شود — StrRetStatus توضیح خطا را دارد.
+ * توکن هر اکانت مستقیم در مسیر URL قرار می‌گیرد (نه در بدنه) — مثل
+ * Kavenegar، این یعنی توکن باید در redaction هم پوشش داده شود (اضافه شد
+ * به lib/notifications/redaction.ts).
+ *
+ * قرارداد پاسخ (طبق پنل): recId شناسه‌ی پیام است؛ status فقط هنگام خطا
+ * پر می‌شود (توضیح خطا) — یعنی موفقیت = status خالی/غایب و recId معتبر.
  *
  * برخلاف Kavenegar، پیکربندی ناقص اینجا silent dry-run نمی‌شود — چون این
  * provider تازه است و هیچ رفتار تاریخی‌ای برای حفظ‌کردن ندارد؛ طبق قرارداد
@@ -29,43 +34,34 @@ export async function melipayamakSend(
     return { status: 'dry_run' };
   }
 
-  const username = process.env.MELIPAYAMAK_USERNAME;
-  const password = process.env.MELIPAYAMAK_PASSWORD;
+  const token = process.env.MELIPAYAMAK_TOKEN;
   const from = process.env.MELIPAYAMAK_FROM;
 
-  if (!username || !password || !from) {
+  if (!token || !from) {
     return {
       status: 'failed',
-      error: 'پیکربندی ملی‌پیامک ناقص است — MELIPAYAMAK_USERNAME/MELIPAYAMAK_PASSWORD/MELIPAYAMAK_FROM را در env تنظیم کنید',
+      error: 'پیکربندی ملی‌پیامک ناقص است — MELIPAYAMAK_TOKEN/MELIPAYAMAK_FROM را در env تنظیم کنید',
     };
   }
 
   try {
-    const body = new URLSearchParams({
-      username,
-      password,
-      to: phone,
-      from,
-      text: message,
-      isFlash: 'false',
-    });
-    const res = await fetch(MELIPAYAMAK_URL, {
+    const res = await fetch(`${MELIPAYAMAK_BASE_URL}/${token}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to: phone, text: message }),
       signal: AbortSignal.timeout(SMS_REQUEST_TIMEOUT_MS),
     });
     const json: unknown = await res.json().catch(() => null);
     const parsed = json as MelipayamakResponseBody | null;
 
-    if (res.ok && parsed?.RetStatus === 1) {
-      return { status: 'sent', providerResponse: parsed, providerMessageId: parsed.Value };
+    if (res.ok && !parsed?.status && typeof parsed?.recId === 'number' && parsed.recId > 0) {
+      return { status: 'sent', providerResponse: parsed, providerMessageId: String(parsed.recId) };
     }
 
     return {
       status: 'failed',
       providerResponse: parsed ?? undefined,
-      error: `ملی‌پیامک: ${parsed?.StrRetStatus ?? `HTTP ${res.status}`}`,
+      error: `ملی‌پیامک: ${parsed?.status || `HTTP ${res.status}`}`,
     };
   } catch (err) {
     const isTimeout = err instanceof Error && err.name === 'TimeoutError';

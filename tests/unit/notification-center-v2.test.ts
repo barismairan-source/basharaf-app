@@ -1488,8 +1488,7 @@ describe('provider-status route — reflects isEmailConfigured() and KAVENEGAR_A
   it('reports sms.provider=melipayamak and configured=true when SMS_PROVIDER=melipayamak with complete env', async () => {
     const saved = { ...process.env };
     process.env.SMS_PROVIDER = 'melipayamak';
-    process.env.MELIPAYAMAK_USERNAME = 'u';
-    process.env.MELIPAYAMAK_PASSWORD = 'p';
+    process.env.MELIPAYAMAK_TOKEN = 't';
     process.env.MELIPAYAMAK_FROM = '3000';
     const res = await providerStatusRoute();
     const body = await res.json() as { sms: { provider: string | null; configured: boolean } };

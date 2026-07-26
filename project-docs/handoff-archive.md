@@ -1270,3 +1270,10 @@ tests/unit/security-guards.test.ts: 27 تست سبز ✅.
 **Build:** tsc ✅ ۰ خطا · tests 271/271 ✅ · build ✅ (بعد از هر کدام از ۵ commit جدا تأیید شد)
 **ناتمام:** smoke test UI نهایی (چک‌لیست ارسال‌شده به کاربر) هنوز تأیید نشده — دسترسی Chrome من قطع بود. لاگ‌های production تا release v189 کاملاً تمیزن (بدون خطا).
 **برای جلسه‌ی بعد:** ۱) وقتی کاربر بیدار شد، چک‌لیست smoke test رو ازش بپرس یا خودت با دسترسی مرورگر انجام بده. ۲) منشأ `below_approval_limit.email_enabled=true` (از قبل production) رو با کاربر چک کن — عمدی بوده یا باقیمانده‌ی تست قدیمی؟
+
+## 📓 2026-07-25 — بازطراحی فرم «ثبت تراکنش» — ادامه‌ی `feat/product-ui-v2`
+**چه شد:** طبق یک اسپک ۷بخشی دقیق، صفحه‌ی `/transactions/new` بدون تغییر منطق حسابداری/تأیید/RBAC/API contract کاملاً بازطراحی شد — مبلغ به «قوی‌ترین فیلد» تبدیل شد، `Toggle` به radiogroup کامل ارتقا یافت، primitive جدید `Disclosure` و اولین استفاده‌ی واقعی از `StickyActionBar` ساخته شد. جزئیات کامل در commit تاریخ ۲۰۲۶-۰۷-۲۵.
+**فایل‌ها:** `components/ui/Disclosure.tsx`، `app/(app)/transactions/new/page.tsx`، `components/ui/Toggle.tsx`.
+**Build:** tsc ✅ · tests 393/393 ✅ · build ✅ · lint ✅
+**ناتمام:** merge/deploy این نشست عمداً انجام نشد (بعداً merge شد).
+**برای جلسه‌ی بعد:** —

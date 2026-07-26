@@ -38,7 +38,7 @@ export function resolveSmsProvider(): ResolvedProvider | UnresolvedProvider {
 /** آیا env متغیرهای لازم برای provider فعلی موجودند — بدون افشای مقدار secret. */
 export function isProviderConfigured(provider: SmsProviderName): boolean {
   if (provider === 'melipayamak') {
-    return !!(process.env.MELIPAYAMAK_USERNAME && process.env.MELIPAYAMAK_PASSWORD && process.env.MELIPAYAMAK_FROM);
+    return !!(process.env.MELIPAYAMAK_TOKEN && process.env.MELIPAYAMAK_FROM);
   }
   return !!process.env.KAVENEGAR_API_KEY;
 }

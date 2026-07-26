@@ -23,6 +23,9 @@ const REDACT_PATTERNS: RegExp[] = [
   // (https://api.kavenegar.com/v1/{key}/sms/send.json) — a fetch failure
   // that echoes the request URL would otherwise leak the raw key.
   /api\.kavenegar\.com\/v1\/[^/\s]+/gi,
+  // MeliPayamak's console "simple send" API embeds the account token
+  // directly in the request URL path (console.melipayamak.com/api/send/simple/{token}).
+  /melipayamak\.com\/api\/send\/simple\/[^/\s]+/gi,
 ];
 
 const MAX_ERROR_LENGTH = 500;

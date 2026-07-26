@@ -1,7 +1,16 @@
 # MeliPayamak SMS Provider — Rollout Guide
 
-Branch: `feat/melipayamak-provider` (not merged to `main`, not deployed, no
-production access used, no secrets or migration executed in this work).
+Original branch `feat/melipayamak-provider` was merged to `main` and
+deployed. **This doc now reflects a follow-up correction on branch
+`fix/melipayamak-token-api`** (not yet merged/deployed): the initial
+implementation targeted MeliPayamak's legacy username/password REST API
+(`rest.payamak-panel.com/api/SendSMS/SendSMS`), matching the contract given
+in the original task spec. After seeing screenshots of the actual account's
+panel, it turned out the account uses MeliPayamak's newer **token-based
+console API** (`console.melipayamak.com/api/send/simple/{token}`) instead
+— so the adapter was switched to match what's actually active on the
+account. No production access was used; no real MeliPayamak credentials
+were ever entered anywhere in this environment.
 
 ## What this adds
 
@@ -65,23 +74,34 @@ dry-run.
 ## MeliPayamak request contract
 
 ```
-POST https://rest.payamak-panel.com/api/SendSMS/SendSMS
-Content-Type: application/x-www-form-urlencoded
+POST https://console.melipayamak.com/api/send/simple/<MELIPAYAMAK_TOKEN>
+Content-Type: application/json
 
-username=<MELIPAYAMAK_USERNAME>
-password=<MELIPAYAMAK_PASSWORD>
-to=<normalized 09xxxxxxxxx phone>
-from=<MELIPAYAMAK_FROM>
-text=<message>
-isFlash=false
+{ "from": "<MELIPAYAMAK_FROM>", "to": "<normalized 09xxxxxxxxx phone>", "text": "<message>" }
 ```
 
-Response is checked against the official contract: `RetStatus === 1` maps
-to `status: 'sent'`, and `Value` (the message id) is captured as
-`providerMessageId`. Any other `RetStatus` maps to `status: 'failed'`,
-with `StrRetStatus` surfaced in the (redacted) error message. A request
-timeout (10s, `AbortSignal.timeout`) or network error also maps to
-`failed`, never to a silent retry or a different provider.
+The account token is embedded directly in the URL path — no username or
+password is sent. Response shape, per the panel's own documentation
+(visible in the "ارسال پیامک ساده" page under دریافت پاسخ):
+
+```json
+{ "recId": 3741437414, "status": "شرح خطا در صورت بروز" }
+```
+
+`status` is documented as populated **only when an error occurs**, so
+success is inferred as: HTTP OK, `status` empty/absent, and `recId` a
+positive number. `recId` is then captured as `providerMessageId`. Any
+other combination (non-empty `status`, missing/zero `recId`, or a non-OK
+HTTP response) maps to `status: 'failed'`, with `status` (when present)
+surfaced in the error message. A request timeout (10s,
+`AbortSignal.timeout`) or network error also maps to `failed`, never to a
+silent retry or a different provider.
+
+Because the panel's own documentation for this endpoint is thin (a single
+example, no explicit list of non-success `status` values), this success
+inference should be double-checked against one real test send before
+relying on it for production alerting — see "How to test a real send"
+below.
 
 ## What's stored in `sms_log`
 
@@ -98,10 +118,20 @@ per the requested contract — belt-and-suspenders, no migration either way.
 
 ```
 SMS_PROVIDER=melipayamak
-MELIPAYAMAK_USERNAME=<real username>
-MELIPAYAMAK_PASSWORD=<real password>
-MELIPAYAMAK_FROM=<real sender number>
+MELIPAYAMAK_TOKEN=<real console token>
+MELIPAYAMAK_FROM=<real sender line number>
 ```
+
+**Where to find these in the MeliPayamak panel (console.melipayamak.com):**
+- `MELIPAYAMAK_TOKEN`: open "ارسال پیامک" → "ساده" in the sidebar; the API
+  address shown there is `.../api/send/simple/<TOKEN>` — the token is the
+  long string at the end of that URL. This is account-specific and acts
+  as a credential (see the redaction pattern added for it below) — copy
+  it straight into Liara's env var panel, don't paste it anywhere else.
+- `MELIPAYAMAK_FROM`: the sender line number for the account, visible on
+  the dashboard / "خطوط من" section (a long shared-line number, e.g.
+  `50004000790780`, or a shorter dedicated line depending on what was
+  purchased).
 
 Leave `KAVENEGAR_API_KEY` in place if you want the ability to switch back
 to Kavenegar by only changing `SMS_PROVIDER` (no redeploy of code needed,
@@ -115,9 +145,8 @@ to anyone.
 ## How to test dry-run (no real SMS, no network call)
 
 1. Set `SMS_PROVIDER=melipayamak` and `SMS_DRY_RUN=true` locally (or leave
-   `MELIPAYAMAK_USERNAME`/`PASSWORD`/`FROM` entirely unset — dry-run is
-   checked before the config-completeness check, so it short-circuits
-   either way).
+   `MELIPAYAMAK_TOKEN`/`FROM` entirely unset — dry-run is checked before
+   the config-completeness check, so it short-circuits either way).
 2. Call `sendSms({ phone: '09121234567', message: 'test' })` from any
    existing call site, or hit `POST /api/sms/test-notify` as SuperAdmin
    with the notification rule `sms.test_notify` enabled in Settings →
@@ -126,15 +155,20 @@ to anyone.
    `provider='melipayamak'`, and confirm no outbound HTTP request was made
    (no MeliPayamak credentials are required for this path to work).
 
-## How to test a real send (requires real MeliPayamak credentials)
+## How to test a real send (requires the real MeliPayamak token)
 
-1. Set `SMS_PROVIDER=melipayamak`, all three `MELIPAYAMAK_*` vars to real
+1. Set `SMS_PROVIDER=melipayamak`, both `MELIPAYAMAK_TOKEN`/`FROM` to real
    values, and make sure `SMS_DRY_RUN` is unset or `false`.
 2. Trigger a send via `/api/sms/test-notify` (SuperAdmin only) against a
    real test phone number.
 3. Confirm the returned `sms_log` row: `status='sent'`,
    `provider='melipayamak'`, and `providerResponse.messageId` populated
-   with MeliPayamak's returned `Value`.
+   with MeliPayamak's returned `recId`. **Given the thin panel
+   documentation for the success/error shape (see above), this first real
+   test is the actual verification that the success-inference logic is
+   correct** — if a real send comes back mapped as `failed` despite
+   actually arriving, or vice versa, that's a signal the response shape
+   assumption needs adjusting in `lib/sms/melipayamak.ts`.
 4. Check `/api/admin/notifications/provider-status` — `sms.provider`
    should read `"melipayamak"` and `sms.configured` should be `true`
    (no secret values are ever returned by this endpoint).
@@ -155,9 +189,11 @@ to anyone.
   dedup, and dry-run logic bodies are byte-for-byte unchanged**
 - `lib/notifications/redaction.ts` — added a Kavenegar-URL-specific
   redaction pattern and a general `user:password@` pattern (found while
-  writing the "no secret leakage" tests below — the API key is embedded
+  writing the "no secret leakage" tests — the API key is embedded
   directly in the Kavenegar request URL path, which the prior generic
-  patterns did not catch)
+  patterns did not catch); **follow-up:** also added a matching pattern
+  for MeliPayamak's `console.melipayamak.com/api/send/simple/{token}`,
+  since its token has the same embedded-in-URL leak shape
 - `app/api/admin/notifications/provider-status/route.ts` — now reports
   the active provider name via `getSmsProviderStatus()` instead of a
   hardcoded `KAVENEGAR_API_KEY` check; response shape gains `sms.provider`
@@ -165,12 +201,14 @@ to anyone.
   `summary.smsConfigured`; response shape gains `summary.smsProvider`
 - `components/settings/SmsPane.tsx` — hint text made provider-neutral
   (previously hardcoded "if KAVENEGAR_API_KEY is absent...")
-- `.env.example` — documented `SMS_PROVIDER`, `MELIPAYAMAK_USERNAME`,
-  `MELIPAYAMAK_PASSWORD`, `MELIPAYAMAK_FROM`
-- `tests/unit/sms-provider.test.ts` — **new**, 30 tests (phone
-  normalization, provider resolution, both adapters, secret redaction)
-- `tests/unit/sms-send.test.ts` — **new**, 9 tests (`sendSms()`-level:
-  daily cap, dedup, phone normalization, provider recorded on the log row)
+- `.env.example` — documented `SMS_PROVIDER`, `MELIPAYAMAK_TOKEN`,
+  `MELIPAYAMAK_FROM`
+- `tests/unit/sms-provider.test.ts` — 30 tests (phone normalization,
+  provider resolution, both adapters, secret redaction); the MeliPayamak
+  subset was rewritten in the follow-up to match the token-based contract
+- `tests/unit/sms-send.test.ts` — 9 tests (`sendSms()`-level: daily cap,
+  dedup, phone normalization, provider recorded on the log row) —
+  unaffected by the follow-up (mocks `dispatchSms` directly)
 - `tests/unit/notification-center-v2.test.ts` — 2 tests added to the
   existing `provider-status route` describe block, for both providers
 

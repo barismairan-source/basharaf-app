@@ -49,7 +49,7 @@ describe('normalizeIranPhone', () => {
 // ─── dispatcher: resolveSmsProvider / getSmsProviderStatus (pure) ──
 
 describe('resolveSmsProvider', () => {
-  const ENV_KEYS = ['SMS_PROVIDER', 'KAVENEGAR_API_KEY', 'MELIPAYAMAK_USERNAME', 'MELIPAYAMAK_PASSWORD', 'MELIPAYAMAK_FROM'];
+  const ENV_KEYS = ['SMS_PROVIDER', 'KAVENEGAR_API_KEY', 'MELIPAYAMAK_TOKEN', 'MELIPAYAMAK_FROM'];
   let saved: Record<string, string | undefined>;
 
   beforeEach(() => {
@@ -104,8 +104,8 @@ describe('resolveSmsProvider', () => {
 
   it('getSmsProviderStatus reports configured=false for melipayamak with incomplete env', async () => {
     process.env.SMS_PROVIDER = 'melipayamak';
-    process.env.MELIPAYAMAK_USERNAME = 'u';
-    // password/from intentionally left unset
+    process.env.MELIPAYAMAK_TOKEN = 't';
+    // from intentionally left unset
     const { getSmsProviderStatus } = await import('@/lib/sms/dispatcher');
     const status = getSmsProviderStatus();
     expect(status.provider).toBe('melipayamak');
@@ -114,8 +114,7 @@ describe('resolveSmsProvider', () => {
 
   it('getSmsProviderStatus reports configured=true for melipayamak with complete env', async () => {
     process.env.SMS_PROVIDER = 'melipayamak';
-    process.env.MELIPAYAMAK_USERNAME = 'u';
-    process.env.MELIPAYAMAK_PASSWORD = 'p';
+    process.env.MELIPAYAMAK_TOKEN = 't';
     process.env.MELIPAYAMAK_FROM = '3000';
     const { getSmsProviderStatus } = await import('@/lib/sms/dispatcher');
     const status = getSmsProviderStatus();
@@ -174,7 +173,7 @@ describe('dispatchSms', () => {
 // ─── melipayamakSend — request shape, response mapping, errors ────
 
 describe('melipayamakSend', () => {
-  const ENV_KEYS = ['MELIPAYAMAK_USERNAME', 'MELIPAYAMAK_PASSWORD', 'MELIPAYAMAK_FROM', 'SMS_DRY_RUN'];
+  const ENV_KEYS = ['MELIPAYAMAK_TOKEN', 'MELIPAYAMAK_FROM', 'SMS_DRY_RUN'];
   let saved: Record<string, string | undefined>;
 
   beforeEach(() => {
@@ -200,27 +199,26 @@ describe('melipayamakSend', () => {
   });
 
   it('fails closed with a clear message when configuration is incomplete (dry-run off)', async () => {
-    process.env.MELIPAYAMAK_USERNAME = 'user';
-    // password/from missing
+    process.env.MELIPAYAMAK_TOKEN = 'ae938c27199344e5970c5a3dbbc85507';
+    // FROM missing
     const fetchSpy = vi.spyOn(global, 'fetch');
     const { melipayamakSend } = await import('@/lib/sms/melipayamak');
     const result = await melipayamakSend('09121234567', 'hello');
     expect(result.status).toBe('failed');
     if (result.status === 'failed') {
       expect(result.error).toContain('ملی‌پیامک');
-      expect(result.error).not.toContain('user'); // never echo the partial credential back
+      expect(result.error).not.toContain('ae938c27199344e5970c5a3dbbc85507'); // never echo the token back
     }
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('sends the correct application/x-www-form-urlencoded body with isFlash=false', async () => {
-    process.env.MELIPAYAMAK_USERNAME = 'myuser';
-    process.env.MELIPAYAMAK_PASSWORD = 'mypass';
-    process.env.MELIPAYAMAK_FROM = '3000123456';
+  it('sends the correct JSON body to the token-scoped URL', async () => {
+    process.env.MELIPAYAMAK_TOKEN = 'my-token-123';
+    process.env.MELIPAYAMAK_FROM = '50004000790780';
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ Value: 'msg-123', RetStatus: 1, StrRetStatus: 'Ok' }),
+      json: async () => ({ recId: 3741437414, status: '' }),
     });
     vi.stubGlobal('fetch', fetchMock);
 
@@ -229,46 +227,39 @@ describe('melipayamakSend', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('https://rest.payamak-panel.com/api/SendSMS/SendSMS');
+    expect(url).toBe('https://console.melipayamak.com/api/send/simple/my-token-123');
     expect(init.method).toBe('POST');
-    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/x-www-form-urlencoded');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
 
-    const body = new URLSearchParams(init.body as string);
-    expect(body.get('username')).toBe('myuser');
-    expect(body.get('password')).toBe('mypass');
-    expect(body.get('to')).toBe('09121234567');
-    expect(body.get('from')).toBe('3000123456');
-    expect(body.get('text')).toBe('سلام');
-    expect(body.get('isFlash')).toBe('false');
+    const body = JSON.parse(init.body as string);
+    expect(body).toEqual({ from: '50004000790780', to: '09121234567', text: 'سلام' });
   });
 
-  it('maps RetStatus=1 to sent, with Value as providerMessageId', async () => {
-    process.env.MELIPAYAMAK_USERNAME = 'u';
-    process.env.MELIPAYAMAK_PASSWORD = 'p';
+  it('maps a positive recId with empty status to sent, with recId as providerMessageId', async () => {
+    process.env.MELIPAYAMAK_TOKEN = 't';
     process.env.MELIPAYAMAK_FROM = '3000';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ Value: 'abc-123', RetStatus: 1, StrRetStatus: 'Ok' }),
+      json: async () => ({ recId: 3741437414, status: '' }),
     }));
 
     const { melipayamakSend } = await import('@/lib/sms/melipayamak');
     const result = await melipayamakSend('09121234567', 'hi');
     expect(result.status).toBe('sent');
     if (result.status === 'sent') {
-      expect(result.providerMessageId).toBe('abc-123');
-      expect(result.providerResponse).toEqual({ Value: 'abc-123', RetStatus: 1, StrRetStatus: 'Ok' });
+      expect(result.providerMessageId).toBe('3741437414');
+      expect(result.providerResponse).toEqual({ recId: 3741437414, status: '' });
     }
   });
 
-  it('maps a non-1 RetStatus to failed with the provider error text', async () => {
-    process.env.MELIPAYAMAK_USERNAME = 'u';
-    process.env.MELIPAYAMAK_PASSWORD = 'p';
+  it('maps a non-empty status to failed with the provider error text', async () => {
+    process.env.MELIPAYAMAK_TOKEN = 't';
     process.env.MELIPAYAMAK_FROM = '3000';
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: async () => ({ RetStatus: 7, StrRetStatus: 'Invalid receptor number' }),
+      json: async () => ({ recId: 0, status: 'Invalid receptor number' }),
     }));
 
     const { melipayamakSend } = await import('@/lib/sms/melipayamak');
@@ -279,9 +270,8 @@ describe('melipayamakSend', () => {
     }
   });
 
-  it('maps a network/timeout error to failed without leaking credentials', async () => {
-    process.env.MELIPAYAMAK_USERNAME = 'super-secret-user';
-    process.env.MELIPAYAMAK_PASSWORD = 'super-secret-pass';
+  it('maps a network/timeout error to failed without leaking the token', async () => {
+    process.env.MELIPAYAMAK_TOKEN = 'super-secret-token';
     process.env.MELIPAYAMAK_FROM = '3000';
     const abortError = new Error('The operation was aborted');
     abortError.name = 'TimeoutError';
@@ -292,25 +282,22 @@ describe('melipayamakSend', () => {
     expect(result.status).toBe('failed');
     if (result.status === 'failed') {
       expect(result.error.toLowerCase()).toContain('timeout');
-      expect(result.error).not.toContain('super-secret-user');
-      expect(result.error).not.toContain('super-secret-pass');
+      expect(result.error).not.toContain('super-secret-token');
     }
   });
 
-  it('never includes username/password in a generic network error message', async () => {
-    process.env.MELIPAYAMAK_USERNAME = 'super-secret-user';
-    process.env.MELIPAYAMAK_PASSWORD = 'super-secret-pass';
+  it('never includes the token in a generic network error message that echoes the request URL', async () => {
+    process.env.MELIPAYAMAK_TOKEN = 'super-secret-token';
     process.env.MELIPAYAMAK_FROM = '3000';
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(
-      new Error('connect ECONNREFUSED super-secret-user:super-secret-pass@rest.payamak-panel.com')
+      new Error('request to https://console.melipayamak.com/api/send/simple/super-secret-token failed')
     ));
 
     const { melipayamakSend } = await import('@/lib/sms/melipayamak');
     const result = await melipayamakSend('09121234567', 'hi');
     expect(result.status).toBe('failed');
     if (result.status === 'failed') {
-      expect(result.error).not.toContain('super-secret-user');
-      expect(result.error).not.toContain('super-secret-pass');
+      expect(result.error).not.toContain('super-secret-token');
     }
   });
 });
