@@ -9,6 +9,7 @@ import {
   Button, IconButton, Select, Chip, StatusPill, Popover,
   Tabs, TabPanel, InlineNotice, Textarea, useConfirm,
 } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import {
   SCREENING_QUESTIONS, AREA_LABELS, STATUS_LABELS, GENDER_LABELS,
   SHIFT_LABELS, START_LABELS, REFERRAL_LABELS,
@@ -101,8 +102,17 @@ export function CandidateDetail({
           {canSeePhone && (
             <span className="inline-flex items-center gap-1.5">
               <span dir="ltr" className="inline-flex items-center gap-1"><Phone size={12} />{a.phone}</span>
-              <a href={`tel:${a.phone}`} title="تماس">
-                <IconButton icon={PhoneCall} aria-label="تماس با داوطلب" size="xs" tone="success" />
+              <a
+                href={`tel:${a.phone}`}
+                aria-label="تماس با داوطلب"
+                title="تماس با داوطلب"
+                className={cn(
+                  'flex items-center justify-center w-7 h-7 rounded-md transition-colors flex-shrink-0',
+                  'text-muted hover:text-ok hover:bg-ok-subtle',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1'
+                )}
+              >
+                <PhoneCall size={14} strokeWidth={1.5} aria-hidden="true" />
               </a>
               <IconButton icon={Copy} aria-label="کپی شماره" size="xs" onClick={copyPhone} />
             </span>

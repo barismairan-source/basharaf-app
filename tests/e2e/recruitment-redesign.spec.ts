@@ -69,6 +69,22 @@ test.describe('پایداری فیلتر در URL', () => {
   });
 });
 
+test.describe('فیلترهای پیشرفته (جنسیت/شیفت/کانال آشنایی/رزومه)', () => {
+  test('باز کردن پنل فیلتر بیشتر و انتخاب جنسیت در URL منعکس می‌شود', async ({ page }) => {
+    await page.goto('/recruitment');
+    await page.getByRole('button', { name: /فیلتر بیشتر/ }).click();
+    await page.getByLabel('فیلتر جنسیت').selectOption('female');
+    await expect(page).toHaveURL(/gender=female/, { timeout: 5_000 });
+  });
+
+  test('فیلتر وجود رزومه در URL منعکس می‌شود', async ({ page }) => {
+    await page.goto('/recruitment');
+    await page.getByRole('button', { name: /فیلتر بیشتر/ }).click();
+    await page.getByLabel('فیلتر وجود رزومه').selectOption('yes');
+    await expect(page).toHaveURL(/resume=yes/, { timeout: 5_000 });
+  });
+});
+
 test.describe('حالت مقایسه', () => {
   test('انتخاب دو داوطلب و باز کردن مودال مقایسه هر دو نام را نشان می‌دهد', async ({ page }) => {
     await page.goto('/recruitment');
@@ -99,6 +115,18 @@ test.describe('نمایش اطلاعات تماس (PII) برای کاربر مج
 
     await card.click();
     await expect(page.getByText('تماس با داوطلب')).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('دکمه‌ی تماس مستقیم روی کارت جمع‌شده یک لینک tel: است و کارت را باز نمی‌کند', async ({ page }) => {
+    await page.goto('/recruitment');
+    const card = page.locator('div[role="button"]').filter({ hasText: candidateA.name }).first();
+    await expect(card).toBeVisible({ timeout: 10_000 });
+    const callLink = card.getByRole('link', { name: 'تماس با داوطلب' });
+    await expect(callLink).toHaveAttribute('href', `tel:${candidateA.phone}`);
+    await callLink.click();
+    // چون tel: است، ناوبری واقعی رخ نمی‌دهد؛ کارت هم نباید باز شده باشد (stopPropagation)
+    await expect(page.getByText('تماس با داوطلب').first()).toBeVisible();
+    await expect(card).toHaveAttribute('aria-expanded', 'false');
   });
 });
 

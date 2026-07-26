@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import {
   UserPlus, Download, Search, Settings2, Wrench, ExternalLink,
-  GitCompareArrows, MoreVertical, Loader2, RefreshCw, X,
+  GitCompareArrows, MoreVertical, Loader2, RefreshCw, X, SlidersHorizontal,
 } from 'lucide-react';
 import { Button, ButtonLink, Input, Select, Empty, InlineNotice, Popover, Skeleton } from '@/components/ui';
 import { PageShell } from '@/components/ui/PageShell';
@@ -123,6 +123,11 @@ export default function RecruitmentPage() {
     [applications, filters]
   );
   const activeFilterCount = countActiveFilters(filters);
+  const advancedFilterCount =
+    (filters.gender !== 'all' ? 1 : 0) +
+    (filters.shift !== 'all' ? 1 : 0) +
+    (filters.referral !== 'all' ? 1 : 0) +
+    (filters.hasResume !== 'all' ? 1 : 0);
 
   const selectedCandidates = useMemo(
     () => applications.filter((a) => selectedIds.has(a.id)),
@@ -346,6 +351,39 @@ export default function RecruitmentPage() {
           <option value="score">امتیاز (نزولی)</option>
         </Select>
 
+        <Popover
+          trigger={<span className="inline-flex items-center gap-1"><SlidersHorizontal size={13} strokeWidth={1.5} />فیلتر بیشتر</span>}
+          badge={advancedFilterCount}
+        >
+          <div className="p-3 w-64 space-y-2.5">
+            <Select value={filters.gender} onChange={(e) => updateFilters({ gender: e.target.value as CandidateFilterState['gender'] })} className="w-full" aria-label="فیلتر جنسیت">
+              <option value="all">همه جنسیت‌ها</option>
+              <option value="male">آقا</option>
+              <option value="female">خانم</option>
+            </Select>
+            <Select value={filters.shift} onChange={(e) => updateFilters({ shift: e.target.value as CandidateFilterState['shift'] })} className="w-full" aria-label="فیلتر شیفت">
+              <option value="all">همه شیفت‌ها</option>
+              <option value="morning">صبح</option>
+              <option value="evening">عصر</option>
+              <option value="night">شب</option>
+              <option value="weekend">آخر هفته و تعطیلات</option>
+            </Select>
+            <Select value={filters.referral} onChange={(e) => updateFilters({ referral: e.target.value as CandidateFilterState['referral'] })} className="w-full" aria-label="فیلتر کانال آشنایی">
+              <option value="all">همه کانال‌های آشنایی</option>
+              <option value="instagram">اینستاگرام</option>
+              <option value="divar">دیوار</option>
+              <option value="friend">معرفی دوست یا همکار</option>
+              <option value="customer">مشتری رستوران</option>
+              <option value="other">سایر</option>
+            </Select>
+            <Select value={filters.hasResume} onChange={(e) => updateFilters({ hasResume: e.target.value as CandidateFilterState['hasResume'] })} className="w-full" aria-label="فیلتر وجود رزومه">
+              <option value="all">دارد/ندارد رزومه</option>
+              <option value="yes">فقط دارای رزومه</option>
+              <option value="no">فقط بدون رزومه</option>
+            </Select>
+          </div>
+        </Popover>
+
         {filterableFields.map((f) => (
           <Select
             key={f.id}
@@ -418,7 +456,7 @@ export default function RecruitmentPage() {
           />
         ) : (
           <div className="space-y-2">
-            <div className="grid grid-cols-1 sm:[grid-template-columns:repeat(auto-fit,minmax(360px,1fr))] gap-2">
+            <div className="grid grid-cols-1 items-start sm:[grid-template-columns:repeat(auto-fit,minmax(360px,1fr))] gap-2.5">
               {sorted.map((a) => (
                 <CandidateCard
                   key={a.id}

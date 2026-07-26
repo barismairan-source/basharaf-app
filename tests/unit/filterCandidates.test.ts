@@ -110,6 +110,33 @@ describe('filterCandidates', () => {
     const filters: CandidateFilterState = { ...DEFAULT_FILTERS, status: 'shortlist', area: 'hall' };
     expect(filterCandidates(list, filters)).toHaveLength(1);
   });
+
+  it('فیلتر جنسیت', () => {
+    const list = [makeCandidate({ gender: 'male' }), makeCandidate({ gender: 'female' })];
+    const filters: CandidateFilterState = { ...DEFAULT_FILTERS, gender: 'female' };
+    expect(filterCandidates(list, filters)).toHaveLength(1);
+  });
+
+  it('فیلتر شیفت — روی آرایه‌ی shiftAvailability چک می‌کند', () => {
+    const list = [
+      makeCandidate({ shiftAvailability: ['morning', 'evening'] }),
+      makeCandidate({ shiftAvailability: ['night'] }),
+    ];
+    const filters: CandidateFilterState = { ...DEFAULT_FILTERS, shift: 'evening' };
+    expect(filterCandidates(list, filters)).toHaveLength(1);
+  });
+
+  it('فیلتر کانال آشنایی', () => {
+    const list = [makeCandidate({ referralSource: 'instagram' }), makeCandidate({ referralSource: 'friend' })];
+    const filters: CandidateFilterState = { ...DEFAULT_FILTERS, referral: 'friend' };
+    expect(filterCandidates(list, filters)).toHaveLength(1);
+  });
+
+  it('فیلتر وجود رزومه', () => {
+    const list = [makeCandidate({ hasResume: true }), makeCandidate({ hasResume: false })];
+    expect(filterCandidates(list, { ...DEFAULT_FILTERS, hasResume: 'yes' })).toHaveLength(1);
+    expect(filterCandidates(list, { ...DEFAULT_FILTERS, hasResume: 'no' })).toHaveLength(1);
+  });
 });
 
 describe('sortCandidates', () => {
@@ -140,13 +167,13 @@ describe('statusCounts', () => {
       makeCandidate({ status: 'shortlist', area: 'hall' }),
       makeCandidate({ status: 'accepted', area: 'hall' }),
     ];
-    const counts = statusCounts(list, { area: 'hall', start: 'all', search: '', dynamicFilters: {} });
+    const counts = statusCounts(list, { area: 'hall', start: 'all', gender: 'all', shift: 'all', referral: 'all', hasResume: 'all', search: '', dynamicFilters: {} });
     expect(counts).toEqual({ all: 3, new: 1, shortlist: 1, accepted: 1, rejected: 0 });
   });
 
   it('بدون فیلتر، all برابر کل لیست است', () => {
     const list = [makeCandidate(), makeCandidate(), makeCandidate({ status: 'rejected' })];
-    const counts = statusCounts(list, { area: 'all', start: 'all', search: '', dynamicFilters: {} });
+    const counts = statusCounts(list, { area: 'all', start: 'all', gender: 'all', shift: 'all', referral: 'all', hasResume: 'all', search: '', dynamicFilters: {} });
     expect(counts.all).toBe(3);
     expect(counts.rejected).toBe(1);
   });
@@ -159,11 +186,12 @@ describe('countActiveFilters', () => {
 
   it('هر فیلتر غیرپیش‌فرض یک واحد اضافه می‌کند', () => {
     const filters: CandidateFilterState = {
-      status: 'new', area: 'hall', start: 'immediate', search: 'علی', sort: 'score',
+      status: 'new', area: 'hall', start: 'immediate', gender: 'female', shift: 'morning',
+      referral: 'friend', hasResume: 'yes', search: 'علی', sort: 'score',
       dynamicFilters: { x: 'y' },
     };
-    // status + area + start + search + dynamicFilters(x) = 5 — sort جزو شمارش نیست
-    expect(countActiveFilters(filters)).toBe(5);
+    // status+area+start+gender+shift+referral+hasResume+search+dynamicFilters(x) = 9 — sort جزو شمارش نیست
+    expect(countActiveFilters(filters)).toBe(9);
   });
 
   it('مقدار خالی یا all در dynamicFilters شمرده نمی‌شود', () => {
@@ -179,7 +207,8 @@ describe('filtersToParams / paramsToFilters — round-trip URL', () => {
 
   it('round-trip یک فیلتر کامل شامل فیلد داینامیک', () => {
     const filters: CandidateFilterState = {
-      status: 'shortlist', area: 'kitchen', start: 'within_week', search: 'رضا', sort: 'score',
+      status: 'shortlist', area: 'kitchen', start: 'within_week', gender: 'male', shift: 'night',
+      referral: 'divar', hasResume: 'yes', search: 'رضا', sort: 'score',
       dynamicFilters: { experience_level: 'senior' },
     };
     const params = new URLSearchParams(filtersToParams(filters));

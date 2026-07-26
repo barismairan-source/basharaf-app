@@ -1,6 +1,6 @@
 import type { User } from '@/types';
 import { isAdmin } from '@/lib/rbac';
-import type { JobApplication, ApplicationStatus, ApplicationArea } from './questions';
+import type { JobApplication, ApplicationStatus, ApplicationArea, ApplicantGender, ShiftSlot, ReferralSource } from './questions';
 
 /**
  * منطق خالص فیلتر/مرتب‌سازی/URL/شمارش داوطلبان — جدا از صفحه تا بدون
@@ -10,12 +10,20 @@ import type { JobApplication, ApplicationStatus, ApplicationArea } from './quest
 
 export type StatusFilter = 'all' | ApplicationStatus;
 export type AreaFilter = 'all' | ApplicationArea;
+export type GenderFilter = 'all' | ApplicantGender;
+export type ShiftFilter = 'all' | ShiftSlot;
+export type ReferralFilter = 'all' | ReferralSource;
+export type ResumeFilter = 'all' | 'yes' | 'no';
 export type SortKey = 'date' | 'score';
 
 export interface CandidateFilterState {
   status: StatusFilter;
   area: AreaFilter;
   start: string; // 'all' یا مقدار StartAvailability
+  gender: GenderFilter;
+  shift: ShiftFilter;
+  referral: ReferralFilter;
+  hasResume: ResumeFilter;
   search: string;
   sort: SortKey;
   /** فیلترهای فیلد داینامیک فرم‌ساز — کلید = field.key */
@@ -26,6 +34,10 @@ export const DEFAULT_FILTERS: CandidateFilterState = {
   status: 'all',
   area: 'all',
   start: 'all',
+  gender: 'all',
+  shift: 'all',
+  referral: 'all',
+  hasResume: 'all',
   search: '',
   sort: 'date',
   dynamicFilters: {},
@@ -33,6 +45,10 @@ export const DEFAULT_FILTERS: CandidateFilterState = {
 
 const VALID_STATUSES: StatusFilter[] = ['all', 'new', 'shortlist', 'accepted', 'rejected'];
 const VALID_AREAS: AreaFilter[] = ['all', 'hall', 'kitchen'];
+const VALID_GENDERS: GenderFilter[] = ['all', 'male', 'female'];
+const VALID_SHIFTS: ShiftFilter[] = ['all', 'morning', 'evening', 'night', 'weekend'];
+const VALID_REFERRALS: ReferralFilter[] = ['all', 'instagram', 'divar', 'friend', 'customer', 'other'];
+const VALID_RESUME: ResumeFilter[] = ['all', 'yes', 'no'];
 const VALID_SORTS: SortKey[] = ['date', 'score'];
 const DYNAMIC_PARAM_PREFIX = 'f_';
 
@@ -42,6 +58,10 @@ export function countActiveFilters(filters: CandidateFilterState): number {
   if (filters.status !== 'all') n += 1;
   if (filters.area !== 'all') n += 1;
   if (filters.start !== 'all') n += 1;
+  if (filters.gender !== 'all') n += 1;
+  if (filters.shift !== 'all') n += 1;
+  if (filters.referral !== 'all') n += 1;
+  if (filters.hasResume !== 'all') n += 1;
   if (filters.search.trim()) n += 1;
   for (const v of Object.values(filters.dynamicFilters)) {
     if (v && v !== 'all') n += 1;
@@ -55,6 +75,10 @@ export function filtersToParams(filters: CandidateFilterState): Record<string, s
   if (filters.status !== 'all') out.status = filters.status;
   if (filters.area !== 'all') out.area = filters.area;
   if (filters.start !== 'all') out.start = filters.start;
+  if (filters.gender !== 'all') out.gender = filters.gender;
+  if (filters.shift !== 'all') out.shift = filters.shift;
+  if (filters.referral !== 'all') out.referral = filters.referral;
+  if (filters.hasResume !== 'all') out.resume = filters.hasResume;
   if (filters.search.trim()) out.q = filters.search;
   if (filters.sort !== DEFAULT_FILTERS.sort) out.sort = filters.sort;
   for (const [key, val] of Object.entries(filters.dynamicFilters)) {
@@ -67,6 +91,10 @@ export function filtersToParams(filters: CandidateFilterState): Record<string, s
 export function paramsToFilters(params: URLSearchParams): CandidateFilterState {
   const status = params.get('status') as StatusFilter | null;
   const area = params.get('area') as AreaFilter | null;
+  const gender = params.get('gender') as GenderFilter | null;
+  const shift = params.get('shift') as ShiftFilter | null;
+  const referral = params.get('referral') as ReferralFilter | null;
+  const hasResume = params.get('resume') as ResumeFilter | null;
   const sort = params.get('sort') as SortKey | null;
   const dynamicFilters: Record<string, string> = {};
   for (const [key, val] of params.entries()) {
@@ -78,6 +106,10 @@ export function paramsToFilters(params: URLSearchParams): CandidateFilterState {
     status: status && VALID_STATUSES.includes(status) ? status : 'all',
     area: area && VALID_AREAS.includes(area) ? area : 'all',
     start: params.get('start') ?? 'all',
+    gender: gender && VALID_GENDERS.includes(gender) ? gender : 'all',
+    shift: shift && VALID_SHIFTS.includes(shift) ? shift : 'all',
+    referral: referral && VALID_REFERRALS.includes(referral) ? referral : 'all',
+    hasResume: hasResume && VALID_RESUME.includes(hasResume) ? hasResume : 'all',
     search: params.get('q') ?? '',
     sort: sort && VALID_SORTS.includes(sort) ? sort : 'date',
     dynamicFilters,
@@ -90,12 +122,19 @@ export function paramsToFilters(params: URLSearchParams): CandidateFilterState {
  */
 function applyNonStatusFilters(
   applications: readonly JobApplication[],
-  filters: Pick<CandidateFilterState, 'area' | 'start' | 'search' | 'dynamicFilters'>
+  filters: Pick<CandidateFilterState, 'area' | 'start' | 'gender' | 'shift' | 'referral' | 'hasResume' | 'search' | 'dynamicFilters'>
 ): JobApplication[] {
   let result = [...applications];
 
   if (filters.area !== 'all') result = result.filter((a) => a.area === filters.area);
   if (filters.start !== 'all') result = result.filter((a) => a.startAvailability === filters.start);
+  if (filters.gender !== 'all') result = result.filter((a) => a.gender === filters.gender);
+  if (filters.shift !== 'all') result = result.filter((a) => (a.shiftAvailability ?? []).includes(filters.shift));
+  if (filters.referral !== 'all') result = result.filter((a) => a.referralSource === filters.referral);
+  if (filters.hasResume !== 'all') {
+    const wantResume = filters.hasResume === 'yes';
+    result = result.filter((a) => a.hasResume === wantResume);
+  }
 
   const q = filters.search.trim().toLowerCase();
   if (q) {
@@ -140,7 +179,7 @@ export function sortCandidates(applications: readonly JobApplication[], sort: So
  */
 export function statusCounts(
   applications: readonly JobApplication[],
-  filters: Pick<CandidateFilterState, 'area' | 'start' | 'search' | 'dynamicFilters'>
+  filters: Pick<CandidateFilterState, 'area' | 'start' | 'gender' | 'shift' | 'referral' | 'hasResume' | 'search' | 'dynamicFilters'>
 ): Record<StatusFilter, number> {
   const nonStatus = applyNonStatusFilters(applications, filters);
   const counts: Record<StatusFilter, number> = { all: nonStatus.length, new: 0, shortlist: 0, accepted: 0, rejected: 0 };
