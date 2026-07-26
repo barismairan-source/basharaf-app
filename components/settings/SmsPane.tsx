@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/Switch';
 
 // ─── types ─────────────────────────────────────────────────────────
 interface AdminRow { id: string; name: string; email: string; smsPhone: string | null }
-interface LogRow   { id: string; phone: string; message: string; templateKey: string | null; status: string; createdAt: string }
+interface LogRow   { id: string; phone: string; message: string; templateKey: string | null; status: string; provider: string | null; error: string | null; createdAt: string }
 
 const STATUS_LABEL: Record<string, string> = {
   sent:     'ارسال شد',
@@ -342,7 +342,8 @@ export function SmsPane() {
                   <th className="pb-2 font-normal">شماره</th>
                   <th className="pb-2 font-normal">قانون</th>
                   <th className="pb-2 font-normal">وضعیت</th>
-                  <th className="pb-2 font-normal">پیام</th>
+                  <th className="pb-2 font-normal">provider</th>
+                  <th className="pb-2 font-normal">پیام / خطا</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-50">
@@ -360,7 +361,15 @@ export function SmsPane() {
                         {STATUS_LABEL[log.status] ?? log.status}
                       </span>
                     </td>
-                    <td className="py-2 max-w-[200px] truncate text-stone-500">{log.message}</td>
+                    <td className="py-2 whitespace-nowrap">
+                      <code className="text-[10px] text-stone-400">{log.provider ?? '—'}</code>
+                    </td>
+                    <td
+                      className={`py-2 max-w-[280px] truncate ${log.status === 'failed' && log.error ? 'text-red-600' : 'text-stone-500'}`}
+                      title={log.status === 'failed' && log.error ? log.error : log.message}
+                    >
+                      {log.status === 'failed' && log.error ? log.error : log.message}
+                    </td>
                   </tr>
                 ))}
               </tbody>
