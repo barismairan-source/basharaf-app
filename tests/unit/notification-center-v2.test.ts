@@ -737,6 +737,17 @@ describe('buildSmsMessage (production helper)', () => {
     expect(msg).toBe('فقط عنوان');
     expect(msg).not.toContain(':');
   });
+
+  it('omits the link when includeLink=false, even with a safe actionUrl', () => {
+    const msg = buildSmsMessage('عنوان', 'متن', '/dashboard', 160, false);
+    expect(msg).toBe('عنوان: متن');
+    expect(msg).not.toContain('https://');
+  });
+
+  it('includes the link when includeLink=true (default)', () => {
+    const msg = buildSmsMessage('عنوان', 'متن', '/dashboard', 160, true);
+    expect(msg).toContain('https://app.example.com/dashboard');
+  });
 });
 
 // ─── email channel — SMTP absent = retryable failure ──────────────

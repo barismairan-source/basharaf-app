@@ -19,23 +19,30 @@ import { nextAttemptAt, isLockStale, DEFAULT_MAX_ATTEMPTS, nextDayMidnightTehran
 import { redactError } from './redaction';
 import { isSafeActionUrl, absoluteUrl } from './templates';
 import { logEvent } from '@/lib/logger';
+import { resolveSmsProvider } from '@/lib/sms/dispatcher';
 
 const BATCH_SIZE = 25;
 const STALE_LOCK_MS = 15 * 60 * 1000;
 
 /**
  * Builds the SMS message text.
- * Appends a safe absolute link when actionUrl is safe.
+ * Appends a safe absolute link when actionUrl is safe AND includeLink is true.
  * Truncates the text part to stay within maxLength characters total.
  * The link is never truncated — it is either included in full or omitted.
+ *
+ * includeLink defaults to true for backward compatibility (Kavenegar allows
+ * links). MeliPayamak's shared/service line rejects any message containing
+ * a link outright ("متن حاوی لینک می‌باشد") — the processor call site below
+ * passes includeLink=false when melipayamak is the active provider.
  */
 export function buildSmsMessage(
   title: string,
   sub: string,
   actionUrl: string | null,
-  maxLength = 160
+  maxLength = 160,
+  includeLink = true
 ): string {
-  const candidateLink = isSafeActionUrl(actionUrl) ? `\n${absoluteUrl(actionUrl!)}` : '';
+  const candidateLink = includeLink && isSafeActionUrl(actionUrl) ? `\n${absoluteUrl(actionUrl!)}` : '';
   // If the link alone cannot fit, omit it so the message never exceeds maxLength.
   const safeLink   = candidateLink.length <= maxLength ? candidateLink : '';
   const maxTextLen = maxLength - safeLink.length;
@@ -145,7 +152,8 @@ export async function processOutboxBatch(
         if (!user?.smsPhone) {
           deliveryResult = { status: 'skipped', error: 'no phone on record' };
         } else {
-          const message = buildSmsMessage(payloadTitle, payloadSub, payloadActionUrl);
+          const includeLink = resolveSmsProvider().name !== 'melipayamak';
+          const message = buildSmsMessage(payloadTitle, payloadSub, payloadActionUrl, 160, includeLink);
           deliveryResult = await sendOutboxSms({
             phone:       user.smsPhone,
             message,
