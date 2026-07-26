@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAppStore } from '@/store';
+import { Switch } from '@/components/ui/Switch';
 
 // ─── types ─────────────────────────────────────────────────────────
 interface AdminRow { id: string; name: string; email: string; smsPhone: string | null }
@@ -65,6 +66,10 @@ export function SmsPane() {
 
   // ── تست کامل ─────────────────────────────────────────────────────
   const [testState, setTestState] = useState<{ loading: boolean; result?: Record<string, unknown>; error?: string }>({ loading: false });
+  // sms_enabled خودِ قانون sms.test_notify — این قانون عمداً از صفحه‌ی مرکزی
+  // اعلان‌ها مخفیه (hiddenFromUi)، پس تنها راه روشن/خاموش‌کردنش همین‌جاست.
+  const [testRuleSmsEnabled, setTestRuleSmsEnabled] = useState<boolean | null>(null);
+  const [testRuleSaving, setTestRuleSaving] = useState(false);
 
   // ── لود اولیه ────────────────────────────────────────────────────
   useEffect(() => {
@@ -72,7 +77,8 @@ export function SmsPane() {
       fetch('/api/admin/sms-settings').then((r) => r.json()),
       fetch('/api/users').then((r) => r.json()),
       fetch('/api/sms/log').then((r) => r.json()),
-    ]).then(([settings, users, logs]) => {
+      fetch('/api/admin/notification-rules').then((r) => r.json()),
+    ]).then(([settings, users, logs, rules]) => {
       setCap(settings.dailyCap ?? 5);
       setDedup(settings.dedupHours ?? 2);
 
@@ -83,10 +89,29 @@ export function SmsPane() {
       setPhoneEdits(Object.fromEntries(su.map((a: AdminRow) => [a.id, a.smsPhone ?? ''])));
 
       setLogs(logs.logs ?? []);
+
+      const testRule = (rules.rules ?? []).find(
+        (r: { key: string }) => r.key === 'sms.test_notify'
+      ) as { smsEnabled?: boolean } | undefined;
+      setTestRuleSmsEnabled(testRule?.smsEnabled ?? false);
     }).catch(() => {}).finally(() => {
       setLogsLoading(false);
     });
   }, [user?.id]);
+
+  async function toggleTestRuleSms(next: boolean) {
+    setTestRuleSaving(true);
+    try {
+      const res = await fetch('/api/admin/notification-rules', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'sms.test_notify', smsEnabled: next }),
+      });
+      if (res.ok) setTestRuleSmsEnabled(next);
+    } finally {
+      setTestRuleSaving(false);
+    }
+  }
 
   const refreshLogs = useCallback(() => {
     setLogsLoading(true);
@@ -246,13 +271,19 @@ export function SmsPane() {
           <div className="flex-1 min-w-0">
             <p className="text-[12.5px] text-stone-700">تست از مسیر واقعی</p>
             <p className="text-[11px] text-stone-400">
-              قانون <code>sms.test_notify</code> را روشن کن، سپس این دکمه را بزن — یک notify واقعی اجرا می‌شود
+              قانون <code>sms.test_notify</code> این‌جا مستقل روشن/خاموش می‌شود — چون از صفحه‌ی مرکزی اعلان‌ها عمداً مخفی است
             </p>
           </div>
+          <Switch
+            checked={testRuleSmsEnabled ?? false}
+            onCheckedChange={toggleTestRuleSms}
+            disabled={testRuleSmsEnabled === null || testRuleSaving}
+            aria-label="روشن/خاموش قانون تست پیامک"
+          />
           <button
             onClick={runTestNotify}
-            disabled={testState.loading}
-            className="h-8 px-3 text-[11.5px] border border-stone-200 rounded-md hover:bg-white flex items-center gap-1.5 shrink-0"
+            disabled={testState.loading || !testRuleSmsEnabled}
+            className="h-8 px-3 text-[11.5px] border border-stone-200 rounded-md hover:bg-white flex items-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Send size={12} strokeWidth={1.5} />
             {testState.loading ? '…' : 'تست کامل'}
@@ -268,7 +299,7 @@ export function SmsPane() {
                   لاگ SMS: <strong>{String((testState.result.smsLog as Record<string, unknown>).status ?? '')}</strong>
                 </span>
               ) : (
-                <span className="mr-2 text-amber-600">پیامک ارسال نشد — sms_enabled قانون را روشن کن</span>
+                <span className="mr-2 text-amber-600">پیامک ارسال نشد — مطمئن شو حداقل یک مدیر کل شماره موبایل ثبت‌شده دارد</span>
               )}
             </div>
           </div>
