@@ -9,13 +9,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` روی `5dac410` (شامل هم Product UI V2 هم نسخه‌ی اول ملی‌پیامک، هر دو دیپلوی‌شده). یک branch جدا فعال: `fix/melipayamak-token-api` — رفع mismatch بین API که ساخته بودم (REST قدیمی کاربری/رمز) و API واقعی پنل کاربر (کنسول توکنی) — **کد آماده، commit/push نشده، merge/deploy عمداً نه**. |
+| **نسخه** | `main` روی `511015f` — Product UI V2 + هر دو نسخه‌ی ملی‌پیامک (اولیه + رفع API توکنی) کامل دیپلوی شده. هیچ branch جدا در دست نیست. |
 | **آخرین به‌روزرسانی** | 2026-07-26 |
-| **Build/tsc** | روی `fix/melipayamak-token-api`: tsc ✅ ۰ خطا · tests 461/461 ✅ · build ✅ · lint ✅ · git diff --check ✅ |
-| **دیپلوی** | main تا `5dac410` دیپلوی شده (GH Actions run `30197085448` و `30197334749`، هر دو attempt اول موفق). branch جدید هنوز دیپلوی نشده. |
-| **کار نیمه‌تمام (in-progress)** | `fix/melipayamak-token-api`: کد کامل و تست‌شده، فقط commit/push نشده. |
-| **کار بعدی پیشنهادی** | این branch رو commit/push کن، از کاربر تأیید بگیر برای merge/deploy. بعدش کاربر باید `MELIPAYAMAK_TOKEN` (از پنل → «ارسال پیامک» → «ساده»، انتهای آدرس API) و `MELIPAYAMAK_FROM` (شماره خط، از داشبورد/«خطوط من») رو در Liara تنظیم کنه، `SMS_PROVIDER=melipayamak` بذاره، و یک پیامک واقعی تست کنه — چون مستندات پنل برای فرمت خطا کامل نیست، این اولین تست واقعی تأیید نهایی منطق موفقیت/شکست هم هست. |
-| **بلاک‌شده/منتظر کاربر** | ۱) Playwright e2e ⛔ — `.env.e2e` غایب (بدون تغییر، چند ماهه). ۲) منشأ `below_approval_limit.email_enabled=true` (از قبل production) هنوز چک نشده. ۳) Phase 2 قدیمی (`UI-UX-REFRESH-PHASE-1.md`): ۱۸ دکمه‌ی آیکونی باقیمانده، مهاجرت رنگ dark پنل ادمین — هنوز روی میز. ۴) `loadBranchCogsWaste` (Dashboard) هنوز fetch خطا رو بی‌صدا catch می‌کنه — تأثیر محدود، عمداً خارج از ممیزی Product UI V2 نگه داشته شد. ۵) ملی‌پیامک با توکن واقعی هنوز تست نشده (بدون دسترسی production). |
+| **Build/tsc** | روی `main` (`511015f`): tsc ✅ ۰ خطا · tests 461/461 ✅ · build ✅ · lint ✅ · git diff --check ✅ |
+| **دیپلوی** | ✅ main تا `511015f` دیپلوی شده — GH Actions run `30199859405`، attempt اول، موفق (بعد از `30197085448`/`30197334749` برای دو مرحله‌ی قبلی). |
+| **کار نیمه‌تمام (in-progress)** | — |
+| **کار بعدی پیشنهادی** | کاربر خودش `MELIPAYAMAK_TOKEN`/`MELIPAYAMAK_FROM`/`SMS_PROVIDER=melipayamak` رو در Liara ست کرده (بدون دسترسی من). منتظر تست واقعی کاربر — چون بدون لاگین من نمی‌تونم `/api/sms/test-notify` رو خودم بزنم. اگه کاربر گزارش داد `sms_log.status='failed'` غیرمنتظره، باید منطق تشخیص موفقیت در `lib/sms/melipayamak.ts` رو با متن خطای واقعی که برگردونده تنظیم کرد. |
+| **بلاک‌شده/منتظر کاربر** | ۱) Playwright e2e ⛔ — `.env.e2e` غایب (بدون تغییر، چند ماهه). ۲) منشأ `below_approval_limit.email_enabled=true` (از قبل production) هنوز چک نشده. ۳) Phase 2 قدیمی (`UI-UX-REFRESH-PHASE-1.md`): ۱۸ دکمه‌ی آیکونی باقیمانده، مهاجرت رنگ dark پنل ادمین — هنوز روی میز. ۴) `loadBranchCogsWaste` (Dashboard) هنوز fetch خطا رو بی‌صدا catch می‌کنه — تأثیر محدود. ۵) تست واقعی ملی‌پیامک روی production — منتظر کاربر (بدون دسترسی من). |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
