@@ -1,6 +1,7 @@
 import { and, count, eq, gt, gte, inArray, lt } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
-import { kavenegarSend } from './kavenegar';
+import { dispatchSms } from './dispatcher';
+import { normalizeIranPhone } from './phone';
 import type { SendSmsParams, SendSmsResult } from './types';
 
 const DEFAULT_DAILY_CAP = 5;
@@ -24,7 +25,24 @@ async function getSetting(key: string, fallback: number): Promise<number> {
  * - Dry-run: سقف روزانه را مصرف نمی‌کند (چون پول واقعی خرج نشده)
  */
 export async function sendSms(params: SendSmsParams): Promise<SendSmsResult> {
-  const { phone, message, templateKey, entityId } = params;
+  const { phone: rawPhone, message, templateKey, entityId } = params;
+
+  const phone = normalizeIranPhone(rawPhone);
+  if (!phone) {
+    const rows = await db
+      .insert(schema.smsLog)
+      .values({
+        phone: rawPhone,
+        message,
+        templateKey,
+        entityId,
+        status: 'failed',
+        provider: 'unknown',
+        error: 'شماره موبایل نامعتبر است',
+      })
+      .returning({ id: schema.smsLog.id });
+    return { status: 'failed', logId: rows[0]!.id };
+  }
 
   const [dailyCap, dedupHours] = await Promise.all([
     getSetting('sms.daily_cap_per_phone', DEFAULT_DAILY_CAP),
@@ -83,7 +101,7 @@ export async function sendSms(params: SendSmsParams): Promise<SendSmsResult> {
   }
 
   // ── ارسال ─────────────────────────────────────────────────────
-  const result = await kavenegarSend(phone, message);
+  const { provider, outcome } = await dispatchSms(phone, message);
 
   const rows = await db
     .insert(schema.smsLog)
@@ -92,12 +110,17 @@ export async function sendSms(params: SendSmsParams): Promise<SendSmsResult> {
       message,
       templateKey,
       entityId,
-      status: result.status,
-      providerResponse: result.providerResponse ?? null,
-      error: result.error ?? null,
-      sentAt: result.status === 'sent' ? new Date() : null,
+      status: outcome.status,
+      provider: provider ?? 'unknown',
+      providerResponse: {
+        provider,
+        ...('providerResponse' in outcome ? { raw: outcome.providerResponse ?? null } : {}),
+        ...('providerMessageId' in outcome ? { messageId: outcome.providerMessageId ?? null } : {}),
+      },
+      error: 'error' in outcome ? outcome.error : null,
+      sentAt: outcome.status === 'sent' ? new Date() : null,
     })
     .returning({ id: schema.smsLog.id });
 
-  return { status: result.status as SendSmsResult['status'], logId: rows[0]!.id };
+  return { status: outcome.status as SendSmsResult['status'], logId: rows[0]!.id };
 }

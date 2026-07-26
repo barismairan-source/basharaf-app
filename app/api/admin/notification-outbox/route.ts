@@ -26,6 +26,7 @@ import { handleError, ApiError } from '@/lib/api-error';
 import { maskPhone, maskEmail } from '@/lib/notifications/redaction';
 import { isEmailConfigured } from '@/lib/notifications/channels/email';
 import { encodeCursor, decodeCursor } from '@/lib/notifications/cursor';
+import { getSmsProviderStatus } from '@/lib/sms/dispatcher';
 
 export const dynamic = 'force-dynamic';
 
@@ -80,6 +81,8 @@ export async function GET(req: Request) {
       ? Math.floor(parseFloat(oldestRow.age_seconds))
       : null;
 
+    const smsStatus = getSmsProviderStatus();
+
     // Compound cursor WHERE — (updatedAt, id) DESC order
     let cursorWhere = undefined;
     if (cursor) {
@@ -133,7 +136,8 @@ export async function GET(req: Request) {
         dead:                  counts['dead']       ?? 0,
         sentToday,
         oldestPendingAgeSeconds,
-        smsConfigured:         !!(process.env.KAVENEGAR_API_KEY),
+        smsProvider:           smsStatus.provider,
+        smsConfigured:         smsStatus.configured,
         emailConfigured:       isEmailConfigured(),
       },
       counts,

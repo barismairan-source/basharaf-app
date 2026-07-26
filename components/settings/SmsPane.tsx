@@ -156,8 +156,9 @@ export function SmsPane() {
       <SectionCard icon={Settings2} title="تنظیمات پیامک">
         <p className="text-[12px] text-stone-500">
           سقف روزانه و بازه‌ی dedup در اینجا تنظیم می‌شوند.
-          اگر <code className="text-[11px] bg-stone-100 px-1 rounded">KAVENEGAR_API_KEY</code> در env نباشد،
-          پیامک‌ها در حالت <strong>dry-run</strong> فقط لاگ می‌شوند.
+          اگر provider پیامک فعال (کاوه‌نگار یا ملی‌پیامک) پیکربندی نشده باشد یا
+          <code className="text-[11px] bg-stone-100 px-1 rounded mx-1">SMS_DRY_RUN=true</code>
+          باشد، پیامک‌ها در حالت <strong>dry-run</strong> فقط لاگ می‌شوند.
         </p>
         <div className="grid grid-cols-2 gap-4">
           <label className="space-y-1">

@@ -1471,6 +1471,32 @@ describe('provider-status route — reflects isEmailConfigured() and KAVENEGAR_A
     if (saved !== undefined) process.env.SMS_DRY_RUN = saved;
     else delete process.env.SMS_DRY_RUN;
   });
+
+  it('reports sms.provider=kavenegar (backward compat) when SMS_PROVIDER is unset', async () => {
+    const savedProvider = process.env.SMS_PROVIDER;
+    const savedKey = process.env.KAVENEGAR_API_KEY;
+    delete process.env.SMS_PROVIDER;
+    process.env.KAVENEGAR_API_KEY = 'test-key';
+    const res = await providerStatusRoute();
+    const body = await res.json() as { sms: { provider: string | null; configured: boolean } };
+    expect(body.sms.provider).toBe('kavenegar');
+    expect(body.sms.configured).toBe(true);
+    if (savedProvider !== undefined) process.env.SMS_PROVIDER = savedProvider; else delete process.env.SMS_PROVIDER;
+    if (savedKey !== undefined) process.env.KAVENEGAR_API_KEY = savedKey; else delete process.env.KAVENEGAR_API_KEY;
+  });
+
+  it('reports sms.provider=melipayamak and configured=true when SMS_PROVIDER=melipayamak with complete env', async () => {
+    const saved = { ...process.env };
+    process.env.SMS_PROVIDER = 'melipayamak';
+    process.env.MELIPAYAMAK_USERNAME = 'u';
+    process.env.MELIPAYAMAK_PASSWORD = 'p';
+    process.env.MELIPAYAMAK_FROM = '3000';
+    const res = await providerStatusRoute();
+    const body = await res.json() as { sms: { provider: string | null; configured: boolean } };
+    expect(body.sms.provider).toBe('melipayamak');
+    expect(body.sms.configured).toBe(true);
+    process.env = saved;
+  });
 });
 
 describe('notification-rules PATCH — SMTP guard rejects emailEnabled without SMTP', () => {

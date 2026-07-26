@@ -16,8 +16,13 @@ const REDACT_PATTERNS: RegExp[] = [
   /bearer\s+\S+/gi,
   /authorization:\s*\S+/gi,
   /smtp:\/\/[^@]*@/gi,            // smtp://user:pass@
+  /\b[\w.-]+:[^:@/\s]{3,}@/g,     // user:password@ in connection-string-like errors
   /:[^:@/\s]{6,}@/g,              // :password@ in URLs
   /\b[A-Za-z0-9+/]{40,}={0,2}\b/g, // long base64 (potential tokens)
+  // Kavenegar embeds the API key directly in the request URL path
+  // (https://api.kavenegar.com/v1/{key}/sms/send.json) — a fetch failure
+  // that echoes the request URL would otherwise leak the raw key.
+  /api\.kavenegar\.com\/v1\/[^/\s]+/gi,
 ];
 
 const MAX_ERROR_LENGTH = 500;
