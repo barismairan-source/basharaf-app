@@ -3,6 +3,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
 import { notifyAdmins } from '@/lib/notify';
+import { processOutboxBatch } from '@/lib/notifications/processor';
 import { desc, eq } from 'drizzle-orm';
 
 export const dynamic = 'force-dynamic';
@@ -10,9 +11,13 @@ export const dynamic = 'force-dynamic';
 /**
  * POST /api/sms/test-notify — تست از مسیر واقعی notifications
  *
- * یک notifyAdmins() واقعی صدا می‌زند با ruleKey='sms.test_notify'.
- * اگر در Settings > پیامک این قانون sms_enabled=true باشد،
- * پیامک هم ارسال می‌شود (در صورت نبود KAVENEGAR_API_KEY → dry_run در sms_log).
+ * یک notifyAdmins() واقعی صدا می‌زند با ruleKey='sms.test_notify'؛ خودِ ارسال
+ * SMS به‌صورت async از طریق notification_outbox انجام می‌شود (پردازش دوره‌ای
+ * هر ۶۰ ثانیه توسط instrumentation.ts). برای این‌که دکمه‌ی «تست کامل» نتیجه‌ی
+ * واقعی و فوری نشون بده (نه این‌که کاربر مجبور باشه تا ۶۰ ثانیه صبر کنه و
+ * دستی رفرش بزنه)، همینجا یک batch پردازش دستی هم صدا زده می‌شود — همون
+ * تابعی که scheduler هر ۶۰ ثانیه صدا می‌زند، امن برای فراخوانی موازی
+ * (row-locking با FOR UPDATE SKIP LOCKED).
  */
 export async function POST() {
   try {
@@ -31,6 +36,8 @@ export async function POST() {
       undefined,
       { sms: true }
     );
+
+    await processOutboxBatch();
 
     // آخرین ردیف sms_log مربوط به این تست را برمی‌گرداند
     const [lastLog] = await db
