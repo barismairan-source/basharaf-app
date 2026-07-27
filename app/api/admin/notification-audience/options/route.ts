@@ -7,6 +7,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
@@ -35,6 +36,9 @@ export async function GET() {
           branchId: schema.users.assignedBranchId,
           email: schema.users.email,
           smsPhone: schema.users.smsPhone,
+          hasPushSubscription: sql<boolean>`EXISTS (
+            SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = ${schema.users.id}
+          )`,
         })
         .from(schema.users)
         .orderBy(schema.users.name),
@@ -56,6 +60,7 @@ export async function GET() {
         branchName: u.branchId ? branchNameById.get(u.branchId) ?? null : null,
         emailReady: !!u.email,
         smsReady: !!u.smsPhone,
+        pushReady: u.hasPushSubscription,
         maskedEmail: u.email ? maskEmail(u.email) : null,
         maskedPhone: u.smsPhone ? maskPhone(u.smsPhone) : null,
       })),

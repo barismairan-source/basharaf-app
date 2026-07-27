@@ -1277,3 +1277,10 @@ tests/unit/security-guards.test.ts: 27 تست سبز ✅.
 **Build:** tsc ✅ · tests 393/393 ✅ · build ✅ · lint ✅
 **ناتمام:** merge/deploy این نشست عمداً انجام نشد (بعداً merge شد).
 **برای جلسه‌ی بعد:** —
+
+## 📓 2026-07-25 — هاتفیکس‌های بصری/اعتبارسنجی فرم «ثبت تراکنش» از بازبینی زنده‌ی کاربر (v0.31.0، مستقیم روی main)
+**چه شد:** دو دور اصلاح مستقیم روی `main` (با تأیید کاربر قبل از هر push، چون صفحه زنده بود): دور ۱ چند باگ بصری (آیکون تقویم روی متن تاریخ، سایز باکس مبلغ، عریض‌زدن `StickyActionBar`). دور ۲، جدی‌تر: فرم اصلاً ثبت نمی‌شد («Expected number, received string») چون `register('amount')` کامل spread شده بود و `onBlur` پیش‌فرض react-hook-form مقدار عددی دستی رو با رشته‌ی خام DOM بازنویسی می‌کرد؛ با گرفتن فقط `ref`/`name` از register (نه کل شیء) رفع شد.
+**فایل‌ها:** `app/(app)/transactions/new/page.tsx`، `components/ui/JalaliDatePicker.tsx`
+**Build:** tsc ✅ · tests 393/393 ✅ · build ✅ · lint ✅ · هر دو دور دیپلوی موفق
+**ناتمام:** —
+**برای جلسه‌ی بعد:** الگوی باگ (register()+custom onChange بدون override onBlur) ممکنه جای دیگه‌ای تکرار بشه.

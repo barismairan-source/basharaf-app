@@ -5,7 +5,7 @@ import {
   Bell, Clock, AlertTriangle, AlertOctagon,
   ShoppingCart, Package, CheckCircle2, RefreshCw, DollarSign,
   Mail, MessageSquare, LayoutList, Inbox, RotateCcw, Loader2,
-  Users, ShieldAlert, FileCheck, Search as SearchIcon,
+  Users, ShieldAlert, FileCheck, Search as SearchIcon, Smartphone,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -15,7 +15,7 @@ import { RecipientDrawer } from '@/components/admin/notifications/RecipientDrawe
 
 // ─── Types — mirror GET /api/admin/notification-audience ──────────
 
-type Channel = 'in_app' | 'sms' | 'email';
+type Channel = 'in_app' | 'sms' | 'email' | 'push';
 
 interface CatalogInfo {
   title: string;
@@ -47,6 +47,7 @@ interface RuleWithAudience {
   smsEnabled: boolean;
   inAppEnabled: boolean;
   emailEnabled: boolean;
+  pushEnabled: boolean;
   threshold: number | null;
   updatedAt: string;
   catalog: CatalogInfo;
@@ -76,6 +77,7 @@ interface OutboxSummary {
   oldestPendingAgeSeconds: number | null;
   smsConfigured: boolean;
   emailConfigured: boolean;
+  pushConfigured: boolean;
 }
 
 // ─── Metadata ─────────────────────────────────────────────────────
@@ -134,7 +136,7 @@ function RuleRow({
   rule: RuleWithAudience;
   onToggle: (key: string, enabled: boolean) => void;
   onThreshold: (key: string, value: number | null) => void;
-  onChannelToggle: (key: string, field: 'inAppEnabled' | 'emailEnabled' | 'smsEnabled', value: boolean) => void;
+  onChannelToggle: (key: string, field: 'inAppEnabled' | 'emailEnabled' | 'smsEnabled' | 'pushEnabled', value: boolean) => void;
   onOpenRecipients: (key: string) => void;
   saving: string | null;
 }) {
@@ -202,6 +204,16 @@ function RuleRow({
               />
               <MessageSquare size={11} className="text-stone-400" aria-hidden />
               <span className="text-[11px] text-stone-400">پیامک ({rule.audience.sms.recipientCount})</span>
+            </label>
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rule.pushEnabled}
+                onChange={(e) => onChannelToggle(rule.key, 'pushEnabled', e.target.checked)}
+                className="w-3.5 h-3.5 accent-indigo-500 cursor-pointer"
+              />
+              <Smartphone size={11} className="text-stone-400" aria-hidden />
+              <span className="text-[11px] text-stone-400">نوتیفیکیشن ({rule.audience.push.recipientCount})</span>
             </label>
           </div>
         )}
@@ -431,6 +443,9 @@ function OutboxTab() {
           <span className={cn('px-2 py-1 rounded', summary.emailConfigured ? 'bg-emerald-900/30 text-emerald-400' : 'bg-stone-800 text-stone-500')}>
             ایمیل: {summary.emailConfigured ? 'پیکربندی‌شده' : 'پیکربندی‌نشده'}
           </span>
+          <span className={cn('px-2 py-1 rounded', summary.pushConfigured ? 'bg-emerald-900/30 text-emerald-400' : 'bg-stone-800 text-stone-500')}>
+            نوتیفیکیشن: {summary.pushConfigured ? 'پیکربندی‌شده' : 'پیکربندی‌نشده'}
+          </span>
           {summary.oldestPendingAgeSeconds !== null && summary.oldestPendingAgeSeconds > 300 && (
             <span className="px-2 py-1 rounded bg-amber-900/30 text-amber-400">
               قدیمی‌ترین pending: {Math.round(summary.oldestPendingAgeSeconds / 60)} دقیقه
@@ -559,6 +574,7 @@ export default function NotificationRulesPage() {
         smsEnabled: data.rule.smsEnabled,
         inAppEnabled: data.rule.inAppEnabled,
         emailEnabled: data.rule.emailEnabled,
+        pushEnabled: data.rule.pushEnabled,
         threshold: data.rule.threshold,
         updatedAt: data.rule.updatedAt,
       } : r)));
@@ -573,7 +589,7 @@ export default function NotificationRulesPage() {
 
   const handleToggle         = (key: string, enabled: boolean) => patch(key, { enabled });
   const handleThreshold      = (key: string, value: number | null) => patch(key, { threshold: value });
-  const handleChannelToggle  = (key: string, field: 'inAppEnabled' | 'emailEnabled' | 'smsEnabled', value: boolean) =>
+  const handleChannelToggle  = (key: string, field: 'inAppEnabled' | 'emailEnabled' | 'smsEnabled' | 'pushEnabled', value: boolean) =>
     patch(key, { [field]: value });
 
   const drawerRule = rules.find((r) => r.key === drawerRuleKey) ?? null;

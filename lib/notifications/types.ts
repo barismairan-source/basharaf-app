@@ -1,6 +1,6 @@
 import type { NotificationType } from '@/types';
 
-export type OutboxChannel = 'sms' | 'email';
+export type OutboxChannel = 'sms' | 'email' | 'push';
 
 export type OutboxStatus = 'pending' | 'processing' | 'sent' | 'failed' | 'dead' | 'skipped';
 
@@ -49,6 +49,12 @@ export interface NotifyAdminsChannelOptions {
    * Pass false to permanently disable email for this event type regardless of rule settings.
    */
   email?: boolean;
+  /**
+   * Declares that this event type supports browser push delivery.
+   * Defaults to true — DB rule.pushEnabled + VAPID config controls whether it's actually sent.
+   * Pass false to permanently disable push for this event type regardless of rule settings.
+   */
+  push?: boolean;
 }
 
 export interface OutboxPayload {

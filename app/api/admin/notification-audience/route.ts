@@ -16,7 +16,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq, and, isNull, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
@@ -37,7 +37,7 @@ import { maskEmail, maskPhone } from '@/lib/notifications/redaction';
 
 export const dynamic = 'force-dynamic';
 
-const CHANNELS: readonly AudienceChannel[] = ['in_app', 'sms', 'email'];
+const CHANNELS: readonly AudienceChannel[] = ['in_app', 'sms', 'email', 'push'];
 
 function toTargetRow(t: TargetInput): AudienceTargetRow {
   return {
@@ -99,6 +99,7 @@ export async function GET() {
         smsEnabled: r.smsEnabled,
         inAppEnabled: r.inAppEnabled,
         emailEnabled: r.emailEnabled,
+        pushEnabled: r.pushEnabled,
         threshold: r.threshold,
         updatedAt: r.updatedAt.toISOString(),
         catalog: catalogEntry
@@ -161,8 +162,8 @@ const postSchema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('copy'),
     ruleKey: z.string().min(1),
-    fromChannel: z.enum(['in_app', 'email', 'sms']).nullable(),
-    toChannel: z.enum(['in_app', 'email', 'sms']).nullable(),
+    fromChannel: z.enum(['in_app', 'email', 'sms', 'push']).nullable(),
+    toChannel: z.enum(['in_app', 'email', 'sms', 'push']).nullable(),
     expectedUpdatedAt: z.string().min(1),
   }),
   z.object({
@@ -182,6 +183,7 @@ interface PreviewRecipient {
   reason: string | null;
   emailReady: boolean;
   smsReady: boolean;
+  pushReady: boolean;
   maskedEmail: string | null;
   maskedPhone: string | null;
 }
@@ -197,6 +199,9 @@ async function loadUsersWithNames(): Promise<Array<CandidateUser & { name: strin
       email: schema.users.email,
       smsPhone: schema.users.smsPhone,
       permissions: schema.users.permissions,
+      hasPushSubscription: sql<boolean>`EXISTS (
+        SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = ${schema.users.id}
+      )`,
     })
     .from(schema.users);
   return rows.map((r) => ({ ...r, permissions: r.permissions ?? null }));
@@ -216,7 +221,7 @@ async function handlePreview(ruleKey: string, draftTargets: TargetInput[] | unde
   const branchNameById = new Map(branches.map((b) => [b.id, b.name]));
   const userById = new Map(users.map((u) => [u.id, u]));
 
-  const result: Record<AudienceChannel, PreviewRecipient[]> = { in_app: [], sms: [], email: [] };
+  const result: Record<AudienceChannel, PreviewRecipient[]> = { in_app: [], sms: [], email: [], push: [] };
   for (const ch of CHANNELS) {
     const resolved = resolveAudience({ ruleKey, channel: ch, targets, users, eventBranchId: null });
     result[ch] = resolved.map((r) => {
@@ -231,6 +236,7 @@ async function handlePreview(ruleKey: string, draftTargets: TargetInput[] | unde
         reason: r.reason ?? null,
         emailReady: !!u.email,
         smsReady: !!u.smsPhone,
+        pushReady: !!u.hasPushSubscription,
         maskedEmail: u.email ? maskEmail(u.email) : null,
         maskedPhone: u.smsPhone ? maskPhone(u.smsPhone) : null,
       };

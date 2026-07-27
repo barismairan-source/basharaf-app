@@ -17,6 +17,7 @@
  *     never silently fall back to the default.
  *  6. Email requires a stored user email.
  *  7. SMS requires a stored smsPhone.
+ *  8. Push requires at least one stored push subscription.
  *  9. Receiving a notification never grants data access by itself.
  * 10. A recipient must already have the rule's required section/capability
  *     before being marked eligible for delivery of details.
@@ -25,7 +26,7 @@
  *     actually sending.
  */
 
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { canAccessSection, canDo } from '@/lib/auth/permissions';
 import { getCatalogEntry } from './catalog';
@@ -55,9 +56,11 @@ export interface CandidateUser {
   email: string;
   smsPhone: string | null;
   permissions: string[] | null;
+  /** True when at least one push_subscriptions row exists for this user. */
+  hasPushSubscription: boolean;
 }
 
-export type IneligibleReason = 'inactive' | 'missing_email' | 'missing_phone' | 'missing_access';
+export type IneligibleReason = 'inactive' | 'missing_email' | 'missing_phone' | 'missing_push_subscription' | 'missing_access';
 
 export interface ResolvedRecipient {
   userId: string;
@@ -154,6 +157,10 @@ export function resolveAudience(input: ResolveAudienceInput): ResolvedRecipient[
       results.push({ userId: u.id, eligible: false, reason: 'missing_phone' });
       continue;
     }
+    if (channel === 'push' && !u.hasPushSubscription) {
+      results.push({ userId: u.id, eligible: false, reason: 'missing_push_subscription' });
+      continue;
+    }
     results.push({ userId: u.id, eligible: true });
   }
   return results;
@@ -232,6 +239,9 @@ export async function fetchCandidateUsers(client: Client = db): Promise<Candidat
       email: schema.users.email,
       smsPhone: schema.users.smsPhone,
       permissions: schema.users.permissions,
+      hasPushSubscription: sql<boolean>`EXISTS (
+        SELECT 1 FROM push_subscriptions ps WHERE ps.user_id = ${schema.users.id}
+      )`,
     })
     .from(schema.users);
 
@@ -243,6 +253,7 @@ export async function fetchCandidateUsers(client: Client = db): Promise<Candidat
     email: r.email,
     smsPhone: r.smsPhone,
     permissions: r.permissions ?? null,
+    hasPushSubscription: r.hasPushSubscription,
   }));
 }
 

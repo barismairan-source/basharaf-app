@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   X, Loader2, Search, Plus, Copy, RotateCcw,
-  CheckCircle2, AlertTriangle, ShieldAlert, Mail, MessageSquare, LayoutList,
+  CheckCircle2, AlertTriangle, ShieldAlert, Mail, MessageSquare, LayoutList, Smartphone,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConfirm } from '@/components/ui/ConfirmDialog';
@@ -11,7 +11,7 @@ import { IconButton } from '@/components/ui/IconButton';
 
 // ─── Types (mirror the API shapes in app/api/admin/notification-audience) ──
 
-type Channel = 'in_app' | 'sms' | 'email';
+type Channel = 'in_app' | 'sms' | 'email' | 'push';
 type Effect = 'include' | 'exclude';
 type TargetType = 'all_active' | 'role' | 'branch' | 'event_branch' | 'user';
 
@@ -33,6 +33,7 @@ interface OptionUser {
   branchName: string | null;
   emailReady: boolean;
   smsReady: boolean;
+  pushReady: boolean;
   maskedEmail: string | null;
   maskedPhone: string | null;
 }
@@ -50,6 +51,7 @@ interface PreviewRecipient {
   reason: string | null;
   emailReady: boolean;
   smsReady: boolean;
+  pushReady: boolean;
   maskedEmail: string | null;
   maskedPhone: string | null;
 }
@@ -68,6 +70,7 @@ const CHANNEL_TABS: Array<{ key: Channel; label: string; icon: typeof LayoutList
   { key: 'in_app', label: 'داخل‌برنامه', icon: LayoutList },
   { key: 'email', label: 'ایمیل', icon: Mail },
   { key: 'sms', label: 'پیامک', icon: MessageSquare },
+  { key: 'push', label: 'نوتیفیکیشن', icon: Smartphone },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -81,6 +84,7 @@ const REASON_LABELS: Record<string, string> = {
   inactive: 'غیرفعال',
   missing_email: 'بدون ایمیل ثبت‌شده',
   missing_phone: 'بدون شماره ثبت‌شده',
+  missing_push_subscription: 'بدون اشتراک نوتیفیکیشن',
   missing_access: 'بدون دسترسی بخش لازم',
 };
 
@@ -115,7 +119,7 @@ export function RecipientDrawer({
   const [roles, setRoles] = useState<OptionRole[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(true);
 
-  const [preview, setPreview] = useState<Record<Channel, PreviewRecipient[]>>({ in_app: [], sms: [], email: [] });
+  const [preview, setPreview] = useState<Record<Channel, PreviewRecipient[]>>({ in_app: [], sms: [], email: [], push: [] });
   const [previewLoading, setPreviewLoading] = useState(false);
 
   const [pickerOpen, setPickerOpen] = useState<Effect | null>(null);
@@ -157,7 +161,7 @@ export function RecipientDrawer({
         body: JSON.stringify({ action: 'preview', ruleKey, targets: draft }),
       })
         .then((r) => r.json())
-        .then((d) => setPreview(d.recipients ?? { in_app: [], sms: [], email: [] }))
+        .then((d) => setPreview(d.recipients ?? { in_app: [], sms: [], email: [], push: [] }))
         .catch(() => {})
         .finally(() => setPreviewLoading(false));
     }, 300);

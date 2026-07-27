@@ -9,6 +9,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
 import { isEmailConfigured } from '@/lib/notifications/channels/email';
+import { isPushConfigured } from '@/lib/notifications/channels/push';
 import { getSmsProviderStatus } from '@/lib/sms/dispatcher';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,9 @@ export async function GET() {
         provider: smsStatus.provider,
         configured: smsStatus.configured,
         dryRun: process.env.SMS_DRY_RUN === 'true',
+      },
+      push: {
+        configured: isPushConfigured(),
       },
     });
   } catch (e) {

@@ -5,6 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
 import { isEmailConfigured } from '@/lib/notifications/channels/email';
+import { isPushConfigured } from '@/lib/notifications/channels/push';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,6 +27,7 @@ export async function GET() {
         smsEnabled:   r.smsEnabled,
         inAppEnabled: r.inAppEnabled,
         emailEnabled: r.emailEnabled,
+        pushEnabled:  r.pushEnabled,
         threshold:    r.threshold,
         updatedAt:    r.updatedAt.toISOString(),
       })),
@@ -41,6 +43,7 @@ const patchSchema = z.object({
   smsEnabled:   z.boolean().optional(),
   inAppEnabled: z.boolean().optional(),
   emailEnabled: z.boolean().optional(),
+  pushEnabled:  z.boolean().optional(),
   threshold:    z.number().int().min(0).nullable().optional(),
 });
 
@@ -61,6 +64,17 @@ export async function PATCH(req: Request) {
       }
     }
 
+    // Guard: reject pushEnabled=true if VAPID is not fully configured —
+    // same rationale as the SMTP guard above.
+    if (body.pushEnabled === true) {
+      if (!isPushConfigured()) {
+        return NextResponse.json(
+          { error: 'نوتیفیکیشن قابل فعال‌سازی نیست — VAPID پیکربندی نشده', code: 'VAPID_NOT_CONFIGURED' },
+          { status: 422 }
+        );
+      }
+    }
+
     const patch: Partial<typeof schema.notificationRules.$inferInsert> = {
       updatedAt: new Date(),
     };
@@ -68,6 +82,7 @@ export async function PATCH(req: Request) {
     if (body.smsEnabled   !== undefined) patch.smsEnabled   = body.smsEnabled;
     if (body.inAppEnabled !== undefined) patch.inAppEnabled = body.inAppEnabled;
     if (body.emailEnabled !== undefined) patch.emailEnabled = body.emailEnabled;
+    if (body.pushEnabled  !== undefined) patch.pushEnabled  = body.pushEnabled;
     if (body.threshold    !== undefined) patch.threshold    = body.threshold;
 
     const [updated] = await db
@@ -89,6 +104,7 @@ export async function PATCH(req: Request) {
         smsEnabled:   updated.smsEnabled,
         inAppEnabled: updated.inAppEnabled,
         emailEnabled: updated.emailEnabled,
+        pushEnabled:  updated.pushEnabled,
         threshold:    updated.threshold,
         updatedAt:    updated.updatedAt.toISOString(),
       },

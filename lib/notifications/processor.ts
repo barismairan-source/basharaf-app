@@ -15,6 +15,7 @@ import { and, eq, lt, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { sendOutboxSms } from './channels/sms';
 import { sendNotificationEmail } from './channels/email';
+import { sendPushToUser } from './channels/push';
 import { nextAttemptAt, isLockStale, DEFAULT_MAX_ATTEMPTS, nextDayMidnightTehran } from './retry';
 import { redactError } from './redaction';
 import { isSafeActionUrl, absoluteUrl } from './templates';
@@ -174,6 +175,15 @@ export async function processOutboxBatch(
             },
           });
         }
+      } else if (row.channel === 'push') {
+        // No address lookup needed here — sendPushToUser looks up the
+        // user's push_subscriptions rows internally by recipient_id.
+        deliveryResult = await sendPushToUser({
+          userId:    row.recipient_id,
+          title:     payloadTitle,
+          sub:       payloadSub,
+          actionUrl: payloadActionUrl,
+        });
       } else {
         deliveryResult = { status: 'skipped', error: `unknown channel: ${row.channel}` };
       }

@@ -32,6 +32,7 @@ function user(overrides: Partial<CandidateUser> & { id: string }): CandidateUser
     email: 'user@example.com',
     smsPhone: '09121234567',
     permissions: null,
+    hasPushSubscription: true,
     ...overrides,
   };
 }
@@ -198,6 +199,18 @@ describe('resolveAudience — address readiness (email/sms) and access gating', 
     expect(result).toEqual([{ userId: 'a', eligible: false, reason: 'missing_phone' }]);
   });
 
+  it('push channel requires at least one push subscription — missing is ineligible with reason', () => {
+    const users = [user({ id: 'a', role: 'SuperAdmin', hasPushSubscription: false })];
+    const result = resolveAudience({ ruleKey: 'k', channel: 'push', targets: [], users });
+    expect(result).toEqual([{ userId: 'a', eligible: false, reason: 'missing_push_subscription' }]);
+  });
+
+  it('push channel is eligible when a subscription exists', () => {
+    const users = [user({ id: 'a', role: 'SuperAdmin', hasPushSubscription: true })];
+    const result = resolveAudience({ ruleKey: 'k', channel: 'push', targets: [], users });
+    expect(result).toEqual([{ userId: 'a', eligible: true }]);
+  });
+
   it('a rule with requiredSection excludes users without that section access, but SuperAdmin always passes', () => {
     // high_value_tx.requiredSection = 'transactions'; BranchUser has it by default role, Warehouse does not.
     const users = [
@@ -340,7 +353,7 @@ describe('service.ts — per-channel audience resolution end-to-end', () => {
     const { fetchAudienceTargets, fetchCandidateUsers } = await import('@/lib/notifications/audience');
     const { db: mockDb, schema } = await import('@/lib/db/client');
 
-    vi.mocked(resolveRule).mockResolvedValue({ enabled: true, inAppEnabled: true, smsEnabled: true, emailEnabled: false });
+    vi.mocked(resolveRule).mockResolvedValue({ enabled: true, inAppEnabled: true, smsEnabled: true, emailEnabled: false, pushEnabled: false });
 
     const users: CandidateUser[] = [
       user({ id: 'sa1', role: 'SuperAdmin' }),                 // eligible on both in_app and sms
@@ -398,7 +411,7 @@ describe('service.ts — per-channel audience resolution end-to-end', () => {
     const { fetchAudienceTargets, fetchCandidateUsers } = await import('@/lib/notifications/audience');
     const { db: mockDb } = await import('@/lib/db/client');
 
-    vi.mocked(resolveRule).mockResolvedValue({ enabled: true, inAppEnabled: true, smsEnabled: false, emailEnabled: false });
+    vi.mocked(resolveRule).mockResolvedValue({ enabled: true, inAppEnabled: true, smsEnabled: false, emailEnabled: false, pushEnabled: false });
     vi.mocked(fetchCandidateUsers).mockResolvedValue([user({ id: 'sa1', role: 'SuperAdmin' })]);
     // custom audience that excludes the only candidate → zero, no fallback
     vi.mocked(fetchAudienceTargets).mockResolvedValue([

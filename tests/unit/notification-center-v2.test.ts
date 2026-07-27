@@ -659,10 +659,10 @@ describe('cursor codec — full validation (production decodeCursor)', () => {
 
 // ─── rules.ts — shouldEnqueueEmail ────────────────────────────────
 
-import { shouldEnqueueEmail, shouldEnqueueSms, shouldSendInApp } from '@/lib/notifications/rules';
+import { shouldEnqueueEmail, shouldEnqueuePush, shouldEnqueueSms, shouldSendInApp } from '@/lib/notifications/rules';
 
 describe('shouldEnqueueEmail — DB rule is sole arbiter (no SMTP check at enqueue)', () => {
-  const baseRule = { enabled: true, inAppEnabled: true, smsEnabled: true, emailEnabled: true };
+  const baseRule = { enabled: true, inAppEnabled: true, smsEnabled: true, emailEnabled: true, pushEnabled: false };
 
   it('returns true when rule is email-enabled and caller allows', () => {
     // Deliberately does not set MAIL_* env vars — proves SMTP is not checked here
@@ -679,6 +679,27 @@ describe('shouldEnqueueEmail — DB rule is sole arbiter (no SMTP check at enque
 
   it('returns false when caller does not allow email channel', () => {
     expect(shouldEnqueueEmail(baseRule, false)).toBe(false);
+  });
+});
+
+describe('shouldEnqueuePush — DB rule is sole arbiter (no VAPID check at enqueue)', () => {
+  const baseRule = { enabled: true, inAppEnabled: true, smsEnabled: true, emailEnabled: true, pushEnabled: true };
+
+  it('returns true when rule is push-enabled and caller allows', () => {
+    // Deliberately does not set VAPID_* env vars — proves config is not checked here
+    expect(shouldEnqueuePush(baseRule, true)).toBe(true);
+  });
+
+  it('returns false when pushEnabled=false in rule', () => {
+    expect(shouldEnqueuePush({ ...baseRule, pushEnabled: false }, true)).toBe(false);
+  });
+
+  it('returns false when rule is globally disabled', () => {
+    expect(shouldEnqueuePush({ ...baseRule, enabled: false }, true)).toBe(false);
+  });
+
+  it('returns false when caller does not allow push channel', () => {
+    expect(shouldEnqueuePush(baseRule, false)).toBe(false);
   });
 });
 
@@ -1002,7 +1023,7 @@ vi.mock('@/lib/notifications/rules', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/lib/notifications/rules')>();
   return {
     ...actual,
-    resolveRule: vi.fn().mockResolvedValue({ enabled: false, inAppEnabled: false, smsEnabled: false, emailEnabled: false }),
+    resolveRule: vi.fn().mockResolvedValue({ enabled: false, inAppEnabled: false, smsEnabled: false, emailEnabled: false, pushEnabled: false }),
   };
 });
 
@@ -1010,7 +1031,7 @@ import { notifyAdminsV2 } from '@/lib/notifications/service';
 import { resolveRule } from '@/lib/notifications/rules';
 import { db as mockDb, schema as mockSchema } from '@/lib/db/client';
 
-const DISABLED_RULE = { enabled: false, inAppEnabled: false, smsEnabled: false, emailEnabled: false };
+const DISABLED_RULE = { enabled: false, inAppEnabled: false, smsEnabled: false, emailEnabled: false, pushEnabled: false };
 
 describe('service.ts — disabled rule produces no DB writes', () => {
   let capturedTxInsert: ReturnType<typeof vi.fn>;
@@ -1142,6 +1163,43 @@ describe('isEmailConfigured — field-level validation', () => {
 
   it('returns true when all five fields are present and port is numeric', () => {
     withSmtp({}, () => { expect(isEmailConfigured()).toBe(true); });
+  });
+});
+
+// ─── isPushConfigured — field-level validation ─────────────────────
+
+import { isPushConfigured } from '@/lib/notifications/channels/push';
+
+describe('isPushConfigured — field-level validation', () => {
+  const FULL_VAPID = {
+    VAPID_PUBLIC_KEY:  'pub',
+    VAPID_PRIVATE_KEY: 'priv',
+    VAPID_SUBJECT:     'mailto:admin@example.com',
+  };
+
+  function withVapid(overrides: Record<string, string | undefined>, fn: () => void): void {
+    const saved = { ...process.env };
+    Object.assign(process.env, FULL_VAPID);
+    for (const [k, v] of Object.entries(overrides)) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    try { fn(); } finally {
+      for (const k of Object.keys(FULL_VAPID)) delete process.env[k];
+      Object.assign(process.env, saved);
+    }
+  }
+
+  it('returns false when VAPID_PRIVATE_KEY is absent', () => {
+    withVapid({ VAPID_PRIVATE_KEY: undefined }, () => { expect(isPushConfigured()).toBe(false); });
+  });
+
+  it('returns false when VAPID_SUBJECT is absent', () => {
+    withVapid({ VAPID_SUBJECT: undefined }, () => { expect(isPushConfigured()).toBe(false); });
+  });
+
+  it('returns true when all three fields are present', () => {
+    withVapid({}, () => { expect(isPushConfigured()).toBe(true); });
   });
 });
 
@@ -1341,7 +1399,7 @@ describe('service.ts — active rule: resolveRule receives correct ruleKey', () 
 
 describe('service.ts — active rule: SMS and email share the same eventKey', () => {
   it('SMS and email outbox entries derive eventKey from entityId (shared)', async () => {
-    const ACTIVE_RULE = { enabled: true, inAppEnabled: false, smsEnabled: true, emailEnabled: true };
+    const ACTIVE_RULE = { enabled: true, inAppEnabled: false, smsEnabled: true, emailEnabled: true, pushEnabled: false };
     vi.mocked(resolveRule).mockResolvedValueOnce(ACTIVE_RULE);
 
     const capturedOutbox: Array<Record<string, unknown>> = [];
@@ -1360,7 +1418,7 @@ describe('service.ts — active rule: SMS and email share the same eventKey', ()
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockImplementation((table: unknown) => {
           if (table === mockSchema.users) {
-            return chainable([{ id: 'admin-1', role: 'SuperAdmin', isActive: true, branchId: null, email: 'admin1@example.com', smsPhone: '+989000000000', permissions: null }]);
+            return chainable([{ id: 'admin-1', role: 'SuperAdmin', isActive: true, branchId: null, email: 'admin1@example.com', smsPhone: '+989000000000', permissions: null, hasPushSubscription: false }]);
           }
           return chainable([]); // no custom audience targets → resolver falls back to default (all active SuperAdmins)
         }),
@@ -1473,6 +1531,28 @@ describe('provider-status route — reflects isEmailConfigured() and KAVENEGAR_A
     else delete process.env.KAVENEGAR_API_KEY;
   });
 
+  it('returns push.configured=false when VAPID env vars are absent', async () => {
+    const saved = { ...process.env };
+    delete process.env.VAPID_PUBLIC_KEY;
+    delete process.env.VAPID_PRIVATE_KEY;
+    delete process.env.VAPID_SUBJECT;
+    const res = await providerStatusRoute();
+    const body = await res.json() as { push: { configured: boolean } };
+    expect(body.push.configured).toBe(false);
+    process.env = saved;
+  });
+
+  it('returns push.configured=true when all VAPID env vars are set', async () => {
+    const saved = { ...process.env };
+    process.env.VAPID_PUBLIC_KEY = 'pub';
+    process.env.VAPID_PRIVATE_KEY = 'priv';
+    process.env.VAPID_SUBJECT = 'mailto:admin@example.com';
+    const res = await providerStatusRoute();
+    const body = await res.json() as { push: { configured: boolean } };
+    expect(body.push.configured).toBe(true);
+    process.env = saved;
+  });
+
   it('returns sms.dryRun=true when SMS_DRY_RUN=true', async () => {
     const saved = process.env.SMS_DRY_RUN;
     process.env.SMS_DRY_RUN = 'true';
@@ -1541,6 +1621,30 @@ describe('notification-rules PATCH — SMTP guard rejects emailEnabled without S
     });
     const res = await notifRulesPATCH(req);
     expect(res.status).toBe(401);
+  });
+});
+
+describe('notification-rules PATCH — VAPID guard rejects pushEnabled without VAPID', () => {
+  beforeEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(mockRequireAdmin).mockResolvedValue({ id: 'admin-1', role: 'Admin' } as any);
+  });
+
+  it('returns 422 with VAPID_NOT_CONFIGURED when pushEnabled=true and VAPID absent', async () => {
+    const saved = { ...process.env };
+    delete process.env.VAPID_PUBLIC_KEY;
+    delete process.env.VAPID_PRIVATE_KEY;
+    delete process.env.VAPID_SUBJECT;
+    const req = new Request('http://localhost/api/admin/notification-rules', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'test.rule', pushEnabled: true }),
+    });
+    const res = await notifRulesPATCH(req);
+    expect(res.status).toBe(422);
+    const body = await res.json() as { code: string };
+    expect(body.code).toBe('VAPID_NOT_CONFIGURED');
+    process.env = saved;
   });
 });
 

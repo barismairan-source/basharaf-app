@@ -10,6 +10,7 @@ export interface ResolvedRule {
   inAppEnabled: boolean;
   smsEnabled: boolean;
   emailEnabled: boolean;
+  pushEnabled: boolean;
 }
 
 /** Resolves a notification rule from DB. Returns null if not found. */
@@ -23,6 +24,7 @@ export async function resolveRule(
       inAppEnabled: schema.notificationRules.inAppEnabled,
       smsEnabled:   schema.notificationRules.smsEnabled,
       emailEnabled: schema.notificationRules.emailEnabled,
+      pushEnabled:  schema.notificationRules.pushEnabled,
     })
     .from(schema.notificationRules)
     .where(eq(schema.notificationRules.key, ruleKey))
@@ -51,4 +53,14 @@ export function shouldEnqueueSms(rule: ResolvedRule, callerAllows: boolean): boo
  */
 export function shouldEnqueueEmail(rule: ResolvedRule, callerAllows: boolean): boolean {
   return rule.enabled && rule.emailEnabled && callerAllows;
+}
+
+/**
+ * Returns true if a push outbox row should be enqueued.
+ * Note: VAPID configuration is NOT checked here — same rationale as email:
+ * the enqueue decision is based solely on the DB rule, so a temporarily
+ * missing VAPID config produces retryable failures rather than silent drops.
+ */
+export function shouldEnqueuePush(rule: ResolvedRule, callerAllows: boolean): boolean {
+  return rule.enabled && rule.pushEnabled && callerAllows;
 }

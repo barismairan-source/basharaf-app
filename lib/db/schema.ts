@@ -360,6 +360,8 @@ export const notificationRules = pgTable('notification_rules', {
   inAppEnabled: boolean('in_app_enabled').notNull().default(true),
   /** V2: controls email channel (requires SMTP configured) */
   emailEnabled: boolean('email_enabled').notNull().default(false),
+  /** V2: controls browser push channel (requires VAPID configured) */
+  pushEnabled: boolean('push_enabled').notNull().default(false),
   threshold: integer('threshold'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
@@ -453,6 +455,35 @@ export const notificationOutbox = pgTable(
 );
 
 export type NotificationOutboxRow = typeof notificationOutbox.$inferSelect;
+
+// ─── Push Subscriptions ───────────────────────────────────────────
+/**
+ * جدول push_subscriptions — اشتراک‌های Web Push هر کاربر.
+ *
+ * یک کاربر می‌تواند چند اشتراک داشته باشد (چند مرورگر/دستگاه) — همه‌شان
+ * هنگام ارسال push هدف قرار می‌گیرند. endpoint شناسه‌ی یکتای هر
+ * مرورگر/دستگاه است (از سرویس push خودِ مرورگر می‌آید)، برای upsert idempotent
+ * استفاده می‌شود.
+ */
+export const pushSubscriptions = pgTable(
+  'push_subscriptions',
+  {
+    id:         uuid('id').primaryKey().defaultRandom(),
+    userId:     uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+    endpoint:   text('endpoint').notNull().unique(),
+    p256dh:     text('p256dh').notNull(),
+    auth:       text('auth').notNull(),
+    userAgent:  text('user_agent'),
+    createdAt:  timestamp('created_at',   { withTimezone: true }).notNull().defaultNow(),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index('push_subscriptions_user_id_idx').on(table.userId),
+  })
+);
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type NewPushSubscriptionRow = typeof pushSubscriptions.$inferInsert;
 
 // ─── Audit Log ───────────────────────────────────────────────────
 /**

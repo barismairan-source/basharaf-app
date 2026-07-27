@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { Card, CardBody, CardHeader, Switch, Select, ACCENT_PRESETS } from '@/components/ui';
 import { useAppStore } from '@/store';
 import type { Preferences } from '@/types';
+import { PushNotificationToggle } from './PushNotificationToggle';
 
 /**
  * PreferencesPane — تنظیمات سامانه.
@@ -301,6 +302,7 @@ export function PreferencesPane() {
         <CardHeader title="اعلان‌ها" />
         <CardBody className="p-0">
           <div className="px-5">
+            <PushNotificationToggle />
             <ToggleRow
               label="اعلان تراکنش‌های در انتظار"
               description="وقتی تراکنش جدیدی برای تایید ارسال می‌شود، در زنگ اعلان نمایش داده شود."

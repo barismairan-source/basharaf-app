@@ -25,6 +25,7 @@ import { requireAdmin } from '@/lib/auth/session';
 import { handleError, ApiError } from '@/lib/api-error';
 import { maskPhone, maskEmail } from '@/lib/notifications/redaction';
 import { isEmailConfigured } from '@/lib/notifications/channels/email';
+import { isPushConfigured } from '@/lib/notifications/channels/push';
 import { encodeCursor, decodeCursor } from '@/lib/notifications/cursor';
 import { getSmsProviderStatus } from '@/lib/sms/dispatcher';
 
@@ -139,6 +140,7 @@ export async function GET(req: Request) {
         smsProvider:           smsStatus.provider,
         smsConfigured:         smsStatus.configured,
         emailConfigured:       isEmailConfigured(),
+        pushConfigured:        isPushConfigured(),
       },
       counts,
       recentProblematic: page.map((r) => ({

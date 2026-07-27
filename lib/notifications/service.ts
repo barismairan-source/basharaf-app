@@ -11,7 +11,7 @@
 
 import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
-import { resolveRule, shouldSendInApp, shouldEnqueueSms, shouldEnqueueEmail } from './rules';
+import { resolveRule, shouldSendInApp, shouldEnqueueSms, shouldEnqueueEmail, shouldEnqueuePush } from './rules';
 import { enqueueOutbox, buildNotifDedupeKey } from './outbox';
 import { fetchAudienceTargets, fetchCandidateUsers, resolveAudience } from './audience';
 import { logEvent } from '@/lib/logger';
@@ -34,6 +34,7 @@ async function runBatch(
   doInApp: boolean,
   doSms: boolean,
   doEmail: boolean,
+  doPush: boolean,
   client: Client
 ): Promise<void> {
   const eventBranchId = params.branchId ?? null;
@@ -61,8 +62,14 @@ async function runBatch(
           .filter((r) => r.eligible).map((r) => r.userId)
       : []
   );
+  const pushIds = new Set(
+    doPush
+      ? resolveAudience({ ruleKey: params.ruleKey, channel: 'push', targets, users, eventBranchId })
+          .filter((r) => r.eligible).map((r) => r.userId)
+      : []
+  );
 
-  const allRecipientIds = new Set<string>([...inAppIds, ...smsIds, ...emailIds]);
+  const allRecipientIds = new Set<string>([...inAppIds, ...smsIds, ...emailIds, ...pushIds]);
 
   for (const userId of allRecipientIds) {
     let notifId: string | null = null;
@@ -125,6 +132,23 @@ async function runBatch(
         client as Pick<typeof db, 'insert'>
       );
     }
+
+    if (pushIds.has(userId)) {
+      await enqueueOutbox(
+        {
+          ruleKey:        params.ruleKey,
+          eventKey,
+          channel:        'push',
+          recipientId:    userId,
+          entityId:       params.entityId ?? null,
+          notificationId: notifId,
+          title:          params.title,
+          sub:            params.sub,
+          actionUrl:      params.actionUrl ?? null,
+        },
+        client as Pick<typeof db, 'insert'>
+      );
+    }
   }
 }
 
@@ -144,15 +168,16 @@ async function notifyWithClient(
   // Caller declares channel support (defaults to true); DB rule gates actual sending
   const doSms    = shouldEnqueueSms(rule, options.sms ?? true);
   const doEmail  = shouldEnqueueEmail(rule, options.email ?? true);
+  const doPush   = shouldEnqueuePush(rule, options.push ?? true);
 
-  if (!doInApp && !doSms && !doEmail) return;
+  if (!doInApp && !doSms && !doEmail && !doPush) return;
 
   // eventKey computed ONCE, shared across all recipients and channels of this event
   const eventKey = params.idempotencyKey ?? params.entityId ?? crypto.randomUUID();
 
   // Recipient resolution (per-channel audience, access gating, address
   // readiness) happens inside runBatch — see lib/notifications/audience.ts.
-  await runBatch(params, eventKey, doInApp, doSms, doEmail, client);
+  await runBatch(params, eventKey, doInApp, doSms, doEmail, doPush, client);
 }
 
 /**
