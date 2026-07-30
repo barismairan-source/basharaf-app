@@ -1284,3 +1284,10 @@ tests/unit/security-guards.test.ts: 27 تست سبز ✅.
 **Build:** tsc ✅ · tests 393/393 ✅ · build ✅ · lint ✅ · هر دو دور دیپلوی موفق
 **ناتمام:** —
 **برای جلسه‌ی بعد:** الگوی باگ (register()+custom onChange بدون override onBlur) ممکنه جای دیگه‌ای تکرار بشه.
+
+## 📓 2026-07-26 — بازطراحی کامل «استخدام» به یک workspace بررسی داوطلب — ادامه‌ی `feat/product-ui-v2`
+**چه شد:** طبق یک اسپک ۸بخشی دقیق (حساس‌ترین بازطراحی این سری از نظر امنیتی)، صفحه‌ی `/recruitment` کامل بازطراحی شد — primitive جدید `Tabs`، ماژول خالص `filterCandidates.ts` (۲۳ تست)، `CandidateCard`/`CandidateDetail` جدا، حالت انتخاب یکپارچه (مقایسه+دانلود رزومه)، `canViewPhone(user)` gate صریح. باگ واقعی رفع شد: `saveNote()` صرف‌نظر از موفقیت/شکست همیشه toast موفقیت نشون می‌داد. جزئیات کامل در commit تاریخ ۲۰۲۶-۰۷-۲۶.
+**فایل‌ها:** `components/ui/Tabs.tsx`، `components/recruitment/CandidateCard.tsx`+`CandidateDetail.tsx`، `lib/recruitment/filterCandidates.ts`، `app/(app)/recruitment/page.tsx` (بازنویسی کامل)
+**Build:** tsc ✅ · tests 416/416 ✅ · build ✅ · lint ✅ · playwright --list ✅ ۱۰۰ تست
+**ناتمام:** merge/deploy عمداً انجام نشد (بعداً merge شد).
+**برای جلسه‌ی بعد:** —
