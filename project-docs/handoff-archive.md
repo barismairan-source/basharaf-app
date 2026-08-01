@@ -1291,3 +1291,10 @@ tests/unit/security-guards.test.ts: 27 تست سبز ✅.
 **Build:** tsc ✅ · tests 416/416 ✅ · build ✅ · lint ✅ · playwright --list ✅ ۱۰۰ تست
 **ناتمام:** merge/deploy عمداً انجام نشد (بعداً merge شد).
 **برای جلسه‌ی بعد:** —
+
+## 📓 2026-07-26 — merge + deploy بازطراحی «استخدام» روی main (v0.31.0)
+**چه شد:** با تأیید صریح کاربر، `feat/product-ui-v2` (آخرین commit: بازطراحی استخدام) روی `main` fast-forward شد و دیپلوی شد. بلافاصله بعد از دیدن نسخه‌ی زنده، کاربر ۳ اصلاح خواست (جزئیات در ورودی بعدی همان روز).
+**فایل‌ها:** بدون تغییر کد — فقط عملیات git.
+**Build:** CI کامل main: typecheck/lint/unit-test/deploy همه ✅.
+**ناتمام:** —
+**برای جلسه‌ی بعد:** —

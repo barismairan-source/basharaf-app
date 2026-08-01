@@ -10,6 +10,7 @@ import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt, formatNumericInputValue } from '@/lib/utils';
 import { EmptyState } from '@/components/ui';
+import { RecipeWeighingBoard } from '@/components/inventory/RecipeWeighingBoard';
 import type { InventoryItem, InventoryRecipe, RecipeCosting } from '@/types';
 
 const repos = createRepos(null as never);
@@ -29,6 +30,8 @@ export default function RecipesPage() {
   const showToast = useAppStore((s) => s.showToast);
 
   const canSeePrices = user?.role !== 'Warehouse';
+  // مدیریت رسپی — همان نقش‌هایی که POST /api/inventory/recipes قبول می‌کند
+  const canEdit = user?.role === 'SuperAdmin' || user?.role === 'Chef';
 
   const [recipes, setRecipes] = useState<InventoryRecipe[]>([]);
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -36,6 +39,7 @@ export default function RecipesPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<InventoryRecipe | null>(null);
+  const [view, setView] = useState<'list' | 'weighing'>('list');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,28 +74,54 @@ export default function RecipesPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-6 space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-[17px] font-semibold text-text">رسپی‌ها</h1>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="flex items-center gap-1.5 border border-border text-muted hover:text-text hover:border-text/40 px-3 py-2 rounded-lg text-[12.5px] min-h-[44px] transition-colors"
-            title="ایمپورت از Excel"
-          >
-            <Upload size={14} />
-            <span className="hidden sm:inline">ایمپورت Excel</span>
-          </button>
-          <button
-            onClick={() => setShowAdd(true)}
-            className="flex items-center gap-1.5 bg-text text-surface px-3 py-2 rounded-lg text-[12.5px] min-h-[44px]"
-          >
-            <Plus size={14} />رسپی جدید
-          </button>
+          <div className="flex items-center border border-border rounded-lg p-0.5">
+            <button
+              onClick={() => setView('list')}
+              className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors ${view === 'list' ? 'bg-text text-surface' : 'text-muted hover:text-text'}`}
+            >
+              لیست
+            </button>
+            <button
+              onClick={() => setView('weighing')}
+              className={`px-3 py-1.5 rounded-md text-[12px] font-medium transition-colors ${view === 'weighing' ? 'bg-text text-surface' : 'text-muted hover:text-text'}`}
+            >
+              فرم رسپی و وزن‌گیری
+            </button>
+          </div>
+          {view === 'list' && (
+            <>
+              <button
+                onClick={() => setShowImport(true)}
+                className="flex items-center gap-1.5 border border-border text-muted hover:text-text hover:border-text/40 px-3 py-2 rounded-lg text-[12.5px] min-h-[44px] transition-colors"
+                title="ایمپورت از Excel"
+              >
+                <Upload size={14} />
+                <span className="hidden sm:inline">ایمپورت Excel</span>
+              </button>
+              <button
+                onClick={() => setShowAdd(true)}
+                className="flex items-center gap-1.5 bg-text text-surface px-3 py-2 rounded-lg text-[12.5px] min-h-[44px]"
+              >
+                <Plus size={14} />رسپی جدید
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-16"><Loader2 className="animate-spin text-muted" size={24} /></div>
+      ) : view === 'weighing' ? (
+        <RecipeWeighingBoard
+          recipes={recipes}
+          items={items}
+          canEdit={canEdit}
+          onReload={load}
+          showToast={showToast}
+        />
       ) : recipes.length === 0 ? (
         <EmptyState
           icon={ChefHat}

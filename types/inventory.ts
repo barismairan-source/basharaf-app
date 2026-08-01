@@ -57,6 +57,9 @@ export interface InventoryRecipe {
   id: string | null;
   name: string;
   branchId: string | null;
+  category: string;
+  portionLabel?: string | null;
+  notes?: string | null;
   portions: number;
   targetFcPct: number;
   price: number;

@@ -15,7 +15,10 @@ import { audit } from '@/lib/auth/audit';
 
 const lineSchema = z.object({
   itemId: z.string().uuid(),
-  qtyBase: z.number().positive(),
+  // min(0) نه positive() — فرم وزن‌گیری باید بتواند حالت نیمه‌تکمیل (ماده
+  // انتخاب‌شده ولی هنوز وزن نشده) را ذخیره کند؛ ویزارد قدیمی رسپی قبل از
+  // ارسال، خودش خطوط با مقدار صفر را فیلتر می‌کند، پس رفتارش تغییر نمی‌کند.
+  qtyBase: z.number().min(0),
   overridePct: z.number().nullable().optional(),
 });
 
@@ -23,6 +26,9 @@ const saveSchema = z.object({
   id: z.string().uuid().nullable().optional(),
   name: z.string().min(1).max(120),
   branchId: z.string().uuid().nullable().optional(),
+  category: z.string().min(1).max(60).default('سایر'),
+  portionLabel: z.string().max(120).nullable().optional(),
+  notes: z.string().max(4000).nullable().optional(),
   portions: z.number().int().min(1).default(1),
   targetFcPct: z.number().min(0).max(100).default(30),
   price: z.number().int().min(0).default(0),
@@ -67,6 +73,7 @@ export async function POST(req: Request) {
       if (recipeId) {
         await dbTx.update(schema.invRecipes).set({
           name: input.name, branchId: input.branchId ?? null,
+          category: input.category, portionLabel: input.portionLabel ?? null, notes: input.notes ?? null,
           portions: input.portions, targetFcPct: String(input.targetFcPct),
           price: input.price, cookMode: input.cookMode, shelfLifeDays: input.shelfLifeDays,
           menuItemId: input.menuItemId ?? null,
@@ -76,6 +83,7 @@ export async function POST(req: Request) {
       } else {
         const [r] = await dbTx.insert(schema.invRecipes).values({
           name: input.name, branchId: input.branchId ?? null,
+          category: input.category, portionLabel: input.portionLabel ?? null, notes: input.notes ?? null,
           portions: input.portions, targetFcPct: String(input.targetFcPct),
           price: input.price, cookMode: input.cookMode, shelfLifeDays: input.shelfLifeDays,
           menuItemId: input.menuItemId ?? null,

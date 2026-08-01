@@ -1186,6 +1186,14 @@ export const invRecipes = pgTable(
     name: text('name').notNull(),
     branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
 
+    // دسته‌بندی داخلی منو (سالاد/برگر/دسر/...) — متن آزاد، هم‌سبک invItems.category؛
+    // مستقل از menu_categories که مربوط به منوی دیجیتال مشتری (دوزبانه+VAT) است.
+    category: text('category').notNull().default('سایر'),
+    // اندازه/پرس به‌صورت توضیح آزاد (مثلاً «پتی ۱۶۰ گرمی»، «بشقاب ۲۵ سانتی»)
+    portionLabel: text('portion_label'),
+    // رسپی و توضیحات آماده‌سازی — متن آزاد
+    notes: text('notes'),
+
     portions: integer('portions').notNull().default(1),       // تعداد پرس هر پخت
     targetFcPct: numeric('target_fc_pct', { precision: 5, scale: 2 }).notNull().default('30'),
     price: bigint('price', { mode: 'number' }).notNull().default(0), // قیمت فروش (تومان)
