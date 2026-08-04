@@ -82,6 +82,29 @@ export function dateToJalali(date: Date): string {
 }
 
 /**
+ * بازه‌ی گریگوری یک ماه شمسی — برای کوئری روی ستون‌های تاریخ گریگوری (مثل
+ * attendance_entries.work_date) بر اساس دوره‌ی حقوق ("۱۴۰۵-۰۳").
+ * `jalaliMonthRange('1405-03')` → { from: '2026-05-22', to: '2026-06-21' }
+ */
+export function jalaliMonthRange(periodYearMonth: string): { from: string; to: string } | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(periodYearMonth);
+  if (!m) return null;
+  const year = parseInt(m[1]!, 10);
+  const month = parseInt(m[2]!, 10);
+  try {
+    const start = new DateObject({ calendar: persian, year, month, day: 1 });
+    const nextMonthStart = month === 12
+      ? new DateObject({ calendar: persian, year: year + 1, month: 1, day: 1 })
+      : new DateObject({ calendar: persian, year, month: month + 1, day: 1 });
+    const end = nextMonthStart.subtract(1, 'day');
+    const toIso = (d: Date) => d.toISOString().slice(0, 10);
+    return { from: toIso(start.toDate()), to: toIso(end.toDate()) };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * ساعت:دقیقه به‌وقت تهران با ارقام فارسی — برای نمایش زمان ثبت سفارش روی کارت.
  * `formatTehranTime('2026-06-12T10:05:00Z')` → '۱۳:۳۵'
  */

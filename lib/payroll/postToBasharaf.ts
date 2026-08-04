@@ -1,6 +1,7 @@
-import { eq, sql, inArray } from 'drizzle-orm';
+import { eq, sql, inArray, and, gte, lte } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { applyBalance } from '@/lib/db/balanceHelpers';
+import { jalaliMonthRange } from '@/lib/jalali';
 
 /**
  * ════════════════════════════════════════════════════════════════
@@ -191,6 +192,21 @@ export async function postPayrollRunToBasharaf(
       journalVoucherId: voucherId,
     }).where(eq(schema.payrollRuns.id, runId));
 
+    // ۱۰. قفل‌کردن حضورهای تأییدشده‌ی همین دوره (سیستم ساعتی) — بعد از نهایی‌شدن
+    // حقوق، حضور دیگر از UI عادی قابل ویرایش نیست.
+    const range = jalaliMonthRange(run.periodYearMonth);
+    if (range) {
+      const employeeIds = slips.map(s => s.employeeId);
+      await dbTx.update(schema.attendanceEntries).set({
+        status: 'locked', lockedAt: new Date(),
+      }).where(and(
+        inArray(schema.attendanceEntries.employeeId, employeeIds),
+        gte(schema.attendanceEntries.workDate, new Date(range.from + 'T00:00:00Z')),
+        lte(schema.attendanceEntries.workDate, new Date(range.to + 'T00:00:00Z')),
+        eq(schema.attendanceEntries.status, 'confirmed'),
+      ));
+    }
+
     return {
       ok: true, voucherId, basharafTransactionId: coreTx.id,
       alreadyPosted: false, totalDebit, totalCredit,
@@ -229,6 +245,27 @@ export async function reversePayrollPost(runId: string): Promise<{ ok: boolean }
     await dbTx.update(schema.payrollRuns).set({
       status: 'approved', postedToBasharafAt: null, journalVoucherId: null,
     }).where(eq(schema.payrollRuns.id, runId));
+
+    // بازگشت قفل حضور — دوره دوباره در حالت approved است و ممکن است نیاز به
+    // اصلاح/محاسبه‌ی مجدد داشته باشد؛ حضورهای قفل‌شده‌ی همین دوره باز می‌شوند.
+    const [runRow] = await dbTx.select().from(schema.payrollRuns).where(eq(schema.payrollRuns.id, runId)).limit(1);
+    if (runRow) {
+      const range = jalaliMonthRange(runRow.periodYearMonth);
+      if (range) {
+        const slipEmployeeIds = (await dbTx.select({ employeeId: schema.payslips.employeeId })
+          .from(schema.payslips).where(eq(schema.payslips.payrollRunId, runId))).map(r => r.employeeId);
+        if (slipEmployeeIds.length > 0) {
+          await dbTx.update(schema.attendanceEntries).set({
+            status: 'confirmed', lockedAt: null,
+          }).where(and(
+            inArray(schema.attendanceEntries.employeeId, slipEmployeeIds),
+            gte(schema.attendanceEntries.workDate, new Date(range.from + 'T00:00:00Z')),
+            lte(schema.attendanceEntries.workDate, new Date(range.to + 'T00:00:00Z')),
+            eq(schema.attendanceEntries.status, 'locked'),
+          ));
+        }
+      }
+    }
 
     return { ok: true };
   });

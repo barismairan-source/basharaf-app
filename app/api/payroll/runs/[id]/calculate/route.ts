@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
-import { eq, and, isNull, sql, inArray } from 'drizzle-orm';
+import { eq, and, isNull, gte, lte, inArray, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { calculatePayslip, type PayrollParameters, type TaxBracket } from '@/lib/payroll/payrollEngine';
+import { calculateHourlyPayslip, type AttendanceDayForPayslip } from '@/lib/payroll/attendanceEngine';
+import { jalaliMonthRange } from '@/lib/jalali';
 
 export const dynamic = 'force-dynamic';
 
 const calcSchema = z.object({
   workingDays: z.number().int().min(1).max(31).default(30),
-  // اطلاعات حضور هر کارمند (اختیاری) — اگر نباشد، ماه کامل فرض می‌شود
+  // اطلاعات حضور هر کارمند (اختیاری) — فقط برای کارمندان سیستم ماهانه (بدون نرخ ساعتی)
   attendance: z.record(z.object({
     unpaidDays: z.number().min(0).default(0),
     overtimeMinutes: z.number().min(0).default(0),
@@ -89,7 +91,51 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       )
     );
 
-    const periodEnd = new Date(); // برای محاسبه‌ی سنوات (تقریبی)
+    // کارمندان سیستم حقوق ساعتی — هر کس در employee_hourly_rates رکورد دارد
+    const empIdsInRun = emps.map(e => e.id);
+    const hourlyRateRows = empIdsInRun.length > 0
+      ? await db.select().from(schema.employeeHourlyRates).where(inArray(schema.employeeHourlyRates.employeeId, empIdsInRun))
+      : [];
+    const hourlyEmployeeIds = new Set(hourlyRateRows.map(r => r.employeeId));
+
+    // بازه‌ی گریگوری دوره (برای کوئری روی attendance_entries.work_date)
+    const range = jalaliMonthRange(run.periodYearMonth);
+    if (hourlyEmployeeIds.size > 0 && !range) {
+      throw new ApiError(400, 'فرمت دوره نامعتبر است — نمی‌توان بازه‌ی حضور را تعیین کرد', 'BAD_PERIOD');
+    }
+
+    // حضور تأییدشده/قفل‌شده‌ی این بازه، به‌همراه plannedMinutes از تخصیص (اگر باشد)
+    const attendanceRows = range && hourlyEmployeeIds.size > 0
+      ? await db.select({
+          entry: schema.attendanceEntries,
+          assignmentPlannedMinutes: schema.employeeShiftAssignments.plannedMinutes,
+        }).from(schema.attendanceEntries)
+          .leftJoin(schema.employeeShiftAssignments, eq(schema.attendanceEntries.shiftAssignmentId, schema.employeeShiftAssignments.id))
+          .where(and(
+            inArray(schema.attendanceEntries.employeeId, [...hourlyEmployeeIds]),
+            gte(schema.attendanceEntries.workDate, new Date(range.from + 'T00:00:00Z')),
+            lte(schema.attendanceEntries.workDate, new Date(range.to + 'T00:00:00Z')),
+            inArray(schema.attendanceEntries.status, ['confirmed', 'locked']),
+          ))
+      : [];
+
+    // هشدار: حضور تأییدنشده (draft) در همین بازه — برای نمایش در UI، بدون جلوگیری از محاسبه
+    const draftCountRows = range && hourlyEmployeeIds.size > 0
+      ? await db.select({ employeeId: schema.attendanceEntries.employeeId, cnt: sql<number>`count(*)` })
+          .from(schema.attendanceEntries)
+          .where(and(
+            inArray(schema.attendanceEntries.employeeId, [...hourlyEmployeeIds]),
+            gte(schema.attendanceEntries.workDate, new Date(range.from + 'T00:00:00Z')),
+            lte(schema.attendanceEntries.workDate, new Date(range.to + 'T00:00:00Z')),
+            eq(schema.attendanceEntries.status, 'draft'),
+          ))
+          .groupBy(schema.attendanceEntries.employeeId)
+      : [];
+    const draftCountByEmployee = new Map(draftCountRows.map(r => [r.employeeId, Number(r.cnt)]));
+
+    const periodEnd = new Date(); // برای محاسبه‌ی سنوات (تقریبی) — فقط سیستم ماهانه
+
+    const warnings: Array<{ employeeId: string; employeeName: string; draftAttendanceCount: number }> = [];
 
     const result = await db.transaction(async (dbTx) => {
       // پاک کردن فیش‌های قبلی این اجرا (محاسبه‌ی مجدد)
@@ -97,71 +143,116 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
       const created: string[] = [];
       for (const emp of emps) {
-        const att = body.attendance?.[emp.id];
         const empEvents = events.filter(ev => ev.employeeId === emp.id && ev.type !== 'settlement')
           .map(ev => ({
             type: ev.type as 'advance' | 'deduction' | 'bonus',
             amount: Number(ev.amount),
           }));
 
-        const slip = calculatePayslip({
-          employee: {
-            maritalStatus: emp.maritalStatus as 'single' | 'married' | 'other' | null,
-            childrenCount: att?.childrenCount ?? 0,
-            insuranceDaysPrior: att?.insuranceDaysPrior ?? 0,
-          },
-          contract: {
-            startDate: emp.joinDate,
-            baseSalaryStructure: Number(emp.baseMonthlySalary) > 0 ? 'custom' : 'minimum_wage',
-            agreedBaseSalary: Number(emp.baseMonthlySalary),
-          },
-          params: engineParams,
-          attendance: {
-            overtimeMinutes: att?.overtimeMinutes ?? 0,
-            nightMinutes: att?.nightMinutes ?? 0,
-            holidayMinutes: att?.holidayMinutes ?? 0,
-            lateMinutes: 0,
-          },
-          calendar: { workingDays: body.workingDays },
-          events: empEvents,
-          periodEnd,
-          unpaidDays: att?.unpaidDays ?? 0,
-        });
+        let workedDays: number;
+        let grossEarnings: number, taxableBase: number, insuranceBase: number;
+        let insuranceEmployee: number, incomeTax: number, insuranceEmployer: number;
+        let totalDeductions: number, netPay: number;
+        let snapshot: { lines?: Array<{ category: string; code: string; labelFa: string; amount: number }> };
 
-        // اعمال override دستی بیمه/مالیات (اگر داده شده)
+        if (hourlyEmployeeIds.has(emp.id)) {
+          // ── مسیر حقوق ساعتی — فقط از حضور تأییدشده‌ی DB (نه body درخواست) ──
+          const days: AttendanceDayForPayslip[] = attendanceRows
+            .filter(r => r.entry.employeeId === emp.id)
+            .map(r => ({
+              workDate: r.entry.workDate.toISOString().slice(0, 10),
+              plannedMinutes: r.assignmentPlannedMinutes ?? 0,
+              workedMinutes: r.entry.workedMinutes,
+              regularMinutes: r.entry.regularMinutes,
+              overtimeMinutes: r.entry.overtimeMinutes,
+              overtimeApproved: r.entry.overtimeApproved,
+              nightMinutes: r.entry.nightMinutes,
+              holidayMinutes: r.entry.holidayMinutes,
+              hourlyRateSnapshot: Number(r.entry.hourlyRateSnapshot),
+              attendanceType: r.entry.attendanceType,
+            }));
+
+          const draftCount = draftCountByEmployee.get(emp.id) ?? 0;
+          if (draftCount > 0) {
+            warnings.push({ employeeId: emp.id, employeeName: emp.fullName, draftAttendanceCount: draftCount });
+          }
+
+          const slip = calculateHourlyPayslip({
+            days,
+            params: {
+              overtimeMultiplier: engineParams.overtimeMultiplier,
+              nightShiftPremium: engineParams.nightShiftPremium,
+              holidayMultiplier: engineParams.holidayMultiplier,
+              insuranceEmployeeRate: engineParams.insuranceEmployeeRate,
+              insuranceEmployerRate: engineParams.insuranceEmployerRate,
+              taxBrackets: engineParams.taxBrackets,
+            },
+            events: empEvents,
+          });
+
+          workedDays = days.filter(d => d.workedMinutes > 0).length;
+          grossEarnings = slip.grossEarnings; taxableBase = slip.taxableBase; insuranceBase = slip.insuranceBase;
+          insuranceEmployee = slip.insuranceEmployee; insuranceEmployer = slip.insuranceEmployer;
+          incomeTax = slip.incomeTax; totalDeductions = slip.totalDeductions; netPay = slip.netPay;
+          snapshot = { lines: slip.lines };
+        } else {
+          // ── مسیر سیستم ماهانه (بدون تغییر) ──
+          const att = body.attendance?.[emp.id];
+          const slip = calculatePayslip({
+            employee: {
+              maritalStatus: emp.maritalStatus as 'single' | 'married' | 'other' | null,
+              childrenCount: att?.childrenCount ?? 0,
+              insuranceDaysPrior: att?.insuranceDaysPrior ?? 0,
+            },
+            contract: {
+              startDate: emp.joinDate,
+              baseSalaryStructure: Number(emp.baseMonthlySalary) > 0 ? 'custom' : 'minimum_wage',
+              agreedBaseSalary: Number(emp.baseMonthlySalary),
+            },
+            params: engineParams,
+            attendance: {
+              overtimeMinutes: att?.overtimeMinutes ?? 0,
+              nightMinutes: att?.nightMinutes ?? 0,
+              holidayMinutes: att?.holidayMinutes ?? 0,
+              lateMinutes: 0,
+            },
+            calendar: { workingDays: body.workingDays },
+            events: empEvents,
+            periodEnd,
+            unpaidDays: att?.unpaidDays ?? 0,
+          });
+          workedDays = slip.workedDays;
+          grossEarnings = slip.grossEarnings; taxableBase = slip.taxableBase; insuranceBase = slip.insuranceBase;
+          insuranceEmployee = slip.insuranceEmployee; insuranceEmployer = slip.insuranceEmployer;
+          incomeTax = slip.incomeTax; totalDeductions = slip.totalDeductions; netPay = slip.netPay;
+          snapshot = slip as unknown as { lines?: Array<{ category: string; code: string; labelFa: string; amount: number }> };
+        }
+
+        // اعمال override دستی بیمه/مالیات (اگر داده شده) — برای هر دو مسیر
         const ov = body.overrides?.[emp.id];
-        let insuranceEmployee = slip.insuranceEmployee;
-        let incomeTax = slip.incomeTax;
-        const snapshot = slip as unknown as { lines?: Array<{ category: string; code: string; labelFa: string; amount: number }> };
         if (ov?.insuranceEmployee !== undefined) {
+          const otherDeductions = totalDeductions - insuranceEmployee - incomeTax;
           insuranceEmployee = ov.insuranceEmployee;
-          // به‌روزرسانی خط بیمه در snapshot
           const line = snapshot.lines?.find(l => l.code === 'insurance_emp');
           if (line) line.amount = insuranceEmployee;
+          totalDeductions = insuranceEmployee + incomeTax + otherDeductions;
         }
         if (ov?.incomeTax !== undefined) {
+          const otherDeductions = totalDeductions - insuranceEmployee - incomeTax;
           incomeTax = ov.incomeTax;
           const line = snapshot.lines?.find(l => l.code === 'tax');
           if (line) line.amount = incomeTax;
+          totalDeductions = insuranceEmployee + incomeTax + otherDeductions;
         }
-        // بازمحاسبه‌ی کسورات و خالص با مقادیر نهایی
-        const otherDeductions = slip.totalDeductions - slip.insuranceEmployee - slip.incomeTax;
-        const totalDeductions = insuranceEmployee + incomeTax + otherDeductions;
-        const netPay = slip.grossEarnings - totalDeductions;
+        netPay = grossEarnings - totalDeductions;
 
         await dbTx.insert(schema.payslips).values({
           payrollRunId: params.id,
           employeeId: emp.id,
           periodYearMonth: run.periodYearMonth,
-          workedDays: String(slip.workedDays),
-          grossEarnings: slip.grossEarnings,
-          taxableBase: slip.taxableBase,
-          insuranceBase: slip.insuranceBase,
-          insuranceEmployee,
-          insuranceEmployer: slip.insuranceEmployer,
-          incomeTax,
-          totalDeductions,
-          netPay,
+          workedDays: String(workedDays),
+          grossEarnings, taxableBase, insuranceBase,
+          insuranceEmployee, insuranceEmployer, incomeTax, totalDeductions, netPay,
           calcSnapshot: snapshot as unknown as object,
         });
         created.push(emp.id);
@@ -174,10 +265,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       return created.length;
     });
 
-    return NextResponse.json({ ok: true, payslipsCreated: result });
+    return NextResponse.json({ ok: true, payslipsCreated: result, warnings });
   } catch (e) {
     return await handleErrorLogged(e, req, { category: 'payroll' });
   }
 }
-
-void sql;

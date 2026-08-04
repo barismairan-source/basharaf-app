@@ -887,6 +887,17 @@ export const journalVoucherStatusEnum = pgEnum('journal_voucher_status', [
   'built', 'posted', 'reversed',
 ]);
 
+// ─── Hourly Attendance/Payroll Enums (۵ عدد) — افزوده بر سیستم حقوق ماهانه ──
+export const breakPolicyEnum = pgEnum('break_policy', ['paid', 'unpaid', 'none']);
+export const shiftAssignmentStatusEnum = pgEnum('shift_assignment_status', [
+  'scheduled', 'cancelled', 'completed',
+]);
+export const attendanceEntryModeEnum = pgEnum('attendance_entry_mode', ['time_range', 'total_minutes']);
+export const attendanceStatusEnum = pgEnum('attendance_status', ['draft', 'confirmed', 'locked']);
+export const attendanceTypeEnum = pgEnum('attendance_type', [
+  'present', 'absent', 'paid_leave', 'unpaid_leave', 'sick_leave', 'holiday_work', 'off_day_work',
+]);
+
 // ─── employees — پرونده پرسنلی ────────────────────────────────────
 export const employees = pgTable(
   'employees',
@@ -1088,6 +1099,124 @@ export const journalVouchers = pgTable('journal_vouchers', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ─── shift_templates — قالب‌های شیفت (مدت دلخواه، بدون محدودیت ثابت) ──
+export const shiftTemplates = pgTable(
+  'shift_templates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    name: text('name').notNull(),
+    startTime: text('start_time').notNull(),   // "HH:MM"
+    endTime: text('end_time').notNull(),       // "HH:MM"
+    plannedMinutes: integer('planned_minutes').notNull(),
+    defaultBreakMinutes: integer('default_break_minutes').notNull().default(0),
+    breakPolicy: breakPolicyEnum('break_policy').notNull().default('unpaid'),
+    crossesMidnight: boolean('crosses_midnight').notNull().default(false),
+    color: text('color'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchIdx: index('shift_templates_branch_idx').on(t.branchId),
+    activeIdx: index('shift_templates_active_idx').on(t.isActive),
+  })
+);
+
+// ─── employee_hourly_rates — نرخ ساعتی نسخه‌دار (بدون اثر روی گذشته) ──
+export const employeeHourlyRates = pgTable(
+  'employee_hourly_rates',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    hourlyRate: bigint('hourly_rate', { mode: 'number' }).notNull(),
+    effectiveFrom: date('effective_from', { mode: 'date' }).notNull(),
+    effectiveTo: date('effective_to', { mode: 'date' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    reason: text('reason'),
+  },
+  (t) => ({
+    employeeIdx: index('employee_hourly_rates_employee_idx').on(t.employeeId),
+    // هم‌پوشانی بازه‌ها (فقط یک نرخ فعال در هر بازه) در لایه‌ی API درون db.transaction
+    // چک می‌شود، نه با EXCLUDE constraint — چون آن به extension btree_gist نیاز دارد
+    // که ممکن است روی Postgres مدیریت‌شده‌ی Liara فعال نباشد.
+  })
+);
+
+// ─── employee_shift_assignments — تخصیص روزانه‌ی شیفت (snapshot از قالب) ──
+export const employeeShiftAssignments = pgTable(
+  'employee_shift_assignments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    workDate: date('work_date', { mode: 'date' }).notNull(),
+    shiftTemplateId: uuid('shift_template_id').references(() => shiftTemplates.id, { onDelete: 'set null' }),
+    // snapshot — تغییر بعدی قالب اثری روی این ردیف ندارد
+    plannedStartTime: text('planned_start_time').notNull(),
+    plannedEndTime: text('planned_end_time').notNull(),
+    plannedMinutes: integer('planned_minutes').notNull(),
+    breakMinutes: integer('break_minutes').notNull().default(0),
+    breakPolicy: breakPolicyEnum('break_policy').notNull().default('unpaid'),
+    crossesMidnight: boolean('crosses_midnight').notNull().default(false),
+    status: shiftAssignmentStatusEnum('status').notNull().default('scheduled'),
+    note: text('note'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    employeeDateIdx: index('shift_assignments_employee_date_idx').on(t.employeeId, t.workDate),
+    branchDateIdx: index('shift_assignments_branch_date_idx').on(t.branchId, t.workDate),
+    statusIdx: index('shift_assignments_status_idx').on(t.status),
+    // چند شیفت غیرهم‌پوشان در یک روز مجاز است؛ پس یکتایی روی (employeeId, workDate)
+    // اعمال نمی‌شود — جلوگیری از هم‌پوشانی زمانی در لایه‌ی API انجام می‌شود.
+  })
+);
+
+// ─── attendance_entries — حضور واقعی (جدا از شیفت برنامه‌ریزی‌شده) ──
+export const attendanceEntries = pgTable(
+  'attendance_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
+    workDate: date('work_date', { mode: 'date' }).notNull(),
+    // null = «حضور بدون شیفت» — باید نگه داشته شود، بدون تصمیم مدیر حذف نشود
+    shiftAssignmentId: uuid('shift_assignment_id').references(() => employeeShiftAssignments.id, { onDelete: 'set null' }),
+    entryMode: attendanceEntryModeEnum('entry_mode').notNull().default('time_range'),
+    clockIn: text('clock_in'),
+    clockOut: text('clock_out'),
+    manualWorkedMinutes: integer('manual_worked_minutes'),
+    breakMinutes: integer('break_minutes').notNull().default(0),
+    workedMinutes: integer('worked_minutes').notNull().default(0),
+    regularMinutes: integer('regular_minutes').notNull().default(0),
+    overtimeMinutes: integer('overtime_minutes').notNull().default(0),
+    overtimeApproved: boolean('overtime_approved').notNull().default(false),
+    nightMinutes: integer('night_minutes').notNull().default(0),
+    holidayMinutes: integer('holiday_minutes').notNull().default(0),
+    hourlyRateSnapshot: bigint('hourly_rate_snapshot', { mode: 'number' }).notNull().default(0),
+    status: attendanceStatusEnum('status').notNull().default('draft'),
+    attendanceType: attendanceTypeEnum('attendance_type').notNull().default('present'),
+    managerNote: text('manager_note'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    confirmedBy: uuid('confirmed_by').references(() => users.id, { onDelete: 'set null' }),
+    confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
+    lockedAt: timestamp('locked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    employeeDateIdx: index('attendance_entries_employee_date_idx').on(t.employeeId, t.workDate),
+    branchDateIdx: index('attendance_entries_branch_date_idx').on(t.branchId, t.workDate),
+    statusIdx: index('attendance_entries_status_idx').on(t.status),
+    // یک رکورد حضور به‌ازای هر تخصیص شیفت (NULL چندبار مجاز است → «حضور بدون شیفت» آزاد)
+    assignmentUniq: uniqueIndex('attendance_entries_assignment_uniq').on(t.shiftAssignmentId),
+  })
+);
+
 // ─── Types ───────────────────────────────────────────────────────
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
@@ -1096,6 +1225,10 @@ export type PayrollParameter = typeof payrollParameters.$inferSelect;
 export type PayrollRun = typeof payrollRuns.$inferSelect;
 export type Payslip = typeof payslips.$inferSelect;
 export type JournalVoucher = typeof journalVouchers.$inferSelect;
+export type ShiftTemplate = typeof shiftTemplates.$inferSelect;
+export type EmployeeHourlyRate = typeof employeeHourlyRates.$inferSelect;
+export type EmployeeShiftAssignment = typeof employeeShiftAssignments.$inferSelect;
+export type AttendanceEntry = typeof attendanceEntries.$inferSelect;
 // ─── Inventory Enums (۵ عدد) ─────────────────────────────────────
 export const invItemKindEnum = pgEnum('inv_item_kind', ['raw', 'prep']);
 //   raw  = ماده خام (از خرید وارد می‌شود)

@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Receipt, BarChart3, Landmark, Users, UtensilsCrossed, ScrollText,
   Briefcase, Calculator, Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
   CalendarClock, Wrench, ShoppingCart, ClipboardList, Truck, TrendingUp, PackageOpen, ChefHat,
-  FileCheck, ShieldAlert, Handshake,
+  FileCheck, ShieldAlert, Handshake, CalendarDays, Clock,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { SectionKey } from '@/lib/auth/permissions';
@@ -69,6 +69,8 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: '/coupons',      label: 'کوپن‌ها',        icon: Ticket,        roles: ['SuperAdmin'], rarely: true },
       { href: '/partners',     label: 'شرکا',           icon: Handshake,     roles: ['SuperAdmin'], rarely: true },
       { href: '/employees',    label: 'پرسنل',          icon: Briefcase,     roles: ['SuperAdmin'], rarely: true },
+      { href: '/shift-schedule', label: 'برنامه شیفت',  icon: CalendarDays,  roles: ['SuperAdmin', 'BranchUser'], rarely: true },
+      { href: '/attendance',   label: 'حضور و غیاب',    icon: Clock,         roles: ['SuperAdmin', 'BranchUser'], rarely: true },
       { href: '/payroll',      label: 'حقوق و دستمزد', icon: Calculator,    roles: ['SuperAdmin'], rarely: true },
       { href: '/recruitment',  label: 'استخدام',        icon: UserPlus,      roles: ['SuperAdmin'], rarely: true },
     ],

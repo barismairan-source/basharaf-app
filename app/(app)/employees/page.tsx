@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil, ChevronDown } from 'lucide-react';
+import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil, ChevronDown, Clock } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, normalizeDigits } from '@/lib/utils';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
+import { resolveActiveHourlyRate } from '@/lib/payroll/attendanceEngine';
 import {
   EMPLOYEE_ROLE_LABELS, INSURANCE_STATUS_LABELS, DEFAULT_ROLES,
   type EmployeeRole, type InsuranceStatus, type Gender, type MaritalStatus,
@@ -28,6 +29,9 @@ export default function EmployeesPage() {
   const getSetting = useAppStore(s => s.getSetting);
   const updateSetting = useAppStore(s => s.updateSetting);
   const showToast = useAppStore(s => s.showToast);
+  const hourlyRatesByEmployee = useAppStore(s => s.hourlyRatesByEmployee);
+  const loadHourlyRates = useAppStore(s => s.loadHourlyRates);
+  const createHourlyRate = useAppStore(s => s.createHourlyRate);
 
   const [hydrated, setHydrated] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
@@ -36,6 +40,38 @@ export default function EmployeesPage() {
   const [newRole, setNewRole] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showExtra, setShowExtra] = useState(false);
+  const [rateManagerId, setRateManagerId] = useState<string | null>(null);
+  const [newRate, setNewRate] = useState('');
+  const [newRateFrom, setNewRateFrom] = useState(getTodayJalali());
+  const [newRateReason, setNewRateReason] = useState('');
+  const [rateBusy, setRateBusy] = useState(false);
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const activeRateFor = (employeeId: string): number | null => {
+    const rates = hourlyRatesByEmployee[employeeId] ?? [];
+    return resolveActiveHourlyRate(rates, todayIso);
+  };
+
+  function openRateManager(employeeId: string) {
+    setRateManagerId(employeeId);
+    setNewRate(''); setNewRateFrom(getTodayJalali()); setNewRateReason('');
+    loadHourlyRates(employeeId);
+  }
+
+  async function handleAddRate() {
+    if (!rateManagerId) return;
+    const rate = parseInt(newRate.replace(/\D/g, ''), 10);
+    if (!rate || rate <= 0) { showToast('نرخ ساعتی نامعتبر است', 'danger'); return; }
+    const gregorian = jalaliToDate(newRateFrom);
+    if (!gregorian) { showToast('تاریخ نامعتبر است', 'danger'); return; }
+    setRateBusy(true);
+    const ok = await createHourlyRate(rateManagerId, {
+      hourlyRate: rate, effectiveFrom: gregorian.toISOString().slice(0, 10), reason: newRateReason || null,
+    });
+    setRateBusy(false);
+    if (ok) { showToast('نرخ جدید ثبت شد', 'success'); setNewRate(''); setNewRateReason(''); }
+    else showToast('خطا در ثبت نرخ — شاید با نرخ فعال دیگری هم‌پوشان است', 'danger');
+  }
 
   const rolesRaw = getSetting('payroll.roles', '');
   let roles: { value: string; label: string }[] = DEFAULT_ROLES;
@@ -262,6 +298,13 @@ export default function EmployeesPage() {
                   <div className="text-[13px] font-medium text-stone-800 tabular-nums">{fmt(e.baseMonthlySalary)}</div>
                   <div className="text-[9.5px] text-muted">تومان / ماه</div>
                 </div>
+                <button onClick={() => openRateManager(e.id)}
+                  className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-stone-200 text-[11px] text-stone-600 hover:border-stone-300 flex-shrink-0">
+                  <Clock size={12} strokeWidth={1.5} />
+                  {hourlyRatesByEmployee[e.id] && activeRateFor(e.id) !== null
+                    ? `${fmt(activeRateFor(e.id)!)} ت/س`
+                    : 'نرخ ساعتی'}
+                </button>
                 <button onClick={() => openEdit(e)} className="text-muted hover:text-stone-700 p-1 flex-shrink-0">
                   <Pencil size={14} strokeWidth={1.5} />
                 </button>
@@ -489,6 +532,60 @@ export default function EmployeesPage() {
               </Button>
               <Button variant="default" onClick={() => { setShowAdd(false); resetForm(); }}>لغو</Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {rateManagerId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setRateManagerId(null)}>
+          <div className="bg-white rounded-xl w-full max-w-sm p-5 max-h-[90vh] overflow-y-auto" onClick={ev => ev.stopPropagation()}>
+            <h2 className="text-[16px] font-medium text-stone-900 mb-1">نرخ ساعتی — {employees.find(e => e.id === rateManagerId)?.fullName}</h2>
+            <p className="text-[11.5px] text-stone-500 mb-4">
+              نرخ جدید فقط از تاریخ شروع به بعد اثر دارد؛ فیش‌های دوره‌های گذشته تغییر نمی‌کنند.
+            </p>
+
+            {activeRateFor(rateManagerId) !== null ? (
+              <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 mb-4 text-[12.5px]">
+                نرخ فعال فعلی: <span className="font-medium tabular-nums">{fmt(activeRateFor(rateManagerId)!)}</span> تومان/ساعت
+              </div>
+            ) : (
+              <div className="bg-stone-50 border border-stone-100 rounded-lg p-3 mb-4 text-[12px] text-stone-500">
+                هیچ نرخ فعالی برای این کارمند تعریف نشده — کارمند در سیستم حقوق ماهانه باقی می‌ماند تا نرخی ثبت شود.
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <Field label="نرخ ساعتی جدید (تومان)">
+                <Input value={newRate} dir="ltr" onChange={e => {
+                  const n = parseInt(e.target.value.replace(/\D/g, ''), 10) || 0;
+                  setNewRate(n ? n.toLocaleString('en-US') : '');
+                }} placeholder="مثلاً: 120,000" />
+              </Field>
+              <Field label="تاریخ شروع اثر">
+                <JalaliDatePicker value={newRateFrom} onChange={setNewRateFrom} />
+              </Field>
+              <Field label="دلیل (اختیاری)">
+                <Input value={newRateReason} onChange={e => setNewRateReason(e.target.value)} />
+              </Field>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <Button variant="primary" size="sm" onClick={handleAddRate} loading={rateBusy}>ثبت نرخ جدید</Button>
+              <Button variant="default" size="sm" onClick={() => setRateManagerId(null)}>بستن</Button>
+            </div>
+
+            {(hourlyRatesByEmployee[rateManagerId]?.length ?? 0) > 0 && (
+              <div className="mt-5 border-t border-stone-100 pt-3">
+                <div className="text-[11px] text-stone-500 mb-2">سابقه‌ی نرخ‌ها</div>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  {hourlyRatesByEmployee[rateManagerId]!.map(r => (
+                    <div key={r.id} className="flex items-center justify-between text-[11.5px] bg-stone-50 rounded p-2">
+                      <span className="text-stone-600" dir="ltr">{r.effectiveFrom} → {r.effectiveTo ?? 'ادامه‌دار'}</span>
+                      <span className="tabular-nums text-stone-800">{fmt(r.hourlyRate)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

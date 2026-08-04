@@ -31,6 +31,7 @@ import { createContactsSlice, type ContactsSlice } from './slices/contactsSlice'
 import { createMenuSlice, type MenuSlice } from './slices/menuSlice';
 import { createEmployeesSlice, type EmployeesSlice } from './slices/employeesSlice';
 import { createPayrollSlice, type PayrollSlice } from './slices/payrollSlice';
+import { createHourlyPayrollSlice, type HourlyPayrollSlice } from './slices/hourlyPayrollSlice';
 import { createRecruitmentSlice, type RecruitmentSlice } from './slices/recruitmentSlice';
 import { createCustomersSlice, type CustomersSlice } from './slices/customersSlice';
 import { createCouponsSlice, type CouponsSlice } from './slices/couponsSlice';
@@ -54,6 +55,7 @@ export type AppStore = AuthSlice &
   MenuSlice &
   EmployeesSlice &
   PayrollSlice &
+  HourlyPayrollSlice &
   RecruitmentSlice &
   CustomersSlice &
   CouponsSlice &
@@ -121,6 +123,7 @@ export const useAppStore = create<AppStore>()(
       ...createMenuSlice(set as any, get as any, api as any),
       ...createEmployeesSlice(set as any, get as any, api as any),
       ...createPayrollSlice(set as any, get as any, api as any),
+      ...createHourlyPayrollSlice(set as any, get as any, api as any),
       ...createRecruitmentSlice(set as any, get as any, api as any),
       ...createCustomersSlice(set as any, get as any, api as any),
       ...createCouponsSlice(set as any, get as any, api as any),
