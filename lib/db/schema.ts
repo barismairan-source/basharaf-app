@@ -897,6 +897,8 @@ export const attendanceStatusEnum = pgEnum('attendance_status', ['draft', 'confi
 export const attendanceTypeEnum = pgEnum('attendance_type', [
   'present', 'absent', 'paid_leave', 'unpaid_leave', 'sick_leave', 'holiday_work', 'off_day_work',
 ]);
+// نوع حقوق — صریح، دیگر از روی وجود/نبود رکورد employee_hourly_rates حدس زده نمی‌شود.
+export const compensationTypeEnum = pgEnum('compensation_type', ['hourly', 'monthly']);
 
 // ─── employees — پرونده پرسنلی ────────────────────────────────────
 export const employees = pgTable(
@@ -939,6 +941,13 @@ export const employees = pgTable(
 
     // پول — bigint تومان صحیح (منطبق با هسته)
     baseMonthlySalary: bigint('base_monthly_salary', { mode: 'number' }).notNull().default(0),
+
+    // نوع حقوق — صریح (فاز ۱ یکپارچه‌سازی HR). پیش از این ستون، نوع حقوق از
+    // روی وجود رکورد در employee_hourly_rates حدس زده می‌شد؛ حالا صریح و
+    // قابل‌مشاهده است. مقدار پیش‌فرض ستون در DB برای سازگاری با رکوردهای
+    // قدیمی 'monthly' است؛ در migration واقعی برای کارمندانی که از قبل نرخ
+    // ساعتی دارند به 'hourly' backfill می‌شود (بدون تغییر در فیش‌های گذشته).
+    compensationType: compensationTypeEnum('compensation_type').notNull().default('monthly'),
 
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
@@ -1217,6 +1226,24 @@ export const attendanceEntries = pgTable(
   })
 );
 
+// ─── employee_compensation_type_changes — گزارش حسابرسی تغییر نوع حقوق ──
+export const employeeCompensationTypeChanges = pgTable(
+  'employee_compensation_type_changes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    fromType: compensationTypeEnum('from_type').notNull(),
+    toType: compensationTypeEnum('to_type').notNull(),
+    effectiveFrom: date('effective_from', { mode: 'date' }).notNull(),
+    changedBy: uuid('changed_by').references(() => users.id, { onDelete: 'set null' }),
+    reason: text('reason'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    employeeIdx: index('employee_compensation_type_changes_employee_idx').on(t.employeeId),
+  })
+);
+
 // ─── Types ───────────────────────────────────────────────────────
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
@@ -1229,6 +1256,7 @@ export type ShiftTemplate = typeof shiftTemplates.$inferSelect;
 export type EmployeeHourlyRate = typeof employeeHourlyRates.$inferSelect;
 export type EmployeeShiftAssignment = typeof employeeShiftAssignments.$inferSelect;
 export type AttendanceEntry = typeof attendanceEntries.$inferSelect;
+export type EmployeeCompensationTypeChange = typeof employeeCompensationTypeChanges.$inferSelect;
 // ─── Inventory Enums (۵ عدد) ─────────────────────────────────────
 export const invItemKindEnum = pgEnum('inv_item_kind', ['raw', 'prep']);
 //   raw  = ماده خام (از خرید وارد می‌شود)

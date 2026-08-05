@@ -5,7 +5,8 @@ import {
   deriveHolidayMinutes, resolveNightMinutes, resolveActiveHourlyRate,
   shiftRangesOverlap, calcAttendancePay, calculateHourlyPayslip,
   canEditAttendance, canConfirmAttendance, canLockAttendance, isPayableAttendanceStatus,
-  type AttendanceDayForPayslip,
+  findAttendanceOverlap,
+  type AttendanceDayForPayslip, type AttendanceIntervalInput,
 } from '@/lib/payroll/attendanceEngine';
 
 const BASE_PARAMS = {
@@ -347,5 +348,64 @@ describe('پاداش و مساعده در فیش ساعتی', () => {
     const days = [day({ workedMinutes: 60, regularMinutes: 60, plannedMinutes: 60, hourlyRateSnapshot: 10_000 })];
     const result = calculateHourlyPayslip({ days, params: BASE_PARAMS, events: [{ type: 'advance', amount: 5_000_000 }] });
     expect(result.isNegative).toBe(true);
+  });
+});
+
+function attEntry(overrides: Partial<AttendanceIntervalInput>): AttendanceIntervalInput {
+  return {
+    id: 'e1', attendanceType: 'present', entryMode: 'time_range',
+    clockIn: '08:00', clockOut: '16:00', crossesMidnight: false,
+    shiftAssignmentId: null,
+    ...overrides,
+  };
+}
+
+describe('جلوگیری از هم‌پوشانی حضور — findAttendanceOverlap', () => {
+  it('دو رکورد با بازه‌ی زمانی هم‌پوشان تشخیص داده می‌شوند', () => {
+    const candidate = attEntry({ id: 'new', clockIn: '08:00', clockOut: '16:00' });
+    const others = [attEntry({ id: 'old', clockIn: '15:00', clockOut: '20:00' })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(true);
+  });
+
+  it('دو رکورد غیرهم‌پوشان (شیفت صبح و عصر) تضادی ندارند', () => {
+    const candidate = attEntry({ id: 'new', clockIn: '08:00', clockOut: '12:00' });
+    const others = [attEntry({ id: 'old', clockIn: '13:00', clockOut: '17:00' })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(false);
+  });
+
+  it('رکورد total_minutes بدون شیفت (بازه‌ی نامشخص) با هر رکورد کاری دیگر همان روز تضاد دارد', () => {
+    const candidate = attEntry({ id: 'new', entryMode: 'total_minutes', clockIn: null, clockOut: null, shiftAssignmentId: null });
+    const others = [attEntry({ id: 'old', clockIn: '08:00', clockOut: '16:00' })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(true);
+  });
+
+  it('دو رکورد total_minutes متصل به دو شیفت غیرهم‌پوشان مجازند (بازه از snapshot تخصیص)', () => {
+    const candidate = attEntry({
+      id: 'new', entryMode: 'total_minutes', clockIn: null, clockOut: null,
+      shiftAssignmentId: 'shiftA', assignmentStartTime: '08:00', assignmentEndTime: '12:00',
+    });
+    const others = [attEntry({
+      id: 'old', entryMode: 'total_minutes', clockIn: null, clockOut: null,
+      shiftAssignmentId: 'shiftB', assignmentStartTime: '13:00', assignmentEndTime: '17:00',
+    })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(false);
+  });
+
+  it('مرخصی/غیبت هرگز وارد بررسی هم‌پوشانی نمی‌شود', () => {
+    const candidate = attEntry({ id: 'new', attendanceType: 'unpaid_leave', entryMode: 'total_minutes', clockIn: null, clockOut: null });
+    const others = [attEntry({ id: 'old', clockIn: '08:00', clockOut: '16:00' })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(false);
+  });
+
+  it('مقایسه با خودش (همان id) نادیده گرفته می‌شود (ویرایش رکورد موجود)', () => {
+    const candidate = attEntry({ id: 'same', clockIn: '08:00', clockOut: '16:00' });
+    const others = [attEntry({ id: 'same', clockIn: '08:00', clockOut: '16:00' })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(false);
+  });
+
+  it('شیفت عبور از نیمه‌شب با شیفت روز بعد هم‌پوشانی را درست تشخیص می‌دهد', () => {
+    const candidate = attEntry({ id: 'new', clockIn: '20:00', clockOut: '04:00', crossesMidnight: true });
+    const others = [attEntry({ id: 'old', clockIn: '02:00', clockOut: '06:00', crossesMidnight: false })];
+    expect(findAttendanceOverlap(candidate, others)).toBe(true);
   });
 });

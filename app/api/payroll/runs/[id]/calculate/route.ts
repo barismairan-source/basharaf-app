@@ -6,6 +6,7 @@ import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { calculatePayslip, type PayrollParameters, type TaxBracket } from '@/lib/payroll/payrollEngine';
 import { calculateHourlyPayslip, type AttendanceDayForPayslip } from '@/lib/payroll/attendanceEngine';
+import { computeReadinessForEmployees } from '@/lib/payroll/payrollReadiness';
 import { jalaliMonthRange } from '@/lib/jalali';
 
 export const dynamic = 'force-dynamic';
@@ -91,12 +92,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       )
     );
 
-    // کارمندان سیستم حقوق ساعتی — هر کس در employee_hourly_rates رکورد دارد
-    const empIdsInRun = emps.map(e => e.id);
-    const hourlyRateRows = empIdsInRun.length > 0
-      ? await db.select().from(schema.employeeHourlyRates).where(inArray(schema.employeeHourlyRates.employeeId, empIdsInRun))
-      : [];
-    const hourlyEmployeeIds = new Set(hourlyRateRows.map(r => r.employeeId));
+    // کارمندان سیستم حقوق ساعتی — بر اساس نوع حقوق صریح (نه حدس از وجود نرخ)
+    const hourlyEmployeeIds = new Set(emps.filter(e => e.compensationType === 'hourly').map(e => e.id));
+
+    // آمادگی دوره — قبل از هر محاسبه‌ای بررسی می‌شود؛ خطای بحرانی محاسبه را مسدود می‌کند
+    const readiness = await computeReadinessForEmployees(emps, run.periodYearMonth, run.branchId);
+    if (!readiness.ready) {
+      throw new ApiError(409, `این دوره آماده‌ی محاسبه نیست: ${readiness.criticalErrors.join('؛ ')}`, 'NOT_READY', {
+        criticalErrors: readiness.criticalErrors, warnings: readiness.warnings,
+      });
+    }
 
     // بازه‌ی گریگوری دوره (برای کوئری روی attendance_entries.work_date)
     const range = jalaliMonthRange(run.periodYearMonth);

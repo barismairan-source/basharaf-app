@@ -1,11 +1,68 @@
 import { db, schema } from '@/lib/db/client';
-import { eq } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import { ApiError } from '@/lib/api-error';
 import {
   resolveTotalPresenceMinutes, applyBreakPolicy, splitRegularOvertime,
   deriveHolidayMinutes, resolveNightMinutes, resolveActiveHourlyRate,
+  findAttendanceOverlap, type AttendanceIntervalInput,
   type AttendanceType, type BreakPolicy, type EntryMode,
 } from './attendanceEngine';
+
+// همان الگوی lib/db/balanceHelpers.ts — تابع باید هم با db اصلی و هم با
+// tx داخل db.transaction(...) کار کند؛ تایپ دقیق drizzle transaction اینجا
+// مفید نیست (فقط select/insert/update لازم است).
+type DbOrTx = any;
+
+/**
+ * جلوگیری از هم‌پوشانی حضور — درون transaction فراخوانی شود (نه فقط UI).
+ * رکورد جدید/ویرایش‌شده را با بقیه‌ی حضورهای همان کارمند در همان روز مقایسه
+ * می‌کند؛ در صورت تضاد، ApiError(409) می‌اندازد.
+ */
+export async function assertNoAttendanceOverlap(
+  tx: DbOrTx,
+  candidate: AttendanceIntervalInput,
+  employeeId: string,
+  workDate: string,
+): Promise<void> {
+  const siblings = await tx.select({
+    entry: schema.attendanceEntries,
+    assignmentStartTime: schema.employeeShiftAssignments.plannedStartTime,
+    assignmentEndTime: schema.employeeShiftAssignments.plannedEndTime,
+    assignmentCrossesMidnight: schema.employeeShiftAssignments.crossesMidnight,
+  }).from(schema.attendanceEntries)
+    .leftJoin(schema.employeeShiftAssignments, eq(schema.attendanceEntries.shiftAssignmentId, schema.employeeShiftAssignments.id))
+    .where(and(
+      eq(schema.attendanceEntries.employeeId, employeeId),
+      eq(schema.attendanceEntries.workDate, new Date(workDate + 'T00:00:00Z')),
+      ne(schema.attendanceEntries.id, candidate.id),
+    ));
+
+  const others: AttendanceIntervalInput[] = siblings.map((s: any) => ({
+    id: s.entry.id, attendanceType: s.entry.attendanceType, entryMode: s.entry.entryMode,
+    clockIn: s.entry.clockIn, clockOut: s.entry.clockOut, crossesMidnight: false,
+    shiftAssignmentId: s.entry.shiftAssignmentId,
+    assignmentStartTime: s.assignmentStartTime, assignmentEndTime: s.assignmentEndTime,
+    assignmentCrossesMidnight: s.assignmentCrossesMidnight ?? false,
+  }));
+
+  if (findAttendanceOverlap(candidate, others)) {
+    throw new ApiError(409, 'این بازه با یک رکورد حضور دیگر در همان روز هم‌پوشانی دارد', 'ATTENDANCE_OVERLAP');
+  }
+}
+
+/**
+ * آیا این کارمند در این روز شیفت برنامه‌ریزی‌شده‌ی فعال دارد؟ برای هشدار
+ * «حضور بدون شیفت وقتی شیفت فعال هست» — مسدودکننده نیست، فقط هشدار.
+ */
+export async function hasActiveShiftAssignment(tx: DbOrTx, employeeId: string, workDate: string): Promise<boolean> {
+  const [row] = await tx.select({ id: schema.employeeShiftAssignments.id }).from(schema.employeeShiftAssignments)
+    .where(and(
+      eq(schema.employeeShiftAssignments.employeeId, employeeId),
+      eq(schema.employeeShiftAssignments.workDate, new Date(workDate + 'T00:00:00Z')),
+      eq(schema.employeeShiftAssignments.status, 'scheduled'),
+    )).limit(1);
+  return !!row;
+}
 
 /**
  * محاسبه‌ی مشتقات یک روز حضور (worked/regular/overtime/night/holiday/rate).

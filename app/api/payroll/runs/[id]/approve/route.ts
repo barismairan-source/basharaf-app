@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { and, eq, gte, lte, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
-import { jalaliMonthRange } from '@/lib/jalali';
+import { computeReadinessForEmployees } from '@/lib/payroll/payrollReadiness';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,23 +12,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const session = await requireAdmin();
     const now = new Date();
 
-    // جلوگیری از تأیید دوره‌ای که برای کارمندان ساعتی هنوز حضور تأییدنشده (draft) دارد
+    // جلوگیری از تأیید دوره‌ی دارای خطای بحرانی (حضور تأییدنشده، هم‌پوشانی، نرخ نامعتبر، ...)
+    // — همان گیت آمادگی‌ی که calculate استفاده می‌کند، تا این دو جا هرگز از هم جدا نیفتند.
     const [runForCheck] = await db.select().from(schema.payrollRuns).where(eq(schema.payrollRuns.id, params.id)).limit(1);
     if (runForCheck) {
       const payslipEmployeeIds = (await db.select({ employeeId: schema.payslips.employeeId })
         .from(schema.payslips).where(eq(schema.payslips.payrollRunId, params.id))).map(r => r.employeeId);
-      const range = jalaliMonthRange(runForCheck.periodYearMonth);
-      if (payslipEmployeeIds.length > 0 && range) {
-        const draftRows = await db.select({ employeeId: schema.attendanceEntries.employeeId })
-          .from(schema.attendanceEntries)
-          .where(and(
-            inArray(schema.attendanceEntries.employeeId, payslipEmployeeIds),
-            gte(schema.attendanceEntries.workDate, new Date(range.from + 'T00:00:00Z')),
-            lte(schema.attendanceEntries.workDate, new Date(range.to + 'T00:00:00Z')),
-            eq(schema.attendanceEntries.status, 'draft'),
-          ));
-        if (draftRows.length > 0) {
-          throw new ApiError(409, 'این دوره حضور تأییدنشده دارد — ابتدا همه‌ی حضورها را تأیید کنید', 'UNCONFIRMED_ATTENDANCE');
+      if (payslipEmployeeIds.length > 0) {
+        const employees = await db.select().from(schema.employees).where(inArray(schema.employees.id, payslipEmployeeIds));
+        const readiness = await computeReadinessForEmployees(employees, runForCheck.periodYearMonth, runForCheck.branchId);
+        if (!readiness.ready) {
+          throw new ApiError(409, `این دوره آماده‌ی تأیید نیست: ${readiness.criticalErrors.join('؛ ')}`, 'NOT_READY', {
+            criticalErrors: readiness.criticalErrors, warnings: readiness.warnings,
+          });
         }
       }
     }

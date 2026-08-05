@@ -31,6 +31,8 @@ const createSchema = z.object({
   healthCardExpiryDate: z.string().optional().nullable(),
   joinDate: z.string().min(1, 'تاریخ استخدام الزامی است'),
   baseMonthlySalary: z.number().int().min(0).default(0),
+  // تصمیم محصول: کارکنان جدید پیش‌فرض ساعتی‌اند — حقوق ماهانه‌ی جدید به‌تدریج متوقف می‌شود.
+  compensationType: z.enum(['hourly', 'monthly']).default('hourly'),
   notes: z.string().max(1000).optional().nullable(),
 });
 
@@ -68,6 +70,7 @@ export async function POST(req: Request) {
       healthCardExpiryDate: input.healthCardExpiryDate ? new Date(input.healthCardExpiryDate) : null,
       joinDate: new Date(input.joinDate),
       baseMonthlySalary: input.baseMonthlySalary,
+      compensationType: input.compensationType,
       notes: input.notes ?? null,
     }).returning();
     if (!e) throw new ApiError(500, 'خطا در ساخت پرسنل', 'INSERT_FAILED');

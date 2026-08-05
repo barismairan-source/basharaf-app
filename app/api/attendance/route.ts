@@ -4,7 +4,8 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
-import { computeDerivedFields } from '@/lib/payroll/attendanceEntryHelpers';
+import { computeDerivedFields, assertNoAttendanceOverlap, hasActiveShiftAssignment } from '@/lib/payroll/attendanceEntryHelpers';
+import type { AttendanceIntervalInput } from '@/lib/payroll/attendanceEngine';
 
 export const dynamic = 'force-dynamic';
 
@@ -91,8 +92,9 @@ export async function POST(req: Request) {
     const branchId = session.role === 'BranchUser' ? (session.branchId ?? null) : (input.branchId ?? null);
 
     let plannedMinutes = 0;
+    let assignment: typeof schema.employeeShiftAssignments.$inferSelect | undefined;
     if (input.shiftAssignmentId) {
-      const [assignment] = await db.select().from(schema.employeeShiftAssignments)
+      [assignment] = await db.select().from(schema.employeeShiftAssignments)
         .where(eq(schema.employeeShiftAssignments.id, input.shiftAssignmentId)).limit(1);
       if (!assignment) throw new ApiError(404, 'تخصیص شیفت پیدا نشد', 'ASSIGNMENT_NOT_FOUND');
       plannedMinutes = assignment.plannedMinutes;
@@ -105,20 +107,36 @@ export async function POST(req: Request) {
       breakPolicy: input.breakPolicy, attendanceType: input.attendanceType, plannedMinutes,
     });
 
-    const [row] = await db.insert(schema.attendanceEntries).values({
-      employeeId: input.employeeId, branchId, workDate: toDate(input.workDate),
+    const candidate: AttendanceIntervalInput = {
+      id: 'new-candidate', attendanceType: input.attendanceType, entryMode: input.entryMode,
+      clockIn: input.clockIn ?? null, clockOut: input.clockOut ?? null, crossesMidnight: input.crossesMidnight,
       shiftAssignmentId: input.shiftAssignmentId ?? null,
-      entryMode: input.entryMode, clockIn: input.clockIn ?? null, clockOut: input.clockOut ?? null,
-      manualWorkedMinutes: input.manualWorkedMinutes ?? null, breakMinutes: input.breakMinutes,
-      workedMinutes: derived.workedMinutes, regularMinutes: derived.regularMinutes,
-      overtimeMinutes: derived.overtimeMinutes, nightMinutes: derived.nightMinutes,
-      holidayMinutes: derived.holidayMinutes, hourlyRateSnapshot: derived.hourlyRateSnapshot,
-      attendanceType: input.attendanceType, managerNote: input.managerNote ?? null,
-      createdBy: session.sub,
-    }).returning();
-    if (!row) throw new ApiError(500, 'خطا در ثبت حضور', 'INSERT_FAILED');
+      assignmentStartTime: assignment?.plannedStartTime ?? null, assignmentEndTime: assignment?.plannedEndTime ?? null,
+      assignmentCrossesMidnight: assignment?.crossesMidnight ?? false,
+    };
 
-    return NextResponse.json({ entry: rowToEntry(row), plannedMinutes }, { status: 201 });
+    let warning: string | null = null;
+    const row = await db.transaction(async (tx) => {
+      await assertNoAttendanceOverlap(tx, candidate, input.employeeId, input.workDate);
+      if (!input.shiftAssignmentId && await hasActiveShiftAssignment(tx, input.employeeId, input.workDate)) {
+        warning = 'برای این کارمند در این تاریخ شیفت برنامه‌ریزی‌شده وجود دارد — به‌جای «حضور بدون شیفت»، بهتر است این حضور را به همان شیفت متصل کنید.';
+      }
+      const [inserted] = await tx.insert(schema.attendanceEntries).values({
+        employeeId: input.employeeId, branchId, workDate: toDate(input.workDate),
+        shiftAssignmentId: input.shiftAssignmentId ?? null,
+        entryMode: input.entryMode, clockIn: input.clockIn ?? null, clockOut: input.clockOut ?? null,
+        manualWorkedMinutes: input.manualWorkedMinutes ?? null, breakMinutes: input.breakMinutes,
+        workedMinutes: derived.workedMinutes, regularMinutes: derived.regularMinutes,
+        overtimeMinutes: derived.overtimeMinutes, nightMinutes: derived.nightMinutes,
+        holidayMinutes: derived.holidayMinutes, hourlyRateSnapshot: derived.hourlyRateSnapshot,
+        attendanceType: input.attendanceType, managerNote: input.managerNote ?? null,
+        createdBy: session.sub,
+      }).returning();
+      if (!inserted) throw new ApiError(500, 'خطا در ثبت حضور', 'INSERT_FAILED');
+      return inserted;
+    });
+
+    return NextResponse.json({ entry: rowToEntry(row), plannedMinutes, warning }, { status: 201 });
   } catch (e) {
     return await handleErrorLogged(e, req, { category: 'payroll' });
   }

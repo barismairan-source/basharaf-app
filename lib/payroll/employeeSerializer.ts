@@ -12,7 +12,8 @@ export function serializeEmployee(e: typeof schema.employees.$inferSelect) {
     healthCardExpiryDate: e.healthCardExpiryDate ? e.healthCardExpiryDate.toISOString().slice(0,10) : null,
     joinDate: e.joinDate.toISOString().slice(0,10),
     terminationDate: e.terminationDate ? e.terminationDate.toISOString().slice(0,10) : null,
-    baseMonthlySalary: Number(e.baseMonthlySalary), isActive: e.isActive, notes: e.notes,
+    baseMonthlySalary: Number(e.baseMonthlySalary), compensationType: e.compensationType,
+    isActive: e.isActive, notes: e.notes,
     createdAt: e.createdAt.toISOString(), updatedAt: e.updatedAt.toISOString(),
   };
 }

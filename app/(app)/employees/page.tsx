@@ -234,7 +234,9 @@ export default function EmployeesPage() {
     showToast(ok ? 'پرسنل حذف شد' : 'خطا در حذف', ok ? 'success' : 'danger');
   }
 
-  const totalSalary = employees.reduce((s, e) => s + e.baseMonthlySalary, 0);
+  const monthlyEmployees = employees.filter(e => e.compensationType === 'monthly');
+  const hourlyCount = employees.length - monthlyEmployees.length;
+  const totalSalary = monthlyEmployees.reduce((s, e) => s + e.baseMonthlySalary, 0);
 
   return (
     <div className="p-4 lg:p-6">
@@ -244,7 +246,8 @@ export default function EmployeesPage() {
           <div>
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">مدیریت پرسنل</h1>
             <div className="text-[12px] text-stone-500 mt-1">
-              {employees.length} نفر · مجموع حقوق پایه ماهانه: {fmt(totalSalary)} تومان
+              {employees.length} نفر · {hourlyCount} ساعتی
+              {monthlyEmployees.length > 0 && <> · مجموع حقوق پایه‌ی ماهانه ({monthlyEmployees.length} نفر): {fmt(totalSalary)} تومان</>}
             </div>
           </div>
           <div className="flex gap-2">
@@ -287,6 +290,9 @@ export default function EmployeesPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[13.5px] font-medium text-stone-900">{e.fullName}</span>
                     <Chip tone="neutral">{roleLabel(e.role)}</Chip>
+                    <Chip tone={e.compensationType === 'hourly' ? 'green' : 'amber'}>
+                      {e.compensationType === 'hourly' ? 'ساعتی' : 'ماهانه'}
+                    </Chip>
                     {e.branchName && <span className="text-[10.5px] text-muted">{e.branchName}</span>}
                   </div>
                   <div className="text-[11px] text-stone-500 mt-0.5 flex items-center gap-3 flex-wrap">
@@ -294,10 +300,12 @@ export default function EmployeesPage() {
                     <span>{INSURANCE_STATUS_LABELS[e.insuranceStatus]}</span>
                   </div>
                 </div>
-                <div className="text-left flex-shrink-0">
-                  <div className="text-[13px] font-medium text-stone-800 tabular-nums">{fmt(e.baseMonthlySalary)}</div>
-                  <div className="text-[9.5px] text-muted">تومان / ماه</div>
-                </div>
+                {e.compensationType === 'monthly' && (
+                  <div className="text-left flex-shrink-0">
+                    <div className="text-[13px] font-medium text-stone-800 tabular-nums">{fmt(e.baseMonthlySalary)}</div>
+                    <div className="text-[9.5px] text-muted">تومان / ماه</div>
+                  </div>
+                )}
                 <button onClick={() => openRateManager(e.id)}
                   className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-stone-200 text-[11px] text-stone-600 hover:border-stone-300 flex-shrink-0">
                   <Clock size={12} strokeWidth={1.5} />

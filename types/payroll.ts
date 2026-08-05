@@ -17,6 +17,7 @@ export const DEFAULT_ROLES: { value: string; label: string }[] = [
 export type Gender = 'male' | 'female' | 'other';
 export type MaritalStatus = 'single' | 'married' | 'other';
 export type InsuranceStatus = 'insured' | 'uninsured' | 'pending' | 'exempt';
+export type CompensationType = 'hourly' | 'monthly';
 
 export interface Employee {
   id: string;
@@ -41,6 +42,7 @@ export interface Employee {
   joinDate: string;                     // ISO date
   terminationDate: string | null;
   baseMonthlySalary: number;            // تومان
+  compensationType: CompensationType;
   isActive: boolean;
   notes: string | null;
   createdAt: string;

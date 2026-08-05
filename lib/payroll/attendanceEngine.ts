@@ -213,6 +213,67 @@ export function shiftRangesOverlap(
   return false;
 }
 
+/* ───── جلوگیری از هم‌پوشانی حضور (چند رکورد حضور یک نفر در یک روز) ── */
+
+const WORKED_ATTENDANCE_TYPES: ReadonlySet<AttendanceType> = new Set(['present', 'holiday_work', 'off_day_work']);
+
+export interface AttendanceIntervalInput {
+  id: string;
+  attendanceType: AttendanceType;
+  entryMode: EntryMode;
+  clockIn: string | null;
+  clockOut: string | null;
+  crossesMidnight: boolean;
+  shiftAssignmentId: string | null;
+  /** اگر shiftAssignmentId ست است، ساعت شروع/پایان همان تخصیص (برای تعیین بازه‌ی زمانی رکورد total_minutes متصل به شیفت). */
+  assignmentStartTime?: string | null;
+  assignmentEndTime?: string | null;
+  assignmentCrossesMidnight?: boolean;
+}
+
+type ResolvedInterval =
+  | { kind: 'none' }                                                        // مرخصی/غیبت — هرگز وارد هم‌پوشانی نمی‌شود
+  | { kind: 'unanchored' }                                                  // total_minutes بدون شیفت — بازه‌ی زمانی مشخصی ندارد
+  | { kind: 'interval'; start: string; end: string; crossesMidnight: boolean };
+
+/** بازه‌ی زمانی قابل‌مقایسه‌ی یک رکورد حضور (برای تشخیص هم‌پوشانی). */
+function resolveAttendanceInterval(e: AttendanceIntervalInput): ResolvedInterval {
+  if (!WORKED_ATTENDANCE_TYPES.has(e.attendanceType)) return { kind: 'none' };
+  if (e.entryMode === 'time_range' && e.clockIn && e.clockOut) {
+    return { kind: 'interval', start: e.clockIn, end: e.clockOut, crossesMidnight: e.crossesMidnight };
+  }
+  if (e.shiftAssignmentId && e.assignmentStartTime && e.assignmentEndTime) {
+    return { kind: 'interval', start: e.assignmentStartTime, end: e.assignmentEndTime, crossesMidnight: !!e.assignmentCrossesMidnight };
+  }
+  return { kind: 'unanchored' };
+}
+
+/**
+ * آیا رکورد جدید/ویرایش‌شده با یکی از رکوردهای دیگر همان کارمند در همان روز
+ * هم‌پوشانی/تضاد دارد؟ قاعده:
+ *   - مرخصی/غیبت هرگز وارد بررسی نمی‌شود.
+ *   - دو رکورد با بازه‌ی زمانی مشخص (ساعت واقعی یا snapshot شیفت متصل):
+ *     فقط اگر بازه‌هایشان هم‌پوشان باشد تضاد دارند.
+ *   - رکورد total_minutes بدون شیفت (بازه‌ی زمانی نامشخص) با هر رکورد
+ *     «کاری» دیگر همان روز تضاد دارد — چون نمی‌توان عدم هم‌پوشانی را اثبات کرد.
+ */
+export function findAttendanceOverlap(
+  candidate: AttendanceIntervalInput,
+  others: AttendanceIntervalInput[],
+): boolean {
+  const a = resolveAttendanceInterval(candidate);
+  if (a.kind === 'none') return false;
+
+  for (const other of others) {
+    if (other.id === candidate.id) continue;
+    const b = resolveAttendanceInterval(other);
+    if (b.kind === 'none') continue;
+    if (a.kind === 'unanchored' || b.kind === 'unanchored') return true;
+    if (shiftRangesOverlap(a.start, a.end, a.crossesMidnight, b.start, b.end, b.crossesMidnight)) return true;
+  }
+  return false;
+}
+
 /* ───── محاسبه‌ی مبلغ یک روز حضور ──────────────────────────────── */
 
 export interface DayPayInput {
