@@ -229,7 +229,13 @@ export function CandidateDetail({
         <Button variant="default" size="sm" icon={Star} onClick={() => onStatusChange('shortlist')}>لیست کوتاه</Button>
         <Button variant="danger" size="sm" icon={X} onClick={() => onStatusChange('rejected')}>رد</Button>
         {a.status === 'accepted' && (
-          <Button variant="primary" size="sm" icon={UserCheck} onClick={onConvert}>تبدیل به پرسنل</Button>
+          a.hiredAt ? (
+            <span className="inline-flex items-center gap-1.5 text-[12px] text-emerald-700">
+              <UserCheck size={14} strokeWidth={1.5} /> استخدام شد
+            </span>
+          ) : (
+            <Button variant="primary" size="sm" icon={UserCheck} onClick={onConvert}>تبدیل به پرسنل</Button>
+          )
         )}
 
         <div className="flex-1 min-w-[180px]">

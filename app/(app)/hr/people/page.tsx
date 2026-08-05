@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil, ChevronDown, Clock, Search } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker, FilterToolbar } from '@/components/ui';
+import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker, FilterToolbar, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, normalizeDigits } from '@/lib/utils';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
@@ -21,6 +21,7 @@ function validateIban(v: string) { return v === '' || /^IR\d{24}$/i.test(v); }
 
 export default function EmployeesPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const user = useAppStore(s => s.user);
   const employees = useAppStore(s => s.employees);
   const branches = useAppStore(s => s.branches);
@@ -238,7 +239,7 @@ export default function EmployeesPage() {
   }
 
   async function handleDelete(id: string, name: string) {
-    if (!confirm(`«${name}» حذف شود؟ (غیرفعال می‌شود، تاریخچه حفظ می‌ماند)`)) return;
+    if (!(await confirm({ title: `«${name}» حذف شود؟`, description: 'غیرفعال می‌شود، تاریخچه حفظ می‌ماند.', danger: true }))) return;
     const ok = await deleteEmployee(id);
     showToast(ok ? 'پرسنل حذف شد' : 'خطا در حذف', ok ? 'success' : 'danger');
   }

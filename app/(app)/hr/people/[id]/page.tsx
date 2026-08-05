@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowRight, Phone, Clock, ShieldX, FileWarning } from 'lucide-react';
-import { Card, CardBody, Tabs, TabPanel, Chip, Empty, InlineNotice, Button, Field, Input, Select } from '@/components/ui';
+import { Card, CardBody, Tabs, TabPanel, Chip, Empty, InlineNotice, Button, Field, Input, Select, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
 import { fmt } from '@/lib/utils';
@@ -261,6 +261,7 @@ interface SystemUser { id: string; name: string; email: string; role: string; as
  * منطق hash رمز عبور). دسترسی نرم‌افزار همیشه مستقل از سمت شغلی می‌ماند. */
 function AccessTab({ employee, canManage }: { employee: NonNullable<ReturnType<typeof useAppStore.getState>['employees']>[number]; canManage: boolean }) {
   const showToast = useAppStore(s => s.showToast);
+  const confirm = useConfirm();
   const branches = useAppStore(s => s.branches);
   const [linkedUser, setLinkedUser] = useState<SystemUser | null>(null);
   const [allUsers, setAllUsers] = useState<SystemUser[]>([]);
@@ -288,7 +289,7 @@ function AccessTab({ employee, canManage }: { employee: NonNullable<ReturnType<t
   }, [employee.userId]);
 
   async function handleUnlink() {
-    if (!confirm('اتصال این کارمند به حساب کاربری قطع شود؟ خود حساب کاربری حذف نمی‌شود.')) return;
+    if (!(await confirm({ title: 'اتصال این کارمند به حساب کاربری قطع شود؟', description: 'خود حساب کاربری حذف نمی‌شود.' }))) return;
     setBusy(true);
     const res = await fetch(`/api/employees/${employee.id}/link-user`, { method: 'DELETE', credentials: 'include' });
     setBusy(false);

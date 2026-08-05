@@ -7,7 +7,7 @@ import {
   UserPlus, Download, Search, Settings2, Wrench, ExternalLink,
   GitCompareArrows, MoreVertical, Loader2, RefreshCw, X, SlidersHorizontal, BarChart3,
 } from 'lucide-react';
-import { Button, ButtonLink, Input, Select, Empty, InlineNotice, Popover, Skeleton } from '@/components/ui';
+import { Button, ButtonLink, Input, Select, Empty, InlineNotice, Popover, Skeleton, useConfirm } from '@/components/ui';
 import { PageShell } from '@/components/ui/PageShell';
 import { PageToolbar } from '@/components/ui/PageToolbar';
 import { FilterToolbar } from '@/components/ui/FilterToolbar';
@@ -49,6 +49,7 @@ interface FunnelStats {
 
 export default function RecruitmentPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const searchParams = useSearchParams();
   const user = useAppStore((s) => s.user);
   const applications = useAppStore((s) => s.applications);
@@ -201,7 +202,11 @@ export default function RecruitmentPage() {
   // ── اقدامات بررسی یک داوطلب ─────────────────────────────────────────────
   async function convertToEmployee(a: JobApplication) {
     if (a.hiredAt) { showToast('این داوطلب قبلاً استخدام شده', 'danger'); return; }
-    if (!confirm(`«${a.firstName} ${a.lastName}» به پرونده‌ی پرسنلی تبدیل شود؟ بعداً می‌توانید سمت/شعبه/نرخ او را تکمیل کنید.`)) return;
+    const ok = await confirm({
+      title: `«${a.firstName} ${a.lastName}» به پرونده‌ی پرسنلی تبدیل شود؟`,
+      description: 'بعداً می‌توانید سمت/شعبه/نرخ او را تکمیل کنید.',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/hr/recruitment/${a.id}/hire`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: '{}',

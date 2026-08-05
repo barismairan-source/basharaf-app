@@ -5,7 +5,7 @@ import {
   Plus, GripVertical, Trash2, Eye, EyeOff, Check, X, ChevronDown, ChevronUp,
   Settings2, Loader2, AlertTriangle, RefreshCw, Save, Smartphone, Monitor,
 } from 'lucide-react';
-import { Button, Input, Select, Empty } from '@/components/ui';
+import { Button, Input, Select, Empty, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
 import type {
@@ -486,6 +486,7 @@ function LivePreview({ structure }: { structure: FormStructure }) {
 // Main Form Builder Page
 // ══════════════════════════════════════════════════════════════════════════
 export default function FormBuilderPage() {
+  const confirm = useConfirm();
   const user = useAppStore(s => s.user);
   const showToast = useAppStore(s => s.showToast);
 
@@ -601,7 +602,7 @@ export default function FormBuilderPage() {
   }
 
   async function handleDeleteField(id: string) {
-    if (!confirm('این فیلد غیرفعال می‌شود. ادامه می‌دهید؟')) return;
+    if (!(await confirm({ title: 'این فیلد غیرفعال شود؟', danger: true }))) return;
     try {
       await fetch(`/api/recruitment/form-builder/fields/${id}`, { method: 'DELETE' });
       showToast('فیلد غیرفعال شد', 'success');

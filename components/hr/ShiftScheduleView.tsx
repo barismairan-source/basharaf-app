@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Plus, ShieldX, Trash2, ChevronRight, ChevronLeft, Copy } from 'lucide-react';
-import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, JalaliDatePicker, Toggle, InlineNotice } from '@/components/ui';
+import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, JalaliDatePicker, Toggle, InlineNotice, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
 
@@ -29,6 +29,7 @@ function isoToJalaliShort(iso: string): string {
  * به نسخه‌ی قبلی مستقل (`/shift-schedule`، اکنون redirect).
  */
 export function ShiftScheduleView() {
+  const confirm = useConfirm();
   const user = useAppStore(s => s.user);
   const employees = useAppStore(s => s.employees);
   const loadEmployees = useAppStore(s => s.loadEmployees);
@@ -138,7 +139,7 @@ export function ShiftScheduleView() {
   }
 
   async function handleCancel(id: string) {
-    if (!confirm('این شیفت لغو شود؟')) return;
+    if (!(await confirm({ title: 'این شیفت لغو شود؟', danger: true }))) return;
     const ok = await cancelShiftAssignment(id);
     showToast(ok ? 'لغو شد' : 'خطا در لغو (شاید حضور آن قفل شده)', ok ? 'success' : 'danger');
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Clock, ShieldX, Check, CheckCheck, Pencil, UserPlus, Trash2 } from 'lucide-react';
-import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, JalaliDatePicker, InlineNotice } from '@/components/ui';
+import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, JalaliDatePicker, InlineNotice, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { getTodayJalali, jalaliToDate } from '@/lib/jalali';
 import {
@@ -38,6 +38,7 @@ function fmtMin(m: number): string {
  * به نسخه‌ی قبلی مستقل (`/attendance`، اکنون redirect).
  */
 export function AttendanceView() {
+  const confirm = useConfirm();
   const user = useAppStore(s => s.user);
   const employees = useAppStore(s => s.employees);
   const loadEmployees = useAppStore(s => s.loadEmployees);
@@ -98,7 +99,7 @@ export function AttendanceView() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('این رکورد حضور حذف شود؟')) return;
+    if (!(await confirm({ title: 'این رکورد حضور حذف شود؟', danger: true }))) return;
     const ok = await deleteAttendanceEntry(id);
     showToast(ok ? 'حذف شد' : 'خطا در حذف (رکورد قفل‌شده قابل حذف نیست)', ok ? 'success' : 'danger');
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Calculator, Plus, ShieldX, Check, Calculator as CalcIcon, Send, ChevronDown, Loader2, Wallet, Trash2, RotateCcw } from 'lucide-react';
-import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, InlineNotice } from '@/components/ui';
+import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, InlineNotice, useConfirm } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 import type { Payslip } from '@/store/slices/payrollSlice';
@@ -28,6 +28,7 @@ function periodLabel(p: string): string {
 }
 
 export default function PayrollPage() {
+  const confirm = useConfirm();
   const user = useAppStore(s => s.user);
   const runs = useAppStore(s => s.payrollRuns);
   const branches = useAppStore(s => s.branches);
@@ -142,7 +143,7 @@ export default function PayrollPage() {
   }
 
   async function handleReverse(id: string) {
-    if (!confirm('این عملیات ثبت حقوق را برمی‌گرداند و تراکنش هزینه‌ی مرتبط حذف می‌شود. ادامه می‌دهید؟')) return;
+    if (!(await confirm({ title: 'ثبت حقوق برگردانده شود؟', description: 'تراکنش هزینه‌ی مرتبط حذف می‌شود.', danger: true }))) return;
     setBusy(id);
     const result = await reverseRun(id);
     setBusy(null);
@@ -164,7 +165,7 @@ export default function PayrollPage() {
   }
 
   async function handleDeleteRun(id: string) {
-    if (!confirm('این اجرای پیش‌نویس کامل حذف شود؟')) return;
+    if (!(await confirm({ title: 'این اجرای پیش‌نویس کامل حذف شود؟', danger: true }))) return;
     setBusy(id);
     const ok = await deleteRun(id);
     setBusy(null);
@@ -176,7 +177,7 @@ export default function PayrollPage() {
     if (activeAccounts.length === 0) { showToast('هیچ صندوقی فعال نیست', 'danger'); return; }
     const acc = activeAccounts[0];
     if (!acc) { showToast('هیچ صندوقی فعال نیست', 'danger'); return; }
-    if (!confirm(`ثبت حقوق در حسابداری از صندوق «${acc.name}»؟ یک تراکنش هزینه ساخته می‌شود.`)) return;
+    if (!(await confirm({ title: `ثبت حقوق در حسابداری از صندوق «${acc.name}»؟`, description: 'یک تراکنش هزینه ساخته می‌شود.' }))) return;
     setBusy(id);
     const today = new Date().toLocaleDateString('fa-IR-u-nu-latn').replace(/\//g, '/');
     const ok = await postRun(id, acc.id, today);
@@ -219,7 +220,7 @@ export default function PayrollPage() {
   }
 
   async function handleVoidEvent(id: string) {
-    if (!confirm('این رویداد حذف شود؟')) return;
+    if (!(await confirm({ title: 'این رویداد حذف شود؟', danger: true }))) return;
     const ok = await voidEvent(id);
     showToast(ok ? 'حذف شد' : 'خطا', ok ? 'success' : 'danger');
   }
