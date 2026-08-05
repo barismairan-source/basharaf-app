@@ -958,6 +958,11 @@ export const employees = pgTable(
     // یک متقاضی فقط می‌تواند به یک کارمند تبدیل شود).
     sourceApplicationId: uuid('source_application_id').references(() => jobApplications.id, { onDelete: 'set null' }),
 
+    // فاز ۸ یکپارچه‌سازی HR — اتصال اختیاری به حساب کاربری سیستم (nullable،
+    // یکتا: یک حساب فقط به یک کارمند وصل می‌شود). حذف کاربر یا غیرفعال‌کردن
+    // کارمند، طرف مقابل را خودکار حذف نمی‌کند (onDelete: set null).
+    userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
+
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -973,6 +978,9 @@ export const employees = pgTable(
     sourceApplicationUniq: uniqueIndex('employees_source_application_uniq')
       .on(t.sourceApplicationId)
       .where(sql`${t.sourceApplicationId} IS NOT NULL`),
+    userIdUniq: uniqueIndex('employees_user_id_uniq')
+      .on(t.userId)
+      .where(sql`${t.userId} IS NOT NULL`),
   })
 );
 

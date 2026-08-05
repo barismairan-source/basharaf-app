@@ -44,6 +44,7 @@ export interface Employee {
   baseMonthlySalary: number;            // تومان
   compensationType: CompensationType;
   sourceApplicationId: string | null;
+  userId: string | null;
   isActive: boolean;
   notes: string | null;
   createdAt: string;

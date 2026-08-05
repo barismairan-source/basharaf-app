@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowRight, Phone, Clock, ShieldX, FileWarning } from 'lucide-react';
-import { Card, CardBody, Tabs, TabPanel, Chip, Empty, InlineNotice } from '@/components/ui';
+import { Card, CardBody, Tabs, TabPanel, Chip, Empty, InlineNotice, Button, Field, Input, Select } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { canDo } from '@/lib/auth/permissions';
 import { fmt } from '@/lib/utils';
@@ -225,9 +225,7 @@ export default function PersonDetailPage() {
         </TabPanel>
 
         <TabPanel value="access" active={tab === 'access'}>
-          <Card><CardBody>
-            <div className="text-[12.5px] text-stone-600">اتصال اختیاری این پرونده‌ی پرسنلی به یک حساب کاربری سیستم، در فاز بعدی این یکپارچه‌سازی ساخته می‌شود.</div>
-          </CardBody></Card>
+          <AccessTab employee={employee} canManage={canDo(user, 'hr.systemAccess.manage')} />
         </TabPanel>
 
         <TabPanel value="history" active={tab === 'history'}>
@@ -253,5 +251,166 @@ export default function PersonDetailPage() {
         </TabPanel>
       </div>
     </div>
+  );
+}
+
+interface SystemUser { id: string; name: string; email: string; role: string; assignedBranch: string | null; isActive: boolean; lastSeen: string | null }
+
+/** تب «حساب کاربری و دسترسی» — اتصال اختیاری به یک حساب کاربری موجود؛ ساخت
+ * حساب جدید از همان endpoint موجود مدیریت تیم استفاده می‌کند (بدون تکرار
+ * منطق hash رمز عبور). دسترسی نرم‌افزار همیشه مستقل از سمت شغلی می‌ماند. */
+function AccessTab({ employee, canManage }: { employee: NonNullable<ReturnType<typeof useAppStore.getState>['employees']>[number]; canManage: boolean }) {
+  const showToast = useAppStore(s => s.showToast);
+  const branches = useAppStore(s => s.branches);
+  const [linkedUser, setLinkedUser] = useState<SystemUser | null>(null);
+  const [allUsers, setAllUsers] = useState<SystemUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState<'none' | 'link' | 'create'>('none');
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const [newName, setNewName] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newRole, setNewRole] = useState<'SuperAdmin' | 'BranchUser' | 'Warehouse' | 'Chef'>('BranchUser');
+  const [newBranchId, setNewBranchId] = useState(employee.branchId ?? '');
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('/api/users', { credentials: 'include', cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        const users: SystemUser[] = d?.users ?? [];
+        setAllUsers(users);
+        setLinkedUser(employee.userId ? users.find(u => u.id === employee.userId) ?? null : null);
+      })
+      .finally(() => setLoading(false));
+  }, [employee.userId]);
+
+  async function handleUnlink() {
+    if (!confirm('اتصال این کارمند به حساب کاربری قطع شود؟ خود حساب کاربری حذف نمی‌شود.')) return;
+    setBusy(true);
+    const res = await fetch(`/api/employees/${employee.id}/link-user`, { method: 'DELETE', credentials: 'include' });
+    setBusy(false);
+    showToast(res.ok ? 'اتصال قطع شد' : 'خطا', res.ok ? 'success' : 'danger');
+    if (res.ok) setLinkedUser(null);
+  }
+
+  async function handleLinkExisting() {
+    if (!selectedUserId) return;
+    setBusy(true);
+    const res = await fetch(`/api/employees/${employee.id}/link-user`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ userId: selectedUserId }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (res.ok) {
+      showToast('حساب متصل شد', 'success');
+      setLinkedUser(allUsers.find(u => u.id === selectedUserId) ?? null);
+      setMode('none');
+    } else {
+      showToast(data.error ?? 'خطا در اتصال', 'danger');
+    }
+  }
+
+  async function handleCreateAndLink() {
+    if (!newName.trim() || !newEmail.trim() || newPassword.length < 8) {
+      showToast('نام، ایمیل و رمز عبور (حداقل ۸ کاراکتر) الزامی است', 'danger'); return;
+    }
+    setBusy(true);
+    const createRes = await fetch('/api/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ name: newName.trim(), email: newEmail.trim(), password: newPassword, role: newRole, assignedBranchId: newBranchId || null }),
+    });
+    const createData = await createRes.json();
+    if (!createRes.ok || !createData.user?.id) {
+      setBusy(false);
+      showToast(createData.error ?? 'خطا در ساخت حساب', 'danger');
+      return;
+    }
+    const linkRes = await fetch(`/api/employees/${employee.id}/link-user`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+      body: JSON.stringify({ userId: createData.user.id }),
+    });
+    setBusy(false);
+    if (linkRes.ok) {
+      showToast('حساب ساخته و متصل شد', 'success');
+      setLinkedUser({ id: createData.user.id, name: newName, email: newEmail, role: newRole, assignedBranch: newBranchId || null, isActive: true, lastSeen: null });
+      setMode('none');
+    } else {
+      showToast('حساب ساخته شد ولی اتصال ناموفق بود — از «اتصال به حساب موجود» استفاده کنید', 'danger');
+    }
+  }
+
+  const availableUsers = allUsers.filter(u => u.id !== linkedUser?.id);
+
+  if (loading) return <Card><CardBody><div className="text-[12px] text-muted">در حال بارگذاری…</div></CardBody></Card>;
+
+  return (
+    <Card><CardBody className="space-y-3">
+      {linkedUser ? (
+        <div className="space-y-2 text-[12.5px]">
+          <div className="flex items-center gap-2"><Chip tone="green">متصل</Chip><span className="font-medium text-stone-800">{linkedUser.name}</span></div>
+          <div className="text-stone-600" dir="ltr">{linkedUser.email}</div>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div><div className="text-muted text-[10.5px] mb-0.5">نقش سیستم</div><div className="text-stone-800">{linkedUser.role}</div></div>
+            <div><div className="text-muted text-[10.5px] mb-0.5">وضعیت</div><div className="text-stone-800">{linkedUser.isActive ? 'فعال' : 'غیرفعال'}</div></div>
+          </div>
+          {canManage && (
+            <Button variant="default" size="sm" onClick={handleUnlink} loading={busy}>قطع اتصال</Button>
+          )}
+        </div>
+      ) : !canManage ? (
+        <InlineNotice tone="info">این کارمند به هیچ حساب کاربری‌ای متصل نیست. فقط مدیر کل می‌تواند اتصال ایجاد کند.</InlineNotice>
+      ) : mode === 'none' ? (
+        <div className="space-y-2">
+          <div className="text-[12.5px] text-stone-600 mb-2">این کارمند به هیچ حساب کاربری‌ای متصل نیست.</div>
+          <div className="flex gap-2">
+            <Button variant="default" size="sm" onClick={() => setMode('link')}>اتصال به حساب موجود</Button>
+            <Button variant="primary" size="sm" onClick={() => setMode('create')}>ساخت حساب جدید</Button>
+          </div>
+        </div>
+      ) : mode === 'link' ? (
+        <div className="space-y-3">
+          <Field label="حساب کاربری موجود">
+            <Select value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}>
+              <option value="">— انتخاب —</option>
+              {availableUsers.map(u => <option key={u.id} value={u.id}>{u.name} ({u.email})</option>)}
+            </Select>
+          </Field>
+          <div className="flex gap-2">
+            <Button variant="primary" size="sm" onClick={handleLinkExisting} loading={busy} disabled={!selectedUserId}>اتصال</Button>
+            <Button variant="default" size="sm" onClick={() => setMode('none')}>انصراف</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <Field label="نام"><Input value={newName} onChange={e => setNewName(e.target.value)} /></Field>
+          <Field label="ایمیل"><Input value={newEmail} onChange={e => setNewEmail(e.target.value)} dir="ltr" /></Field>
+          <Field label="رمز عبور (حداقل ۸ کاراکتر)"><Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} dir="ltr" /></Field>
+          <Field label="نقش سیستم">
+            <Select value={newRole} onChange={e => setNewRole(e.target.value as typeof newRole)}>
+              <option value="BranchUser">کاربر شعبه</option>
+              <option value="Chef">سرآشپز</option>
+              <option value="Warehouse">انباردار</option>
+              <option value="SuperAdmin">مدیر کل</option>
+            </Select>
+          </Field>
+          {newRole !== 'SuperAdmin' && (
+            <Field label="شعبه">
+              <Select value={newBranchId} onChange={e => setNewBranchId(e.target.value)}>
+                <option value="">— انتخاب کنید —</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            </Field>
+          )}
+          <div className="flex gap-2">
+            <Button variant="primary" size="sm" onClick={handleCreateAndLink} loading={busy}>ساخت و اتصال</Button>
+            <Button variant="default" size="sm" onClick={() => setMode('none')}>انصراف</Button>
+          </div>
+        </div>
+      )}
+    </CardBody></Card>
   );
 }

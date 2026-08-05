@@ -65,7 +65,9 @@ export type AuditAction =
   | 'anomaly.statusChanged'
   | 'notification.audience.updated'
   | 'notification.audience.reset'
-  | 'notification.audience.copied';
+  | 'notification.audience.copied'
+  | 'hr.employee.userLinked'
+  | 'hr.employee.userUnlinked';
 
 export async function audit(params: {
   action: AuditAction;
