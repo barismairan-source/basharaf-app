@@ -5,7 +5,7 @@ export interface EmployeesSlice {
   employees: Employee[];
   employeesLoaded: boolean;
   employeesError: string | null;
-  loadEmployees: () => Promise<void>;
+  loadEmployees: (status?: 'active' | 'inactive' | 'all') => Promise<void>;
   createEmployee: (params: Record<string, unknown>) => Promise<Employee | null>;
   updateEmployee: (id: string, patch: Record<string, unknown>) => Promise<boolean>;
   deleteEmployee: (id: string) => Promise<boolean>;
@@ -16,9 +16,10 @@ export const createEmployeesSlice: StateCreator<EmployeesSlice> = (set, get) => 
   employeesLoaded: false,
   employeesError: null,
 
-  async loadEmployees() {
+  async loadEmployees(status) {
     try {
-      const res = await fetch('/api/employees', { credentials: 'include', cache: 'no-store' });
+      const qs = status && status !== 'active' ? `?status=${status}` : '';
+      const res = await fetch(`/api/employees${qs}`, { credentials: 'include', cache: 'no-store' });
       if (!res.ok) return;
       const { employees } = (await res.json()) as { employees: Employee[] };
       set({ employees, employeesLoaded: true });

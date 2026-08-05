@@ -39,11 +39,17 @@ const createSchema = z.object({
 function serializeUnused() { /* removed — see lib/payroll/employeeSerializer */ }
 void serializeUnused;
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     await requireSession();
+    const status = new URL(req.url).searchParams.get('status'); // 'all' | 'inactive' | (default: active)
+    const where = status === 'all'
+      ? undefined
+      : status === 'inactive'
+        ? eq(schema.employees.isActive, false)
+        : eq(schema.employees.isActive, true);
     const rows = await db.select().from(schema.employees)
-      .where(eq(schema.employees.isActive, true))
+      .where(where)
       .orderBy(desc(schema.employees.createdAt));
     return NextResponse.json({ employees: rows.map(serialize) });
   } catch (e) {

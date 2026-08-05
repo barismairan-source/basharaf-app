@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil, ChevronDown, Clock } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker } from '@/components/ui';
+import { useRouter } from 'next/navigation';
+import { Users, Plus, Phone, Trash2, Briefcase, ShieldX, Pencil, ChevronDown, Clock, Search } from 'lucide-react';
+import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker, FilterToolbar } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, normalizeDigits } from '@/lib/utils';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
@@ -19,6 +20,7 @@ function validateNationalId(v: string) { return v === '' || /^\d{10}$/.test(v); 
 function validateIban(v: string) { return v === '' || /^IR\d{24}$/i.test(v); }
 
 export default function EmployeesPage() {
+  const router = useRouter();
   const user = useAppStore(s => s.user);
   const employees = useAppStore(s => s.employees);
   const branches = useAppStore(s => s.branches);
@@ -45,6 +47,12 @@ export default function EmployeesPage() {
   const [newRateFrom, setNewRateFrom] = useState(getTodayJalali());
   const [newRateReason, setNewRateReason] = useState('');
   const [rateBusy, setRateBusy] = useState(false);
+
+  // ── فیلترها ──
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [compFilter, setCompFilter] = useState<'' | 'hourly' | 'monthly'>('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'inactive' | 'all'>('active');
 
   const todayIso = new Date().toISOString().slice(0, 10);
   const activeRateFor = (employeeId: string): number | null => {
@@ -123,7 +131,8 @@ export default function EmployeesPage() {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
 
-  useEffect(() => { setHydrated(true); loadEmployees(); }, [loadEmployees]);
+  useEffect(() => { setHydrated(true); }, []);
+  useEffect(() => { loadEmployees(statusFilter); }, [loadEmployees, statusFilter]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -238,6 +247,14 @@ export default function EmployeesPage() {
   const hourlyCount = employees.length - monthlyEmployees.length;
   const totalSalary = monthlyEmployees.reduce((s, e) => s + e.baseMonthlySalary, 0);
 
+  const filteredEmployees = employees.filter(e => {
+    if (search.trim() && !e.fullName.includes(search.trim()) && !e.phone.includes(search.trim())) return false;
+    if (roleFilter && e.role !== roleFilter) return false;
+    if (compFilter && e.compensationType !== compFilter) return false;
+    return true;
+  });
+  const activeFilterCount = [search, roleFilter, compFilter].filter(Boolean).length + (statusFilter !== 'active' ? 1 : 0);
+
   return (
     <div className="p-4 lg:p-6">
       <div className="max-w-4xl mx-auto space-y-5">
@@ -276,13 +293,40 @@ export default function EmployeesPage() {
           </div>
         )}
 
+        {/* فیلترها */}
+        <FilterToolbar
+          activeFilterCount={activeFilterCount}
+          onClearFilters={() => { setSearch(''); setRoleFilter(''); setCompFilter(''); setStatusFilter('active'); }}
+        >
+          <Input icon={Search} value={search} onChange={e => setSearch(e.target.value)} placeholder="جست‌وجوی نام یا تلفن..." className="min-w-[180px]" />
+          <Select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} className="max-w-[160px]">
+            <option value="">— همه‌ی سمت‌ها —</option>
+            {roles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+          </Select>
+          <Select value={compFilter} onChange={e => setCompFilter(e.target.value as any)} className="max-w-[140px]">
+            <option value="">— نوع حقوق —</option>
+            <option value="hourly">ساعتی</option>
+            <option value="monthly">ماهانه</option>
+          </Select>
+          <Select value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} className="max-w-[140px]">
+            <option value="active">فعال</option>
+            <option value="inactive">غیرفعال</option>
+            <option value="all">همه</option>
+          </Select>
+        </FilterToolbar>
+
         {/* List */}
         {employees.length === 0 ? (
           <Card><CardBody><Empty title="هنوز پرسنلی ثبت نشده" icon={Users} /></CardBody></Card>
+        ) : filteredEmployees.length === 0 ? (
+          <Card><CardBody><Empty title="نتیجه‌ای یافت نشد" icon={Search} /></CardBody></Card>
         ) : (
           <div className="space-y-2">
-            {employees.map(e => (
-              <div key={e.id} className="bg-white border border-stone-200 rounded-lg p-3 flex items-center gap-3">
+            {filteredEmployees.map(e => (
+              <div key={e.id} role="button" tabIndex={0}
+                onClick={() => router.push(`/hr/people/${e.id}`)}
+                onKeyDown={ev => { if (ev.key === 'Enter') router.push(`/hr/people/${e.id}`); }}
+                className="bg-white border border-stone-200 rounded-lg p-3 flex items-center gap-3 cursor-pointer hover:border-stone-300 transition-colors">
                 <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600 flex-shrink-0">
                   <Briefcase size={16} strokeWidth={1.5} />
                 </div>
@@ -306,17 +350,17 @@ export default function EmployeesPage() {
                     <div className="text-[9.5px] text-muted">تومان / ماه</div>
                   </div>
                 )}
-                <button onClick={() => openRateManager(e.id)}
+                <button onClick={ev => { ev.stopPropagation(); openRateManager(e.id); }}
                   className="flex items-center gap-1 h-8 px-2.5 rounded-lg border border-stone-200 text-[11px] text-stone-600 hover:border-stone-300 flex-shrink-0">
                   <Clock size={12} strokeWidth={1.5} />
                   {hourlyRatesByEmployee[e.id] && activeRateFor(e.id) !== null
                     ? `${fmt(activeRateFor(e.id)!)} ت/س`
                     : 'نرخ ساعتی'}
                 </button>
-                <button onClick={() => openEdit(e)} className="text-muted hover:text-stone-700 p-1 flex-shrink-0">
+                <button onClick={ev => { ev.stopPropagation(); openEdit(e); }} className="text-muted hover:text-stone-700 p-1 flex-shrink-0">
                   <Pencil size={14} strokeWidth={1.5} />
                 </button>
-                <button onClick={() => handleDelete(e.id, e.fullName)} className="text-muted hover:text-rose-600 p-1 flex-shrink-0">
+                <button onClick={ev => { ev.stopPropagation(); handleDelete(e.id, e.fullName); }} className="text-muted hover:text-rose-600 p-1 flex-shrink-0">
                   <Trash2 size={15} strokeWidth={1.5} />
                 </button>
               </div>

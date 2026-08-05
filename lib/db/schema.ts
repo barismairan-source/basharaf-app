@@ -1244,6 +1244,28 @@ export const employeeCompensationTypeChanges = pgTable(
   })
 );
 
+// ─── job_titles — سمت‌های شغلی به‌عنوان جدول واقعی (فاز ۵ یکپارچه‌سازی HR) ──
+// زیرساخت آماده است ولی هنوز جایگزین payroll.roles (تنظیمات JSON) نشده —
+// آن تصمیم cutover نیازمند بررسی مقادیر واقعی employees.role در production
+// و تأیید صریح کاربر است (طبق دستور صریح: گزارش قبل از هر migration).
+export const jobTitles = pgTable(
+  'job_titles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    code: text('code'),
+    department: text('department'),
+    branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'set null' }),
+    isActive: boolean('is_active').notNull().default(true),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    codeUniq: uniqueIndex('job_titles_code_uniq').on(t.code).where(sql`${t.code} IS NOT NULL`),
+    activeIdx: index('job_titles_active_idx').on(t.isActive),
+  })
+);
+
 // ─── Types ───────────────────────────────────────────────────────
 export type Employee = typeof employees.$inferSelect;
 export type EmployeeDocument = typeof employeeDocuments.$inferSelect;
@@ -1257,6 +1279,7 @@ export type EmployeeHourlyRate = typeof employeeHourlyRates.$inferSelect;
 export type EmployeeShiftAssignment = typeof employeeShiftAssignments.$inferSelect;
 export type AttendanceEntry = typeof attendanceEntries.$inferSelect;
 export type EmployeeCompensationTypeChange = typeof employeeCompensationTypeChanges.$inferSelect;
+export type JobTitle = typeof jobTitles.$inferSelect;
 // ─── Inventory Enums (۵ عدد) ─────────────────────────────────────
 export const invItemKindEnum = pgEnum('inv_item_kind', ['raw', 'prep']);
 //   raw  = ماده خام (از خرید وارد می‌شود)
