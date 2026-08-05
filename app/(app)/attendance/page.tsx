@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Clock, ShieldX, Check, CheckCheck, Pencil, UserPlus } from 'lucide-react';
+import { Clock, ShieldX, Check, CheckCheck, Pencil, UserPlus, Trash2 } from 'lucide-react';
 import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, JalaliDatePicker, InlineNotice } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { getTodayJalali, jalaliToDate } from '@/lib/jalali';
@@ -45,6 +45,7 @@ export default function AttendancePage() {
   const updateAttendanceEntry = useAppStore(s => s.updateAttendanceEntry);
   const confirmAttendanceEntry = useAppStore(s => s.confirmAttendanceEntry);
   const confirmAttendanceBulk = useAppStore(s => s.confirmAttendanceBulk);
+  const deleteAttendanceEntry = useAppStore(s => s.deleteAttendanceEntry);
   const showToast = useAppStore(s => s.showToast);
 
   const [hydrated, setHydrated] = useState(false);
@@ -89,6 +90,12 @@ export default function AttendancePage() {
   async function handleConfirm(id: string) {
     const ok = await confirmAttendanceEntry(id);
     showToast(ok ? 'تأیید شد' : 'خطا در تأیید (فقط مدیر مجاز است)', ok ? 'success' : 'danger');
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('این رکورد حضور حذف شود؟')) return;
+    const ok = await deleteAttendanceEntry(id);
+    showToast(ok ? 'حذف شد' : 'خطا در حذف (رکورد قفل‌شده قابل حذف نیست)', ok ? 'success' : 'danger');
   }
 
   async function handleBulkConfirm() {
@@ -173,13 +180,18 @@ export default function AttendancePage() {
                       </div>
                       {st && <Chip tone={st.tone}>{st.label}</Chip>}
                       {r.entry.status !== 'locked' && (
-                        <button onClick={() => setEditor({
-                          employeeId: r.employeeId, employeeName: r.employeeName,
-                          assignmentId: r.assignment?.id ?? null, plannedMinutes: r.assignment?.plannedMinutes ?? 0,
-                          existingId: r.entry!.id,
-                        })} className="text-muted hover:text-stone-700 p-1">
-                          <Pencil size={14} strokeWidth={1.5} />
-                        </button>
+                        <>
+                          <button onClick={() => setEditor({
+                            employeeId: r.employeeId, employeeName: r.employeeName,
+                            assignmentId: r.assignment?.id ?? null, plannedMinutes: r.assignment?.plannedMinutes ?? 0,
+                            existingId: r.entry!.id,
+                          })} className="text-muted hover:text-stone-700 p-1">
+                            <Pencil size={14} strokeWidth={1.5} />
+                          </button>
+                          <button onClick={() => handleDelete(r.entry!.id)} className="text-muted hover:text-rose-600 p-1">
+                            <Trash2 size={14} strokeWidth={1.5} />
+                          </button>
+                        </>
                       )}
                       {r.entry.status === 'draft' && user.role === 'SuperAdmin' && (
                         <Button variant="default" size="sm" icon={Check} onClick={() => handleConfirm(r.entry!.id)}>تأیید</Button>
