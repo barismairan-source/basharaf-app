@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { verifyToken, type JWTPayload } from '@/lib/auth/jwt';
-import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
+import { canAccessSection, canAccessHr, sectionForPath } from '@/lib/auth/permissions';
 
 const SESSION_COOKIE = 'basharaf-session';
 const IMP_COOKIE = 'basharaf-imp';
@@ -10,6 +10,9 @@ const PROTECTED_PREFIXES = [
   '/contacts', '/menu', '/orders', '/logs', '/employees', '/payroll',
   '/inventory', '/recruitment', '/customers', '/reservations', '/coupons',
   '/purchase-orders', '/equipment', '/tasks', '/admin',
+  // یکپارچه‌سازی منابع انسانی: /hr/* جدید + دو مسیر قدیمی که تا امروز
+  // اصلاً در این لیست نبودند (یافته‌ی فاز صفر ممیزی HR).
+  '/hr', '/shift-schedule', '/attendance',
 ];
 const AUTH_ROUTES = ['/login', '/signup', '/forgot'];
 
@@ -132,7 +135,9 @@ export async function middleware(request: NextRequest) {
       // No access to this section → redirect to dashboard (safe landing page).
       // Guard: if they're already on /dashboard and still have no access, log
       // them out to avoid a dashboard→dashboard loop.
-      if (!canAccessSection(access, section)) {
+      // «hr» از پل سازگاری استفاده می‌کند تا permission قدیمی employees/payroll/recruitment هم بپذیرد.
+      const hasAccess = section === 'hr' ? canAccessHr(access) : canAccessSection(access, section);
+      if (!hasAccess) {
         if (pathname.startsWith('/dashboard')) {
           const response = NextResponse.redirect(loginRedirectUrl(request, ''));
           clearAuthCookies(response);

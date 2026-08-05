@@ -10,7 +10,7 @@ import {
 import { useAppStore } from '@/store';
 import { BrandMark, Avatar, IconButton } from '@/components/ui';
 import { cn, toFa } from '@/lib/utils';
-import { canAccessSection, sectionForPath } from '@/lib/auth/permissions';
+import { canAccessSection, canAccessHr, sectionForPath } from '@/lib/auth/permissions';
 import {
   NAV_GROUPS, BOTTOM_NAV_HREFS, SETTINGS_NAV_ITEM,
   isNavItemActive, type NavItem,
@@ -112,7 +112,7 @@ export function SidebarContent({
     if (secondaryOnly && BOTTOM_NAV_HREFS.has(item.href)) return false;
     const section = sectionForPath(item.href);
     if (!section) return item.roles.includes(user.role);
-    return canAccessSection(user, section);
+    return section === 'hr' ? canAccessHr(user) : canAccessSection(user, section);
   };
 
   const visibleGroups = NAV_GROUPS

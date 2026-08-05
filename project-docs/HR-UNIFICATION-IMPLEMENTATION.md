@@ -126,3 +126,22 @@ Branch جدید `feat/hr-workspace-unification` از همین نقطه ساخت�
 **محدودیت آگاهانه‌ی این فاز:** «عملیات اصلاح گروهی» برای حضورهای هم‌پوشان *موجود* (قبل از این فیکس) ساخته نشد — چون هر مورد نیاز به تصمیم انسانی دارد (کدام رکورد درست است). به‌جایش، مسیر دستی (ویرایش/حذف/اتصال به شیفت در `/attendance`) + گزارش تشخیصی SQL بالا کفایت می‌کند؛ این در گزارش نهایی به‌عنوان یک مورد باقی‌مانده (نه بلاکر) اعلام می‌شود.
 
 **گیت‌های این فاز:** tsc ✅ ۰ خطا · tests 526/526 ✅ (۷ جدید) · lint ✅ · build ✅ (route های جدید `/api/hr/payroll/readiness`، `/api/employees/[id]/compensation-type` ثبت شدند).
+
+---
+
+## فاز ۲ — نتیجه (تکمیل‌شده)
+
+**section جدید:** `hr` به `SECTIONS` اضافه شد (`defaultRoles: ['SuperAdmin','BranchUser']`). سه section قدیمی (`employees`/`payroll`/`recruitment`) حذف نشدند — فقط برچسب «(قدیمی)» گرفتند و برای سازگاری permissionهای از‌قبل‌ثبت‌شده باقی ماندند.
+
+**۱۹ کلید `hr.*` در `CAPABILITIES`:** دقیقاً طبق فهرست خواسته‌شده، با پیش‌فرض‌های منطبق با رفتار فعلی — عملیات روزمره‌ی شعبه (`hr.schedule.manage`, `hr.attendance.record`) هم SuperAdmin هم BranchUser؛ هر چیز حساس (نرخ/مبلغ/تأیید حضور/تأیید‌واضافه‌کاری/تأیید‌وثبت حقوق/مدارک/استخدام/اتصال حساب کاربری) فقط SuperAdmin.
+
+**۳ ناسازگاری یافته‌شده در فاز صفر رفع شد:**
+1. `PROTECTED_PREFIXES` (middleware.ts) حالا شامل `/hr`، `/shift-schedule`، `/attendance` است — این دو مسیر آخر تا امروز اصلاً محافظت middleware نداشتند.
+2. `sectionForPath` حالا `/hr/*`، `/shift-schedule`، `/attendance` را به بخش `hr` نگاشت می‌کند — قبلاً هیچ‌کدام section نداشتند.
+3. تابع پل سازگاری `canAccessHr()` اضافه شد (`lib/auth/permissions.ts`) — دسترسی به `hr` را از `hr` *یا* هرکدام از سه کلید قدیمی می‌پذیرد، تا کاربری که قبلاً برای `employees`/`payroll`/`recruitment` مجوز گرفته، بعد از redirect شدن به `/hr/*` (فاز ۳) دسترسی‌اش را از دست ندهد. `middleware.ts` و `Sidebar.tsx` هر دو از این پل برای section=`hr` استفاده می‌کنند.
+
+**محدودیت آگاهانه:** صفحات فعلی `/employees`/`/payroll`/`/shift-schedule`/`/attendance` (که در فاز ۳ به `/hr/*` redirect می‌شوند و دیگر رندر نخواهند شد) همچنان چک `user.role !== 'SuperAdmin'` سخت‌کدشده‌ی خودشان را دارند — چون به‌زودی حذف/redirect می‌شوند، اصلاحشان به مدل granular صرفاً کار دورریختنی بود؛ صفحات جدید `/hr/*` (فازهای ۳ به بعد) از ابتدا با `canAccessHr`/`canDo` ساخته می‌شوند.
+
+**تست:** `tests/unit/hr-permissions.test.ts` (۱۵ تست جدید) — نگاشت مسیر، پل سازگاری (۶ سناریو)، پیش‌فرض‌های ۱۹ کلید hr.*، ثبت‌شدن section جدید.
+
+**گیت‌های این فاز:** tsc ✅ ۰ خطا · tests 541/541 ✅ (۱۵ جدید) · lint ✅ · build ✅.
