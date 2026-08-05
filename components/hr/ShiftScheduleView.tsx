@@ -23,7 +23,12 @@ function isoToJalaliShort(iso: string): string {
   return dateToJalali(new Date(iso + 'T00:00:00Z'));
 }
 
-export default function ShiftSchedulePage() {
+/**
+ * تب «برنامه شیفت» — جدا از حضور واقعی. زیر پوسته‌ی مشترک /hr/time
+ * (`app/(app)/hr/time/page.tsx`) رندر می‌شود؛ منطق/API بدون تغییر نسبت
+ * به نسخه‌ی قبلی مستقل (`/shift-schedule`، اکنون redirect).
+ */
+export function ShiftScheduleView() {
   const user = useAppStore(s => s.user);
   const employees = useAppStore(s => s.employees);
   const loadEmployees = useAppStore(s => s.loadEmployees);
@@ -102,7 +107,7 @@ export default function ShiftSchedulePage() {
 
   if (!hydrated || !user) return null;
   if (user.role !== 'SuperAdmin' && user.role !== 'BranchUser') {
-    return <div className="p-6"><Card><CardBody><Empty title="دسترسی به این بخش مجاز نیست" icon={ShieldX} /></CardBody></Card></div>;
+    return <Card><CardBody><Empty title="دسترسی به این بخش مجاز نیست" icon={ShieldX} /></CardBody></Card>;
   }
 
   const branchEmployees = employees.filter(e => e.isActive && (!branchFilter || e.branchId === branchFilter));
@@ -139,75 +144,70 @@ export default function ShiftSchedulePage() {
   }
 
   return (
-    <div className="p-4 lg:p-6">
-      <div className="max-w-5xl mx-auto space-y-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">برنامه شیفت</h1>
-            <div className="text-[12px] text-stone-500 mt-1">تخصیص شیفت روزانه به پرسنل — جدا از ثبت حضور واقعی</div>
-          </div>
-          <Button variant="primary" size="sm" icon={Plus} onClick={openAdd}>افزودن شیفت</Button>
-        </div>
-
-        <Card>
-          <CardBody>
-            <div className="flex flex-wrap items-center gap-3">
-              <Toggle value={viewMode} onChange={setViewMode} aria-label="نمای روزانه/هفتگی"
-                options={[{ value: 'day', label: 'روزانه' }, { value: 'week', label: 'هفتگی' }]} />
-              <div className="flex items-center gap-1">
-                <button className="p-1.5 text-muted hover:text-stone-700" onClick={() => setAnchorJalali(isoToJalaliShort(addDaysIso(anchorIso, viewMode === 'week' ? -7 : -1)))}>
-                  <ChevronRight size={16} strokeWidth={1.5} />
-                </button>
-                <JalaliDatePicker value={anchorJalali} onChange={setAnchorJalali} />
-                <button className="p-1.5 text-muted hover:text-stone-700" onClick={() => setAnchorJalali(isoToJalaliShort(addDaysIso(anchorIso, viewMode === 'week' ? 7 : 1)))}>
-                  <ChevronLeft size={16} strokeWidth={1.5} />
-                </button>
-              </div>
-              {!isBranchUser && (
-                <Select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="max-w-[180px]">
-                  <option value="">— همه شعبه‌ها —</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </Select>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-
-        {visibleDates.map(dateIso => {
-          const dayAssignments = assignments.filter(a => a.workDate === dateIso && a.status !== 'cancelled');
-          return (
-            <Card key={dateIso}>
-              <CardBody>
-                <div className="text-[12.5px] font-medium text-stone-700 mb-2">{isoToJalaliShort(dateIso)}</div>
-                {dayAssignments.length === 0 ? (
-                  <div className="text-[11.5px] text-muted py-2">شیفتی ثبت نشده</div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {dayAssignments.map(a => (
-                      <div key={a.id} className="flex items-center gap-3 bg-stone-50 rounded-lg p-2.5">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-[13px] text-stone-800">{a.employeeName ?? '—'}</div>
-                          <div className="text-[11px] text-stone-500 flex items-center gap-2 flex-wrap mt-0.5">
-                            <span dir="ltr">{a.plannedStartTime}–{a.plannedEndTime}</span>
-                            <span>{Math.floor(a.plannedMinutes / 60)} ساعت{a.plannedMinutes % 60 ? ` و ${a.plannedMinutes % 60} دقیقه` : ''}</span>
-                            {a.crossesMidnight && <Chip tone="neutral">عبور از نیمه‌شب</Chip>}
-                          </div>
-                        </div>
-                        <Chip tone={a.status === 'completed' ? 'green' : 'neutral'}>
-                          {a.status === 'completed' ? 'انجام‌شده' : 'برنامه‌ریزی‌شده'}
-                        </Chip>
-                        <button onClick={() => handleCancel(a.id)} className="text-muted hover:text-rose-600 p-1">
-                          <Trash2 size={14} strokeWidth={1.5} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-          );
-        })}
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="text-[12px] text-stone-500">تخصیص شیفت روزانه به پرسنل — جدا از ثبت حضور واقعی</div>
+        <Button variant="primary" size="sm" icon={Plus} onClick={openAdd}>افزودن شیفت</Button>
       </div>
+
+      <Card>
+        <CardBody>
+          <div className="flex flex-wrap items-center gap-3">
+            <Toggle value={viewMode} onChange={setViewMode} aria-label="نمای روزانه/هفتگی"
+              options={[{ value: 'day', label: 'روزانه' }, { value: 'week', label: 'هفتگی' }]} />
+            <div className="flex items-center gap-1">
+              <button className="p-1.5 text-muted hover:text-stone-700" onClick={() => setAnchorJalali(isoToJalaliShort(addDaysIso(anchorIso, viewMode === 'week' ? -7 : -1)))}>
+                <ChevronRight size={16} strokeWidth={1.5} />
+              </button>
+              <JalaliDatePicker value={anchorJalali} onChange={setAnchorJalali} />
+              <button className="p-1.5 text-muted hover:text-stone-700" onClick={() => setAnchorJalali(isoToJalaliShort(addDaysIso(anchorIso, viewMode === 'week' ? 7 : 1)))}>
+                <ChevronLeft size={16} strokeWidth={1.5} />
+              </button>
+            </div>
+            {!isBranchUser && (
+              <Select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="max-w-[180px]">
+                <option value="">— همه شعبه‌ها —</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            )}
+          </div>
+        </CardBody>
+      </Card>
+
+      {visibleDates.map(dateIso => {
+        const dayAssignments = assignments.filter(a => a.workDate === dateIso && a.status !== 'cancelled');
+        return (
+          <Card key={dateIso}>
+            <CardBody>
+              <div className="text-[12.5px] font-medium text-stone-700 mb-2">{isoToJalaliShort(dateIso)}</div>
+              {dayAssignments.length === 0 ? (
+                <div className="text-[11.5px] text-muted py-2">شیفتی ثبت نشده</div>
+              ) : (
+                <div className="space-y-1.5">
+                  {dayAssignments.map(a => (
+                    <div key={a.id} className="flex items-center gap-3 bg-stone-50 rounded-lg p-2.5">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] text-stone-800">{a.employeeName ?? '—'}</div>
+                        <div className="text-[11px] text-stone-500 flex items-center gap-2 flex-wrap mt-0.5">
+                          <span dir="ltr">{a.plannedStartTime}–{a.plannedEndTime}</span>
+                          <span>{Math.floor(a.plannedMinutes / 60)} ساعت{a.plannedMinutes % 60 ? ` و ${a.plannedMinutes % 60} دقیقه` : ''}</span>
+                          {a.crossesMidnight && <Chip tone="neutral">عبور از نیمه‌شب</Chip>}
+                        </div>
+                      </div>
+                      <Chip tone={a.status === 'completed' ? 'green' : 'neutral'}>
+                        {a.status === 'completed' ? 'انجام‌شده' : 'برنامه‌ریزی‌شده'}
+                      </Chip>
+                      <button onClick={() => handleCancel(a.id)} className="text-muted hover:text-rose-600 p-1">
+                        <Trash2 size={14} strokeWidth={1.5} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardBody>
+          </Card>
+        );
+      })}
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowAdd(false)}>

@@ -178,7 +178,7 @@ export default function RecruitmentPage() {
 
   // ── اقدامات بررسی یک داوطلب ─────────────────────────────────────────────
   function convertToEmployee(a: JobApplication) {
-    router.push(`/employees?${new URLSearchParams({ fromApplicant: '1', fullName: `${a.firstName} ${a.lastName}`, phone: a.phone })}`);
+    router.push(`/hr/people?${new URLSearchParams({ fromApplicant: '1', fullName: `${a.firstName} ${a.lastName}`, phone: a.phone })}`);
   }
   async function setStatus(a: JobApplication, status: ApplicationStatus) {
     const ok = await reviewApplication(a.id, { status });

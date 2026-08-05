@@ -32,7 +32,12 @@ function fmtMin(m: number): string {
   return mm ? `${h}س ${mm}د` : `${h}س`;
 }
 
-export default function AttendancePage() {
+/**
+ * تب «ثبت حضور» — جدا از شیفت برنامه‌ریزی‌شده. زیر پوسته‌ی مشترک /hr/time
+ * (`app/(app)/hr/time/page.tsx`) رندر می‌شود؛ منطق/API بدون تغییر نسبت
+ * به نسخه‌ی قبلی مستقل (`/attendance`، اکنون redirect).
+ */
+export function AttendanceView() {
   const user = useAppStore(s => s.user);
   const employees = useAppStore(s => s.employees);
   const loadEmployees = useAppStore(s => s.loadEmployees);
@@ -84,7 +89,7 @@ export default function AttendancePage() {
 
   if (!hydrated || !user) return null;
   if (user.role !== 'SuperAdmin' && user.role !== 'BranchUser') {
-    return <div className="p-6"><Card><CardBody><Empty title="دسترسی به این بخش مجاز نیست" icon={ShieldX} /></CardBody></Card></div>;
+    return <Card><CardBody><Empty title="دسترسی به این بخش مجاز نیست" icon={ShieldX} /></CardBody></Card>;
   }
 
   async function handleConfirm(id: string) {
@@ -109,107 +114,102 @@ export default function AttendancePage() {
   const draftIdsOnPage = rows.filter(r => r.entry?.status === 'draft').map(r => r.entry!.id);
 
   return (
-    <div className="p-4 lg:p-6">
-      <div className="max-w-5xl mx-auto space-y-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">حضور و غیاب</h1>
-            <div className="text-[12px] text-stone-500 mt-1">ثبت حضور واقعی — جدا از شیفت برنامه‌ریزی‌شده</div>
-          </div>
-          {user.role === 'SuperAdmin' && draftIdsOnPage.length > 0 && (
-            <Button variant="primary" size="sm" icon={CheckCheck}
-              onClick={() => { setSelectedForBulk(draftIdsOnPage); handleBulkConfirm(); }}>
-              تأیید همه‌ی پیش‌نویس‌ها ({draftIdsOnPage.length})
-            </Button>
-          )}
-        </div>
-
-        <Card>
-          <CardBody>
-            <div className="flex flex-wrap items-center gap-3">
-              <JalaliDatePicker value={dateJalali} onChange={setDateJalali} />
-              {!isBranchUser && (
-                <Select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="max-w-[180px]">
-                  <option value="">— همه شعبه‌ها —</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </Select>
-              )}
-              {employeesWithoutRowToday.length > 0 && (
-                <Select value="" onChange={e => {
-                  const emp = employees.find(x => x.id === e.target.value);
-                  if (emp) setEditor({ employeeId: emp.id, employeeName: emp.fullName, assignmentId: null, plannedMinutes: 0, existingId: null });
-                }} className="max-w-[220px]">
-                  <option value="">+ ثبت حضور بدون شیفت...</option>
-                  {employeesWithoutRowToday.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
-                </Select>
-              )}
-            </div>
-          </CardBody>
-        </Card>
-
-        {rows.length === 0 ? (
-          <Card><CardBody><Empty title="امروز شیفت یا حضوری ثبت نشده" icon={Clock} /></CardBody></Card>
-        ) : (
-          <div className="space-y-2">
-            {rows.map(r => {
-              const st = r.entry ? STATUS_LABELS[r.entry.status] : null;
-              return (
-                <div key={r.key} className="bg-white border border-stone-200 rounded-lg p-3 flex items-center gap-3 flex-wrap">
-                  <div className="flex-1 min-w-[160px]">
-                    <div className="text-[13.5px] font-medium text-stone-900">{r.employeeName}</div>
-                    <div className="text-[11px] text-stone-500 flex items-center gap-2 flex-wrap mt-0.5">
-                      {r.assignment ? (
-                        <span dir="ltr">{r.assignment.plannedStartTime}–{r.assignment.plannedEndTime} · برنامه: {fmtMin(r.assignment.plannedMinutes)}</span>
-                      ) : (
-                        <span>بدون شیفت برنامه‌ریزی‌شده</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {r.entry ? (
-                    <>
-                      <div className="text-[11.5px] text-stone-600 flex flex-wrap gap-x-3 gap-y-0.5">
-                        <span>حضور: {fmtMin(r.entry.workedMinutes)}</span>
-                        <span>عادی: {fmtMin(r.entry.regularMinutes)}</span>
-                        {r.entry.overtimeMinutes > 0 && (
-                          <span className={r.entry.overtimeApproved ? 'text-emerald-700' : 'text-amber-700'}>
-                            اضافه‌کاری: {fmtMin(r.entry.overtimeMinutes)}{r.entry.overtimeApproved ? ' (تأییدشده)' : ' (در انتظار)'}
-                          </span>
-                        )}
-                        {r.entry.nightMinutes > 0 && <span>شب‌کاری: {fmtMin(r.entry.nightMinutes)}</span>}
-                      </div>
-                      {st && <Chip tone={st.tone}>{st.label}</Chip>}
-                      {r.entry.status !== 'locked' && (
-                        <>
-                          <button onClick={() => setEditor({
-                            employeeId: r.employeeId, employeeName: r.employeeName,
-                            assignmentId: r.assignment?.id ?? null, plannedMinutes: r.assignment?.plannedMinutes ?? 0,
-                            existingId: r.entry!.id,
-                          })} className="text-muted hover:text-stone-700 p-1">
-                            <Pencil size={14} strokeWidth={1.5} />
-                          </button>
-                          <button onClick={() => handleDelete(r.entry!.id)} className="text-muted hover:text-rose-600 p-1">
-                            <Trash2 size={14} strokeWidth={1.5} />
-                          </button>
-                        </>
-                      )}
-                      {r.entry.status === 'draft' && user.role === 'SuperAdmin' && (
-                        <Button variant="default" size="sm" icon={Check} onClick={() => handleConfirm(r.entry!.id)}>تأیید</Button>
-                      )}
-                    </>
-                  ) : (
-                    <Button variant="default" size="sm" icon={UserPlus} onClick={() => setEditor({
-                      employeeId: r.employeeId, employeeName: r.employeeName,
-                      assignmentId: r.assignment?.id ?? null, plannedMinutes: (r.assignment as any)?.plannedMinutes ?? 0,
-                      existingId: null,
-                    })}>ثبت حضور</Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+    <div className="space-y-5">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="text-[12px] text-stone-500">ثبت حضور واقعی — جدا از شیفت برنامه‌ریزی‌شده</div>
+        {user.role === 'SuperAdmin' && draftIdsOnPage.length > 0 && (
+          <Button variant="primary" size="sm" icon={CheckCheck}
+            onClick={() => { setSelectedForBulk(draftIdsOnPage); handleBulkConfirm(); }}>
+            تأیید همه‌ی پیش‌نویس‌ها ({draftIdsOnPage.length})
+          </Button>
         )}
       </div>
+
+      <Card>
+        <CardBody>
+          <div className="flex flex-wrap items-center gap-3">
+            <JalaliDatePicker value={dateJalali} onChange={setDateJalali} />
+            {!isBranchUser && (
+              <Select value={branchFilter} onChange={e => setBranchFilter(e.target.value)} className="max-w-[180px]">
+                <option value="">— همه شعبه‌ها —</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              </Select>
+            )}
+            {employeesWithoutRowToday.length > 0 && (
+              <Select value="" onChange={e => {
+                const emp = employees.find(x => x.id === e.target.value);
+                if (emp) setEditor({ employeeId: emp.id, employeeName: emp.fullName, assignmentId: null, plannedMinutes: 0, existingId: null });
+              }} className="max-w-[220px]">
+                <option value="">+ ثبت حضور بدون شیفت...</option>
+                {employeesWithoutRowToday.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
+              </Select>
+            )}
+          </div>
+        </CardBody>
+      </Card>
+
+      {rows.length === 0 ? (
+        <Card><CardBody><Empty title="امروز شیفت یا حضوری ثبت نشده" icon={Clock} /></CardBody></Card>
+      ) : (
+        <div className="space-y-2">
+          {rows.map(r => {
+            const st = r.entry ? STATUS_LABELS[r.entry.status] : null;
+            return (
+              <div key={r.key} className="bg-white border border-stone-200 rounded-lg p-3 flex items-center gap-3 flex-wrap">
+                <div className="flex-1 min-w-[160px]">
+                  <div className="text-[13.5px] font-medium text-stone-900">{r.employeeName}</div>
+                  <div className="text-[11px] text-stone-500 flex items-center gap-2 flex-wrap mt-0.5">
+                    {r.assignment ? (
+                      <span dir="ltr">{r.assignment.plannedStartTime}–{r.assignment.plannedEndTime} · برنامه: {fmtMin(r.assignment.plannedMinutes)}</span>
+                    ) : (
+                      <span>بدون شیفت برنامه‌ریزی‌شده</span>
+                    )}
+                  </div>
+                </div>
+
+                {r.entry ? (
+                  <>
+                    <div className="text-[11.5px] text-stone-600 flex flex-wrap gap-x-3 gap-y-0.5">
+                      <span>حضور: {fmtMin(r.entry.workedMinutes)}</span>
+                      <span>عادی: {fmtMin(r.entry.regularMinutes)}</span>
+                      {r.entry.overtimeMinutes > 0 && (
+                        <span className={r.entry.overtimeApproved ? 'text-emerald-700' : 'text-amber-700'}>
+                          اضافه‌کاری: {fmtMin(r.entry.overtimeMinutes)}{r.entry.overtimeApproved ? ' (تأییدشده)' : ' (در انتظار)'}
+                        </span>
+                      )}
+                      {r.entry.nightMinutes > 0 && <span>شب‌کاری: {fmtMin(r.entry.nightMinutes)}</span>}
+                    </div>
+                    {st && <Chip tone={st.tone}>{st.label}</Chip>}
+                    {r.entry.status !== 'locked' && (
+                      <>
+                        <button onClick={() => setEditor({
+                          employeeId: r.employeeId, employeeName: r.employeeName,
+                          assignmentId: r.assignment?.id ?? null, plannedMinutes: r.assignment?.plannedMinutes ?? 0,
+                          existingId: r.entry!.id,
+                        })} className="text-muted hover:text-stone-700 p-1">
+                          <Pencil size={14} strokeWidth={1.5} />
+                        </button>
+                        <button onClick={() => handleDelete(r.entry!.id)} className="text-muted hover:text-rose-600 p-1">
+                          <Trash2 size={14} strokeWidth={1.5} />
+                        </button>
+                      </>
+                    )}
+                    {r.entry.status === 'draft' && user.role === 'SuperAdmin' && (
+                      <Button variant="default" size="sm" icon={Check} onClick={() => handleConfirm(r.entry!.id)}>تأیید</Button>
+                    )}
+                  </>
+                ) : (
+                  <Button variant="default" size="sm" icon={UserPlus} onClick={() => setEditor({
+                    employeeId: r.employeeId, employeeName: r.employeeName,
+                    assignmentId: r.assignment?.id ?? null, plannedMinutes: (r.assignment as any)?.plannedMinutes ?? 0,
+                    existingId: null,
+                  })}>ثبت حضور</Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {editor && (
         <AttendanceEditor

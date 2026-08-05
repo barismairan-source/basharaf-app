@@ -145,3 +145,21 @@ Branch جدید `feat/hr-workspace-unification` از همین نقطه ساخت�
 **تست:** `tests/unit/hr-permissions.test.ts` (۱۵ تست جدید) — نگاشت مسیر، پل سازگاری (۶ سناریو)، پیش‌فرض‌های ۱۹ کلید hr.*، ثبت‌شدن section جدید.
 
 **گیت‌های این فاز:** tsc ✅ ۰ خطا · tests 541/541 ✅ (۱۵ جدید) · lint ✅ · build ✅.
+
+---
+
+## فاز ۳ — نتیجه (تکمیل‌شده)
+
+**انتقال فیزیکی صفحات (نه بازنویسی):** `employees/page.tsx`→`hr/people/page.tsx`، `payroll/page.tsx`→`hr/payroll/page.tsx`، `recruitment/page.tsx`(+`form-builder`)→`hr/recruitment/*` — با `git mv` (تاریخچه حفظ شد)، صفر تغییر منطقی. `shift-schedule/page.tsx` و `attendance/page.tsx` به کامپوننت‌های reusable (`components/hr/ShiftScheduleView.tsx`, `AttendanceView.tsx`) استخراج شدند و `app/(app)/hr/time/page.tsx` آن‌ها را با `Tabs`/`TabPanel` (کامپوننت موجود پروژه) بین دو تب «برنامه شیفت»/«ثبت حضور» جابه‌جا می‌کند — دقیقاً طبق اصل مهم: «رابط ادغام شود، داده‌ها جدا بمانند» (هیچ منطق DB/API لمس نشد).
+
+**پوسته‌ی مشترک:** `app/(app)/hr/layout.tsx` — نوار بالای مشترک (برچسب «منابع انسانی» + فیلتر شعبه + ناوبری تب بین ۵ بخش) با یک بار padding. **تصمیم مهندسی:** بدنه‌ی هر صفحه container مستقل خودش را نگه داشت (بعضی `PageShell` موجود، بعضی div دستی) تا padding دوبرابر نشود؛ فازهای بعدی که محتوای هر صفحه را واقعاً بازسازی می‌کنند (۴/۵/۶/۹) این سه الگو را یکی می‌کنند. فیلتر شعبه‌ی مشترک با یک React Context (`lib/hr/branchFilterContext.tsx`) پیاده شد — چون Next.js layout بین صفحات هم‌سطح دوباره mount نمی‌شود، این state واقعاً در طول ناوبری HR حفظ می‌شود؛ اتصال کامل هر ۵ صفحه به این مقدار مشترک (به‌جای فیلتر محلی فعلی هرکدام) در فازهای بعدی که محتوا را بازسازی می‌کنند انجام می‌شود.
+
+**redirect مسیرهای قدیمی:** در `middleware.ts` (`rewriteLegacyHrPath`, export شده برای تست) — قبل از هر چک دیگری اجرا می‌شود، query string و زیرمسیر را حفظ می‌کند (`/recruitment/form-builder`→`/hr/recruitment/form-builder`، `/shift-schedule`→`/hr/time?tab=schedule`، `/attendance`→`/hr/time?tab=attendance`). لینک‌های داخلی شناسایی‌شده در فاز صفر (`HRSummaryCard`, `AttentionWidget`, `RecruitmentWidget`) نیازی به تغییر ندارند چون redirect شفاف کار می‌کند؛ فقط یک لینک داخلی (`convertToEmployee` در صفحه‌ی استخدام) مستقیماً به `/hr/people` اصلاح شد (بهتر از اتکا به round-trip redirect).
+
+**nav-config.ts:** ۵ آیتم قدیمیِ پراکنده زیر «روابط و منابع» (که `rarely:true` داشتند، یعنی پشت «بیشتر» پنهان بودند) حذف و یک گروه مستقل «منابع انسانی» با همان ۵ آیتم (بدون `rarely`) اضافه شد.
+
+**محدودیت شناخته‌شده (تأیید با مرورگر):** بدون DATABASE_URL در این sandbox امکان لاگین واقعی نبود؛ تأیید با `next dev` واقعی انجام شد: build صحیح مسیرهای جدید/حذف قطعی مسیرهای قدیمی از خروجی build، زنجیره‌ی redirect (`/employees`→`/hr/people`→`/login?redirect=%2Fhr%2Fpeople`، مشابه برای ۴ مسیر دیگر) با `window.location.href` واقعی تأیید شد، بدون خطای سرور/کنسول. تست تعاملی کامل (کلیک تب‌ها، تأیید بصری چیدمان) به فازهای بعدی که محتوا آماده می‌شود موکول شد.
+
+**تست:** `tests/unit/hr-legacy-redirects.test.ts` (۷ تست) — نگاشت دقیق هر ۵ مسیر قدیمی + حفظ زیرمسیر + عدم rewrite مسیرهای جدید/بی‌ربط.
+
+**گیت‌های این فاز:** tsc ✅ ۰ خطا · tests 548/548 ✅ (۷ جدید) · lint ✅ (فقط warningهای preexisting، شامل یک فایل جابه‌جاشده) · build ✅ (مسیرهای قدیمی از خروجی حذف، `/hr/*` جدید ثبت شد).

@@ -7,12 +7,13 @@ const IMP_COOKIE = 'basharaf-imp';
 
 const PROTECTED_PREFIXES = [
   '/dashboard', '/transactions', '/settings', '/reports', '/accounts',
-  '/contacts', '/menu', '/orders', '/logs', '/employees', '/payroll',
-  '/inventory', '/recruitment', '/customers', '/reservations', '/coupons',
+  '/contacts', '/menu', '/orders', '/logs',
+  '/inventory', '/customers', '/reservations', '/coupons',
   '/purchase-orders', '/equipment', '/tasks', '/admin',
-  // یکپارچه‌سازی منابع انسانی: /hr/* جدید + دو مسیر قدیمی که تا امروز
-  // اصلاً در این لیست نبودند (یافته‌ی فاز صفر ممیزی HR).
-  '/hr', '/shift-schedule', '/attendance',
+  // یکپارچه‌سازی منابع انسانی — /employees، /payroll، /recruitment،
+  // /shift-schedule، /attendance همیشه قبل از رسیدن به این چک redirect
+  // می‌شوند (rewriteLegacyHrPath بالا)، پس دیگر نیازی نیست اینجا باشند.
+  '/hr',
 ];
 const AUTH_ROUTES = ['/login', '/signup', '/forgot'];
 
@@ -86,8 +87,43 @@ async function fetchFreshAccess(
   }
 }
 
+/**
+ * یکپارچه‌سازی منابع انسانی — مسیرهای قدیمی حذف نشدند، به مسیر جدید زیر
+ * /hr/* هدایت می‌شوند (query string و زیرمسیر حفظ می‌شود، تا لینک‌های
+ * قدیمی/bookmarkها/اعلان‌ها خراب نشوند). shift-schedule/attendance هرکدام
+ * تب مربوطه‌ی /hr/time را با ?tab= مشخص می‌کنند.
+ */
+export function rewriteLegacyHrPath(pathname: string): { path: string; extraParams?: Record<string, string> } | null {
+  if (pathname === '/shift-schedule' || pathname.startsWith('/shift-schedule/')) {
+    return { path: '/hr/time' + pathname.slice('/shift-schedule'.length), extraParams: { tab: 'schedule' } };
+  }
+  if (pathname === '/attendance' || pathname.startsWith('/attendance/')) {
+    return { path: '/hr/time' + pathname.slice('/attendance'.length), extraParams: { tab: 'attendance' } };
+  }
+  if (pathname === '/employees' || pathname.startsWith('/employees/')) {
+    return { path: '/hr/people' + pathname.slice('/employees'.length) };
+  }
+  if (pathname === '/payroll' || pathname.startsWith('/payroll/')) {
+    return { path: '/hr/payroll' + pathname.slice('/payroll'.length) };
+  }
+  if (pathname === '/recruitment' || pathname.startsWith('/recruitment/')) {
+    return { path: '/hr/recruitment' + pathname.slice('/recruitment'.length) };
+  }
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const legacyRewrite = rewriteLegacyHrPath(pathname);
+  if (legacyRewrite) {
+    const url = new URL(legacyRewrite.path, request.url);
+    url.search = request.nextUrl.search;
+    if (legacyRewrite.extraParams) {
+      for (const [k, v] of Object.entries(legacyRewrite.extraParams)) url.searchParams.set(k, v);
+    }
+    return NextResponse.redirect(url);
+  }
 
   const token   = request.cookies.get(SESSION_COOKIE)?.value;
   const session = token ? await verifyToken(token) : null;

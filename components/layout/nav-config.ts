@@ -1,9 +1,9 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard, Receipt, BarChart3, Landmark, Users, UtensilsCrossed, ScrollText,
-  Briefcase, Calculator, Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
+  Calculator, Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
   CalendarClock, Wrench, ShoppingCart, ClipboardList, Truck, TrendingUp, PackageOpen, ChefHat,
-  FileCheck, ShieldAlert, Handshake, CalendarDays, Clock,
+  FileCheck, ShieldAlert, Handshake, Clock,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { SectionKey } from '@/lib/auth/permissions';
@@ -68,11 +68,19 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: '/reservations', label: 'رزرو میز',      icon: CalendarClock, roles: ['SuperAdmin', 'BranchUser'] },
       { href: '/coupons',      label: 'کوپن‌ها',        icon: Ticket,        roles: ['SuperAdmin'], rarely: true },
       { href: '/partners',     label: 'شرکا',           icon: Handshake,     roles: ['SuperAdmin'], rarely: true },
-      { href: '/employees',    label: 'پرسنل',          icon: Briefcase,     roles: ['SuperAdmin'], rarely: true },
-      { href: '/shift-schedule', label: 'برنامه شیفت',  icon: CalendarDays,  roles: ['SuperAdmin', 'BranchUser'], rarely: true },
-      { href: '/attendance',   label: 'حضور و غیاب',    icon: Clock,         roles: ['SuperAdmin', 'BranchUser'], rarely: true },
-      { href: '/payroll',      label: 'حقوق و دستمزد', icon: Calculator,    roles: ['SuperAdmin'], rarely: true },
-      { href: '/recruitment',  label: 'استخدام',        icon: UserPlus,      roles: ['SuperAdmin'], rarely: true },
+    ],
+  },
+  {
+    // یکپارچه‌سازی HR: استخدام/پرسنل/شیفت/حضور/حقوق دیگر ۵ آیتم پراکنده‌ی
+    // «rarely» نیستند — یک گروه مستقل با مسیرهای زیر /hr/*. طبق دستور صریح،
+    // این آیتم‌ها نباید زیر «موارد بیشتر» پنهان شوند.
+    label: 'منابع انسانی',
+    items: [
+      { href: '/hr',             label: 'نمای کلی',     icon: LayoutDashboard, roles: ['SuperAdmin', 'BranchUser'] },
+      { href: '/hr/recruitment', label: 'استخدام',      icon: UserPlus,        roles: ['SuperAdmin'], matchPrefix: true },
+      { href: '/hr/people',      label: 'افراد',        icon: Users,           roles: ['SuperAdmin'], matchPrefix: true },
+      { href: '/hr/time',        label: 'زمان و حضور',  icon: Clock,           roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
+      { href: '/hr/payroll',     label: 'حقوق و مزایا', icon: Calculator,      roles: ['SuperAdmin'], matchPrefix: true },
     ],
   },
   {
