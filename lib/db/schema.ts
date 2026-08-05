@@ -680,6 +680,11 @@ export const jobApplications = pgTable(
     reviewedBy: uuid('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
     customFields: jsonb('custom_fields').$type<Record<string, unknown>>().default({}),
     fieldSnapshot: jsonb('field_snapshot').$type<Array<{ key: string; label: string; type: string }>>().default([]),
+    // فاز ۷ یکپارچه‌سازی HR — اتصال واقعی استخدام↔پرسنل. عمداً مقدار enum
+    // جدید 'hired' اضافه نشد (ریسک/گستره‌ی تغییر در کل UI کانبان استخدام)؛
+    // «استخدام‌شده» = status='accepted' AND hiredAt IS NOT NULL.
+    hiredAt: timestamp('hired_at', { withTimezone: true }),
+    hiredBy: uuid('hired_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -949,6 +954,10 @@ export const employees = pgTable(
     // ساعتی دارند به 'hourly' backfill می‌شود (بدون تغییر در فیش‌های گذشته).
     compensationType: compensationTypeEnum('compensation_type').notNull().default('monthly'),
 
+    // فاز ۷ یکپارچه‌سازی HR — اتصال واقعی استخدام↔پرسنل (nullable, یکتا:
+    // یک متقاضی فقط می‌تواند به یک کارمند تبدیل شود).
+    sourceApplicationId: uuid('source_application_id').references(() => jobApplications.id, { onDelete: 'set null' }),
+
     isActive: boolean('is_active').notNull().default(true),
     notes: text('notes'),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -961,6 +970,9 @@ export const employees = pgTable(
     activeIdx: index('employees_active_idx').on(t.isActive),
     nameIdx: index('employees_full_name_idx').on(t.fullName),
     branchIdx: index('employees_branch_idx').on(t.branchId),
+    sourceApplicationUniq: uniqueIndex('employees_source_application_uniq')
+      .on(t.sourceApplicationId)
+      .where(sql`${t.sourceApplicationId} IS NOT NULL`),
   })
 );
 

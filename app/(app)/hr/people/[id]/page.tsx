@@ -12,6 +12,11 @@ import { INSURANCE_STATUS_LABELS } from '@/types';
 
 type DetailTab = 'summary' | 'work' | 'compensation' | 'documents' | 'time' | 'payslips' | 'recruitment' | 'access' | 'history';
 
+interface SourceApplication {
+  id: string; firstName: string; lastName: string; phone: string;
+  referralSource: string | null; score: number | null; createdAt: string; hiredAt: string | null;
+}
+
 interface CompensationChange {
   id: string; fromType: string; toType: string; effectiveFrom: string; reason: string | null; createdAt: string;
 }
@@ -32,6 +37,7 @@ export default function PersonDetailPage() {
   const [hydrated, setHydrated] = useState(false);
   const [tab, setTab] = useState<DetailTab>('summary');
   const [changes, setChanges] = useState<CompensationChange[] | null>(null);
+  const [sourceApplication, setSourceApplication] = useState<SourceApplication | null>(null);
 
   const employee = employees.find(e => e.id === params.id);
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -47,6 +53,13 @@ export default function PersonDetailPage() {
       .then(d => setChanges(d?.changes ?? []));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
+
+  useEffect(() => {
+    if (!employee?.sourceApplicationId) { setSourceApplication(null); return; }
+    fetch(`/api/recruitment/${employee.sourceApplicationId}`, { credentials: 'include', cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setSourceApplication(d?.application ?? null));
+  }, [employee?.sourceApplicationId]);
 
   if (!hydrated || !user) return null;
   if (user.role !== 'SuperAdmin' && user.role !== 'BranchUser') {
@@ -190,7 +203,24 @@ export default function PersonDetailPage() {
 
         <TabPanel value="recruitment" active={tab === 'recruitment'}>
           <Card><CardBody>
-            <div className="text-[12.5px] text-stone-600">اتصال واقعی «این کارمند از کدام متقاضی استخدام آمد» در فاز بعدی این یکپارچه‌سازی ساخته می‌شود (اکنون چنین ارتباطی در دیتابیس ذخیره نمی‌شود).</div>
+            {!employee.sourceApplicationId ? (
+              <div className="text-[12.5px] text-stone-600">این کارمند از مسیر استخدام یکپارچه ثبت نشده (یا قبل از این قابلیت اضافه شده).</div>
+            ) : !sourceApplication ? (
+              <div className="text-[12px] text-muted">در حال بارگذاری…</div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 text-[12.5px]">
+                <div><div className="text-muted text-[10.5px] mb-0.5">نام در درخواست</div><div className="text-stone-800">{sourceApplication.firstName} {sourceApplication.lastName}</div></div>
+                <div><div className="text-muted text-[10.5px] mb-0.5">کانال آشنایی</div><div className="text-stone-800">{sourceApplication.referralSource ?? '—'}</div></div>
+                <div><div className="text-muted text-[10.5px] mb-0.5">امتیاز</div><div className="text-stone-800">{sourceApplication.score ?? '—'}</div></div>
+                <div><div className="text-muted text-[10.5px] mb-0.5">تاریخ درخواست</div><div className="text-stone-800" dir="ltr">{sourceApplication.createdAt.slice(0, 10)}</div></div>
+                {sourceApplication.hiredAt && (
+                  <div><div className="text-muted text-[10.5px] mb-0.5">تاریخ استخدام</div><div className="text-stone-800" dir="ltr">{sourceApplication.hiredAt.slice(0, 10)}</div></div>
+                )}
+                <div className="col-span-2">
+                  <a href={`/hr/recruitment?status=all`} className="text-accent hover:underline">مشاهده در صفحه‌ی استخدام</a>
+                </div>
+              </div>
+            )}
           </CardBody></Card>
         </TabPanel>
 

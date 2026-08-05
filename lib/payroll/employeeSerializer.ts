@@ -13,6 +13,7 @@ export function serializeEmployee(e: typeof schema.employees.$inferSelect) {
     joinDate: e.joinDate.toISOString().slice(0,10),
     terminationDate: e.terminationDate ? e.terminationDate.toISOString().slice(0,10) : null,
     baseMonthlySalary: Number(e.baseMonthlySalary), compensationType: e.compensationType,
+    sourceApplicationId: e.sourceApplicationId,
     isActive: e.isActive, notes: e.notes,
     createdAt: e.createdAt.toISOString(), updatedAt: e.updatedAt.toISOString(),
   };

@@ -105,6 +105,7 @@ export interface JobApplication {
   reviewerNote: string | null;
   customFields: Record<string, unknown>;
   fieldSnapshot: Array<{ key: string; label: string; type: string }>;
+  hiredAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

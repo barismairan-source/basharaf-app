@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import * as XLSX from 'xlsx';
 import {
   UserPlus, Download, Search, Settings2, Wrench, ExternalLink,
-  GitCompareArrows, MoreVertical, Loader2, RefreshCw, X, SlidersHorizontal,
+  GitCompareArrows, MoreVertical, Loader2, RefreshCw, X, SlidersHorizontal, BarChart3,
 } from 'lucide-react';
 import { Button, ButtonLink, Input, Select, Empty, InlineNotice, Popover, Skeleton } from '@/components/ui';
 import { PageShell } from '@/components/ui/PageShell';
@@ -35,6 +35,18 @@ const STATUS_TAB_LABELS: Record<StatusFilter, string> = {
 };
 const STATUS_TAB_ORDER: StatusFilter[] = ['all', 'new', 'shortlist', 'accepted', 'rejected'];
 
+interface FunnelStats {
+  totalApplications: number;
+  byStatus: Record<string, number>;
+  hiredCount: number;
+  shortlistRate: number;
+  acceptRate: number;
+  hireRate: number;
+  avgDaysToHire: number | null;
+  topReferralSources: Array<{ source: string; applications: number; hired: number }>;
+  hireCountByRole: Array<{ role: string; count: number }>;
+}
+
 export default function RecruitmentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -63,6 +75,16 @@ export default function RecruitmentPage() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [resumeZipLoading, setResumeZipLoading] = useState(false);
+  const [showFunnel, setShowFunnel] = useState(false);
+  const [funnel, setFunnel] = useState<FunnelStats | null>(null);
+
+  async function openFunnel() {
+    setShowFunnel(true);
+    if (!funnel) {
+      const res = await fetch('/api/hr/recruitment/funnel', { credentials: 'include', cache: 'no-store' });
+      if (res.ok) setFunnel(await res.json());
+    }
+  }
 
   const canSeePhone = canViewPhone(user);
 
@@ -177,8 +199,24 @@ export default function RecruitmentPage() {
   }
 
   // ── اقدامات بررسی یک داوطلب ─────────────────────────────────────────────
-  function convertToEmployee(a: JobApplication) {
-    router.push(`/hr/people?${new URLSearchParams({ fromApplicant: '1', fullName: `${a.firstName} ${a.lastName}`, phone: a.phone })}`);
+  async function convertToEmployee(a: JobApplication) {
+    if (a.hiredAt) { showToast('این داوطلب قبلاً استخدام شده', 'danger'); return; }
+    if (!confirm(`«${a.firstName} ${a.lastName}» به پرونده‌ی پرسنلی تبدیل شود؟ بعداً می‌توانید سمت/شعبه/نرخ او را تکمیل کنید.`)) return;
+    try {
+      const res = await fetch(`/api/hr/recruitment/${a.id}/hire`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: '{}',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.employeeId) {
+        showToast(data.error ?? 'خطا در استخدام', 'danger');
+        return;
+      }
+      showToast('پرونده‌ی پرسنلی ساخته شد', 'success');
+      loadApplications();
+      router.push(`/hr/people/${data.employeeId}`);
+    } catch {
+      showToast('خطا در ارتباط با سرور', 'danger');
+    }
   }
   async function setStatus(a: JobApplication, status: ApplicationStatus) {
     const ok = await reviewApplication(a.id, { status });
@@ -297,10 +335,18 @@ export default function RecruitmentPage() {
                   <button
                     type="button"
                     role="menuitem"
-                    onClick={() => { close(); router.push('/recruitment/form-builder'); }}
+                    onClick={() => { close(); router.push('/hr/recruitment/form-builder'); }}
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
                   >
                     <Wrench size={14} strokeWidth={1.5} /> فرم‌ساز
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { close(); openFunnel(); }}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-[12.5px] text-text hover:bg-bg text-right focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/40"
+                  >
+                    <BarChart3 size={14} strokeWidth={1.5} /> آمار قیف استخدام
                   </button>
                   <button
                     type="button"
@@ -510,6 +556,67 @@ export default function RecruitmentPage() {
 
       {showCompare && selectedCandidates.length >= 2 && (
         <CompareModal candidates={selectedCandidates} onClose={() => setShowCompare(false)} />
+      )}
+
+      {showFunnel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" onClick={() => setShowFunnel(false)}>
+          <div className="bg-white rounded-xl w-full max-w-md p-5 max-h-[90vh] overflow-y-auto" onClick={ev => ev.stopPropagation()}>
+            <h2 className="text-[16px] font-medium text-stone-900 mb-4">آمار قیف استخدام</h2>
+            {!funnel ? (
+              <div className="text-[12px] text-muted">در حال بارگذاری…</div>
+            ) : (
+              <div className="space-y-3 text-[12.5px]">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-stone-50 rounded-lg p-3">
+                    <div className="text-[10.5px] text-muted mb-1">کل درخواست‌ها</div>
+                    <div className="text-[16px] font-medium">{funnel.totalApplications}</div>
+                  </div>
+                  <div className="bg-stone-50 rounded-lg p-3">
+                    <div className="text-[10.5px] text-muted mb-1">استخدام‌شده</div>
+                    <div className="text-[16px] font-medium text-emerald-700">{funnel.hiredCount}</div>
+                  </div>
+                  <div className="bg-stone-50 rounded-lg p-3">
+                    <div className="text-[10.5px] text-muted mb-1">نرخ ورود به لیست کوتاه</div>
+                    <div className="text-[14px] font-medium">{Math.round(funnel.shortlistRate * 100)}٪</div>
+                  </div>
+                  <div className="bg-stone-50 rounded-lg p-3">
+                    <div className="text-[10.5px] text-muted mb-1">نرخ استخدام واقعی</div>
+                    <div className="text-[14px] font-medium">{Math.round(funnel.hireRate * 100)}٪</div>
+                  </div>
+                </div>
+                {funnel.avgDaysToHire !== null && (
+                  <div className="text-stone-700">میانگین زمان تا استخدام: <span className="font-medium">{Math.round(funnel.avgDaysToHire)} روز</span></div>
+                )}
+                {funnel.topReferralSources.length > 0 && (
+                  <div>
+                    <div className="text-[11px] text-muted mb-1.5">کانال‌های جذب مؤثر</div>
+                    <div className="space-y-1">
+                      {funnel.topReferralSources.map(r => (
+                        <div key={r.source} className="flex items-center justify-between bg-stone-50 rounded p-2">
+                          <span className="text-stone-700">{r.source}</span>
+                          <span className="text-stone-500">{r.hired} استخدام از {r.applications} درخواست</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {funnel.hireCountByRole.length > 0 && (
+                  <div>
+                    <div className="text-[11px] text-muted mb-1.5">استخدام به تفکیک سمت</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {funnel.hireCountByRole.map(r => (
+                        <span key={r.role} className="bg-stone-100 rounded-full px-2.5 py-1 text-[11px] text-stone-700">{r.role}: {r.count}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="flex gap-2 mt-5">
+              <Button variant="default" onClick={() => setShowFunnel(false)}>بستن</Button>
+            </div>
+          </div>
+        </div>
       )}
     </PageShell>
   );

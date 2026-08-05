@@ -125,6 +125,7 @@ export async function GET(req: Request) {
           status: schema.jobApplications.status,
           score: schema.jobApplications.score,
           reviewerNote: schema.jobApplications.reviewerNote,
+          hiredAt: schema.jobApplications.hiredAt,
           createdAt: schema.jobApplications.createdAt,
           updatedAt: schema.jobApplications.updatedAt,
         })
@@ -158,6 +159,7 @@ export async function GET(req: Request) {
         status: r.status,
         score: r.score,
         reviewerNote: r.reviewerNote,
+        hiredAt: r.hiredAt ? r.hiredAt.toISOString() : null,
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
       })),

@@ -31,6 +31,7 @@ function makeCandidate(overrides: Partial<JobApplication> = {}): JobApplication 
     reviewerNote: null,
     customFields: {},
     fieldSnapshot: [],
+    hiredAt: null,
     createdAt: '2025-03-21T10:00:00.000Z',
     updatedAt: '2025-03-21T10:00:00.000Z',
     ...overrides,

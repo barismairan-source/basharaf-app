@@ -43,6 +43,7 @@ export interface Employee {
   terminationDate: string | null;
   baseMonthlySalary: number;            // تومان
   compensationType: CompensationType;
+  sourceApplicationId: string | null;
   isActive: boolean;
   notes: string | null;
   createdAt: string;
