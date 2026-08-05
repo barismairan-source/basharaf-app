@@ -16,6 +16,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       id: schema.payslips.id,
       employeeId: schema.payslips.employeeId,
       employeeName: schema.employees.fullName,
+      compensationType: schema.employees.compensationType,
       grossEarnings: schema.payslips.grossEarnings,
       insuranceEmployee: schema.payslips.insuranceEmployee,
       incomeTax: schema.payslips.incomeTax,
@@ -37,12 +38,16 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         postedToBasharafAt: run.postedToBasharafAt?.toISOString() ?? null,
       },
       payslips: slips.map(s => {
-        const snap = (s.calcSnapshot ?? {}) as { lines?: Array<{ category: string; code: string; labelFa: string; amount: number }> };
+        const snap = (s.calcSnapshot ?? {}) as { lines?: Array<{ category: string; code: string; labelFa: string; amount: number; meta?: Record<string, unknown> }> };
         const deductionLines = (snap.lines ?? [])
           .filter(l => l.category === 'deduction' || (l.category === 'statutory' && l.code !== 'insurance_employer'))
           .map(l => ({ label: l.labelFa, amount: l.amount }));
+        const earningLines = (snap.lines ?? [])
+          .filter(l => l.category === 'earning')
+          .map(l => ({ code: l.code, label: l.labelFa, amount: l.amount, meta: l.meta ?? null }));
         return {
           id: s.id, employeeId: s.employeeId, employeeName: s.employeeName ?? '—',
+          compensationType: s.compensationType ?? 'monthly',
           grossEarnings: Number(s.grossEarnings),
           insuranceEmployee: Number(s.insuranceEmployee),
           incomeTax: Number(s.incomeTax),
@@ -50,6 +55,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
           netPay: Number(s.netPay),
           workedDays: Number(s.workedDays),
           deductionLines,
+          earningLines,
         };
       }),
     });

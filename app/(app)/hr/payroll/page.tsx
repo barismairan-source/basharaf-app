@@ -2,10 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { Calculator, Plus, ShieldX, Check, Calculator as CalcIcon, Send, ChevronDown, Loader2, Wallet, Trash2, RotateCcw } from 'lucide-react';
-import { Button, Card, CardBody, Field, Input, Select, Empty, Chip } from '@/components/ui';
+import { Button, Card, CardBody, Field, Input, Select, Empty, Chip, InlineNotice } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn } from '@/lib/utils';
 import type { Payslip } from '@/store/slices/payrollSlice';
+
+interface PayrollReadiness {
+  ready: boolean;
+  criticalErrors: string[];
+  warnings: string[];
+}
 
 const STATUS_LABELS: Record<string, { label: string; tone: string }> = {
   draft: { label: 'پیش‌نویس', tone: 'neutral' },
@@ -52,6 +58,7 @@ export default function PayrollPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, Payslip[]>>({});
+  const [readiness, setReadiness] = useState<Record<string, PayrollReadiness>>({});
 
   // فرم رویداد
   const [evEmployee, setEvEmployee] = useState('');
@@ -182,6 +189,18 @@ export default function PayrollPage() {
     setExpanded(id);
     const d = await getRunDetail(id);
     if (d) setDetails(prev => ({ ...prev, [id]: d.payslips }));
+    loadReadiness(id);
+  }
+
+  async function loadReadiness(id: string) {
+    const run = runs.find(r => r.id === id);
+    if (!run) return;
+    const qs = new URLSearchParams({ period: run.periodYearMonth, ...(run.branchId ? { branchId: run.branchId } : {}) });
+    const res = await fetch(`/api/hr/payroll/readiness?${qs}`, { credentials: 'include', cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      setReadiness(prev => ({ ...prev, [id]: data }));
+    }
   }
 
   async function handleCreateEvent() {
@@ -272,6 +291,20 @@ export default function PayrollPage() {
                   </div>
                   {isOpen && (
                     <div className="border-t border-stone-100 bg-stone-50/50 p-3">
+                      {readiness[run.id] && !readiness[run.id]!.ready && (run.status === 'draft' || run.status === 'calculated') && (
+                        <InlineNotice tone="danger" title="این دوره آماده‌ی محاسبه/تأیید نیست">
+                          <ul className="list-disc pr-4">
+                            {readiness[run.id]!.criticalErrors.map((e, i) => <li key={i}>{e}</li>)}
+                          </ul>
+                        </InlineNotice>
+                      )}
+                      {readiness[run.id] && readiness[run.id]!.ready && readiness[run.id]!.warnings.length > 0 && (run.status === 'draft' || run.status === 'calculated') && (
+                        <InlineNotice tone="warning" title="هشدار (مسدودکننده نیست)">
+                          <ul className="list-disc pr-4">
+                            {readiness[run.id]!.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                          </ul>
+                        </InlineNotice>
+                      )}
                       {slips.length === 0 ? (
                         <div className="text-[12px] text-muted text-center py-3">فیشی نیست (اول محاسبه کنید)</div>
                       ) : (
@@ -284,11 +317,27 @@ export default function PayrollPage() {
                           {slips.map(s => (
                             <div key={s.id} className="bg-white rounded border border-stone-100">
                               <div className="grid grid-cols-4 gap-2 text-[12px] p-2">
-                                <span className="text-stone-800 truncate">{s.employeeName}</span>
+                                <span className="text-stone-800 truncate flex items-center gap-1.5">
+                                  {s.employeeName}
+                                  <Chip tone={s.compensationType === 'hourly' ? 'green' : 'amber'}>
+                                    {s.compensationType === 'hourly' ? 'ساعتی' : 'ماهانه'}
+                                  </Chip>
+                                </span>
                                 <span className="text-left tabular-nums text-stone-600 whitespace-nowrap">{fmt(s.grossEarnings)}</span>
                                 <span className="text-left tabular-nums text-rose-600 whitespace-nowrap">{fmt(s.totalDeductions)}</span>
                                 <span className="text-left tabular-nums font-medium text-stone-900 whitespace-nowrap">{fmt(s.netPay)}</span>
                               </div>
+                              {s.compensationType === 'hourly' && s.earningLines && s.earningLines.length > 0 && (
+                                <div className="border-t border-stone-50 px-2 py-1.5 space-y-1">
+                                  <div className="text-[9.5px] text-muted">تفکیک ساعتی:</div>
+                                  {s.earningLines.map((l, i) => (
+                                    <div key={i} className="flex justify-between text-[10.5px] text-stone-500">
+                                      <span>{l.label}{l.meta?.minutes ? ` (${Math.round(Number(l.meta.minutes) / 60 * 10) / 10} ساعت)` : ''}</span>
+                                      <span className="tabular-nums">{fmt(l.amount)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                               {s.deductionLines && s.deductionLines.length > 0 && (
                                 <div className="border-t border-stone-50 px-2 py-1.5 space-y-1">
                                   <div className="text-[9.5px] text-muted">تفکیک کسورات:</div>

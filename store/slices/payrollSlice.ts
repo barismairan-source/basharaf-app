@@ -16,6 +16,7 @@ export interface Payslip {
   id: string;
   employeeId: string;
   employeeName: string;
+  compensationType?: 'hourly' | 'monthly';
   grossEarnings: number;
   insuranceEmployee: number;
   incomeTax: number;
@@ -23,6 +24,7 @@ export interface Payslip {
   netPay: number;
   workedDays: number;
   deductionLines?: Array<{ label: string; amount: number }>;
+  earningLines?: Array<{ code: string; label: string; amount: number; meta: Record<string, unknown> | null }>;
 }
 
 export interface PayrollSlice {
