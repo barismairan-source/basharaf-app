@@ -5,19 +5,24 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabPanel } from '@/components/ui';
 import { ShiftScheduleView } from '@/components/hr/ShiftScheduleView';
 import { AttendanceView } from '@/components/hr/AttendanceView';
+import { ApprovalsView } from '@/components/hr/ApprovalsView';
+import { TimesheetView } from '@/components/hr/TimesheetView';
 
-type TimeTab = 'schedule' | 'attendance';
+type TimeTab = 'schedule' | 'attendance' | 'approvals' | 'timesheet';
+const VALID_TABS: TimeTab[] = ['schedule', 'attendance', 'approvals', 'timesheet'];
 
 /**
- * «زمان و حضور» — فضای کاری یکپارچه‌ی برنامه شیفت + ثبت حضور.
- * تب‌ها فقط ادغام رابط کاربری است؛ داده‌ی برنامه‌ریزی‌شده (employee_shift_assignments)
- * و حضور واقعی (attendance_entries) کاملاً جدا باقی می‌مانند (طبق دستور صریح).
- * مسیرهای قدیمی /shift-schedule و /attendance به اینجا با tab مناسب redirect می‌شوند.
+ * «زمان و حضور» — فضای کاری یکپارچه‌ی برنامه شیفت + ثبت حضور + تأییدها +
+ * گزارش کارکرد. تب‌ها فقط ادغام رابط کاربری است؛ داده‌ی برنامه‌ریزی‌شده
+ * (employee_shift_assignments) و حضور واقعی (attendance_entries) کاملاً جدا
+ * باقی می‌مانند (طبق دستور صریح). مسیرهای قدیمی /shift-schedule و
+ * /attendance به اینجا با tab مناسب redirect می‌شوند.
  */
 export default function HrTimePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialTab: TimeTab = searchParams.get('tab') === 'attendance' ? 'attendance' : 'schedule';
+  const requestedTab = searchParams.get('tab') as TimeTab | null;
+  const initialTab: TimeTab = requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'schedule';
   const [tab, setTab] = useState<TimeTab>(initialTab);
 
   function handleChange(next: TimeTab) {
@@ -32,12 +37,20 @@ export default function HrTimePage() {
           items={[
             { value: 'schedule', label: 'برنامه شیفت' },
             { value: 'attendance', label: 'ثبت حضور' },
+            { value: 'approvals', label: 'تأییدها' },
+            { value: 'timesheet', label: 'گزارش کارکرد' },
           ]} />
         <TabPanel value="schedule" active={tab === 'schedule'}>
           <ShiftScheduleView />
         </TabPanel>
         <TabPanel value="attendance" active={tab === 'attendance'}>
           <AttendanceView />
+        </TabPanel>
+        <TabPanel value="approvals" active={tab === 'approvals'}>
+          <ApprovalsView />
+        </TabPanel>
+        <TabPanel value="timesheet" active={tab === 'timesheet'}>
+          <TimesheetView />
         </TabPanel>
       </div>
     </div>
