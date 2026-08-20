@@ -22,10 +22,13 @@ ALTER TABLE reservations ALTER COLUMN created_by DROP NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS reservations_tracking_code_uniq
   ON reservations(tracking_code) WHERE tracking_code IS NOT NULL;
 
--- مهمان بدون عضویت باید نام+موبایل داشته باشد؛ رزرو با عضویت باید customer_id داشته باشد.
+-- فقط رزروهای ثبت‌شده از صفحه‌ی عمومی (source='public') باید نام+موبایل مهمان داشته
+-- باشند — نه همه‌ی ردیف‌ها. رزروهای قدیمی «مهمان» ثبت‌شده از پنل مدیریت (customer_id
+-- خالی، بدون هیچ نام/موبایلی، فقط source='staff') کاملاً معتبرند و نباید رد شوند؛
+-- نسخه‌ی اول این migration این حالت را در نظر نگرفته بود و روی داده‌ی واقعی خطا داد.
 DO $$ BEGIN
   ALTER TABLE reservations ADD CONSTRAINT reservations_customer_or_guest_check
-    CHECK (customer_id IS NOT NULL OR (guest_name IS NOT NULL AND guest_phone IS NOT NULL));
+    CHECK (source <> 'public' OR (guest_name IS NOT NULL AND guest_phone IS NOT NULL));
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ─── جدول تنظیمات رزرو عمومی هر شعبه ───
@@ -76,8 +79,10 @@ SELECT 'reservations public-booking columns created' AS status;
 SELECT COUNT(*) AS reservation_settings_rows FROM reservation_settings;
 
 -- ─── کوئری‌های بررسی ───
--- قبل: همه‌ی رزروهای موجود باید customer_id داشته باشند (وگرنه CHECK جدید رد می‌کند):
--- SELECT id, date, time FROM reservations WHERE customer_id IS NULL AND (guest_name IS NULL OR guest_phone IS NULL);
+-- قبل: هیچ ردیفی نباید source='public' با نام/موبایل خالی داشته باشد (چون این
+-- migration خودش هنوز source را ست نکرده، این کوئری همیشه صفر برمی‌گرداند —
+-- فقط برای اطمینان):
+-- SELECT id, date, time FROM reservations WHERE source = 'public' AND (guest_name IS NULL OR guest_phone IS NULL);
 -- بعد: کدام شعب رزرو عمومی را فعال کرده‌اند:
 -- SELECT b.name, rs.is_public_enabled FROM reservation_settings rs JOIN branches b ON b.id = rs.branch_id;
 
