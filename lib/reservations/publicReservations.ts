@@ -43,13 +43,11 @@ export async function getPublicReservationAvailability(branchId: string, date: s
     .from(schema.branches).where(eq(schema.branches.id, branchId)).limit(1);
   if (!branch) throw new ApiError(404, 'شعبه پیدا نشد', 'BRANCH_NOT_FOUND');
 
+  const branchInfo = { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize, minLeadMinutes: settings.minLeadMinutes, maxLeadDays: settings.maxLeadDays };
+
   const dateCheck = isDateBookable(settings, date);
   if (!dateCheck.ok) {
-    return {
-      branch: { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize, minLeadMinutes: settings.minLeadMinutes, maxLeadDays: settings.maxLeadDays },
-      date,
-      slots: [],
-    };
+    return { branch: branchInfo, date, slots: [], dateBookable: false, dateReason: dateCheck.reason };
   }
 
   const existing = await db
@@ -58,11 +56,7 @@ export async function getPublicReservationAvailability(branchId: string, date: s
     .where(and(eq(schema.reservations.branchId, branchId), eq(schema.reservations.date, date)));
 
   const slots = computeSlotAvailability(settings, date, existing);
-  return {
-    branch: { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize, minLeadMinutes: settings.minLeadMinutes, maxLeadDays: settings.maxLeadDays },
-    date,
-    slots,
-  };
+  return { branch: branchInfo, date, slots, dateBookable: true };
 }
 
 /**

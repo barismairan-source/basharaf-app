@@ -22,6 +22,9 @@ export interface PublicReservationDay {
   branch: PublicReservationBranch;
   date: string;            // Jalali 'YYYY/MM/DD'
   slots: PublicReservationSlot[];
+  /** false یعنی کل روز قابل رزرو نیست (blackout/تعطیل/خارج از بازه) — dateReason توضیح می‌دهد. */
+  dateBookable: boolean;
+  dateReason?: string;
 }
 
 export interface CreatePublicReservationInput {
