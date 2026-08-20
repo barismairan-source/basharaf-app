@@ -1,89 +1,90 @@
 import { and, eq, inArray, sql as sqlOp } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { ApiError } from '@/lib/api-error';
+import { getTodayJalali } from '@/lib/jalali';
 import { generateTrackingCode } from './trackingCode';
-import { jalaliSlotToDate, computeSlotAvailability, isSlotBookable, isDateBookable, CAPACITY_HOLDING_STATUSES } from './capacity';
+import { jalaliSlotToDate, computeTodayAvailability, CAPACITY_HOLDING_STATUSES } from './capacity';
 import { fireReservationNotification } from './adminAlert';
 import type {
-  CreatePublicReservationInput, PublicReservationBranch, PublicReservationDay,
+  CreatePublicReservationInput, PublicReservationBranch, PublicReservationToday,
   PublicReservationResult, PublicReservationDetail,
 } from '@/types';
 
-type ReservationSettingsRow = typeof schema.reservationSettings.$inferSelect;
+type DbOrTx = any;
 
-async function loadEnabledSettings(branchId: string): Promise<ReservationSettingsRow | null> {
-  const [row] = await db.select().from(schema.reservationSettings)
-    .where(and(eq(schema.reservationSettings.branchId, branchId), eq(schema.reservationSettings.isPublicEnabled, true)))
-    .limit(1);
-  return row ?? null;
-}
-
-/** شعبی که رزرو عمومی برایشان فعال است — برای انتخاب‌گر شعبه در /reserve. */
+/** شعبی که رزرو عمومی برایشان تنظیم شده — چه الان باز باشند چه بسته (پیام/شماره‌ی بسته‌بودن هم دیده می‌شود). */
 export async function getPublicReservationBranches(): Promise<PublicReservationBranch[]> {
   const rows = await db
     .select({
       id: schema.branches.id,
       name: schema.branches.name,
       maxPartySize: schema.reservationSettings.maxPartySize,
-      minLeadMinutes: schema.reservationSettings.minLeadMinutes,
-      maxLeadDays: schema.reservationSettings.maxLeadDays,
     })
     .from(schema.reservationSettings)
-    .innerJoin(schema.branches, eq(schema.branches.id, schema.reservationSettings.branchId))
-    .where(eq(schema.reservationSettings.isPublicEnabled, true));
+    .innerJoin(schema.branches, eq(schema.branches.id, schema.reservationSettings.branchId));
   return rows;
 }
 
-/** اسلات‌های یک روز برای یک شعبه (با ظرفیت واقعی از رزروهای موجود). */
-export async function getPublicReservationAvailability(branchId: string, date: string): Promise<PublicReservationDay> {
-  const settings = await loadEnabledSettings(branchId);
-  if (!settings) throw new ApiError(404, 'رزرو عمومی برای این شعبه فعال نیست', 'RESERVATIONS_DISABLED');
+async function countActiveToday(tx: DbOrTx, branchId: string, date: string): Promise<number> {
+  const rows = await tx
+    .select({ status: schema.reservations.status })
+    .from(schema.reservations)
+    .where(and(eq(schema.reservations.branchId, branchId), eq(schema.reservations.date, date)));
+  return rows.filter((r: { status: string }) => (CAPACITY_HOLDING_STATUSES as readonly string[]).includes(r.status)).length;
+}
+
+/** وضعیت «امروز» یک شعبه — باز/بسته + ظرفیت باقی‌مانده + متن/شماره‌ی بسته‌بودن (اگر بسته باشد). */
+export async function getTodayReservationStatus(branchId: string): Promise<PublicReservationToday> {
+  const [settings] = await db.select().from(schema.reservationSettings)
+    .where(eq(schema.reservationSettings.branchId, branchId)).limit(1);
+  if (!settings) throw new ApiError(404, 'رزرو عمومی برای این شعبه تنظیم نشده', 'RESERVATIONS_NOT_CONFIGURED');
 
   const [branch] = await db.select({ id: schema.branches.id, name: schema.branches.name })
     .from(schema.branches).where(eq(schema.branches.id, branchId)).limit(1);
   if (!branch) throw new ApiError(404, 'شعبه پیدا نشد', 'BRANCH_NOT_FOUND');
 
-  const branchInfo = { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize, minLeadMinutes: settings.minLeadMinutes, maxLeadDays: settings.maxLeadDays };
+  const date = getTodayJalali();
+  const activeCount = await countActiveToday(db, branchId, date);
+  const avail = computeTodayAvailability(settings, activeCount);
 
-  const dateCheck = isDateBookable(settings, date);
-  if (!dateCheck.ok) {
-    return { branch: branchInfo, date, slots: [], dateBookable: false, dateReason: dateCheck.reason };
-  }
-
-  const existing = await db
-    .select({ time: schema.reservations.time, partySize: schema.reservations.partySize, status: schema.reservations.status })
-    .from(schema.reservations)
-    .where(and(eq(schema.reservations.branchId, branchId), eq(schema.reservations.date, date)));
-
-  const slots = computeSlotAvailability(settings, date, existing);
-  return { branch: branchInfo, date, slots, dateBookable: true };
+  return {
+    branch: { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize },
+    date,
+    open: avail.open,
+    remainingTables: avail.remainingTables,
+    closedMessage: avail.open ? null : settings.closedMessage,
+    closedPhone: avail.open ? null : settings.closedPhone,
+  };
 }
 
 /**
  * ثبت رزرو عمومی — اتمیک، ضد race-condition.
  *
- * قفل: به‌جای یک advisory lock مصنوعی، همان ردیف reservation_settings که
- * برای خواندن ظرفیت لازم است با FOR UPDATE قفل می‌شود (الگوی همین پروژه —
- * ر.ک. lib/db/inventoryHelpers.ts روی invItems). این یعنی همه‌ی تلاش‌های
- * همزمان برای رزرو در یک شعبه صف می‌شوند، ظرفیت هر اسلات زیر همان قفل
- * دوباره محاسبه و چک می‌شود.
+ * قفل: همان ردیف reservation_settings که برای خواندن ظرفیت لازم است با
+ * FOR UPDATE قفل می‌شود (الگوی همین پروژه — ر.ک. lib/db/inventoryHelpers.ts
+ * روی invItems). یعنی همه‌ی تلاش‌های همزمان برای رزرو در یک شعبه صف
+ * می‌شوند، ظرفیت امروز زیر همان قفل دوباره محاسبه و چک می‌شود.
  */
 export async function createPublicReservation(input: CreatePublicReservationInput): Promise<PublicReservationResult> {
   return db.transaction(async (tx) => {
     const [settings] = await tx.select().from(schema.reservationSettings)
-      .where(and(eq(schema.reservationSettings.branchId, input.branchId), eq(schema.reservationSettings.isPublicEnabled, true)))
+      .where(eq(schema.reservationSettings.branchId, input.branchId))
       .for('update');
-    if (!settings) throw new ApiError(404, 'رزرو عمومی برای این شعبه فعال نیست', 'RESERVATIONS_DISABLED');
+    if (!settings) throw new ApiError(404, 'رزرو عمومی برای این شعبه تنظیم نشده', 'RESERVATIONS_NOT_CONFIGURED');
 
     const [branch] = await tx.select({ id: schema.branches.id, name: schema.branches.name })
       .from(schema.branches).where(eq(schema.branches.id, input.branchId)).limit(1);
     if (!branch) throw new ApiError(404, 'شعبه پیدا نشد', 'BRANCH_NOT_FOUND');
 
-    const slotCheck = isSlotBookable(settings, input.date, input.time);
-    if (!slotCheck.ok) throw new ApiError(422, slotCheck.reason ?? 'این اسلات قابل رزرو نیست', 'SLOT_NOT_BOOKABLE');
-
     if (input.partySize < 1 || input.partySize > settings.maxPartySize) {
       throw new ApiError(422, `تعداد نفرات باید بین ۱ تا ${settings.maxPartySize} باشد`, 'PARTY_SIZE_INVALID');
+    }
+
+    const date = getTodayJalali();
+    const activeCount = await countActiveToday(tx, input.branchId, date);
+    const avail = computeTodayAvailability(settings, activeCount);
+    if (!avail.open) {
+      throw new ApiError(409, settings.closedMessage ?? 'ظرفیت امروز تکمیل شده است', 'RESERVATIONS_CLOSED');
     }
 
     // ضد اسپم — حداکثر رزرو فعال هم‌زمان per شماره موبایل (در همه‌ی شعب)
@@ -94,25 +95,9 @@ export async function createPublicReservation(input: CreatePublicReservationInpu
         eq(schema.reservations.guestPhone, input.guestPhone),
         inArray(schema.reservations.status, [...CAPACITY_HOLDING_STATUSES]),
       ));
-    const activeCount = activeCountRows[0]?.activeCount ?? 0;
-    if (activeCount >= settings.maxActiveReservationsPerPhone) {
+    const phoneActiveCount = activeCountRows[0]?.activeCount ?? 0;
+    if (phoneActiveCount >= settings.maxActiveReservationsPerPhone) {
       throw new ApiError(429, 'شما به حداکثر تعداد رزرو فعال رسیده‌اید — ابتدا یکی از رزروهای قبلی را لغو کنید', 'PHONE_LIMIT_REACHED');
-    }
-
-    // ظرفیت همان اسلات
-    const existing = await tx
-      .select({ partySize: schema.reservations.partySize, status: schema.reservations.status })
-      .from(schema.reservations)
-      .where(and(
-        eq(schema.reservations.branchId, input.branchId),
-        eq(schema.reservations.date, input.date),
-        eq(schema.reservations.time, input.time),
-      ));
-    const used = existing
-      .filter((r) => (CAPACITY_HOLDING_STATUSES as readonly string[]).includes(r.status))
-      .reduce((sum, r) => sum + r.partySize, 0);
-    if (used + input.partySize > settings.slotCapacityGuests) {
-      throw new ApiError(409, 'ظرفیت این اسلات تکمیل شده — لطفاً ساعت دیگری را انتخاب کنید', 'SLOT_FULL');
     }
 
     let trackingCode = '';
@@ -128,14 +113,14 @@ export async function createPublicReservation(input: CreatePublicReservationInpu
       branchId: input.branchId,
       guestName: input.guestName,
       guestPhone: input.guestPhone,
-      date: input.date,
+      date,
       time: input.time,
       partySize: input.partySize,
       note: input.note ?? null,
       status: 'pending',
       source: 'public',
       trackingCode,
-      reserveAt: jalaliSlotToDate(input.date, input.time),
+      reserveAt: jalaliSlotToDate(date, input.time),
       createdBy: null,
     }).returning();
     if (!row) throw new ApiError(500, 'خطا در ثبت رزرو', 'INSERT_FAILED');
@@ -144,8 +129,8 @@ export async function createPublicReservation(input: CreatePublicReservationInpu
       reservationId: row.id,
       branchId: input.branchId,
       guestName: input.guestName,
-      date: input.date,
-      time: input.time,
+      date: row.date,
+      time: row.time,
     });
 
     return {

@@ -1,11 +1,11 @@
 import type {
-  PublicReservationBranch, PublicReservationDay, CreatePublicReservationInput,
+  PublicReservationBranch, PublicReservationToday, CreatePublicReservationInput,
   PublicReservationResult, PublicReservationDetail,
 } from '@/types';
 
 export interface ReservationPublicRepo {
   getBranches(): Promise<PublicReservationBranch[]>;
-  getAvailability(branchId: string, date: string): Promise<PublicReservationDay>;
+  getToday(branchId: string): Promise<PublicReservationToday>;
   create(input: CreatePublicReservationInput): Promise<PublicReservationResult>;
   track(code: string, phone: string): Promise<PublicReservationDetail>;
   cancel(code: string, phone: string): Promise<void>;

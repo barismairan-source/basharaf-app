@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApiError, handleError } from '@/lib/api-error';
-import { isValidJalaliString } from '@/lib/jalali';
 import { normalizeIranPhone } from '@/lib/sms/phone';
 import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
 import { createPublicReservation } from '@/lib/reservations/publicReservations';
@@ -19,7 +18,6 @@ const bodySchema = z.object({
     }
     return normalized;
   }),
-  date: z.string().refine(isValidJalaliString, 'تاریخ نامعتبر است'),
   time: z.string().regex(/^\d{1,2}:\d{2}$/, 'ساعت نامعتبر است'),
   partySize: z.number().int().positive().max(100),
   note: z.string().trim().max(300).optional(),

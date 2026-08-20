@@ -2,28 +2,26 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CalendarClock, CheckCircle2, ChevronLeft, Loader2, Minus, Phone, Plus, User } from 'lucide-react';
-import { Button, Card, CardBody, Empty, Field, Input, JalaliDatePicker, Select, Textarea } from '@/components/ui';
-import { normalizeDigits, toFa, cn } from '@/lib/utils';
-import { getTodayJalali } from '@/lib/jalali';
+import { CheckCircle2, Loader2, Minus, Phone, PhoneCall, Plus, User } from 'lucide-react';
+import { Button, Card, CardBody, Empty, Field, Input, Select, Textarea } from '@/components/ui';
+import { normalizeDigits, toFa } from '@/lib/utils';
 import { reservationPublicRepo } from '@/lib/repos/reservationPublic.api';
-import type { PublicReservationBranch, PublicReservationDay, PublicReservationResult } from '@/types';
+import type { PublicReservationBranch, PublicReservationToday, PublicReservationResult } from '@/types';
 
 export default function PublicReservePage() {
   const [branches, setBranches] = useState<PublicReservationBranch[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [branchId, setBranchId] = useState('');
-  const [date, setDate] = useState(getTodayJalali());
   const [time, setTime] = useState('');
   const [partySize, setPartySize] = useState(2);
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [note, setNote] = useState('');
 
-  const [day, setDay] = useState<PublicReservationDay | null>(null);
-  const [dayLoading, setDayLoading] = useState(false);
-  const [dayError, setDayError] = useState<string | null>(null);
+  const [today, setToday] = useState<PublicReservationToday | null>(null);
+  const [todayLoading, setTodayLoading] = useState(false);
+  const [todayError, setTodayError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -41,28 +39,27 @@ export default function PublicReservePage() {
   }, []);
 
   useEffect(() => {
-    if (!branchId || !date) { setDay(null); return; }
-    setDayLoading(true);
-    setDayError(null);
-    setTime('');
-    reservationPublicRepo.getAvailability(branchId, date)
-      .then(setDay)
-      .catch((e: Error) => setDayError(e.message))
-      .finally(() => setDayLoading(false));
-  }, [branchId, date]);
+    if (!branchId) { setToday(null); return; }
+    setTodayLoading(true);
+    setTodayError(null);
+    reservationPublicRepo.getToday(branchId)
+      .then(setToday)
+      .catch((e: Error) => setTodayError(e.message))
+      .finally(() => setTodayLoading(false));
+  }, [branchId]);
 
   useEffect(() => {
     if (branch && partySize > branch.maxPartySize) setPartySize(branch.maxPartySize);
   }, [branch, partySize]);
 
   async function handleSubmit() {
-    if (!branchId || !date || !time) return;
+    if (!branchId || !time.trim()) return;
     if (guestName.trim().length < 2) { setSubmitError('نام را کامل وارد کنید'); return; }
     setSubmitting(true);
     setSubmitError(null);
     try {
       const res = await reservationPublicRepo.create({
-        branchId, date, time, partySize,
+        branchId, time: time.trim(), partySize,
         guestName: guestName.trim(),
         guestPhone: normalizeDigits(guestPhone.trim()),
         note: note.trim() || undefined,
@@ -122,7 +119,7 @@ export default function PublicReservePage() {
   return (
     <div className="mx-auto max-w-md px-4 pb-24 pt-6 sm:px-6">
       <div className="mb-6 text-center">
-        <div className="text-[18px] font-medium text-stone-900">رزرو میز</div>
+        <div className="text-[18px] font-medium text-stone-900">رزرو میز — امروز</div>
         <div className="text-[12.5px] text-muted mt-1">با شرف</div>
       </div>
 
@@ -136,51 +133,46 @@ export default function PublicReservePage() {
           </Field>
         )}
 
-        {branchId && (
-          <Field label="تاریخ">
-            <JalaliDatePicker value={date} onChange={setDate} />
-          </Field>
-        )}
-
-        {branchId && date && (
-          <div>
-            <div className="text-xs font-medium text-gray-500 mb-1.5 flex items-center gap-1.5">
-              <CalendarClock size={13} strokeWidth={1.5} />
-              ساعت
-            </div>
-            {dayLoading && <div className="text-[12px] text-muted py-3 flex items-center gap-1.5"><Loader2 size={13} className="animate-spin" /> در حال بررسی ظرفیت...</div>}
-            {dayError && <div className="text-[12px] text-rose-600 py-2">{dayError}</div>}
-            {day && !day.dateBookable && (
-              <div className="text-[12px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">{day.dateReason ?? 'این تاریخ قابل رزرو نیست'}</div>
-            )}
-            {day && day.dateBookable && day.slots.length === 0 && (
-              <div className="text-[12px] text-muted py-2">اسلات فعالی برای این روز تعریف نشده</div>
-            )}
-            {day && day.dateBookable && day.slots.length > 0 && (
-              <div className="grid grid-cols-4 gap-2">
-                {day.slots.map((s) => (
-                  <button
-                    key={s.time}
-                    type="button"
-                    disabled={!s.available}
-                    onClick={() => setTime(s.time)}
-                    className={cn(
-                      'h-10 rounded-lg text-[12.5px] tabular-nums border transition-colors',
-                      !s.available && 'opacity-40 cursor-not-allowed border-stone-100 text-muted line-through',
-                      s.available && time === s.time && 'border-accent bg-accent/10 text-accent font-medium',
-                      s.available && time !== s.time && 'border-stone-200 text-stone-700 hover:border-stone-300',
-                    )}
-                  >
-                    {toFa(s.time)}
-                  </button>
-                ))}
-              </div>
-            )}
+        {branchId && todayLoading && (
+          <div className="text-[12px] text-muted py-6 flex items-center justify-center gap-1.5">
+            <Loader2 size={13} className="animate-spin" /> در حال بررسی ظرفیت...
           </div>
         )}
 
-        {time && branch && (
+        {branchId && todayError && (
+          <div className="text-[12.5px] text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{todayError}</div>
+        )}
+
+        {branchId && today && !today.open && (
+          <Card>
+            <CardBody className="text-center space-y-3 py-6">
+              <div className="text-[14px] text-stone-800">
+                {today.closedMessage ?? 'رزرو امروز بسته است'}
+              </div>
+              {today.closedPhone && (
+                <a
+                  href={`tel:${today.closedPhone}`}
+                  className="inline-flex items-center gap-1.5 text-[13.5px] text-accent font-medium"
+                  dir="ltr"
+                >
+                  <PhoneCall size={14} strokeWidth={1.5} />
+                  {today.closedPhone}
+                </a>
+              )}
+            </CardBody>
+          </Card>
+        )}
+
+        {branchId && today && today.open && branch && (
           <>
+            <div className="text-[11.5px] text-muted text-center">
+              {toFa(String(today.remainingTables))} میز آزاد برای امروز
+            </div>
+
+            <Field label="ساعت مراجعه">
+              <Input dir="ltr" placeholder="19:30" value={time} onChange={(e) => setTime(e.target.value)} />
+            </Field>
+
             <Field label="تعداد نفرات">
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => setPartySize((n) => Math.max(1, n - 1))}
@@ -212,7 +204,7 @@ export default function PublicReservePage() {
 
             {submitError && <div className="text-[12.5px] text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{submitError}</div>}
 
-            <Button variant="primary" className="w-full" loading={submitting} onClick={handleSubmit}>
+            <Button variant="primary" className="w-full" loading={submitting} disabled={!time.trim()} onClick={handleSubmit}>
               ثبت رزرو
             </Button>
           </>
@@ -222,7 +214,6 @@ export default function PublicReservePage() {
       <div className="mt-8 text-center">
         <Link href="/reserve/track" className="inline-flex items-center gap-1 text-[12.5px] text-muted hover:text-stone-700">
           پیگیری رزرو قبلی
-          <ChevronLeft size={13} strokeWidth={1.5} />
         </Link>
       </div>
     </div>

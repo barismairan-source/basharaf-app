@@ -39,17 +39,6 @@ const STATUS_TONE: Record<string, 'neutral' | 'amber' | 'green' | 'red'> = {
   no_show: 'red',
 };
 
-/** قرارداد JS Date.getDay(): 0=یکشنبه..6=شنبه — همان چیزی که lib/reservations/capacity.ts می‌خواند. */
-const WEEK_DAYS = [
-  { value: 6, label: 'شنبه' },
-  { value: 0, label: 'یکشنبه' },
-  { value: 1, label: 'دوشنبه' },
-  { value: 2, label: 'سه‌شنبه' },
-  { value: 3, label: 'چهارشنبه' },
-  { value: 4, label: 'پنجشنبه' },
-  { value: 5, label: 'جمعه' },
-];
-
 const NEXT_STATES: Record<string, ReservationStatus[]> = {
   pending: ['confirmed', 'seated', 'cancelled', 'no_show'],
   confirmed: ['seated', 'cancelled', 'no_show'],
@@ -96,7 +85,6 @@ export default function ReservationsPage() {
   const [settingsBranch, setSettingsBranch] = useState('');
   const [settingsForm, setSettingsForm] = useState<Omit<ReservationSettingsDTO, 'id' | 'branchId' | 'updatedAt'> | null>(null);
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [blackoutText, setBlackoutText] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editFields, setEditFields] = useState({ tableId: '', date: '', time: '', partySize: '', note: '' });
   const [editSaving, setEditSaving] = useState(false);
@@ -143,14 +131,12 @@ export default function ReservationsPage() {
     if (!reservationSettings) return;
     const { id: _id, branchId: _branchId, updatedAt: _updatedAt, ...rest } = reservationSettings;
     setSettingsForm(rest);
-    setBlackoutText(rest.blackoutDates.join('\n'));
   }, [reservationSettings]);
 
   async function handleSaveSettings() {
     if (!settingsForm || !activeSettingsBranch) return;
     setSettingsSaving(true);
-    const blackoutDates = blackoutText.split('\n').map((s) => s.trim()).filter(Boolean);
-    const ok = await saveReservationSettings(isAdmin ? activeSettingsBranch : null, { ...settingsForm, blackoutDates });
+    const ok = await saveReservationSettings(isAdmin ? activeSettingsBranch : null, settingsForm);
     setSettingsSaving(false);
     showToast(ok ? 'تنظیمات ذخیره شد' : 'خطا در ذخیره‌ی تنظیمات', ok ? 'success' : 'danger');
   }
@@ -310,10 +296,10 @@ export default function ReservationsPage() {
           </div>
         </div>
 
-        {/* Public booking settings */}
+        {/* Public booking settings — مدل ساده: فقط امروز + ظرفیت بر اساس تعداد میز */}
         {showSettings && (
           <Card>
-            <CardHeader title="تنظیمات رزرو آنلاین" sub="اگر فعال شود، این شعبه در صفحه‌ی عمومی /reserve دیده می‌شود" />
+            <CardHeader title="تنظیمات رزرو آنلاین" sub="فقط برای «امروز» — هر روز خودتان روشن/خاموش می‌کنید" />
             <CardBody className="space-y-4">
               {isAdmin && (
                 <Field label="شعبه">
@@ -328,68 +314,44 @@ export default function ReservationsPage() {
                 <>
                   <div className="flex items-center justify-between bg-stone-50 rounded-lg px-3 py-2.5">
                     <div>
-                      <div className="text-[13px] text-stone-800">فعال‌بودن رزرو آنلاین</div>
-                      <div className="text-[11px] text-muted mt-0.5">مهمان‌ها می‌توانند بدون عضویت رزرو کنند</div>
+                      <div className="text-[13px] text-stone-800">امروز رزرو باز است</div>
+                      <div className="text-[11px] text-muted mt-0.5">هر روز باید خودتان دوباره روشن کنید</div>
                     </div>
                     <Switch
                       checked={settingsForm.isPublicEnabled}
                       onCheckedChange={(v) => setSettingsForm((f) => f && { ...f, isPublicEnabled: v })}
-                      aria-label="فعال‌بودن رزرو آنلاین"
+                      aria-label="امروز رزرو باز است"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <Field label="ساعت شروع">
-                      <Input dir="ltr" value={settingsForm.openTime} onChange={(e) => setSettingsForm((f) => f && { ...f, openTime: e.target.value })} placeholder="12:00" />
-                    </Field>
-                    <Field label="ساعت پایان">
-                      <Input dir="ltr" value={settingsForm.closeTime} onChange={(e) => setSettingsForm((f) => f && { ...f, closeTime: e.target.value })} placeholder="23:00" />
-                    </Field>
-                    <Field label="طول هر اسلات (دقیقه)">
-                      <Input dir="ltr" inputMode="numeric" value={String(settingsForm.slotMinutes)} onChange={(e) => setSettingsForm((f) => f && { ...f, slotMinutes: num(e.target.value) })} />
-                    </Field>
-                    <Field label="ظرفیت هر اسلات (نفر)">
-                      <Input dir="ltr" inputMode="numeric" value={String(settingsForm.slotCapacityGuests)} onChange={(e) => setSettingsForm((f) => f && { ...f, slotCapacityGuests: num(e.target.value) })} />
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    <Field label="تعداد میز" hint="ظرفیت امروز">
+                      <Input dir="ltr" inputMode="numeric" value={String(settingsForm.tableCount)} onChange={(e) => setSettingsForm((f) => f && { ...f, tableCount: num(e.target.value) })} />
                     </Field>
                     <Field label="حداکثر نفرات هر رزرو">
                       <Input dir="ltr" inputMode="numeric" value={String(settingsForm.maxPartySize)} onChange={(e) => setSettingsForm((f) => f && { ...f, maxPartySize: num(e.target.value) })} />
-                    </Field>
-                    <Field label="حداقل فاصله تا رزرو (دقیقه)">
-                      <Input dir="ltr" inputMode="numeric" value={String(settingsForm.minLeadMinutes)} onChange={(e) => setSettingsForm((f) => f && { ...f, minLeadMinutes: num(e.target.value) })} />
-                    </Field>
-                    <Field label="حداکثر روزهای آینده">
-                      <Input dir="ltr" inputMode="numeric" value={String(settingsForm.maxLeadDays)} onChange={(e) => setSettingsForm((f) => f && { ...f, maxLeadDays: num(e.target.value) })} />
                     </Field>
                     <Field label="سقف رزرو فعال هر موبایل">
                       <Input dir="ltr" inputMode="numeric" value={String(settingsForm.maxActiveReservationsPerPhone)} onChange={(e) => setSettingsForm((f) => f && { ...f, maxActiveReservationsPerPhone: num(e.target.value) })} />
                     </Field>
                   </div>
 
-                  <Field label="روزهای فعال هفته (خالی = همه‌ی روزها)">
-                    <div className="flex flex-wrap gap-1.5">
-                      {WEEK_DAYS.map((d) => {
-                        const active = (settingsForm.workingDays ?? []).includes(d.value);
-                        return (
-                          <button
-                            key={d.value}
-                            type="button"
-                            onClick={() => setSettingsForm((f) => {
-                              if (!f) return f;
-                              const cur = f.workingDays ?? [];
-                              const next = cur.includes(d.value) ? cur.filter((v) => v !== d.value) : [...cur, d.value];
-                              return { ...f, workingDays: next.length === 0 ? null : next };
-                            })}
-                            className={`px-3 py-1.5 rounded-md text-[12px] border transition-colors ${active ? 'border-accent bg-accent/10 text-accent' : 'border-stone-200 text-stone-600'}`}
-                          >
-                            {d.label}
-                          </button>
-                        );
-                      })}
-                    </div>
+                  <Field label="متن وقتی رزرو بسته/تکمیل است" hint="مثلاً «رزرو امروز تکمیل شد، لطفاً تماس بگیرید»">
+                    <Textarea
+                      rows={2}
+                      value={settingsForm.closedMessage ?? ''}
+                      onChange={(e) => setSettingsForm((f) => f && { ...f, closedMessage: e.target.value })}
+                      placeholder="متن دلخواه شما..."
+                    />
                   </Field>
 
-                  <Field label="تاریخ‌های مسدود (هر خط یک تاریخ شمسی)" hint="مثلاً ۱۴۰۵/۰۱/۰۱">
-                    <Textarea rows={3} value={blackoutText} onChange={(e) => setBlackoutText(e.target.value)} placeholder="۱۴۰۵/۰۱/۰۱" dir="ltr" className="text-right" />
+                  <Field label="شماره تماس (وقتی بسته است نشان داده می‌شود)">
+                    <Input
+                      dir="ltr"
+                      value={settingsForm.closedPhone ?? ''}
+                      onChange={(e) => setSettingsForm((f) => f && { ...f, closedPhone: e.target.value })}
+                      placeholder="021xxxxxxxx"
+                    />
                   </Field>
 
                   <div className="flex justify-end">

@@ -12,16 +12,11 @@ function serialize(s: SettingsRow) {
     id: s.id,
     branchId: s.branchId,
     isPublicEnabled: s.isPublicEnabled,
-    workingDays: s.workingDays,
-    openTime: s.openTime,
-    closeTime: s.closeTime,
-    slotMinutes: s.slotMinutes,
-    slotCapacityGuests: s.slotCapacityGuests,
+    tableCount: s.tableCount,
     maxPartySize: s.maxPartySize,
-    minLeadMinutes: s.minLeadMinutes,
-    maxLeadDays: s.maxLeadDays,
-    blackoutDates: s.blackoutDates,
     maxActiveReservationsPerPhone: s.maxActiveReservationsPerPhone,
+    closedMessage: s.closedMessage,
+    closedPhone: s.closedPhone,
     updatedAt: s.updatedAt.toISOString(),
   };
 }
@@ -32,16 +27,11 @@ function defaults(branchId: string) {
     id: null as string | null,
     branchId,
     isPublicEnabled: false,
-    workingDays: null as number[] | null,
-    openTime: '12:00',
-    closeTime: '23:00',
-    slotMinutes: 30,
-    slotCapacityGuests: 40,
+    tableCount: 5,
     maxPartySize: 12,
-    minLeadMinutes: 60,
-    maxLeadDays: 30,
-    blackoutDates: [] as string[],
     maxActiveReservationsPerPhone: 3,
+    closedMessage: null as string | null,
+    closedPhone: null as string | null,
     updatedAt: null as string | null,
   };
 }
@@ -75,16 +65,11 @@ export async function GET(req: Request) {
 const putSchema = z.object({
   branchId: z.string().uuid().optional(),
   isPublicEnabled: z.boolean(),
-  workingDays: z.array(z.number().int().min(0).max(6)).nullable(),
-  openTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-  closeTime: z.string().regex(/^\d{1,2}:\d{2}$/),
-  slotMinutes: z.number().int().min(5).max(240),
-  slotCapacityGuests: z.number().int().min(1).max(2000),
+  tableCount: z.number().int().min(1).max(500),
   maxPartySize: z.number().int().min(1).max(200),
-  minLeadMinutes: z.number().int().min(0).max(10080),
-  maxLeadDays: z.number().int().min(1).max(365),
-  blackoutDates: z.array(z.string()).max(200),
   maxActiveReservationsPerPhone: z.number().int().min(1).max(50),
+  closedMessage: z.string().trim().max(300).nullable().optional(),
+  closedPhone: z.string().trim().max(20).nullable().optional(),
 });
 
 /** PUT /api/reservations/settings — ایجاد/به‌روزرسانی تنظیمات (upsert). */
@@ -94,23 +79,14 @@ export async function PUT(req: Request) {
     const input = putSchema.parse(await req.json());
     const branchId = resolveScopedBranchId(session, input.branchId ?? null);
 
-    if (input.closeTime <= input.openTime) {
-      throw new ApiError(400, 'ساعت پایان باید بعد از ساعت شروع باشد', 'INVALID_HOURS');
-    }
-
     const values = {
       branchId,
       isPublicEnabled: input.isPublicEnabled,
-      workingDays: input.workingDays,
-      openTime: input.openTime,
-      closeTime: input.closeTime,
-      slotMinutes: input.slotMinutes,
-      slotCapacityGuests: input.slotCapacityGuests,
+      tableCount: input.tableCount,
       maxPartySize: input.maxPartySize,
-      minLeadMinutes: input.minLeadMinutes,
-      maxLeadDays: input.maxLeadDays,
-      blackoutDates: input.blackoutDates,
       maxActiveReservationsPerPhone: input.maxActiveReservationsPerPhone,
+      closedMessage: input.closedMessage || null,
+      closedPhone: input.closedPhone || null,
     };
 
     const [row] = await db.insert(schema.reservationSettings).values(values)

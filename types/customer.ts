@@ -131,17 +131,13 @@ export type ReservationStatus =
 export interface ReservationSettingsDTO {
   id: string | null;
   branchId: string;
+  /** آیا امروز رزرو باز است — کلید دستی روزانه. */
   isPublicEnabled: boolean;
-  workingDays: number[] | null;
-  openTime: string;
-  closeTime: string;
-  slotMinutes: number;
-  slotCapacityGuests: number;
+  tableCount: number;
   maxPartySize: number;
-  minLeadMinutes: number;
-  maxLeadDays: number;
-  blackoutDates: string[];
   maxActiveReservationsPerPhone: number;
+  closedMessage: string | null;
+  closedPhone: string | null;
   updatedAt: string | null;
 }
 

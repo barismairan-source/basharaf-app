@@ -1724,25 +1724,30 @@ export const reservations = pgTable(
  * یک ردیف اختیاری per-branch. اگر ردیفی برای یک شعبه نباشد یا
  * isPublicEnabled=false باشد، آن شعبه در صفحه‌ی عمومی رزرو دیده نمی‌شود.
  */
+/**
+ * جدول reservation_settings — نسخه‌ی ساده‌شده (طبق بازخورد کاربر).
+ *
+ * مدل قبلی (اسلات زمانی/ساعت کاری/روزهای هفته/blackout/رزرو چند روز آینده)
+ * عمداً کنار گذاشته شد — کاربر فقط رزرو «همان روز» و ظرفیت بر اساس «تعداد
+ * میز» می‌خواست، نه یک تقویم از پیش زمان‌بندی‌شده. ستون‌های قدیمی هنوز در
+ * دیتابیس هستند (بی‌ضرر، دیگر خوانده نمی‌شوند) — ر.ک.
+ * db-reservations-daily-capacity.sql برای توضیح کامل.
+ */
 export const reservationSettings = pgTable(
   'reservation_settings',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'cascade' }),
+    /** آیا امروز رزرو باز است — کلید دستی که هر روز خود مدیر روشن/خاموش می‌کند. */
     isPublicEnabled: boolean('is_public_enabled').notNull().default(false),
-    /** روزهای فعال هفته — قرارداد JS Date.getDay(): 0=یکشنبه..6=شنبه. null یعنی همه‌ی روزها فعال. */
-    workingDays: jsonb('working_days').$type<number[] | null>(),
-    openTime: text('open_time').notNull().default('12:00'),   // 'HH:mm'
-    closeTime: text('close_time').notNull().default('23:00'), // 'HH:mm'
-    slotMinutes: integer('slot_minutes').notNull().default(30),
-    /** حداکثر مجموع نفرات در هر اسلات (ظرفیت رزرو، نه ظرفیت فیزیکی سالن) */
-    slotCapacityGuests: integer('slot_capacity_guests').notNull().default(40),
+    /** تعداد میز/ظرفیت امروز — بعد از این تعداد رزرو فعال، دیگر جا نیست. */
+    tableCount: integer('table_count').notNull().default(5),
     maxPartySize: integer('max_party_size').notNull().default(12),
-    minLeadMinutes: integer('min_lead_minutes').notNull().default(60),
-    maxLeadDays: integer('max_lead_days').notNull().default(30),
-    /** تاریخ‌های مسدود — رشته‌ی شمسی 'YYYY/MM/DD' */
-    blackoutDates: jsonb('blackout_dates').$type<string[]>().notNull().default([]),
     maxActiveReservationsPerPhone: integer('max_active_reservations_per_phone').notNull().default(3),
+    /** متن دلخواه مدیر — وقتی رزرو بسته/تکمیل است به مهمان نشان داده می‌شود. */
+    closedMessage: text('closed_message'),
+    /** شماره‌ی تماس نمایش‌داده‌شده در همان حالت بسته/تکمیل. */
+    closedPhone: text('closed_phone'),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull().defaultNow().$onUpdate(() => new Date()),
   },

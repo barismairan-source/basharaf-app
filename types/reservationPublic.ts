@@ -2,36 +2,31 @@
  * انواع صفحه‌ی عمومی رزرو (/reserve) — مطابق سبک types/ordering.ts (PublicOrder*).
  * این‌ها مستقل از Reservation داخلی (types/customer.ts) هستند، چون فیلدهای
  * قابل‌مشاهده برای مهمان ناشناس محدودتر است (بدون جزئیات رزروهای دیگران).
+ *
+ * مدل «فقط امروز»: هیچ تاریخ آینده‌ای انتخاب نمی‌شود — سرور همیشه تاریخ
+ * امروز را برمی‌گرداند/ثبت می‌کند.
  */
 
 export interface PublicReservationBranch {
   id: string;
   name: string;
   maxPartySize: number;
-  minLeadMinutes: number;
-  maxLeadDays: number;
 }
 
-export interface PublicReservationSlot {
-  time: string;           // 'HH:mm'
-  available: boolean;
-  remainingGuests: number;
-}
-
-export interface PublicReservationDay {
+export interface PublicReservationToday {
   branch: PublicReservationBranch;
-  date: string;            // Jalali 'YYYY/MM/DD'
-  slots: PublicReservationSlot[];
-  /** false یعنی کل روز قابل رزرو نیست (blackout/تعطیل/خارج از بازه) — dateReason توضیح می‌دهد. */
-  dateBookable: boolean;
-  dateReason?: string;
+  date: string;              // Jalali 'YYYY/MM/DD' — امروز
+  open: boolean;
+  remainingTables: number;
+  /** فقط وقتی open=false پر می‌شود — متن/شماره‌ی دلخواه مدیر. */
+  closedMessage: string | null;
+  closedPhone: string | null;
 }
 
 export interface CreatePublicReservationInput {
   branchId: string;
   guestName: string;
   guestPhone: string;
-  date: string;             // Jalali
   time: string;              // 'HH:mm'
   partySize: number;
   note?: string;
