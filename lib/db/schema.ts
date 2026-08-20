@@ -1692,7 +1692,20 @@ export const reservations = pgTable(
     partySize: integer('party_size').notNull().default(1),
     status: text('status').notNull().default('pending'), // pending|confirmed|seated|cancelled|no_show
     note: text('note'),
-    createdBy: uuid('created_by').notNull().references(() => users.id, { onDelete: 'restrict' }),
+    // ── سیستم رزرو عمومی (فاز ۱) ──────────────────────────────────
+    /** مهمان بدون عضویت — وقتی customerId خالی است هر دو الزامی‌اند (چک در API). */
+    guestName: text('guest_name'),
+    guestPhone: text('guest_phone'),
+    /** کد پیگیری کوتاه — فقط برای رزروهای عمومی تولید می‌شود، یکتا. */
+    trackingCode: text('tracking_code'),
+    canceledReason: text('canceled_reason'),
+    /** 'staff' = ثبت‌شده در پنل مدیریت | 'public' = ثبت‌شده از صفحه‌ی عمومی */
+    source: text('source').notNull().default('staff'),
+    /** ستون سیستمی timestamptz برای query/مرتب‌سازی — از date+time شمسی هنگام ثبت محاسبه می‌شود. */
+    reserveAt: timestamp('reserve_at', { withTimezone: true }),
+    // ───────────────────────────────────────────────────────────────
+    /** برای رزرو عمومی کاربری وجود ندارد که ثبت‌کننده باشد. */
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({
@@ -1700,8 +1713,45 @@ export const reservations = pgTable(
     customerIdx: index('reservations_customer_idx').on(t.customerId),
     statusIdx: index('reservations_status_idx').on(t.status),
     branchDateIdx: index('reservations_branch_date_idx').on(t.branchId, t.date),
+    trackingCodeUniq: uniqueIndex('reservations_tracking_code_uniq')
+      .on(t.trackingCode)
+      .where(sql`${t.trackingCode} IS NOT NULL`),
   })
 );
+
+// ─── reservation_settings — تنظیمات رزرو عمومی هر شعبه ────────────
+/**
+ * یک ردیف اختیاری per-branch. اگر ردیفی برای یک شعبه نباشد یا
+ * isPublicEnabled=false باشد، آن شعبه در صفحه‌ی عمومی رزرو دیده نمی‌شود.
+ */
+export const reservationSettings = pgTable(
+  'reservation_settings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'cascade' }),
+    isPublicEnabled: boolean('is_public_enabled').notNull().default(false),
+    /** روزهای فعال هفته — قرارداد JS Date.getDay(): 0=یکشنبه..6=شنبه. null یعنی همه‌ی روزها فعال. */
+    workingDays: jsonb('working_days').$type<number[] | null>(),
+    openTime: text('open_time').notNull().default('12:00'),   // 'HH:mm'
+    closeTime: text('close_time').notNull().default('23:00'), // 'HH:mm'
+    slotMinutes: integer('slot_minutes').notNull().default(30),
+    /** حداکثر مجموع نفرات در هر اسلات (ظرفیت رزرو، نه ظرفیت فیزیکی سالن) */
+    slotCapacityGuests: integer('slot_capacity_guests').notNull().default(40),
+    maxPartySize: integer('max_party_size').notNull().default(12),
+    minLeadMinutes: integer('min_lead_minutes').notNull().default(60),
+    maxLeadDays: integer('max_lead_days').notNull().default(30),
+    /** تاریخ‌های مسدود — رشته‌ی شمسی 'YYYY/MM/DD' */
+    blackoutDates: jsonb('blackout_dates').$type<string[]>().notNull().default([]),
+    maxActiveReservationsPerPhone: integer('max_active_reservations_per_phone').notNull().default(3),
+    updatedAt: timestamp('updated_at', { withTimezone: true })
+      .notNull().defaultNow().$onUpdate(() => new Date()),
+  },
+  (t) => ({
+    branchUniq: uniqueIndex('reservation_settings_branch_uniq').on(t.branchId),
+  })
+);
+
+export type ReservationSettings = typeof reservationSettings.$inferSelect;
 
 export const feedback = pgTable(
   'feedback',

@@ -21,6 +21,7 @@ const patchSchema = z.object({
   partySize: z.number().int().positive().optional(),
   note: z.string().max(300).nullable().optional(),
   status: z.enum(['pending', 'confirmed', 'seated', 'cancelled', 'no_show']).optional(),
+  canceledReason: z.string().max(300).nullable().optional(),
 });
 
 function ensureScope(role: string, branchId: string | null, resBranch: string): void {
@@ -33,6 +34,9 @@ function ensureScope(role: string, branchId: string | null, resBranch: string): 
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireSession();
+    if (session.role === 'Warehouse' || session.role === 'Chef') {
+      throw new ApiError(403, 'دسترسی به رزرو میز ندارید', 'FORBIDDEN');
+    }
     const [existing] = await db
       .select()
       .from(schema.reservations)
@@ -82,6 +86,9 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireSession();
+    if (session.role === 'Warehouse' || session.role === 'Chef') {
+      throw new ApiError(403, 'دسترسی به رزرو میز ندارید', 'FORBIDDEN');
+    }
     const [existing] = await db
       .select()
       .from(schema.reservations)

@@ -71,6 +71,11 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
       partySize: params.partySize ?? 1,
       status: 'pending',
       note: params.note ?? null,
+      guestName: null,
+      guestPhone: null,
+      trackingCode: null,
+      canceledReason: null,
+      source: 'staff',
       createdBy: '',
       createdAt: new Date().toISOString(),
     };

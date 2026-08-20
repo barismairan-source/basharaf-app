@@ -25,6 +25,7 @@ export type SectionKey =
   | 'orders'
   | 'recruitment'
   | 'hr'
+  | 'reservations'
   | 'logs'
   | 'anomaly'
   | 'settings';
@@ -60,6 +61,9 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   // «منابع انسانی» — استخدام+پرسنل+شیفت+حضور+حقوق یکپارچه، زیر /hr/*.
   // دسترسی granular‌تر (کدام زیربخش/عملیات) با کلیدهای hr.* در CAPABILITIES.
   { key: 'hr',           label: 'منابع انسانی',      defaultRoles: ['SuperAdmin', 'BranchUser'] },
+  // فاز ۱ سیستم رزرو عمومی — این section از قبل در sectionForPath وجود نداشت
+  // (یافته‌ی ممیزی: /reservations فقط login می‌خواست، هیچ نقشی محدود نمی‌شد).
+  { key: 'reservations', label: 'رزرو میز',          defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'logs',         label: 'لاگ سیستم',         defaultRoles: ['SuperAdmin'] },
   { key: 'anomaly',      label: 'دستیار مالی',         defaultRoles: ['SuperAdmin'] },
   { key: 'settings',     label: 'تنظیمات',           defaultRoles: ['SuperAdmin', 'BranchUser'] },
@@ -193,6 +197,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (pathname.startsWith('/menu')) return 'menu';
   if (pathname.startsWith('/orders')) return 'orders';
   if (pathname.startsWith('/recruitment')) return 'recruitment';
+  if (pathname.startsWith('/reservations')) return 'reservations';
   if (pathname.startsWith('/logs')) return 'logs';
   if (pathname.startsWith('/anomaly')) return 'anomaly';
   if (pathname.startsWith('/settings')) return 'settings';

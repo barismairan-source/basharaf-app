@@ -21,6 +21,7 @@ export type RuleCategory =
   | 'انبار و خرید'
   | 'چک‌ها'
   | 'استخدام'
+  | 'رزرو'
   | 'دستیار مالی'
   | 'سیستم';
 
@@ -199,6 +200,22 @@ export const RULE_CATALOG: readonly RuleCatalogEntry[] = [
     requiredCapability: null,
     branchAware: false,
     sensitivity: 'medium',
+    audienceConfigurable: true,
+  },
+  {
+    key: 'reservations.new_public',
+    title: 'رزرو عمومی جدید',
+    description: 'اعلان وقتی مهمان از صفحه‌ی عمومی رزرو ثبت می‌کند.',
+    category: 'رزرو',
+    trigger: 'ثبت یک رزرو جدید در صفحه‌ی عمومی /reserve.',
+    channels: ['push'],
+    supportsInApp: true,
+    thresholdType: null,
+    thresholdUnit: null,
+    requiredSection: 'reservations',
+    requiredCapability: null,
+    branchAware: true,
+    sensitivity: 'low',
     audienceConfigurable: true,
   },
   {

@@ -28,6 +28,11 @@ function serialize(r: ResRow) {
     partySize: r.partySize,
     status: r.status,
     note: r.note,
+    guestName: r.guestName,
+    guestPhone: r.guestPhone,
+    trackingCode: r.trackingCode,
+    canceledReason: r.canceledReason,
+    source: r.source,
     createdBy: r.createdBy,
     createdAt: r.createdAt.toISOString(),
   };
@@ -36,6 +41,9 @@ function serialize(r: ResRow) {
 export async function GET() {
   try {
     const session = await requireSession();
+    if (session.role === 'Warehouse' || session.role === 'Chef') {
+      throw new ApiError(403, 'دسترسی به رزرو میز ندارید', 'FORBIDDEN');
+    }
     if (session.role !== 'SuperAdmin' && !session.branchId) {
       return NextResponse.json({ reservations: [] });
     }
@@ -58,6 +66,9 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
+    if (session.role === 'Warehouse' || session.role === 'Chef') {
+      throw new ApiError(403, 'دسترسی به رزرو میز ندارید', 'FORBIDDEN');
+    }
     const input = createSchema.parse(await req.json());
 
     const branchId =

@@ -46,7 +46,13 @@ export interface Reservation {
   partySize: number;
   status: 'pending' | 'confirmed' | 'seated' | 'cancelled' | 'no_show' | string;
   note: string | null;
-  createdBy: string;
+  /** فقط برای مهمانِ بدون عضویت (customerId=null) — از صفحه‌ی عمومی رزرو */
+  guestName: string | null;
+  guestPhone: string | null;
+  trackingCode: string | null;
+  canceledReason: string | null;
+  source: 'staff' | 'public' | string;
+  createdBy: string | null;
   createdAt: string;
 }
 
