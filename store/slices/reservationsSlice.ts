@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { Reservation, ReservationStatus, RestaurantTable } from '@/types';
+import type { Reservation, ReservationStatus, RestaurantTable, ReservationSettingsDTO } from '@/types';
 
 /**
  * ReservationsSlice — رزرو میز + مدیریت میزها (branch-scoped، CRUD optimistic).
@@ -10,6 +10,7 @@ export interface ReservationsSlice {
   reservationsError: string | null;
   tables: RestaurantTable[];
   tablesLoaded: boolean;
+  reservationSettings: ReservationSettingsDTO | null;
 
   loadReservations: () => Promise<void>;
   createReservation: (params: {
@@ -39,6 +40,12 @@ export interface ReservationsSlice {
     branchId?: string | null;
   }) => Promise<RestaurantTable | null>;
   deleteTable: (id: string) => Promise<boolean>;
+
+  loadReservationSettings: (branchId: string) => Promise<void>;
+  saveReservationSettings: (
+    branchId: string | null,
+    patch: Omit<ReservationSettingsDTO, 'id' | 'branchId' | 'updatedAt'>,
+  ) => Promise<boolean>;
 }
 
 export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, get) => ({
@@ -47,6 +54,7 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
   reservationsError: null,
   tables: [],
   tablesLoaded: false,
+  reservationSettings: null,
 
   async loadReservations() {
     try {
@@ -202,6 +210,35 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
       return true;
     } catch {
       set({ tables: snapshot });
+      return false;
+    }
+  },
+
+  async loadReservationSettings(branchId) {
+    try {
+      const qs = new URLSearchParams({ branchId });
+      const res = await fetch(`/api/reservations/settings?${qs}`, { credentials: 'include' });
+      if (!res.ok) return;
+      const { settings } = (await res.json()) as { settings: ReservationSettingsDTO };
+      set({ reservationSettings: settings });
+    } catch {
+      /* ignore */
+    }
+  },
+
+  async saveReservationSettings(branchId, patch) {
+    try {
+      const res = await fetch('/api/reservations/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ branchId: branchId ?? undefined, ...patch }),
+      });
+      if (!res.ok) return false;
+      const { settings } = (await res.json()) as { settings: ReservationSettingsDTO };
+      set({ reservationSettings: settings });
+      return true;
+    } catch {
       return false;
     }
   },

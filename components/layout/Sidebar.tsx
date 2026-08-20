@@ -89,13 +89,22 @@ export function SidebarContent({
   const user = useAppStore((s) => s.user);
   const logout = useAppStore((s) => s.logout);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [anomalyCount, setAnomalyCount] = useState(0);
+  /** شمارنده‌ی badge هر آیتم — کلید href، مقدار عدد. چند fetch جدا هرکدام کلید خودشان را می‌نویسند. */
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!user || user.role !== 'SuperAdmin') return;
     fetch('/api/anomaly/findings/counts')
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data?.high) setAnomalyCount(data.high); })
+      .then((data) => { if (data?.high) setBadgeCounts((prev) => ({ ...prev, '/anomaly': data.high })); })
+      .catch(() => {});
+  }, [user, pathname]);
+
+  useEffect(() => {
+    if (!user || (user.role !== 'SuperAdmin' && user.role !== 'BranchUser')) return;
+    fetch('/api/reservations/pending-count')
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (typeof data?.count === 'number') setBadgeCounts((prev) => ({ ...prev, '/reservations': data.count })); })
       .catch(() => {});
   }, [user, pathname]);
 
@@ -201,7 +210,7 @@ export function SidebarContent({
                       pathname={pathname}
                       collapsed={collapsed}
                       onNavClick={onNavClick}
-                      badge={item.hasBadge ? anomalyCount : undefined}
+                      badge={item.hasBadge ? badgeCounts[item.href] : undefined}
                     />
                   ))}
                 </ul>

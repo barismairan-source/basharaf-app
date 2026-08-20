@@ -65,7 +65,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
     label: 'روابط و منابع',
     items: [
       { href: '/customers',    label: 'امور مشتریان',  icon: UserCircle,    roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
-      { href: '/reservations', label: 'رزرو میز',      icon: CalendarClock, roles: ['SuperAdmin', 'BranchUser'] },
+      { href: '/reservations', label: 'رزرو میز',      icon: CalendarClock, roles: ['SuperAdmin', 'BranchUser'], hasBadge: true },
       { href: '/coupons',      label: 'کوپن‌ها',        icon: Ticket,        roles: ['SuperAdmin'], rarely: true },
       { href: '/partners',     label: 'شرکا',           icon: Handshake,     roles: ['SuperAdmin'], rarely: true },
     ],

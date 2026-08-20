@@ -19,7 +19,7 @@ export type { MenuCategory, MenuItem, MenuSection, MenuSettings } from './menu';
 export type {
   Customer, CustomerTier, LoyaltyEntry, Reservation, ReservationStatus,
   Feedback, CustomerDetail, Coupon, CouponRedemption, CouponDiscountType,
-  CouponValidationResult, RestaurantTable, FeedbackSummaryRow,
+  CouponValidationResult, RestaurantTable, FeedbackSummaryRow, ReservationSettingsDTO,
 } from './customer';
 export * from './payroll';
 export * from './inventory';

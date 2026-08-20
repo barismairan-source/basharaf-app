@@ -127,6 +127,24 @@ export type ReservationStatus =
   | 'no_show'
   | string;
 
+/** تنظیمات رزرو عمومی یک شعبه — خروجی GET/PUT /api/reservations/settings. */
+export interface ReservationSettingsDTO {
+  id: string | null;
+  branchId: string;
+  isPublicEnabled: boolean;
+  workingDays: number[] | null;
+  openTime: string;
+  closeTime: string;
+  slotMinutes: number;
+  slotCapacityGuests: number;
+  maxPartySize: number;
+  minLeadMinutes: number;
+  maxLeadDays: number;
+  blackoutDates: string[];
+  maxActiveReservationsPerPhone: number;
+  updatedAt: string | null;
+}
+
 export interface RestaurantTable {
   id: string;
   branchId: string;
