@@ -11,6 +11,7 @@ interface PayrollReadiness {
   ready: boolean;
   criticalErrors: string[];
   warnings: string[];
+  employeesWithInvalidRate: Array<{ employeeId: string; employeeName: string; reason: string }>;
 }
 
 const STATUS_LABELS: Record<string, { label: string; tone: string }> = {
@@ -297,6 +298,16 @@ export default function PayrollPage() {
                           <ul className="list-disc pr-4">
                             {readiness[run.id]!.criticalErrors.map((e, i) => <li key={i}>{e}</li>)}
                           </ul>
+                          {readiness[run.id]!.employeesWithInvalidRate.length > 0 && (
+                            <ul className="list-disc pr-4 mt-1.5 pt-1.5 border-t border-rose-200/60">
+                              {readiness[run.id]!.employeesWithInvalidRate.map(e => (
+                                <li key={e.employeeId}>
+                                  <span className="font-medium">{e.employeeName}</span>
+                                  <span className="text-rose-700/80"> — {e.reason}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
                         </InlineNotice>
                       )}
                       {readiness[run.id] && readiness[run.id]!.ready && readiness[run.id]!.warnings.length > 0 && (run.status === 'draft' || run.status === 'calculated') && (
