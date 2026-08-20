@@ -131,9 +131,12 @@ export type ReservationStatus =
 export interface ReservationSettingsDTO {
   id: string | null;
   branchId: string;
-  /** آیا امروز رزرو باز است — کلید دستی روزانه. */
-  isPublicEnabled: boolean;
-  tableCount: number;
+  lunchEnabled: boolean;
+  lunchStartHour: number;
+  lunchEndHour: number;
+  dinnerEnabled: boolean;
+  dinnerStartHour: number;
+  dinnerEndHour: number;
   maxPartySize: number;
   maxActiveReservationsPerPhone: number;
   closedMessage: string | null;
@@ -147,6 +150,8 @@ export interface RestaurantTable {
   name: string;
   capacity: number;
   area: string | null;
+  /** میز اشتراکی/سوشیال — چند رزرو جدا می‌توانند هم‌زمان روی آن بنشینند. */
+  isSocial: boolean;
   isActive: boolean;
   createdAt: string;
 }

@@ -3,10 +3,10 @@ import { db, schema } from '@/lib/db/client';
 import { ApiError } from '@/lib/api-error';
 import { getTodayJalali } from '@/lib/jalali';
 import { generateTrackingCode } from './trackingCode';
-import { jalaliSlotToDate, computeTodayAvailability, CAPACITY_HOLDING_STATUSES } from './capacity';
+import { jalaliSlotToDate, generateTodaySlots, findTableForSlot, CAPACITY_HOLDING_STATUSES } from './capacity';
 import { fireReservationNotification } from './adminAlert';
 import type {
-  CreatePublicReservationInput, PublicReservationBranch, PublicReservationToday,
+  CreatePublicReservationInput, PublicReservationBranch, PublicReservationToday, PublicReservationSlot,
   PublicReservationResult, PublicReservationDetail,
 } from '@/types';
 
@@ -25,16 +25,23 @@ export async function getPublicReservationBranches(): Promise<PublicReservationB
   return rows;
 }
 
-async function countActiveToday(tx: DbOrTx, branchId: string, date: string): Promise<number> {
-  const rows = await tx
-    .select({ status: schema.reservations.status })
-    .from(schema.reservations)
-    .where(and(eq(schema.reservations.branchId, branchId), eq(schema.reservations.date, date)));
-  return rows.filter((r: { status: string }) => (CAPACITY_HOLDING_STATUSES as readonly string[]).includes(r.status)).length;
+async function loadActiveTables(tx: DbOrTx, branchId: string) {
+  return tx.select().from(schema.restaurantTables)
+    .where(and(eq(schema.restaurantTables.branchId, branchId), eq(schema.restaurantTables.isActive, true)));
 }
 
-/** وضعیت «امروز» یک شعبه — باز/بسته + ظرفیت باقی‌مانده + متن/شماره‌ی بسته‌بودن (اگر بسته باشد). */
-export async function getTodayReservationStatus(branchId: string): Promise<PublicReservationToday> {
+async function loadTodayReservations(tx: DbOrTx, branchId: string, date: string) {
+  return tx.select({
+    tableId: schema.reservations.tableId,
+    time: schema.reservations.time,
+    partySize: schema.reservations.partySize,
+    status: schema.reservations.status,
+  }).from(schema.reservations)
+    .where(and(eq(schema.reservations.branchId, branchId), eq(schema.reservations.date, date)));
+}
+
+/** وضعیت «امروز» یک شعبه — اسلات‌های ناهار/شام + اینکه هرکدام برای این تعداد نفر جا دارد یا نه. */
+export async function getTodayReservationStatus(branchId: string, partySize: number): Promise<PublicReservationToday> {
   const [settings] = await db.select().from(schema.reservationSettings)
     .where(eq(schema.reservationSettings.branchId, branchId)).limit(1);
   if (!settings) throw new ApiError(404, 'رزرو عمومی برای این شعبه تنظیم نشده', 'RESERVATIONS_NOT_CONFIGURED');
@@ -44,32 +51,51 @@ export async function getTodayReservationStatus(branchId: string): Promise<Publi
   if (!branch) throw new ApiError(404, 'شعبه پیدا نشد', 'BRANCH_NOT_FOUND');
 
   const date = getTodayJalali();
-  const activeCount = await countActiveToday(db, branchId, date);
-  const avail = computeTodayAvailability(settings, activeCount);
+  const shiftSlots = generateTodaySlots(settings);
+
+  if (shiftSlots.length === 0) {
+    return {
+      branch: { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize },
+      date,
+      slots: [],
+      closedMessage: settings.closedMessage,
+      closedPhone: settings.closedPhone,
+    };
+  }
+
+  const [tables, existing] = await Promise.all([
+    loadActiveTables(db, branchId),
+    loadTodayReservations(db, branchId, date),
+  ]);
+
+  const slots: PublicReservationSlot[] = shiftSlots.map((s) => {
+    const atSlot = existing.filter((r: { time: string }) => r.time === s.time);
+    const assignment = findTableForSlot(tables, atSlot, partySize);
+    return { time: s.time, period: s.period, available: assignment !== null, social: assignment?.isSocial ?? false };
+  });
+
+  const anyAvailable = slots.some((s) => s.available);
 
   return {
     branch: { id: branch.id, name: branch.name, maxPartySize: settings.maxPartySize },
     date,
-    open: avail.open,
-    remainingTables: avail.remainingTables,
-    closedMessage: avail.open ? null : settings.closedMessage,
-    closedPhone: avail.open ? null : settings.closedPhone,
+    slots,
+    closedMessage: anyAvailable ? null : settings.closedMessage,
+    closedPhone: anyAvailable ? null : settings.closedPhone,
   };
 }
 
 /**
  * ثبت رزرو عمومی — اتمیک، ضد race-condition.
  *
- * قفل: همان ردیف reservation_settings که برای خواندن ظرفیت لازم است با
- * FOR UPDATE قفل می‌شود (الگوی همین پروژه — ر.ک. lib/db/inventoryHelpers.ts
- * روی invItems). یعنی همه‌ی تلاش‌های همزمان برای رزرو در یک شعبه صف
- * می‌شوند، ظرفیت امروز زیر همان قفل دوباره محاسبه و چک می‌شود.
+ * قفل: همه‌ی میزهای فعال شعبه با FOR UPDATE قفل می‌شوند (تعداد کم، ۵ تا ۱۰
+ * ردیف — کاملاً سبک) تا محاسبه‌ی تخصیص میز زیر یک تراکنش قفل‌شده انجام شود؛
+ * دو رزرو هم‌زمان روی آخرین میز/صندلی خالی امکان‌پذیر نیست.
  */
 export async function createPublicReservation(input: CreatePublicReservationInput): Promise<PublicReservationResult> {
   return db.transaction(async (tx) => {
     const [settings] = await tx.select().from(schema.reservationSettings)
-      .where(eq(schema.reservationSettings.branchId, input.branchId))
-      .for('update');
+      .where(eq(schema.reservationSettings.branchId, input.branchId)).limit(1);
     if (!settings) throw new ApiError(404, 'رزرو عمومی برای این شعبه تنظیم نشده', 'RESERVATIONS_NOT_CONFIGURED');
 
     const [branch] = await tx.select({ id: schema.branches.id, name: schema.branches.name })
@@ -81,10 +107,21 @@ export async function createPublicReservation(input: CreatePublicReservationInpu
     }
 
     const date = getTodayJalali();
-    const activeCount = await countActiveToday(tx, input.branchId, date);
-    const avail = computeTodayAvailability(settings, activeCount);
-    if (!avail.open) {
-      throw new ApiError(409, settings.closedMessage ?? 'ظرفیت امروز تکمیل شده است', 'RESERVATIONS_CLOSED');
+    const shiftSlots = generateTodaySlots(settings);
+    if (!shiftSlots.some((s) => s.time === input.time)) {
+      throw new ApiError(422, 'این ساعت دیگر قابل رزرو نیست', 'SLOT_NOT_BOOKABLE');
+    }
+
+    // قفل میزها — تراکنش‌های همزمان روی این شعبه صف می‌شوند
+    const tables = await tx.select().from(schema.restaurantTables)
+      .where(and(eq(schema.restaurantTables.branchId, input.branchId), eq(schema.restaurantTables.isActive, true)))
+      .for('update');
+
+    const existing = await loadTodayReservations(tx, input.branchId, date);
+    const atSlot = existing.filter((r: { time: string }) => r.time === input.time);
+    const assignment = findTableForSlot(tables, atSlot, input.partySize);
+    if (!assignment) {
+      throw new ApiError(409, settings.closedMessage ?? 'ظرفیت این ساعت تکمیل شده — ساعت دیگری را امتحان کنید', 'SLOT_FULL');
     }
 
     // ضد اسپم — حداکثر رزرو فعال هم‌زمان per شماره موبایل (در همه‌ی شعب)
@@ -111,6 +148,7 @@ export async function createPublicReservation(input: CreatePublicReservationInpu
 
     const [row] = await tx.insert(schema.reservations).values({
       branchId: input.branchId,
+      tableId: assignment.tableId,
       guestName: input.guestName,
       guestPhone: input.guestPhone,
       date,
@@ -140,6 +178,7 @@ export async function createPublicReservation(input: CreatePublicReservationInpu
       time: row.time,
       partySize: row.partySize,
       status: row.status,
+      isSocialTable: assignment.isSocial,
     };
   });
 }

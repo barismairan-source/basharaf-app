@@ -9,6 +9,7 @@ const patchSchema = z.object({
   name: z.string().min(1).max(60).optional(),
   capacity: z.number().int().nonnegative().optional(),
   area: z.string().max(60).nullable().optional(),
+  isSocial: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });
 

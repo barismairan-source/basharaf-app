@@ -109,6 +109,7 @@ export default function ReservationsPage() {
   const [tCap, setTCap] = useState('');
   const [tArea, setTArea] = useState('');
   const [tBranch, setTBranch] = useState('');
+  const [tSocial, setTSocial] = useState(false);
 
   useEffect(() => {
     setHydrated(true);
@@ -250,12 +251,14 @@ export default function ReservationsPage() {
       capacity: tCap ? num(tCap) : 0,
       area: tArea.trim() || null,
       branchId: isAdmin ? tBranch || null : null,
+      isSocial: tSocial,
     });
     if (t) {
       showToast('میز اضافه شد', 'success', t.name);
       setTName('');
       setTCap('');
       setTArea('');
+      setTSocial(false);
     } else {
       showToast('خطا در ساخت میز (شعبه مشخص است؟)', 'danger');
     }
@@ -296,10 +299,10 @@ export default function ReservationsPage() {
           </div>
         </div>
 
-        {/* Public booking settings — مدل ساده: فقط امروز + ظرفیت بر اساس تعداد میز */}
+        {/* Public booking settings — دو شیفت ثابت امروز، ظرفیت از میزهای واقعی */}
         {showSettings && (
           <Card>
-            <CardHeader title="تنظیمات رزرو آنلاین" sub="فقط برای «امروز» — هر روز خودتان روشن/خاموش می‌کنید" />
+            <CardHeader title="تنظیمات رزرو آنلاین" sub="فقط برای «امروز» — هر روز خودتان هر شیفت را جدا روشن/خاموش می‌کنید" />
             <CardBody className="space-y-4">
               {isAdmin && (
                 <Field label="شعبه">
@@ -312,22 +315,45 @@ export default function ReservationsPage() {
 
               {activeSettingsBranch && settingsForm && (
                 <>
-                  <div className="flex items-center justify-between bg-stone-50 rounded-lg px-3 py-2.5">
-                    <div>
-                      <div className="text-[13px] text-stone-800">امروز رزرو باز است</div>
-                      <div className="text-[11px] text-muted mt-0.5">هر روز باید خودتان دوباره روشن کنید</div>
+                  <div className="rounded-lg border border-stone-200 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[13px] text-stone-800">ناهار امروز باز است</div>
+                      <Switch
+                        checked={settingsForm.lunchEnabled}
+                        onCheckedChange={(v) => setSettingsForm((f) => f && { ...f, lunchEnabled: v })}
+                        aria-label="ناهار امروز باز است"
+                      />
                     </div>
-                    <Switch
-                      checked={settingsForm.isPublicEnabled}
-                      onCheckedChange={(v) => setSettingsForm((f) => f && { ...f, isPublicEnabled: v })}
-                      aria-label="امروز رزرو باز است"
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="از ساعت">
+                        <Input dir="ltr" inputMode="numeric" value={String(settingsForm.lunchStartHour)} onChange={(e) => setSettingsForm((f) => f && { ...f, lunchStartHour: num(e.target.value) })} />
+                      </Field>
+                      <Field label="تا ساعت">
+                        <Input dir="ltr" inputMode="numeric" value={String(settingsForm.lunchEndHour)} onChange={(e) => setSettingsForm((f) => f && { ...f, lunchEndHour: num(e.target.value) })} />
+                      </Field>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <Field label="تعداد میز" hint="ظرفیت امروز">
-                      <Input dir="ltr" inputMode="numeric" value={String(settingsForm.tableCount)} onChange={(e) => setSettingsForm((f) => f && { ...f, tableCount: num(e.target.value) })} />
-                    </Field>
+                  <div className="rounded-lg border border-stone-200 p-3 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[13px] text-stone-800">شام امروز باز است</div>
+                      <Switch
+                        checked={settingsForm.dinnerEnabled}
+                        onCheckedChange={(v) => setSettingsForm((f) => f && { ...f, dinnerEnabled: v })}
+                        aria-label="شام امروز باز است"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Field label="از ساعت">
+                        <Input dir="ltr" inputMode="numeric" value={String(settingsForm.dinnerStartHour)} onChange={(e) => setSettingsForm((f) => f && { ...f, dinnerStartHour: num(e.target.value) })} />
+                      </Field>
+                      <Field label="تا ساعت">
+                        <Input dir="ltr" inputMode="numeric" value={String(settingsForm.dinnerEndHour)} onChange={(e) => setSettingsForm((f) => f && { ...f, dinnerEndHour: num(e.target.value) })} />
+                      </Field>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <Field label="حداکثر نفرات هر رزرو">
                       <Input dir="ltr" inputMode="numeric" value={String(settingsForm.maxPartySize)} onChange={(e) => setSettingsForm((f) => f && { ...f, maxPartySize: num(e.target.value) })} />
                     </Field>
@@ -384,7 +410,7 @@ export default function ReservationsPage() {
                   onChange={(e) => setTCap(e.target.value)}
                 />
                 <Input placeholder="منطقه (اختیاری)" value={tArea} onChange={(e) => setTArea(e.target.value)} />
-                {isAdmin ? (
+                {isAdmin && (
                   <Select value={tBranch} onChange={(e) => setTBranch(e.target.value)}>
                     <option value="">شعبه…</option>
                     {branches.map((b) => (
@@ -393,19 +419,17 @@ export default function ReservationsPage() {
                       </option>
                     ))}
                   </Select>
-                ) : (
-                  <Button variant="primary" size="sm" icon={Plus} onClick={handleAddTable}>
-                    افزودن
-                  </Button>
                 )}
               </div>
-              {isAdmin && (
-                <div className="flex justify-end">
-                  <Button variant="primary" size="sm" icon={Plus} onClick={handleAddTable}>
-                    افزودن میز
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-[12px] text-stone-600">
+                  <input type="checkbox" checked={tSocial} onChange={(e) => setTSocial(e.target.checked)} />
+                  میز اشتراکی/سوشیال (چند رزرو جدا می‌توانند هم‌زمان روی آن بنشینند)
+                </label>
+                <Button variant="primary" size="sm" icon={Plus} onClick={handleAddTable}>
+                  افزودن میز
+                </Button>
+              </div>
               {tables.length === 0 ? (
                 <Empty title="میزی ثبت نشده" />
               ) : (
@@ -417,6 +441,7 @@ export default function ReservationsPage() {
                     >
                       <span>{t.name}</span>
                       <span className="text-[10px] text-muted tabular-nums">{fmt(t.capacity)} نفر</span>
+                      {t.isSocial && <Chip tone="amber">سوشیال</Chip>}
                       {isAdmin && <span className="text-[10px] text-muted">{branchName(t.branchId)}</span>}
                       <button
                         onClick={() => deleteTable(t.id)}

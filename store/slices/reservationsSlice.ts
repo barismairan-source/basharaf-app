@@ -38,6 +38,7 @@ export interface ReservationsSlice {
     capacity?: number;
     area?: string | null;
     branchId?: string | null;
+    isSocial?: boolean;
   }) => Promise<RestaurantTable | null>;
   deleteTable: (id: string) => Promise<boolean>;
 

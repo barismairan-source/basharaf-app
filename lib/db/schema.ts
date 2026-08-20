@@ -1672,6 +1672,8 @@ export const restaurantTables = pgTable(
     name: text('name').notNull(),
     capacity: integer('capacity').notNull().default(0),
     area: text('area'),
+    /** میز اشتراکی/سوشیال — چند رزرو جدا می‌توانند هم‌زمان روی همین میز بنشینند (سقف مجموع نفرات = capacity). */
+    isSocial: boolean('is_social').notNull().default(false),
     isActive: boolean('is_active').notNull().default(true),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -1725,26 +1727,28 @@ export const reservations = pgTable(
  * isPublicEnabled=false باشد، آن شعبه در صفحه‌ی عمومی رزرو دیده نمی‌شود.
  */
 /**
- * جدول reservation_settings — نسخه‌ی ساده‌شده (طبق بازخورد کاربر).
- *
- * مدل قبلی (اسلات زمانی/ساعت کاری/روزهای هفته/blackout/رزرو چند روز آینده)
- * عمداً کنار گذاشته شد — کاربر فقط رزرو «همان روز» و ظرفیت بر اساس «تعداد
- * میز» می‌خواست، نه یک تقویم از پیش زمان‌بندی‌شده. ستون‌های قدیمی هنوز در
- * دیتابیس هستند (بی‌ضرر، دیگر خوانده نمی‌شوند) — ر.ک.
- * db-reservations-daily-capacity.sql برای توضیح کامل.
+ * جدول reservation_settings — نسخه‌ی دوم (طبق بازخورد کاربر بعد از دیدن نسخه‌ی
+ * ساده‌ی «فقط تعداد میز کلی»). حالا ظرفیت واقعاً بر اساس میزهای واقعی
+ * (restaurantTables + ستون isSocial) محاسبه می‌شود، در بازه‌های اسلات
+ * ساعتی (حداکثر یک ساعت هر نشست)، فقط در دو شیفت ثابت امروز: ناهار/شام.
+ * هرکدام از دو شیفت جدا روشن/خاموش می‌شود — نه یک کلید کلی برای کل روز.
+ * ستون‌های نسخه‌ی قبلی (is_public_enabled, table_count) هنوز در دیتابیس
+ * هستند (بی‌ضرر، دیگر خوانده نمی‌شوند) — ر.ک. db-reservations-shifts.sql.
  */
 export const reservationSettings = pgTable(
   'reservation_settings',
   {
     id: uuid('id').primaryKey().defaultRandom(),
     branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'cascade' }),
-    /** آیا امروز رزرو باز است — کلید دستی که هر روز خود مدیر روشن/خاموش می‌کند. */
-    isPublicEnabled: boolean('is_public_enabled').notNull().default(false),
-    /** تعداد میز/ظرفیت امروز — بعد از این تعداد رزرو فعال، دیگر جا نیست. */
-    tableCount: integer('table_count').notNull().default(5),
+    lunchEnabled: boolean('lunch_enabled').notNull().default(false),
+    lunchStartHour: integer('lunch_start_hour').notNull().default(12),
+    lunchEndHour: integer('lunch_end_hour').notNull().default(16),
+    dinnerEnabled: boolean('dinner_enabled').notNull().default(false),
+    dinnerStartHour: integer('dinner_start_hour').notNull().default(19),
+    dinnerEndHour: integer('dinner_end_hour').notNull().default(23),
     maxPartySize: integer('max_party_size').notNull().default(12),
     maxActiveReservationsPerPhone: integer('max_active_reservations_per_phone').notNull().default(3),
-    /** متن دلخواه مدیر — وقتی رزرو بسته/تکمیل است به مهمان نشان داده می‌شود. */
+    /** متن دلخواه مدیر — وقتی هیچ شیفتی باز نیست یا همه‌ی میزها پر است. */
     closedMessage: text('closed_message'),
     /** شماره‌ی تماس نمایش‌داده‌شده در همان حالت بسته/تکمیل. */
     closedPhone: text('closed_phone'),

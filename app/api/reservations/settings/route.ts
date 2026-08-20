@@ -11,8 +11,12 @@ function serialize(s: SettingsRow) {
   return {
     id: s.id,
     branchId: s.branchId,
-    isPublicEnabled: s.isPublicEnabled,
-    tableCount: s.tableCount,
+    lunchEnabled: s.lunchEnabled,
+    lunchStartHour: s.lunchStartHour,
+    lunchEndHour: s.lunchEndHour,
+    dinnerEnabled: s.dinnerEnabled,
+    dinnerStartHour: s.dinnerStartHour,
+    dinnerEndHour: s.dinnerEndHour,
     maxPartySize: s.maxPartySize,
     maxActiveReservationsPerPhone: s.maxActiveReservationsPerPhone,
     closedMessage: s.closedMessage,
@@ -26,8 +30,12 @@ function defaults(branchId: string) {
   return {
     id: null as string | null,
     branchId,
-    isPublicEnabled: false,
-    tableCount: 5,
+    lunchEnabled: false,
+    lunchStartHour: 12,
+    lunchEndHour: 16,
+    dinnerEnabled: false,
+    dinnerStartHour: 19,
+    dinnerEndHour: 23,
     maxPartySize: 12,
     maxActiveReservationsPerPhone: 3,
     closedMessage: null as string | null,
@@ -64,8 +72,12 @@ export async function GET(req: Request) {
 
 const putSchema = z.object({
   branchId: z.string().uuid().optional(),
-  isPublicEnabled: z.boolean(),
-  tableCount: z.number().int().min(1).max(500),
+  lunchEnabled: z.boolean(),
+  lunchStartHour: z.number().int().min(0).max(23),
+  lunchEndHour: z.number().int().min(1).max(24),
+  dinnerEnabled: z.boolean(),
+  dinnerStartHour: z.number().int().min(0).max(23),
+  dinnerEndHour: z.number().int().min(1).max(24),
   maxPartySize: z.number().int().min(1).max(200),
   maxActiveReservationsPerPhone: z.number().int().min(1).max(50),
   closedMessage: z.string().trim().max(300).nullable().optional(),
@@ -79,10 +91,21 @@ export async function PUT(req: Request) {
     const input = putSchema.parse(await req.json());
     const branchId = resolveScopedBranchId(session, input.branchId ?? null);
 
+    if (input.lunchEndHour <= input.lunchStartHour) {
+      throw new ApiError(400, 'ساعت پایان ناهار باید بعد از ساعت شروع باشد', 'INVALID_LUNCH_HOURS');
+    }
+    if (input.dinnerEndHour <= input.dinnerStartHour) {
+      throw new ApiError(400, 'ساعت پایان شام باید بعد از ساعت شروع باشد', 'INVALID_DINNER_HOURS');
+    }
+
     const values = {
       branchId,
-      isPublicEnabled: input.isPublicEnabled,
-      tableCount: input.tableCount,
+      lunchEnabled: input.lunchEnabled,
+      lunchStartHour: input.lunchStartHour,
+      lunchEndHour: input.lunchEndHour,
+      dinnerEnabled: input.dinnerEnabled,
+      dinnerStartHour: input.dinnerStartHour,
+      dinnerEndHour: input.dinnerEndHour,
       maxPartySize: input.maxPartySize,
       maxActiveReservationsPerPhone: input.maxActiveReservationsPerPhone,
       closedMessage: input.closedMessage || null,

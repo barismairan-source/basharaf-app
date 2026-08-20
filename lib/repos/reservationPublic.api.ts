@@ -10,8 +10,8 @@ export const reservationPublicRepo: ReservationPublicRepo = {
     return data.branches;
   },
 
-  async getToday(branchId) {
-    const qs = new URLSearchParams({ branchId });
+  async getToday(branchId, partySize) {
+    const qs = new URLSearchParams({ branchId, partySize: String(partySize) });
     return apiFetch<PublicReservationToday>(`/api/public/reservations/today?${qs}`);
   },
 

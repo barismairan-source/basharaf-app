@@ -10,6 +10,7 @@ const createSchema = z.object({
   capacity: z.number().int().nonnegative().default(0),
   area: z.string().max(60).nullable().optional(),
   branchId: z.string().uuid().nullable().optional(),
+  isSocial: z.boolean().default(false),
 });
 
 type TableRow = typeof schema.restaurantTables.$inferSelect;
@@ -21,6 +22,7 @@ function serialize(t: TableRow) {
     name: t.name,
     capacity: t.capacity,
     area: t.area,
+    isSocial: t.isSocial,
     isActive: t.isActive,
     createdAt: t.createdAt.toISOString(),
   };
@@ -66,6 +68,7 @@ export async function POST(req: Request) {
         name: input.name,
         capacity: input.capacity,
         area: input.area ?? null,
+        isSocial: input.isSocial,
       })
       .returning();
     if (!t) throw new ApiError(500, 'خطا در ساخت میز', 'INSERT_FAILED');
