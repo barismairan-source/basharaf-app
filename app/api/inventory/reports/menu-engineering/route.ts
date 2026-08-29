@@ -11,6 +11,7 @@ type SaleLine = { recipeId?: string; qty?: number; count?: number };
 export type MenuEngineItem = {
   recipeId: string;
   name: string;
+  code: string | null;
   unitsSold: number;
   unitPrice: number;
   unitCost: number;
@@ -65,6 +66,7 @@ export async function GET(req: Request) {
       .select({
         id: schema.invRecipes.id,
         name: schema.invRecipes.name,
+        code: schema.invRecipes.code,
         portions: schema.invRecipes.portions,
         price: schema.invRecipes.price,
         menuItemId: schema.invRecipes.menuItemId,
@@ -136,7 +138,7 @@ export async function GET(req: Request) {
 
     // ۷. محاسبه‌ی هر آیتم
     const raw: Array<{
-      recipeId: string; name: string; unitsSold: number;
+      recipeId: string; name: string; code: string | null; unitsSold: number;
       unitPrice: number; unitCost: number; unitMargin: number;
     }> = [];
 
@@ -154,7 +156,7 @@ export async function GET(req: Request) {
       );
       const unitCost = costing.costPerPortion;
       const unitMargin = unitPrice - unitCost;
-      raw.push({ recipeId: recipe.id, name: recipe.name, unitsSold, unitPrice, unitCost, unitMargin });
+      raw.push({ recipeId: recipe.id, name: recipe.name, code: recipe.code ?? null, unitsSold, unitPrice, unitCost, unitMargin });
     }
 
     // ۸. میانگین‌ها و طبقه‌بندی ربع‌ماتریس

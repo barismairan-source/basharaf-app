@@ -1390,6 +1390,9 @@ export const invRecipes = pgTable(
     name: text('name').notNull(),
     branchId: uuid('branch_id').references(() => branches.id, { onDelete: 'restrict' }),
 
+    // کد کالا (SKU) — اختیاری، یکتا در هر شعبه. nullable چون رسپی‌های قدیمی کد ندارند.
+    code: text('code'),
+
     portions: integer('portions').notNull().default(1),       // تعداد پرس هر پخت
     targetFcPct: numeric('target_fc_pct', { precision: 5, scale: 2 }).notNull().default('30'),
     price: bigint('price', { mode: 'number' }).notNull().default(0), // قیمت فروش (تومان)
@@ -1408,6 +1411,9 @@ export const invRecipes = pgTable(
   (t) => ({
     branchIdx: index('inv_recipes_branch_idx').on(t.branchId),
     activeIdx: index('inv_recipes_active_idx').on(t.isActive),
+    branchCodeUniq: uniqueIndex('inv_recipes_branch_code_uniq')
+      .on(t.branchId, t.code)
+      .where(sql`${t.code} IS NOT NULL`),
   })
 );
 

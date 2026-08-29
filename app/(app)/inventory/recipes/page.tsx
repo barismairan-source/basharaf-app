@@ -249,6 +249,9 @@ function RecipeCard({
       <div className="flex justify-between items-start gap-2">
         <div className="min-w-0">
           <span className="text-[13px] font-medium text-text">{recipe.name}</span>
+          {recipe.code && (
+            <span dir="ltr" className="text-[10.5px] text-muted mr-1.5 bg-border/20 rounded px-1 py-0.5">{recipe.code}</span>
+          )}
           <span className="text-[11px] text-muted mr-2">{recipe.portions} پرس · {recipe.lines.length} ماده</span>
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -637,6 +640,7 @@ function AddRecipeWizard({
 
   // Step 1
   const [name, setName] = useState(editRecipe?.name ?? '');
+  const [code, setCode] = useState(editRecipe?.code ?? '');
   const [cookMode, setCookMode] = useState<'daily' | 'batch'>(editRecipe?.cookMode ?? 'daily');
   const [portions, setPortions] = useState(String(editRecipe?.portions ?? 1));
   const [branchId, setBranchId] = useState(editRecipe?.branchId ?? '');
@@ -751,6 +755,7 @@ function AddRecipeWizard({
       await repos.inventory.saveRecipe({
         id: editRecipe?.id ?? null,
         name: name.trim(),
+        code: code.trim() || null,
         branchId: branchId || null,
         portions: portionsNum,
         targetFcPct: editRecipe?.targetFcPct ?? 30,
@@ -824,6 +829,17 @@ function AddRecipeWizard({
                   onChange={(e) => setName(e.target.value)}
                   className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
                   placeholder="مثال: چلوکباب کوبیده"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11.5px] text-muted block mb-1">کد کالا (اختیاری)</label>
+                <input
+                  dir="ltr"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="w-full border border-border rounded-lg px-3 py-2.5 text-[13px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text text-right"
+                  placeholder="مثال: KABAB-01"
                 />
               </div>
 

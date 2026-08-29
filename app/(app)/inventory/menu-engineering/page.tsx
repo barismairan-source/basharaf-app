@@ -71,9 +71,10 @@ export default function MenuEngineeringPage() {
 
   function exportExcel() {
     if (!items.length) return;
-    const header = ['نام آیتم', 'تعداد فروش', 'قیمت فروش', 'بهای تمام‌شده', 'حاشیه سود', 'ربع'];
+    const header = ['نام آیتم', 'کد کالا', 'تعداد فروش', 'قیمت فروش', 'بهای تمام‌شده', 'حاشیه سود', 'ربع'];
     const rows = items.map((it) => [
       it.name,
+      it.code ?? '',
       it.unitsSold,
       it.unitPrice,
       it.unitCost,
@@ -163,6 +164,7 @@ export default function MenuEngineeringPage() {
                         {qItems.map((it) => (
                           <li key={it.recipeId} className="text-[12px] text-text leading-snug">
                             {it.name}
+                            {it.code && <span dir="ltr" className="text-[10px] text-muted mr-1">{it.code}</span>}
                             <span className="text-[10px] text-muted mr-1 tabular-nums">({fmt(it.unitsSold)} عدد)</span>
                           </li>
                         ))}
@@ -194,6 +196,7 @@ export default function MenuEngineeringPage() {
                 <thead>
                   <tr className="border-b border-border bg-bg">
                     <th className="text-right px-4 py-2.5 font-medium text-muted">نام آیتم</th>
+                    <th className="text-right px-3 py-2.5 font-medium text-muted whitespace-nowrap">کد کالا</th>
                     <th className="text-center px-3 py-2.5 font-medium text-muted whitespace-nowrap">تعداد فروش</th>
                     <th className="text-center px-3 py-2.5 font-medium text-muted whitespace-nowrap">قیمت فروش</th>
                     <th className="text-center px-3 py-2.5 font-medium text-muted whitespace-nowrap">بهای تمام‌شده</th>
@@ -207,6 +210,7 @@ export default function MenuEngineeringPage() {
                     return (
                       <tr key={it.recipeId} className="hover:bg-bg/50 transition-colors">
                         <td className="px-4 py-3 text-text">{it.name}</td>
+                        <td className="px-3 py-3 text-muted" dir="ltr">{it.code ?? '—'}</td>
                         <td className="px-3 py-3 text-center tabular-nums text-text">{fmt(it.unitsSold)}</td>
                         <td className="px-3 py-3 text-center tabular-nums text-muted">{fmt(it.unitPrice)}</td>
                         <td className="px-3 py-3 text-center tabular-nums text-muted">{fmt(it.unitCost)}</td>

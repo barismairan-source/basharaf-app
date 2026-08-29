@@ -50,6 +50,7 @@ export function rowToInvRecipe(
   return {
     id: row.id,
     name: row.name,
+    code: row.code ?? null,
     branchId: row.branchId,
     portions: row.portions,
     targetFcPct: toNum(row.targetFcPct),

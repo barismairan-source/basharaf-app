@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Loader2, TrendingUp } from 'lucide-react';
+import { Loader2, TrendingUp, Search } from 'lucide-react';
 import { createRepos } from '@/lib/repos';
 import { useAppStore } from '@/store';
 import { fmt } from '@/lib/utils';
@@ -28,6 +28,7 @@ export default function SalesPage() {
   const [qtys, setQtys] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
@@ -50,6 +51,11 @@ export default function SalesPage() {
   const branchRecipes = recipes.filter(
     (r) => !branchId || !r.branchId || r.branchId === branchId
   );
+
+  const q = search.trim().toLowerCase();
+  const visibleRecipes = q
+    ? branchRecipes.filter((r) => r.name.toLowerCase().includes(q) || (r.code ?? '').toLowerCase().includes(q))
+    : branchRecipes;
 
   const sold = branchRecipes
     .map((r) => ({ recipe: r, count: parseInt((qtys[r.id!] ?? '').replace(/\D/g, ''), 10) || 0 }))
@@ -142,10 +148,24 @@ export default function SalesPage() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-[11.5px] text-muted">تعداد فروش هر غذا</label>
-            {branchRecipes.map((r) => (
+            <div className="flex items-center justify-between">
+              <label className="text-[11.5px] text-muted">تعداد فروش هر غذا</label>
+              <div className="relative w-40">
+                <Search size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="جستجو یا کد کالا..."
+                  className="w-full h-8 border border-border rounded-lg pr-7 pl-2 text-[11.5px] focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+                />
+              </div>
+            </div>
+            {visibleRecipes.map((r) => (
               <div key={r.id} className="flex items-center gap-2 py-0.5">
-                <span className="flex-1 min-w-0 truncate text-[13px] text-text">{r.name}</span>
+                <span className="flex-1 min-w-0 truncate text-[13px] text-text">
+                  {r.name}
+                  {r.code && <span dir="ltr" className="text-[10px] text-muted mr-1.5 bg-bg rounded px-1 py-0.5">{r.code}</span>}
+                </span>
                 <span className="text-[11px] text-muted num">{fmt(r.price)} ت</span>
                 <input
                   value={qtys[r.id!] ?? ''}

@@ -56,6 +56,8 @@ export interface InventoryRecipeLine {
 export interface InventoryRecipe {
   id: string | null;
   name: string;
+  /** کد کالا (SKU) — اختیاری، یکتا در هر شعبه */
+  code?: string | null;
   branchId: string | null;
   portions: number;
   targetFcPct: number;

@@ -22,6 +22,7 @@ const lineSchema = z.object({
 const saveSchema = z.object({
   id: z.string().uuid().nullable().optional(),
   name: z.string().min(1).max(120),
+  code: z.string().trim().max(40).nullable().optional(),
   branchId: z.string().uuid().nullable().optional(),
   portions: z.number().int().min(1).default(1),
   targetFcPct: z.number().min(0).max(100).default(30),
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
 
       if (recipeId) {
         await dbTx.update(schema.invRecipes).set({
-          name: input.name, branchId: input.branchId ?? null,
+          name: input.name, code: input.code || null, branchId: input.branchId ?? null,
           portions: input.portions, targetFcPct: String(input.targetFcPct),
           price: input.price, cookMode: input.cookMode, shelfLifeDays: input.shelfLifeDays,
           menuItemId: input.menuItemId ?? null,
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
         await dbTx.delete(schema.invRecipeLines).where(eq(schema.invRecipeLines.recipeId, recipeId));
       } else {
         const [r] = await dbTx.insert(schema.invRecipes).values({
-          name: input.name, branchId: input.branchId ?? null,
+          name: input.name, code: input.code || null, branchId: input.branchId ?? null,
           portions: input.portions, targetFcPct: String(input.targetFcPct),
           price: input.price, cookMode: input.cookMode, shelfLifeDays: input.shelfLifeDays,
           menuItemId: input.menuItemId ?? null,
