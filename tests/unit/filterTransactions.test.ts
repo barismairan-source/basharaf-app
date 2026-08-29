@@ -50,6 +50,7 @@ describe('filtersToParams / paramsToFilters — round-trip URL persistence', () 
       type: 'expense',
       status: 'pending',
       branchId: 'branch-2',
+      contactId: 'contact-1',
       dateFrom: '1404/01/01',
       dateTo: '1404/01/31',
       sort: 'amount-desc',
@@ -100,6 +101,29 @@ describe('filterTransactions', () => {
 
   it('جستجو در عنوان/طرف‌حساب/دسته', () => {
     expect(filterTransactions(txs, { ...DEFAULT_FILTERS, search: 'اجاره' })).toHaveLength(1);
+  });
+
+  it('فیلتر بر اساس contactId', () => {
+    const withContact = [
+      ...txs,
+      makeTx({ title: 'پرداخت به تامین‌کننده', contactId: 'contact-1' }),
+      makeTx({ title: 'پرداخت به تامین‌کننده دیگر', contactId: 'contact-2' }),
+    ];
+    expect(filterTransactions(withContact, { ...DEFAULT_FILTERS, contactId: 'contact-1' })).toHaveLength(1);
+  });
+
+  it('جستجوی متنی روی نام طرف‌حساب (وقتی contactNameById داده شود)', () => {
+    const withContact = [...txs, makeTx({ title: 'فاکتور ماهانه', contactId: 'contact-1' })];
+    const contactNameById = new Map([['contact-1', 'شرکت پخش الف']]);
+    const result = filterTransactions(withContact, { ...DEFAULT_FILTERS, search: 'پخش الف' }, contactNameById);
+    expect(result).toHaveLength(1);
+    expect(result[0]!.title).toBe('فاکتور ماهانه');
+  });
+
+  it('بدون contactNameById، جستجو روی نام طرف‌حساب چیزی پیدا نمی‌کند (نه throw)', () => {
+    const withContact = [...txs, makeTx({ title: 'فاکتور ماهانه', contactId: 'contact-1' })];
+    expect(() => filterTransactions(withContact, { ...DEFAULT_FILTERS, search: 'پخش الف' })).not.toThrow();
+    expect(filterTransactions(withContact, { ...DEFAULT_FILTERS, search: 'پخش الف' })).toHaveLength(0);
   });
 
   it('بازه‌ی تاریخ شمسی (from/to) — هر دو طرف شامل است', () => {

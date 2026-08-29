@@ -18,6 +18,8 @@ export interface TransactionFilterState {
   status: StatusFilter;
   /** 'all' یعنی بدون فیلتر شعبه — برای BranchUser بی‌معنی است (همیشه scope خودش) */
   branchId: string;
+  /** 'all' یعنی بدون فیلتر طرف‌حساب */
+  contactId: string;
   /** تاریخ شمسی 'YYYY/MM/DD' یا خالی */
   dateFrom: string;
   dateTo: string;
@@ -30,6 +32,7 @@ export const DEFAULT_FILTERS: TransactionFilterState = {
   type: 'all',
   status: 'all',
   branchId: 'all',
+  contactId: 'all',
   dateFrom: '',
   dateTo: '',
   sort: 'date-desc',
@@ -41,8 +44,8 @@ const VALID_STATUSES: StatusFilter[] = ['all', 'pending', 'approved', 'rejected'
 const VALID_SORTS: TransactionSortKey[] = ['date-desc', 'date-asc', 'amount-desc', 'amount-asc'];
 
 /** فیلترهایی که روی «چند مورد فعال است» شمرده می‌شوند — sort/page جزو «فیلتر» نیستند. */
-type CountableKey = 'search' | 'type' | 'status' | 'branchId' | 'dateFrom' | 'dateTo';
-const COUNTABLE_KEYS: CountableKey[] = ['search', 'type', 'status', 'branchId', 'dateFrom', 'dateTo'];
+type CountableKey = 'search' | 'type' | 'status' | 'branchId' | 'contactId' | 'dateFrom' | 'dateTo';
+const COUNTABLE_KEYS: CountableKey[] = ['search', 'type', 'status', 'branchId', 'contactId', 'dateFrom', 'dateTo'];
 
 export function countActiveFilters(filters: TransactionFilterState): number {
   return COUNTABLE_KEYS.filter((k) => filters[k] !== DEFAULT_FILTERS[k] && filters[k] !== '').length;
@@ -59,6 +62,7 @@ export function filtersToParams(filters: TransactionFilterState): Record<string,
   if (filters.type !== 'all') out.type = filters.type;
   if (filters.status !== 'all') out.status = filters.status;
   if (filters.branchId !== 'all') out.branch = filters.branchId;
+  if (filters.contactId !== 'all') out.contact = filters.contactId;
   if (filters.dateFrom) out.from = filters.dateFrom;
   if (filters.dateTo) out.to = filters.dateTo;
   if (filters.sort !== DEFAULT_FILTERS.sort) out.sort = filters.sort;
@@ -78,6 +82,7 @@ export function paramsToFilters(params: URLSearchParams): TransactionFilterState
     type: type && VALID_TYPES.includes(type) ? type : 'all',
     status: status && VALID_STATUSES.includes(status) ? status : 'all',
     branchId: params.get('branch') ?? 'all',
+    contactId: params.get('contact') ?? 'all',
     dateFrom: params.get('from') ?? '',
     dateTo: params.get('to') ?? '',
     sort: sort && VALID_SORTS.includes(sort) ? sort : 'date-desc',
@@ -97,22 +102,29 @@ function txDateToDate(jalali: string): Date | null {
  */
 export function filterTransactions(
   transactions: readonly Transaction[],
-  filters: TransactionFilterState
+  filters: TransactionFilterState,
+  /** نام طرف‌حساب برای هر contactId — برای جستجوی متنی روی نام طرف‌حساب. اختیاری (پیش‌فرض جستجو را محدود می‌کند، نه می‌شکند). */
+  contactNameById?: ReadonlyMap<string, string>,
 ): Transaction[] {
   let result = [...transactions];
 
   if (filters.type !== 'all') result = result.filter((t) => t.type === filters.type);
   if (filters.status !== 'all') result = result.filter((t) => t.status === filters.status);
   if (filters.branchId !== 'all') result = result.filter((t) => t.branchId === filters.branchId);
+  if (filters.contactId !== 'all') result = result.filter((t) => t.contactId === filters.contactId);
 
   const q = filters.search.trim().toLowerCase();
   if (q) {
-    result = result.filter((t) =>
-      t.title.toLowerCase().includes(q) ||
-      t.payee.toLowerCase().includes(q) ||
-      t.categoryName.toLowerCase().includes(q) ||
-      String(t.amount).includes(q)
-    );
+    result = result.filter((t) => {
+      const contactName = t.contactId ? contactNameById?.get(t.contactId) : undefined;
+      return (
+        t.title.toLowerCase().includes(q) ||
+        t.payee.toLowerCase().includes(q) ||
+        t.categoryName.toLowerCase().includes(q) ||
+        String(t.amount).includes(q) ||
+        (contactName ? contactName.toLowerCase().includes(q) : false)
+      );
+    });
   }
 
   if (filters.dateFrom && isValidJalaliString(filters.dateFrom)) {

@@ -62,6 +62,8 @@ export default function TransactionsPage() {
 
   const user = useAppStore(s => s.user);
   const branches = useAppStore(s => s.branches);
+  const contacts = useAppStore(s => s.contacts);
+  const loadContacts = useAppStore(s => s.loadContacts);
   const visible = useVisibleTransactions();
   const openTxId = useAppStore(s => s.openTxId);
   const openTx = useAppStore(s => s.openTx);
@@ -79,6 +81,9 @@ export default function TransactionsPage() {
     setFilters(initial);
     setSearchInput(initial.search);
     setHydrated(true);
+    // این صفحه تنها مصرف‌کننده‌ی contacts نیست که در bootstrap لود می‌شود،
+    // ولی برای اطمینان (مثلاً اگر bootstrap قبل از این صفحه fail کرده باشد) دوباره صدا می‌زنیم.
+    loadContacts();
     // فقط یک بار روی mount اجرا می‌شود
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -110,7 +115,11 @@ export default function TransactionsPage() {
 
   const isAdmin = user?.role === 'SuperAdmin';
 
-  const filteredUnsorted = useMemo(() => filterTransactions(visible, filters), [visible, filters]);
+  const contactNameById = useMemo(() => new Map(contacts.map(c => [c.id, c.name])), [contacts]);
+  const filteredUnsorted = useMemo(
+    () => filterTransactions(visible, filters, contactNameById),
+    [visible, filters, contactNameById],
+  );
   const summary = useMemo(() => summarizeTransactions(filteredUnsorted), [filteredUnsorted]);
   const sorted = useMemo(() => sortTransactions(filteredUnsorted, filters.sort), [filteredUnsorted, filters.sort]);
   const paginated = useMemo(() => paginateItems(sorted, filters.page, PAGE_SIZE), [sorted, filters.page]);
@@ -322,7 +331,7 @@ export default function TransactionsPage() {
           <div className="hidden md:flex flex-wrap items-center gap-2">
             <Input
               icon={Search}
-              placeholder="جستجو در عنوان، طرف معامله، مبلغ..."
+              placeholder="جستجو در عنوان، طرف معامله، طرف‌حساب، مبلغ..."
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               className="w-64"
@@ -348,6 +357,12 @@ export default function TransactionsPage() {
                 ))}
               </Select>
             )}
+            <Select value={filters.contactId} onChange={e => updateFilters({ contactId: e.target.value })} className="min-w-[130px]">
+              <option value="all">همه طرف‌حساب‌ها</option>
+              {contacts.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
 
             <Popover
               trigger={<><SlidersHorizontal size={13} strokeWidth={1.5} /> فیلتر پیشرفته</>}
@@ -423,6 +438,12 @@ export default function TransactionsPage() {
                   <button onClick={() => updateFilters({ branchId: 'all' })} aria-label="حذف فیلتر شعبه" className="mr-1 align-middle"><X size={11} /></button>
                 </Chip>
               )}
+              {filters.contactId !== 'all' && (
+                <Chip tone="neutral">
+                  طرف‌حساب: {contactNameById.get(filters.contactId) ?? '—'}
+                  <button onClick={() => updateFilters({ contactId: 'all' })} aria-label="حذف فیلتر طرف‌حساب" className="mr-1 align-middle"><X size={11} /></button>
+                </Chip>
+              )}
               {filters.dateFrom && (
                 <Chip tone="neutral">
                   از: <span dir="ltr">{filters.dateFrom}</span>
@@ -444,7 +465,7 @@ export default function TransactionsPage() {
           <div className="p-4 space-y-3">
             <Input
               icon={Search}
-              placeholder="جستجو در عنوان، طرف معامله، مبلغ..."
+              placeholder="جستجو در عنوان، طرف معامله، طرف‌حساب، مبلغ..."
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               className="w-full"
@@ -470,6 +491,12 @@ export default function TransactionsPage() {
                 ))}
               </Select>
             )}
+            <Select value={filters.contactId} onChange={e => updateFilters({ contactId: e.target.value })} className="w-full">
+              <option value="all">همه طرف‌حساب‌ها</option>
+              {contacts.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </Select>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[10.5px] text-muted mb-1">از تاریخ</label>
