@@ -11,6 +11,7 @@ import { getTodayJalali } from '@/lib/jalali';
 type VarianceRow = {
   itemId: string;
   itemName: string;
+  itemCode: string | null;
   unit: string;
   theoreticalQty: number;
   actualQty: number;
@@ -70,9 +71,9 @@ export default function VariancePage() {
   function exportExcel() {
     const sourceLabel = source === 'daily' ? 'فروش-واقعی' : 'حواله';
     const ws = XLSX.utils.aoa_to_sheet([
-      ['قلم', 'واحد', 'مصرف تئوریک', 'مصرف واقعی', 'واریانس (مقدار)', 'واریانس (ریال)'],
-      ...rows.map((r) => [r.itemName, r.unit, r.theoreticalQty, r.actualQty, r.varianceQty, r.varianceCost]),
-      ['', '', '', '', 'جمع واریانس:', rows.reduce((s, r) => s + r.varianceCost, 0)],
+      ['قلم', 'کد کالا', 'واحد', 'مصرف تئوریک', 'مصرف واقعی', 'واریانس (مقدار)', 'واریانس (ریال)'],
+      ...rows.map((r) => [r.itemName, r.itemCode ?? '', r.unit, r.theoreticalQty, r.actualQty, r.varianceQty, r.varianceCost]),
+      ['', '', '', '', '', 'جمع واریانس:', rows.reduce((s, r) => s + r.varianceCost, 0)],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'واریانس');
@@ -186,6 +187,7 @@ export default function VariancePage() {
                       >
                         <td className="px-3 py-2.5 text-text">
                           {r.itemName}
+                          {r.itemCode && <span dir="ltr" className="text-[10.5px] text-muted mr-1.5 bg-bg rounded px-1 py-0.5">{r.itemCode}</span>}
                           <span className="text-muted text-[11px] mr-1">({r.unit})</span>
                         </td>
                         <td className="px-3 py-2.5 text-left num text-muted">

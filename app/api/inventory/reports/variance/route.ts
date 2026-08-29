@@ -134,6 +134,7 @@ export async function GET(req: Request) {
         return {
           itemId: item.id,
           itemName: item.name,
+          itemCode: item.code ?? null,
           unit: item.unit,
           theoreticalQty,
           actualQty,
@@ -205,6 +206,7 @@ export async function GET(req: Request) {
       return {
         itemId: item.id,
         itemName: item.name,
+        itemCode: item.code ?? null,
         unit: item.unit,
         theoreticalQty,
         actualQty,
