@@ -217,6 +217,9 @@ export default function CartablePage() {
                           )}
                           <span className="text-[13px] font-medium text-text">{VOUCHER_KIND_LABELS[v.kind] ?? v.kind}</span>
                           <span className="text-[11px] text-muted">{v.no} · {v.makerDate} · {v.lines.length} قلم</span>
+                          {v.supplierInvoiceNo && (
+                            <span dir="ltr" className="text-[10.5px] text-muted bg-bg rounded px-1.5 py-0.5">فاکتور: {v.supplierInvoiceNo}</span>
+                          )}
                         </div>
                       </div>
                     </button>

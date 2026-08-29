@@ -31,7 +31,7 @@ function cell(row: Record<string, unknown>, ...keys: string[]): string {
 interface PreparedLine { itemId: string; qtyBase: number; estUnitCost: number; }
 interface PreparedVoucher {
   groupKey: string; branchId: string; branchName: string; date: string;
-  note: string; lines: PreparedLine[];
+  note: string; invoiceNo: string | null; lines: PreparedLine[];
 }
 
 export async function POST(req: Request) {
@@ -66,7 +66,8 @@ export async function POST(req: Request) {
 
     rows.forEach((row, i) => {
       const ln = i + 2;
-      const invoiceNo = cell(row, 'شماره فاکتور', 'فاکتور', 'invoice') || `_row${i}`;
+      const invoiceNoRaw = cell(row, 'شماره فاکتور', 'فاکتور', 'invoice');
+      const invoiceNo = invoiceNoRaw || `_row${i}`;
       const date = cell(row, 'تاریخ', 'date');
       if (!isValidJalaliString(date)) { errors.push(`ردیف ${ln}: تاریخ شمسی نامعتبر`); return; }
 
@@ -91,7 +92,10 @@ export async function POST(req: Request) {
       const key = `${invoiceNo}|${branch.id}`;
       let g = groups.get(key);
       if (!g) {
-        g = { groupKey: key, branchId: branch.id, branchName: branch.name, date, note: cell(row, 'توضیح', 'note'), lines: [] };
+        g = {
+          groupKey: key, branchId: branch.id, branchName: branch.name, date,
+          note: cell(row, 'توضیح', 'note'), invoiceNo: invoiceNoRaw || null, lines: [],
+        };
         groups.set(key, g);
       }
       g.lines.push({ itemId: item.id, qtyBase: qty, estUnitCost: unitCost });
@@ -122,6 +126,7 @@ export async function POST(req: Request) {
         const [voucher] = await dbTx.insert(schema.invVouchers).values({
           no, kind: 'in', status: 'pending', branchId: v.branchId,
           estTotal, note: v.note || 'ورود دسته‌ای رسید خرید',
+          supplierInvoiceNo: v.invoiceNo,
           saleMeta: null, createdBy: session.sub, makerDate: v.date,
         }).returning();
         if (!voucher) throw new ApiError(500, 'خطا در ساخت برگه', 'INSERT_FAILED');

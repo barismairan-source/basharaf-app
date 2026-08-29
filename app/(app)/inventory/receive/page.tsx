@@ -120,6 +120,7 @@ function VoucherForm({
   const [branchId, setBranchId] = useState(defaultBranch);
   const [date, setDate] = useState(getTodayJalali());
   const [note, setNote] = useState('');
+  const [supplierInvoiceNo, setSupplierInvoiceNo] = useState('');
   const [lines, setLines] = useState<{ itemId: string; qty: string; cost: string; wasteReason: string; wasteReasonOther: string }[]>([
     { itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' },
   ]);
@@ -155,6 +156,7 @@ function VoucherForm({
     try {
       await (createRepos(null as never).inventory as any).createVoucher({
         kind, branchId, date, note: note || undefined,
+        supplierInvoiceNo: kind === 'in' ? (supplierInvoiceNo.trim() || undefined) : undefined,
         lines: valid.map((l) => {
           const resolvedReason = kind === 'waste' && l.wasteReason
             ? (l.wasteReason === 'سایر' ? (l.wasteReasonOther.trim() || 'سایر') : l.wasteReason)
@@ -170,6 +172,7 @@ function VoucherForm({
       showToast('برگه ثبت شد (در انتظار تأیید)', 'success');
       setLines([{ itemId: '', qty: '', cost: '', wasteReason: '', wasteReasonOther: '' }]);
       setNote('');
+      setSupplierInvoiceNo('');
       onDone();
     } catch {
       showToast('خطا در ثبت برگه', 'danger');
@@ -299,6 +302,19 @@ function VoucherForm({
           افزودن قلم
         </Button>
       </div>
+
+      {kind === 'in' && (
+        <div>
+          <label className="text-[11.5px] text-muted">شماره فاکتور تامین‌کننده (اختیاری)</label>
+          <input
+            dir="ltr"
+            value={supplierInvoiceNo}
+            onChange={(e) => setSupplierInvoiceNo(e.target.value)}
+            placeholder="مثلاً INV-4521"
+            className="w-full h-11 border border-border rounded-lg px-3 text-[13px] mt-1 text-right focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text"
+          />
+        </div>
+      )}
 
       <div>
         <label className="text-[11.5px] text-muted">توضیح (اختیاری)</label>

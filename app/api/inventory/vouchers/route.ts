@@ -39,6 +39,7 @@ const createVoucherSchema = z.object({
   date: z.string().min(1), // Jalali
   lines: z.array(lineSchema).min(1),
   saleMeta: z.any().optional().nullable(),
+  supplierInvoiceNo: z.string().trim().max(60).optional().nullable(),
 });
 
 export async function GET(req: Request) {
@@ -109,6 +110,7 @@ export async function POST(req: Request) {
         branchId: input.branchId,
         estTotal,
         note: input.note ?? '',
+        supplierInvoiceNo: input.kind === 'in' ? (input.supplierInvoiceNo || null) : null,
         saleMeta: input.saleMeta ?? null,
         createdBy: session.sub,
         makerDate: input.date,

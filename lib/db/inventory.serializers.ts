@@ -84,6 +84,7 @@ export function rowToInvVoucher(
     estTotal: maskCosts ? null : toNum(row.estTotal),
     finalTotal: maskCosts ? null : (row.finalTotal == null ? null : toNum(row.finalTotal)),
     note: row.note,
+    supplierInvoiceNo: row.supplierInvoiceNo ?? null,
     saleMeta: row.saleMeta ?? null,
     createdBy: row.createdBy,
     makerDate: row.makerDate,

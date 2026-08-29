@@ -1458,6 +1458,10 @@ export const invVouchers = pgTable(
 
     note: text('note').notNull().default(''),
 
+    // شماره فاکتور تامین‌کننده (فقط kind=in معنا دارد) — سند کاغذی/دیجیتال طرف فروشنده،
+    // جدا از «no» که شماره‌ی داخلی خودِ برگه است. اختیاری، آزاد (بدون فرمت ثابت).
+    supplierInvoiceNo: text('supplier_invoice_no'),
+
     // متادیتای فروش (فقط kind=sale): { lines:[{recipeId,name,qty,price}], revenue, date }
     saleMeta: jsonb('sale_meta'),
 

@@ -87,6 +87,8 @@ export interface InventoryVoucher {
   estTotal: number;
   finalTotal: number | null;
   note: string;
+  /** شماره فاکتور تامین‌کننده — فقط برای kind='in' معنا دارد */
+  supplierInvoiceNo?: string | null;
   saleMeta: unknown | null;
   createdBy: string | null;
   makerDate: string;
@@ -109,6 +111,8 @@ export interface NewVoucherInput {
   date: string; // Jalali
   lines: Array<{ itemId: string; qtyBase: number; estUnitCost?: number; wasteReason?: string }>;
   saleMeta?: unknown | null;
+  /** فقط برای kind='in' معنا دارد */
+  supplierInvoiceNo?: string | null;
 }
 
 export interface ProduceInput {
