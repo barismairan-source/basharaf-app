@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
  * POST /api/inventory/items/import — ورود دسته‌ای اقلام انبار + موجودی اولیه از اکسل.
  * تطبیق شعبه با نام. کد قلم در هر شعبه یکتا (تکراری = خطا). اتمیک.
  *
- * ستون‌ها: کد | نام | دسته | نوع | واحد | مقدار هر واحد | بازده | موجودی اولیه | بهای واحد | حداقل موجودی | شعبه
+ * ستون‌ها: کد | نام | دسته | نوع | واحد | مقدار هر واحد | بازده | موجودی اولیه | بهای واحد | حداقل موجودی | شعبه | چرخه شمارش
+ * چرخه شمارش: «روزانه» یا «هفتگی» — نبود/نامعتبر = پیش‌فرض «هفتگی».
  */
 
 const UNIT_MAP: Record<string, string> = {
@@ -24,6 +25,10 @@ const UNIT_MAP: Record<string, string> = {
 const KIND_MAP: Record<string, 'raw' | 'prep'> = {
   'raw': 'raw', 'prep': 'prep',
   'اولیه': 'raw', 'ماده اولیه': 'raw', 'خام': 'raw', 'نیمه‌آماده': 'prep', 'نیمه آماده': 'prep',
+};
+const COUNT_CYCLE_MAP: Record<string, 'daily' | 'weekly'> = {
+  'daily': 'daily', 'weekly': 'weekly',
+  'روزانه': 'daily', 'هفتگی': 'weekly', 'هفته‌ای': 'weekly',
 };
 
 function num(v: unknown): number {
@@ -88,6 +93,7 @@ export async function POST(req: Request) {
       const initialQty = num(row['موجودی اولیه'] ?? row['qty']);
       const unitCost = num(row['بهای واحد'] ?? row['cost']); // تومان به‌ازای هر واحد (نه پایه)
       const minBase = num(row['حداقل موجودی'] ?? row['minBase']);
+      const countCycle = COUNT_CYCLE_MAP[cell(row, 'چرخه شمارش', 'countCycle').toLowerCase()] ?? 'weekly';
 
       // بهای هر واحد پایه = بهای واحد ÷ مقدار هر واحد به پایه
       const avgCostPerBase = basePerUnit > 0 ? unitCost / basePerUnit : 0;
@@ -104,6 +110,7 @@ export async function POST(req: Request) {
           qtyBase: '0',
           avgCostPerBase: '0',
           minBase: String(minBase),
+          countCycle,
           isActive: true,
         },
         initialQty,
