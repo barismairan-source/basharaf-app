@@ -8,6 +8,8 @@ export type InvItemKind = 'raw' | 'prep';
 export type InvVoucherKind = 'in' | 'out' | 'waste' | 'sale' | 'produce' | 'stocktake';
 export type InvVoucherStatus = 'pending' | 'approved' | 'rejected';
 export type InvCookMode = 'daily' | 'batch';
+/** چرخه‌ی شمارش/سفارش — daily برای تازه/حساس، weekly برای ماندگار */
+export type InvCountCycle = 'daily' | 'weekly';
 
 export interface InventoryItem {
   id: string;
@@ -23,6 +25,7 @@ export interface InventoryItem {
   qtyBase: number;
   avgCostPerBase: number;
   minBase: number;
+  countCycle: InvCountCycle;
   batchYieldBase: number | null;
   shelfLifeDays: number;
   prepRecipe: Array<{ itemId: string; qtyBase: number }> | null;
@@ -41,6 +44,7 @@ export interface NewInventoryItemInput {
   basePerUnit?: number;
   yieldPct?: number;
   minBase?: number;
+  countCycle?: InvCountCycle;
   batchYieldBase?: number | null;
   shelfLifeDays?: number;
   prepRecipe?: Array<{ itemId: string; qtyBase: number }> | null;

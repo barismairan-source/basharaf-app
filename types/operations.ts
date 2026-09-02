@@ -147,6 +147,8 @@ export interface PoSuggestionItem {
   minQty: number;
   suggestedQty: number;
   suggestedUnitCost: number;
+  /** true یعنی مقدار پیشنهادی از ریتم واقعی مصرف آمده، نه فقط رساندن به حداقل موجودی */
+  demandDriven?: boolean;
 }
 
 // ═══════════════════════════════════════════════════════════════════

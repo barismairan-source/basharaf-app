@@ -1329,6 +1329,9 @@ export const invCookModeEnum = pgEnum('inv_cook_mode', ['daily', 'batch']);
 //   daily = روزانه تازه (به‌سفارش، ماندگاری ۱ روز)
 //   batch = دسته‌ای (قابل نگهداری چند روز)
 
+// چرخه‌ی شمارش/سفارش انبار — اقلام تازه/حساس هر روز، اقلام ماندگار هفته‌ای یک‌بار.
+export const invCountCycleEnum = pgEnum('inv_count_cycle', ['daily', 'weekly']);
+
 // ─── inv_items — کالا (خام و نیمه‌آماده) ──────────────────────────
 export const invItems = pgTable(
   'inv_items',
@@ -1362,6 +1365,11 @@ export const invItems = pgTable(
 
     // حداقل موجودی برای هشدار (واحد پایه)
     minBase: numeric('min_base', { precision: 16, scale: 4 }).notNull().default('0'),
+
+    // چرخه‌ی شمارش/سفارش — 'daily' برای تازه/حساس (تره‌بار، گوشت، لبنیات روزانه)،
+    // 'weekly' برای ماندگار (خواربار، بسته‌بندی، بهداشتی) — پیش‌فرض weekly چون
+    // اکثریت اقلام یک آشپزخانه معمولاً ماندگارند؛ تازه‌ها باید صریح تگ بخورند.
+    countCycle: invCountCycleEnum('count_cycle').notNull().default('weekly'),
 
     // فقط نیمه‌آماده‌ها:
     batchYieldBase: numeric('batch_yield_base', { precision: 16, scale: 4 }), // مقدار هر بَچ

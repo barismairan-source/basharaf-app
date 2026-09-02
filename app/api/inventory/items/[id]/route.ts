@@ -15,6 +15,7 @@ const patchSchema = z.object({
   basePerUnit: z.number().positive().optional(),
   yieldPct: z.number().min(1).max(100).optional(),
   minBase: z.number().min(0).optional(),
+  countCycle: z.enum(['daily', 'weekly']).optional(),
   shelfLifeDays: z.number().int().min(1).optional(),
   batchYieldBase: z.number().positive().optional().nullable(),
   prepRecipe: z.array(z.object({

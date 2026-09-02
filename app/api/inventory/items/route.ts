@@ -23,6 +23,7 @@ const createItemSchema = z.object({
   basePerUnit: z.number().positive().default(1000),
   yieldPct: z.number().min(1).max(100).default(100),
   minBase: z.number().min(0).default(0),
+  countCycle: z.enum(['daily', 'weekly']).default('weekly'),
   // فقط نیمه‌آماده:
   batchYieldBase: z.number().positive().optional().nullable(),
   shelfLifeDays: z.number().int().min(1).default(1),
@@ -72,6 +73,7 @@ export async function POST(req: Request) {
       basePerUnit: String(input.basePerUnit),
       yieldPct: String(input.yieldPct),
       minBase: String(input.minBase),
+      countCycle: input.countCycle,
       batchYieldBase: input.batchYieldBase != null ? String(input.batchYieldBase) : null,
       shelfLifeDays: input.shelfLifeDays,
       prepRecipe: input.prepRecipe ?? null,

@@ -50,6 +50,7 @@ interface SuggestRow {
   qty: string;
   unitCost: string;
   selected: boolean;
+  demandDriven: boolean;
 }
 
 function suggestRowTotal(r: SuggestRow): number {
@@ -193,6 +194,7 @@ export default function PurchaseOrdersPage() {
         qty: it.suggestedQty.toLocaleString('en-US'),
         unitCost: it.suggestedUnitCost.toLocaleString('en-US'),
         selected: true,
+        demandDriven: it.demandDriven ?? false,
       })));
       setSuggestSupplierId('');
       setShowSuggest(true);
@@ -276,7 +278,17 @@ export default function PurchaseOrdersPage() {
                     {suggestRows.map((r, i) => (
                       <div key={r.itemId} className="flex flex-wrap items-center gap-2">
                         <Checkbox checked={r.selected} onChange={e => setSuggestRow(i, { selected: e.target.checked })} />
-                        <div className="flex-1 min-w-[140px] text-[12.5px] text-stone-800">{r.name}</div>
+                        <div className="flex-1 min-w-[140px] text-[12.5px] text-stone-800 flex items-center gap-1.5">
+                          {r.name}
+                          {r.demandDriven && (
+                            <span
+                              title="مقدار پیشنهادی بر اساس ریتم واقعی مصرف اخیر است، نه فقط رساندن به حداقل موجودی"
+                              className="text-[9.5px] text-accent bg-accent/10 border border-accent/20 rounded px-1 py-0.5 leading-none shrink-0"
+                            >
+                              بر اساس مصرف
+                            </span>
+                          )}
+                        </div>
                         <div className="text-[11px] text-muted tabular-nums w-32 text-center">
                           موجودی: {fmt(r.currentQty)} / حداقل: {fmt(r.minQty)} {UNIT_LABELS[r.unit] ?? ''}
                         </div>

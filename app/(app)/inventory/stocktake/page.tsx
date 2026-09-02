@@ -33,6 +33,7 @@ export default function StocktakePage() {
   const [counted, setCounted] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cycleFilter, setCycleFilter] = useState<'daily' | 'weekly' | 'all'>('daily');
 
   const isSuperAdmin = user?.role === 'SuperAdmin';
 
@@ -55,6 +56,23 @@ export default function StocktakePage() {
   const branchItems = items.filter(
     (it) => it.isActive && (!branchId || it.branchId === branchId)
   );
+
+  const visibleItems = cycleFilter === 'all'
+    ? branchItems
+    : branchItems.filter((it) => it.countCycle === cycleFilter);
+
+  const groupedItems = (() => {
+    const map = new Map<string, InventoryItem[]>();
+    for (const it of visibleItems) {
+      const key = it.category || 'سایر';
+      const arr = map.get(key);
+      if (arr) arr.push(it); else map.set(key, [it]);
+    }
+    return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0], 'fa'));
+  })();
+
+  const dailyCount = branchItems.filter((it) => it.countCycle === 'daily').length;
+  const weeklyCount = branchItems.filter((it) => it.countCycle === 'weekly').length;
 
   const changes = branchItems
     .map((it) => {
@@ -131,49 +149,83 @@ export default function StocktakePage() {
           <div className="text-center text-muted py-8 text-[13px]">این شعبه قلمی ندارد</div>
         ) : (
           <>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCycleFilter('daily')}
+                className={`flex-1 h-10 rounded-lg text-[12.5px] border transition-colors ${cycleFilter === 'daily' ? 'border-text bg-text text-surface' : 'border-border text-muted'}`}
+              >
+                روزانه (تازه/حساس) — {fmt(dailyCount)}
+              </button>
+              <button
+                onClick={() => setCycleFilter('weekly')}
+                className={`flex-1 h-10 rounded-lg text-[12.5px] border transition-colors ${cycleFilter === 'weekly' ? 'border-text bg-text text-surface' : 'border-border text-muted'}`}
+              >
+                هفتگی (ماندگار) — {fmt(weeklyCount)}
+              </button>
+              <button
+                onClick={() => setCycleFilter('all')}
+                className={`h-10 px-3 rounded-lg text-[12.5px] border transition-colors ${cycleFilter === 'all' ? 'border-text bg-text text-surface' : 'border-border text-muted'}`}
+              >
+                همه
+              </button>
+            </div>
+
             <div className="text-[11.5px] text-muted">
               موجودی واقعی شمرده‌شده را وارد کنید. فقط اقلامی که با سیستم فرق دارند ثبت می‌شوند. قیمت لازم نیست.
+              {changes.length > 0 && ` (${fmt(changes.length)} اختلاف ثبت‌شده در کل — از هر تبی که باشد)`}
             </div>
-            <div className="border border-border rounded-lg overflow-x-auto">
-              <table className="w-full text-[12.5px]">
-                <thead className="bg-bg text-muted text-[11px]">
-                  <tr>
-                    <th className="text-right px-3 py-2">قلم</th>
-                    <th className="text-left px-3 py-2">سیستم</th>
-                    <th className="text-left px-3 py-2">شمارش واقعی</th>
-                    <th className="text-left px-3 py-2">اختلاف</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {branchItems.map((it) => {
-                    const raw = (counted[it.id] ?? '').replace(/[^0-9.]/g, '');
-                    const real = raw === '' ? null : parseFloat(raw);
-                    const diff = real == null || isNaN(real) ? null : real - it.qtyBase;
-                    return (
-                      <tr key={it.id} className="border-t border-border">
-                        <td className="px-3 py-2.5 text-text">
-                          {it.name}
-                          <span className="text-muted text-[11px] mr-1">({UNIT_LABELS[it.unit] ?? it.unit})</span>
-                        </td>
-                        <td className="px-3 py-2.5 text-left num text-muted">{fmt(it.qtyBase)}</td>
-                        <td className="px-3 py-2.5 text-left">
-                          <input
-                            value={counted[it.id] ?? ''}
-                            onChange={(e) => setCounted((c) => ({ ...c, [it.id]: e.target.value }))}
-                            dir="ltr"
-                            placeholder="—"
-                            className="w-24 border border-border rounded px-2 py-1.5 text-[12px] text-left focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text min-h-[36px]"
-                          />
-                        </td>
-                        <td className={`px-3 py-2.5 text-left num ${diff == null ? 'text-muted' : diff === 0 ? 'text-muted' : diff > 0 ? 'text-ok' : 'text-danger'}`}>
-                          {diff == null ? '—' : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+
+            {visibleItems.length === 0 ? (
+              <div className="text-center text-muted py-8 text-[13px]">قلمی با این چرخه‌ی شمارش در این شعبه نیست</div>
+            ) : (
+              <div className="space-y-4">
+                {groupedItems.map(([category, catItems]) => (
+                  <div key={category} className="border border-border rounded-lg overflow-hidden">
+                    <div className="bg-bg px-3 py-2 text-[12px] font-medium text-text">{category}</div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[12.5px]">
+                        <thead className="text-muted text-[11px]">
+                          <tr>
+                            <th className="text-right px-3 py-2">قلم</th>
+                            <th className="text-left px-3 py-2">سیستم</th>
+                            <th className="text-left px-3 py-2">شمارش واقعی</th>
+                            <th className="text-left px-3 py-2">اختلاف</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {catItems.map((it) => {
+                            const raw = (counted[it.id] ?? '').replace(/[^0-9.]/g, '');
+                            const real = raw === '' ? null : parseFloat(raw);
+                            const diff = real == null || isNaN(real) ? null : real - it.qtyBase;
+                            return (
+                              <tr key={it.id} className="border-t border-border">
+                                <td className="px-3 py-2.5 text-text">
+                                  {it.name}
+                                  <span className="text-muted text-[11px] mr-1">({UNIT_LABELS[it.unit] ?? it.unit})</span>
+                                </td>
+                                <td className="px-3 py-2.5 text-left num text-muted">{fmt(it.qtyBase)}</td>
+                                <td className="px-3 py-2.5 text-left">
+                                  <input
+                                    value={counted[it.id] ?? ''}
+                                    onChange={(e) => setCounted((c) => ({ ...c, [it.id]: e.target.value }))}
+                                    dir="ltr"
+                                    placeholder="—"
+                                    className="w-24 border border-border rounded px-2 py-1.5 text-[12px] text-left focus:outline-none focus:ring-1 focus:ring-accent bg-surface text-text min-h-[36px]"
+                                  />
+                                </td>
+                                <td className={`px-3 py-2.5 text-left num ${diff == null ? 'text-muted' : diff === 0 ? 'text-muted' : diff > 0 ? 'text-ok' : 'text-danger'}`}>
+                                  {diff == null ? '—' : diff > 0 ? `+${fmt(diff)}` : fmt(diff)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {changes.length > 0 && (
               <div className="bg-warn-subtle border border-warn/20 rounded-lg p-3 text-[12px] text-warn">

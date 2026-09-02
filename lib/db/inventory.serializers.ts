@@ -34,6 +34,7 @@ export function rowToInvItem(row: typeof schema.invItems.$inferSelect, maskCosts
     qtyBase: toNum(row.qtyBase),
     avgCostPerBase: maskCosts ? null : toNum(row.avgCostPerBase),
     minBase: toNum(row.minBase),
+    countCycle: row.countCycle,
     batchYieldBase: row.batchYieldBase == null ? null : toNum(row.batchYieldBase),
     shelfLifeDays: row.shelfLifeDays,
     prepRecipe: (row.prepRecipe as Array<{ itemId: string; qtyBase: number }> | null) ?? null,

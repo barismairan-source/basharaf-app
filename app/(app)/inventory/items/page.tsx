@@ -9,7 +9,7 @@ import { canDo } from '@/lib/auth/permissions';
 import { fmt, toFa } from '@/lib/utils';
 import { Button, DataList, EmptyState, Sheet, PageHeader } from '@/components/ui';
 import type { DataColumn } from '@/components/ui/DataList';
-import type { InventoryItem, NewInventoryItemInput, InvUnit } from '@/types';
+import type { InventoryItem, NewInventoryItemInput, InvUnit, InvCountCycle } from '@/types';
 
 type PriceRecord = { date: string; unitPrice: number; qty: number; source: string };
 type PriceHistoryResponse = {
@@ -62,16 +62,18 @@ function errMsg(e: unknown, fallback: string): string {
 interface ItemForm {
   code: string;
   name: string;
+  category: string;
   unit: InvUnit;
   branchId: string;
   basePerUnit: string;
   yieldPct: string;
   minBase: string;
+  countCycle: InvCountCycle;
 }
 
 const EMPTY_FORM: ItemForm = {
-  code: '', name: '', unit: 'kg', branchId: '',
-  basePerUnit: '1000', yieldPct: '100', minBase: '0',
+  code: '', name: '', category: '', unit: 'kg', branchId: '',
+  basePerUnit: '1000', yieldPct: '100', minBase: '0', countCycle: 'weekly',
 };
 
 // ── sub-components ──────────────────────────────────────────────────
@@ -168,11 +170,13 @@ export default function InventoryItemsPage() {
     setForm({
       code: item.code,
       name: item.name,
+      category: item.category,
       unit: item.unit,
       branchId: item.branchId ?? '',
       basePerUnit: String(item.basePerUnit),
       yieldPct: String(item.yieldPct),
       minBase: String(item.minBase),
+      countCycle: item.countCycle,
     });
     setShowAdvanced(false);
     setSheetOpen(true);
@@ -197,12 +201,14 @@ export default function InventoryItemsPage() {
       const input: NewInventoryItemInput = {
         code: form.code.trim(),
         name: form.name.trim(),
+        category: form.category.trim() || undefined,
         branchId: form.branchId,
         kind: 'raw',
         unit: form.unit,
         basePerUnit: parseFloat(form.basePerUnit) || 1,
         yieldPct: parseFloat(form.yieldPct) || 100,
         minBase: parseFloat(form.minBase) || 0,
+        countCycle: form.countCycle,
       };
       if (editItem) {
         await repos.inventory.updateItem(editItem.id, input);
@@ -263,9 +269,14 @@ export default function InventoryItemsPage() {
       label: 'نام قلم',
       render: (row) => (
         <div>
-          <div className="text-[13px] font-medium text-text leading-snug">{row.name}</div>
+          <div className="text-[13px] font-medium text-text leading-snug flex items-center gap-1.5">
+            {row.name}
+            {row.countCycle === 'daily' && (
+              <span className="text-[9.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1 py-0.5 leading-none">روزانه</span>
+            )}
+          </div>
           <div className="text-[11px] text-muted mt-0.5 num">
-            {row.code} · {UNIT_LABELS[row.unit]}
+            {row.code} · {row.category} · {UNIT_LABELS[row.unit]}
           </div>
         </div>
       ),
@@ -601,6 +612,37 @@ export default function InventoryItemsPage() {
               onChange={(v) => setForm((f) => ({ ...f, name: v }))}
               placeholder="مثلاً قهوه اسپرسو ۱"
             />
+          </div>
+
+          {/* دسته — برای گروه‌بندی در انبارگردانی (مثل «ترهبار»، «لبنیات») */}
+          <div>
+            <FieldLabel>دسته</FieldLabel>
+            <TextInput
+              value={form.category}
+              onChange={(v) => setForm((f) => ({ ...f, category: v }))}
+              placeholder="مثلاً ترهبار، لبنیات روزانه، خواربار و آرد"
+            />
+          </div>
+
+          {/* چرخه‌ی شمارش — تعیین می‌کند در انبارگردانی روزانه یا هفتگی دیده شود */}
+          <div>
+            <FieldLabel>چرخه‌ی شمارش</FieldLabel>
+            <div className="grid grid-cols-2 gap-2">
+              {(['daily', 'weekly'] as const).map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, countCycle: c as InvCountCycle }))}
+                  className={`h-11 rounded-lg text-[12.5px] border transition-colors ${
+                    form.countCycle === c
+                      ? 'border-text bg-text text-surface'
+                      : 'border-border text-muted hover:border-text/40'
+                  }`}
+                >
+                  {c === 'daily' ? 'روزانه (تازه/حساس)' : 'هفتگی (ماندگار)'}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* شعبه — اجباری */}
