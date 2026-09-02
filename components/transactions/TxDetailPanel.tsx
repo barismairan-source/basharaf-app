@@ -15,6 +15,7 @@ import {
   CreditCard,
   Calendar,
   ExternalLink,
+  Printer,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -31,6 +32,7 @@ import {
 import { useAppStore } from '@/store';
 import { can } from '@/lib/rbac';
 import { fmt, formatAmountInput, parseAmount } from '@/lib/utils';
+import { printInvoice } from '@/lib/transactions/printInvoice';
 import { RejectModal } from './RejectModal';
 import { ReceiptUploader } from './ReceiptUploader';
 import type { Transaction, TransactionPatch } from '@/types';
@@ -62,6 +64,8 @@ export function TxDetailPanel({ tx, onClose, onContactClick }: TxDetailPanelProp
   const user = useAppStore((s) => s.user);
   const users = useAppStore((s) => s.users);
   const categories = useAppStore((s) => s.categories);
+  const branches = useAppStore((s) => s.branches);
+  const contacts = useAppStore((s) => s.contacts);
   const approveTransaction = useAppStore((s) => s.approveTransaction);
   const rejectTransaction = useAppStore((s) => s.rejectTransaction);
   const updateTransaction = useAppStore((s) => s.updateTransaction);
@@ -152,6 +156,12 @@ export function TxDetailPanel({ tx, onClose, onContactClick }: TxDetailPanelProp
       showToast('تراکنش حذف شد', 'danger', tx.title);
       onClose();
     }
+  }
+
+  function handlePrint() {
+    const branch = branches.find((b) => b.id === tx.branchId);
+    const contact = tx.contactId ? contacts.find((c) => c.id === tx.contactId) ?? null : null;
+    printInvoice(tx, branch, contact);
   }
 
   return (
@@ -258,6 +268,15 @@ export function TxDetailPanel({ tx, onClose, onContactClick }: TxDetailPanelProp
         {!editMode && (
           <div className="sticky bottom-0 bg-white border-t border-stone-100 px-6 py-4 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
+              <Button
+                variant="default"
+                size="sm"
+                icon={Printer}
+                onClick={handlePrint}
+                disabled={actionLoading}
+              >
+                چاپ فاکتور
+              </Button>
               {canEdit && (
                 <Button
                   variant="default"

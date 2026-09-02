@@ -88,6 +88,10 @@ interface TransactionBase extends AuditFields {
   invoiceCode?: string | null;
   /** طرف‌حساب مرتبط — null اگر وارد نشده باشد */
   contactId?: string | null;
+  /** مبلغ مالیات ارزش‌افزوده (تومان) — سرور همیشه برمی‌گرداند، پیش‌فرض ۰ */
+  vatAmount?: number;
+  /** آیا این تراکنش نسیه است */
+  isCredit?: boolean;
 }
 
 /**
