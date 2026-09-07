@@ -112,8 +112,26 @@ export function rewriteLegacyHrPath(pathname: string): { path: string; extraPara
   return null;
 }
 
+/**
+ * لینک برندشده‌ی منوی عمومی — basharaf.me/safasity/menu به‌جای basharaf.me/m،
+ * بدون تغییر URL نمایش‌داده‌شده به مشتری (rewrite، نه redirect). زیرمسیرها
+ * (مثل /safasity/menu/birun برای منوی بیرون‌بر) هم منتقل می‌شوند.
+ */
+export function rewriteBrandedMenuPath(pathname: string): string | null {
+  if (pathname === '/safasity/menu') return '/m';
+  if (pathname.startsWith('/safasity/menu/')) return '/m' + pathname.slice('/safasity/menu'.length);
+  return null;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  const brandedMenuPath = rewriteBrandedMenuPath(pathname);
+  if (brandedMenuPath) {
+    const url = new URL(brandedMenuPath, request.url);
+    url.search = request.nextUrl.search;
+    return NextResponse.rewrite(url);
+  }
 
   const legacyRewrite = rewriteLegacyHrPath(pathname);
   if (legacyRewrite) {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { rewriteLegacyHrPath } from '@/middleware';
+import { rewriteLegacyHrPath, rewriteBrandedMenuPath } from '@/middleware';
 
 describe('rewriteLegacyHrPath — redirect مسیرهای قدیمی HR', () => {
   it('/employees → /hr/people', () => {
@@ -32,5 +32,21 @@ describe('rewriteLegacyHrPath — redirect مسیرهای قدیمی HR', () => 
   it('مسیرهای بی‌ربط rewrite نمی‌شوند', () => {
     expect(rewriteLegacyHrPath('/dashboard')).toBeNull();
     expect(rewriteLegacyHrPath('/employeesFoo')).toBeNull();
+  });
+});
+
+describe('rewriteBrandedMenuPath — لینک برندشده‌ی منوی عمومی', () => {
+  it('/safasity/menu → /m', () => {
+    expect(rewriteBrandedMenuPath('/safasity/menu')).toBe('/m');
+  });
+
+  it('/safasity/menu/birun → /m/birun (زیرمسیر بیرون‌بر حفظ می‌شود)', () => {
+    expect(rewriteBrandedMenuPath('/safasity/menu/birun')).toBe('/m/birun');
+  });
+
+  it('مسیرهای بی‌ربط rewrite نمی‌شوند', () => {
+    expect(rewriteBrandedMenuPath('/safasity')).toBeNull();
+    expect(rewriteBrandedMenuPath('/m')).toBeNull();
+    expect(rewriteBrandedMenuPath('/safasity/menuFoo')).toBeNull();
   });
 });

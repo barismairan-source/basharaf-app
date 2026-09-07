@@ -12,22 +12,19 @@ export function MenuItem({ item }: { item: MenuItemType }) {
   const sold = !item.isAvailable;
 
   return (
-    <li className={['group py-5 transition-opacity duration-200', sold ? 'opacity-50' : 'opacity-100'].join(' ')}>
-      <div className="flex items-baseline gap-3">
-        <h3 className="flex-1 text-lg leading-snug text-foreground">
+    <li className={['transition-opacity duration-200', sold ? 'opacity-50' : 'opacity-100'].join(' ')}>
+      <div className="flex items-baseline gap-2.5">
+        <h3 className="flex-1 text-base font-medium leading-snug text-foreground sm:text-[17px]">
           <span className={sold ? 'line-through decoration-1' : undefined}>{title}</span>
-          {sold && <span className="ms-2 align-middle text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{unavailableLabel}</span>}
         </h3>
         {item.price !== null && (
-          <>
-            <span aria-hidden className="hidden flex-1 translate-y-[-3px] border-b border-dotted border-border sm:block" />
-            <span className={['tabular-nums text-lg text-foreground flex-shrink-0', sold ? 'line-through decoration-1' : undefined].filter(Boolean).join(' ')}>
-              {formatPrice(item.price)}
-            </span>
-          </>
+          <span className={['flex-shrink-0 text-sm tabular-nums text-foreground sm:text-base', sold ? 'line-through decoration-1' : undefined].filter(Boolean).join(' ')}>
+            {formatPrice(item.price)}
+          </span>
         )}
       </div>
-      {description && <p className="mt-1.5 max-w-[55ch] text-sm leading-relaxed text-muted-foreground">{description}</p>}
+      {sold && <p className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{unavailableLabel}</p>}
+      {description && <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{description}</p>}
     </li>
   );
 }

@@ -49,7 +49,7 @@ export default function MenuAdminPage() {
             <h1 className="text-[20px] font-medium text-stone-900 tracking-tight">مدیریت منو</h1>
             <div className="text-[12px] text-stone-500 mt-1">منوی دیجیتال صفاسیتی</div>
           </div>
-          <a href="/m" target="_blank" rel="noreferrer"
+          <a href="/safasity/menu" target="_blank" rel="noreferrer"
             className="flex items-center gap-1.5 h-9 px-3 rounded-md border border-stone-200 text-[12px] text-stone-600 hover:bg-stone-50">
             <ExternalLink size={13} strokeWidth={1.5} />
             <span className="hidden sm:inline">مشاهده منو</span>
@@ -539,7 +539,7 @@ function SettingsTab({ settings, onUpdate, showToast }: any) {
             </div>
           </div>
 
-          <Field label="لینک منوی بیرون‌بر" error={slugError ?? undefined} helper={origin ? `پیش‌نمایش: ${origin}/m/${form.takeawaySlug || '...'}` : `پیش‌نمایش: /m/${form.takeawaySlug || '...'}`}>
+          <Field label="لینک منوی بیرون‌بر" error={slugError ?? undefined} helper={origin ? `پیش‌نمایش: ${origin}/safasity/menu/${form.takeawaySlug || '...'}` : `پیش‌نمایش: /safasity/menu/${form.takeawaySlug || '...'}`}>
             <Input dir="ltr" placeholder="birun" value={form.takeawaySlug}
               onChange={e => setForm({ ...form, takeawaySlug: e.target.value.toLowerCase() })} />
           </Field>
@@ -568,14 +568,14 @@ function QrTab({ settings, showToast }: { settings: MenuSettings | null; showToa
         <QrCard
           title="کد QR — سالن"
           sub="منوی سالن"
-          path="/m"
+          path="/safasity/menu"
           filename="basharaf-menu-hall-qr.png"
           showToast={showToast}
         />
         <QrCard
           title="کد QR — بیرون‌بر"
           sub="منوی بیرون‌بر"
-          path={`/m/${settings?.takeawaySlug || 'birun'}`}
+          path={`/safasity/menu/${settings?.takeawaySlug || 'birun'}`}
           filename="basharaf-menu-takeaway-qr.png"
           showToast={showToast}
         />
