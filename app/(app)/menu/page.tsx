@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode } from 'lucide-react';
+import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode, ArrowUp, ArrowDown, Instagram, Phone, Briefcase, Link2 } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip, Switch } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, formatNumericInputValue } from '@/lib/utils';
 import { FA_FONTS } from '@/lib/menu/fonts';
-import type { MenuItem, MenuSettings } from '@/types';
+import type { MenuItem, MenuSettings, HubItem, HubSettings, HubItemKind } from '@/types';
 
-type Tab = 'items' | 'categories' | 'settings' | 'qr';
+type Tab = 'items' | 'categories' | 'settings' | 'qr' | 'hub';
 
 export default function MenuAdminPage() {
   const user = useAppStore(s => s.user);
@@ -25,10 +25,19 @@ export default function MenuAdminPage() {
   const updateSettings = useAppStore(s => s.updateMenuSettings);
   const showToast = useAppStore(s => s.showToast);
 
+  const hubItems = useAppStore(s => s.hubItems);
+  const hubSettings = useAppStore(s => s.hubSettings);
+  const loadHub = useAppStore(s => s.loadHub);
+  const createHubItem = useAppStore(s => s.createHubItem);
+  const updateHubItem = useAppStore(s => s.updateHubItem);
+  const deleteHubItem = useAppStore(s => s.deleteHubItem);
+  const moveHubItem = useAppStore(s => s.moveHubItem);
+  const updateHubSettings = useAppStore(s => s.updateHubSettings);
+
   const [hydrated, setHydrated] = useState(false);
   const [tab, setTab] = useState<Tab>('items');
 
-  useEffect(() => { setHydrated(true); loadMenu(); }, [loadMenu]);
+  useEffect(() => { setHydrated(true); loadMenu(); loadHub(); }, [loadMenu, loadHub]);
 
   const allItems = useMemo(
     () => sections.flatMap(s => s.items.map(it => ({ ...it, sectionLabel: s.labelFa }))),
@@ -58,7 +67,7 @@ export default function MenuAdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-stone-200">
-          {([['items', 'آیتم‌ها'], ['categories', 'دسته‌ها'], ['settings', 'تنظیمات'], ['qr', 'کد QR']] as [Tab, string][]).map(([t, label]) => (
+          {([['items', 'آیتم‌ها'], ['categories', 'دسته‌ها'], ['settings', 'تنظیمات'], ['qr', 'کد QR'], ['hub', 'صفحه لینک']] as [Tab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={cn('px-4 h-10 text-[13px] border-b-2 -mb-px transition-colors',
                 tab === t ? 'border-stone-900 text-stone-900' : 'border-transparent text-stone-500 hover:text-stone-800')}>
@@ -78,6 +87,13 @@ export default function MenuAdminPage() {
           <SettingsTab settings={settings} onUpdate={updateSettings} showToast={showToast} />
         )}
         {tab === 'qr' && <QrTab settings={settings} showToast={showToast} />}
+        {tab === 'hub' && (
+          <HubTab
+            items={hubItems} settings={hubSettings}
+            onCreate={createHubItem} onUpdate={updateHubItem} onDelete={deleteHubItem}
+            onMove={moveHubItem} onUpdateSettings={updateHubSettings} showToast={showToast}
+          />
+        )}
       </div>
     </div>
   );
@@ -642,5 +658,195 @@ function QrCard({ title, sub, path, filename, showToast }: {
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+// ─── Hub Tab (صفحه‌ی basharaf.me/safasity) ───────────────────────
+const HUB_KIND_ICON: Record<HubItemKind, typeof Link2> = {
+  menu: UtensilsCrossed, apply: Briefcase, instagram: Instagram, phone: Phone, custom: Link2,
+};
+const HUB_KIND_LABEL: Record<HubItemKind, string> = {
+  menu: 'منو', apply: 'استخدام', instagram: 'اینستاگرام', phone: 'تلفن', custom: 'سفارشی',
+};
+const EMPTY_HUB_ITEM = { kind: 'custom' as HubItemKind, label: '', url: '' };
+
+function HubTab({ items, settings, onCreate, onUpdate, onDelete, onMove, onUpdateSettings, showToast }: {
+  items: HubItem[];
+  settings: HubSettings | null;
+  onCreate: (input: Omit<HubItem, 'id'>) => Promise<boolean>;
+  onUpdate: (id: string, patch: Partial<Omit<HubItem, 'id'>>) => Promise<boolean>;
+  onDelete: (id: string) => Promise<boolean>;
+  onMove: (id: string, direction: 'up' | 'down') => Promise<boolean>;
+  onUpdateSettings: (patch: Partial<HubSettings>) => Promise<boolean>;
+  showToast: any;
+}) {
+  const sorted = useMemo(() => [...items].sort((a, b) => a.sortOrder - b.sortOrder), [items]);
+
+  const [settingsForm, setSettingsForm] = useState({
+    title: settings?.title ?? '', bio: settings?.bio ?? '',
+    addressFa: settings?.addressFa ?? '', mapUrl: settings?.mapUrl ?? '', showQr: settings?.showQr ?? true,
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
+  useEffect(() => {
+    if (!settings) return;
+    setSettingsForm({ title: settings.title, bio: settings.bio, addressFa: settings.addressFa, mapUrl: settings.mapUrl ?? '', showQr: settings.showQr });
+  }, [settings]);
+
+  async function handleSaveSettings() {
+    setSavingSettings(true);
+    const ok = await onUpdateSettings({ ...settingsForm, mapUrl: settingsForm.mapUrl.trim() || null });
+    setSavingSettings(false);
+    showToast(ok ? 'تنظیمات صفحه‌ی لینک ذخیره شد' : 'خطا در ذخیره', ok ? 'success' : 'danger');
+  }
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ label: '', url: '' });
+  const [adding, setAdding] = useState(false);
+  const [addForm, setAddForm] = useState(EMPTY_HUB_ITEM);
+
+  function startEdit(item: HubItem) {
+    setEditingId(item.id);
+    setEditForm({ label: item.label, url: item.url });
+  }
+
+  async function saveEdit(id: string) {
+    if (!editForm.label.trim() || !editForm.url.trim()) return;
+    const ok = await onUpdate(id, { label: editForm.label.trim(), url: editForm.url.trim() });
+    if (ok) setEditingId(null);
+    showToast(ok ? 'لینک به‌روزرسانی شد' : 'خطا در ذخیره', ok ? 'success' : 'danger');
+  }
+
+  async function handleAdd() {
+    if (!addForm.label.trim() || !addForm.url.trim()) { showToast('عنوان و لینک را وارد کنید', 'danger'); return; }
+    const ok = await onCreate({
+      kind: addForm.kind, label: addForm.label.trim(), url: addForm.url.trim(),
+      isVisible: true, sortOrder: sorted.length,
+    });
+    if (ok) { setAdding(false); setAddForm(EMPTY_HUB_ITEM); showToast('لینک اضافه شد', 'success'); }
+    else showToast('خطا در ساخت لینک', 'danger');
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('این لینک حذف شود؟')) return;
+    const ok = await onDelete(id);
+    showToast(ok ? 'لینک حذف شد' : 'خطا در حذف', ok ? 'success' : 'danger');
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-[12px] text-stone-500">صفحه‌ی معرفی basharaf.me/safasity — منو، استخدام، اینستاگرام، تماس و آدرس در یک صفحه</p>
+        <a href="/safasity" target="_blank" rel="noreferrer"
+          className="flex-shrink-0 flex items-center gap-1.5 h-9 px-3 rounded-md border border-stone-200 text-[12px] text-stone-600 hover:bg-stone-50">
+          <ExternalLink size={13} strokeWidth={1.5} />
+          <span className="hidden sm:inline">مشاهده صفحه</span>
+        </a>
+      </div>
+
+      <Card>
+        <CardHeader title="لینک‌ها" sub="ترتیب و نمایش هر لینک را از اینجا کنترل کنید" />
+        <CardBody className="space-y-2">
+          {sorted.length === 0 && <Empty title="هنوز لینکی اضافه نشده" icon={Link2} />}
+          {sorted.map((item, idx) => {
+            const Icon = HUB_KIND_ICON[item.kind];
+            const isEditing = editingId === item.id;
+            return (
+              <div key={item.id} className={cn('rounded-lg border p-3', item.isVisible ? 'border-stone-200' : 'border-stone-100 bg-stone-50 opacity-60')}>
+                {isEditing ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Input placeholder="عنوان" value={editForm.label} onChange={e => setEditForm({ ...editForm, label: e.target.value })} />
+                      <Input dir="ltr" placeholder="لینک یا tel:..." value={editForm.url} onChange={e => setEditForm({ ...editForm, url: e.target.value })} />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="default" size="sm" icon={X} onClick={() => setEditingId(null)}>انصراف</Button>
+                      <Button variant="primary" size="sm" icon={Check} onClick={() => saveEdit(item.id)}>ذخیره</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Icon size={16} strokeWidth={1.5} className="text-stone-400 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] text-stone-800 font-medium truncate">{item.label}</span>
+                        <Chip>{HUB_KIND_LABEL[item.kind]}</Chip>
+                      </div>
+                      <span className="text-[11px] text-stone-400 truncate block" dir="ltr">{item.url}</span>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button onClick={() => onMove(item.id, 'up')} disabled={idx === 0}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 disabled:opacity-30 disabled:hover:bg-transparent">
+                        <ArrowUp size={14} strokeWidth={1.5} />
+                      </button>
+                      <button onClick={() => onMove(item.id, 'down')} disabled={idx === sorted.length - 1}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100 disabled:opacity-30 disabled:hover:bg-transparent">
+                        <ArrowDown size={14} strokeWidth={1.5} />
+                      </button>
+                      <button onClick={() => onUpdate(item.id, { isVisible: !item.isVisible })}
+                        className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100" title={item.isVisible ? 'مخفی کردن' : 'نمایش'}>
+                        {item.isVisible ? <Eye size={14} strokeWidth={1.5} /> : <EyeOff size={14} strokeWidth={1.5} className="text-stone-400" />}
+                      </button>
+                      <button onClick={() => startEdit(item)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-stone-100">
+                        <Edit3 size={14} strokeWidth={1.5} />
+                      </button>
+                      <button onClick={() => handleDelete(item.id)} className="w-7 h-7 flex items-center justify-center rounded hover:bg-red-50 text-red-500">
+                        <Trash2 size={14} strokeWidth={1.5} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {adding ? (
+            <div className="rounded-lg border border-stone-200 p-3 space-y-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <Select value={addForm.kind} onChange={e => setAddForm({ ...addForm, kind: e.target.value as HubItemKind })}>
+                  {(Object.keys(HUB_KIND_LABEL) as HubItemKind[]).map(k => <option key={k} value={k}>{HUB_KIND_LABEL[k]}</option>)}
+                </Select>
+                <Input placeholder="عنوان" value={addForm.label} onChange={e => setAddForm({ ...addForm, label: e.target.value })} />
+                <Input dir="ltr" placeholder="لینک یا tel:..." value={addForm.url} onChange={e => setAddForm({ ...addForm, url: e.target.value })} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="default" size="sm" icon={X} onClick={() => { setAdding(false); setAddForm(EMPTY_HUB_ITEM); }}>انصراف</Button>
+                <Button variant="primary" size="sm" icon={Check} onClick={handleAdd}>افزودن</Button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setAdding(true)}
+              className="w-full flex items-center justify-center gap-1.5 h-10 rounded-lg border border-dashed border-stone-300 text-[12px] text-stone-500 hover:bg-stone-50">
+              <Plus size={14} strokeWidth={1.5} /> افزودن لینک
+            </button>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="محتوای صفحه" sub="عنوان، توضیح کوتاه، آدرس و نقشه" />
+        <CardBody>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <Field label="عنوان"><Input value={settingsForm.title} onChange={e => setSettingsForm({ ...settingsForm, title: e.target.value })} /></Field>
+            <Field label="توضیح کوتاه"><Input value={settingsForm.bio} onChange={e => setSettingsForm({ ...settingsForm, bio: e.target.value })} /></Field>
+            <div className="sm:col-span-2">
+              <Field label="آدرس"><Textarea rows={2} value={settingsForm.addressFa} onChange={e => setSettingsForm({ ...settingsForm, addressFa: e.target.value })} /></Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="لینک دقیق نقشه (اختیاری)" helper="اگر خالی بماند، نقشه از روی متن آدرس ساخته می‌شود">
+                <Input dir="ltr" placeholder="https://maps.google.com/..." value={settingsForm.mapUrl} onChange={e => setSettingsForm({ ...settingsForm, mapUrl: e.target.value })} />
+              </Field>
+            </div>
+            <div className="flex items-center justify-between rounded-md border border-stone-200 px-3 h-10 sm:col-span-2">
+              <span className="text-[12px] text-stone-600">نمایش کد QR منو در صفحه</span>
+              <Switch checked={settingsForm.showQr} onCheckedChange={v => setSettingsForm({ ...settingsForm, showQr: v })} aria-label="نمایش کد QR منو در صفحه" />
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+
+      <div className="flex justify-end items-center gap-3 mt-2 pt-4 border-t border-border">
+        <Button variant="primary" icon={Check} loading={savingSettings} onClick={handleSaveSettings}>ذخیره تنظیمات</Button>
+      </div>
+    </div>
   );
 }

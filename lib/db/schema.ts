@@ -823,6 +823,41 @@ export type MenuCategory = typeof menuCategories.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type MenuSettings = typeof menuSettings.$inferSelect;
 
+// ─── Link Hub (صفحه‌ی لینک basharaf.me/safasity) ─────────────────
+/**
+ * لیست لینک‌های صفحه‌ی basharaf.me/safasity (سبک Linktree/Bento).
+ * kind آیکن+رفتار را مشخص می‌کند؛ url مقصد واقعی است (داخلی یا خارجی)
+ * تا از پنل قابل تغییر باشد بدون نیاز به دیپلوی.
+ */
+export const linkHubItemKindEnum = pgEnum('link_hub_item_kind', [
+  'menu', 'apply', 'instagram', 'phone', 'custom',
+]);
+
+export const linkHubItems = pgTable('link_hub_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  kind: linkHubItemKindEnum('kind').notNull().default('custom'),
+  label: text('label').notNull(),
+  url: text('url').notNull(),
+  isVisible: boolean('is_visible').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const linkHubSettings = pgTable('link_hub_settings', {
+  id: integer('id').primaryKey().default(1),
+  title: text('title').notNull().default(''),
+  bio: text('bio').notNull().default(''),
+  addressFa: text('address_fa').notNull().default(''),
+  // اگر خالی باشد، صفحه از addressFa یک لینک نقشه می‌سازد؛ اینجا override دقیق (لینک اشتراک‌گذاری گوگل‌مپ) است.
+  mapUrl: text('map_url'),
+  showQr: boolean('show_qr').notNull().default(true),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type LinkHubItem = typeof linkHubItems.$inferSelect;
+export type LinkHubSettings = typeof linkHubSettings.$inferSelect;
+
 // ─── System Logs (سیستم لاگ مرکزی برای تحلیل) ───────────────────
 /**
  * لاگ مرکزی رویدادها و خطاها.

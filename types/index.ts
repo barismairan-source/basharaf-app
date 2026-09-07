@@ -16,6 +16,7 @@ export { DEFAULT_PREFERENCES } from './preferences';
 export type { Account } from './transaction';
 export type { Contact } from './transaction';
 export type { MenuCategory, MenuItem, MenuSection, MenuSettings } from './menu';
+export type { HubItem, HubItemKind, HubSettings } from './hub';
 export type {
   Customer, CustomerTier, LoyaltyEntry, Reservation, ReservationStatus,
   Feedback, CustomerDetail, Coupon, CouponRedemption, CouponDiscountType,
