@@ -11,6 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const patchSchema = z.object({
   faFont: z.string().max(40).optional(),
+  enFont: z.string().max(40).optional(),
   phone: z.string().max(40).optional(),
   addressFa: z.string().max(300).optional(),
   addressEn: z.string().max(300).optional(),

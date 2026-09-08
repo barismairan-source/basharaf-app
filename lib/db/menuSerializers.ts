@@ -31,6 +31,7 @@ export function rowToMenuCategory(row: typeof schema.menuCategories.$inferSelect
 export function rowToMenuSettings(row: typeof schema.menuSettings.$inferSelect) {
   return {
     faFont: row.faFont,
+    enFont: row.enFont,
     phone: row.phone,
     addressFa: row.addressFa,
     addressEn: row.addressEn,

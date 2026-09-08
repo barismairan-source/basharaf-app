@@ -29,6 +29,7 @@ export interface MenuSection extends MenuCategory {
 
 export interface MenuSettings {
   faFont: string;
+  enFont: string;
   phone: string;
   addressFa: string;
   addressEn: string;

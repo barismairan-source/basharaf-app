@@ -6,7 +6,7 @@ import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLi
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip, Switch } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, formatNumericInputValue } from '@/lib/utils';
-import { FA_FONTS } from '@/lib/menu/fonts';
+import { FA_FONTS, EN_FONTS } from '@/lib/menu/fonts';
 import type { MenuItem, MenuSettings, HubItem, HubSettings, HubItemKind } from '@/types';
 
 type Tab = 'items' | 'categories' | 'settings' | 'qr' | 'hub';
@@ -490,7 +490,7 @@ const SLUG_RE = /^[a-z0-9-]+$/;
 
 function SettingsTab({ settings, onUpdate, showToast }: any) {
   const [form, setForm] = useState({
-    faFont: settings.faFont, phone: settings.phone, addressFa: settings.addressFa,
+    faFont: settings.faFont, enFont: settings.enFont, phone: settings.phone, addressFa: settings.addressFa,
     addressEn: settings.addressEn, instagram: settings.instagram,
     showPriceHall: settings.showPriceHall, showPriceTakeaway: settings.showPriceTakeaway,
     takeawaySlug: settings.takeawaySlug,
@@ -527,6 +527,11 @@ function SettingsTab({ settings, onUpdate, showToast }: any) {
             <Field label="فونت فارسی منو">
               <Select value={form.faFont} onChange={e => setForm({ ...form, faFont: e.target.value })}>
                 {FA_FONTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
+              </Select>
+            </Field>
+            <Field label="فونت انگلیسی منو">
+              <Select value={form.enFont} onChange={e => setForm({ ...form, enFont: e.target.value })}>
+                {EN_FONTS.map(f => <option key={f.key} value={f.key}>{f.label}</option>)}
               </Select>
             </Field>
             <Field label="تلفن"><Input dir="ltr" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} /></Field>

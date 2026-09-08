@@ -7,7 +7,7 @@ import { rowToMenuItem, rowToMenuCategory, rowToMenuSettings, buildPublicMenuSec
 export const dynamic = 'force-dynamic';
 
 const DEFAULT_SETTINGS = {
-  faFont: 'IRANMarker', phone: '', addressFa: '', addressEn: '', instagram: '',
+  faFont: 'IRANMarker', enFont: 'GochiHand', phone: '', addressFa: '', addressEn: '', instagram: '',
   showPriceHall: true, showPriceTakeaway: true, takeawaySlug: 'birun',
   hallTitle: null, takeawayTitle: null, hallNote: null, takeawayNote: null,
 };

@@ -805,6 +805,7 @@ export const menuItems = pgTable('menu_items', {
 export const menuSettings = pgTable('menu_settings', {
   id: integer('id').primaryKey().default(1),
   faFont: text('fa_font').notNull().default('IRANMarker'),
+  enFont: text('en_font').notNull().default('GochiHand'),
   phone: text('phone').notNull().default(''),
   addressFa: text('address_fa').notNull().default(''),
   addressEn: text('address_en').notNull().default(''),

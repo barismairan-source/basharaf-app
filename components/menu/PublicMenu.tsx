@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { LanguageToggle } from '@/components/menu/LanguageToggle';
 import { MenuSection } from '@/components/menu/MenuSection';
 import { useLanguage } from '@/lib/menu/i18n';
-import { DEFAULT_FA_FONT } from '@/lib/menu/fonts';
+import { DEFAULT_FA_FONT, DEFAULT_EN_FONT } from '@/lib/menu/fonts';
 import type { MenuSection as MenuSectionType, MenuSettings } from '@/types';
 
 export type MenuChannel = 'hall' | 'takeaway';
@@ -31,8 +31,8 @@ export function PublicMenu({ channel }: { channel: MenuChannel }) {
   }, [channel]);
 
   useEffect(() => {
-    const font = settings?.faFont || DEFAULT_FA_FONT;
-    document.documentElement.setAttribute('data-fa-font', font);
+    document.documentElement.setAttribute('data-fa-font', settings?.faFont || DEFAULT_FA_FONT);
+    document.documentElement.setAttribute('data-en-font', settings?.enFont || DEFAULT_EN_FONT);
   }, [settings]);
 
   const footerLine = pick('All prices in Toman. Allergens on request.', 'قیمت‌ها به تومان است. اطلاعات حساسیت غذایی را از پرسنل بپرسید.');
