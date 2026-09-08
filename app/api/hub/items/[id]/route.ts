@@ -9,7 +9,7 @@ import { rowToHubItem } from '@/lib/db/hubSerializers';
 export const dynamic = 'force-dynamic';
 
 const patchSchema = z.object({
-  kind: z.enum(['menu', 'apply', 'instagram', 'phone', 'custom']).optional(),
+  kind: z.enum(['menu', 'apply', 'instagram', 'phone', 'reserve', 'order', 'custom']).optional(),
   label: z.string().min(1).max(60).optional(),
   url: z.string().min(1).max(500).optional(),
   isVisible: z.boolean().optional(),

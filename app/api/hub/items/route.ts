@@ -8,7 +8,7 @@ import { rowToHubItem } from '@/lib/db/hubSerializers';
 export const dynamic = 'force-dynamic';
 
 const createSchema = z.object({
-  kind: z.enum(['menu', 'apply', 'instagram', 'phone', 'custom']).optional().default('custom'),
+  kind: z.enum(['menu', 'apply', 'instagram', 'phone', 'reserve', 'order', 'custom']).optional().default('custom'),
   label: z.string().min(1).max(60),
   url: z.string().min(1).max(500),
   isVisible: z.boolean().optional().default(true),

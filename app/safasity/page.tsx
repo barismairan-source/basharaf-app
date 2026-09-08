@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
-import { UtensilsCrossed, Briefcase, Instagram, Phone, Link2, MapPin, Navigation } from 'lucide-react';
+import { UtensilsCrossed, Briefcase, Instagram, Phone, Link2, MapPin, Navigation, CalendarCheck, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HubItem, HubItemKind, HubSettings } from '@/types';
 
@@ -12,6 +12,8 @@ const KIND_STYLE: Record<HubItemKind, { icon: typeof Link2; badge: string }> = {
   apply:     { icon: Briefcase,       badge: 'bg-sky-100 text-sky-700' },
   instagram: { icon: Instagram,       badge: 'bg-gradient-to-br from-fuchsia-500 to-amber-400 text-white' },
   phone:     { icon: Phone,           badge: 'bg-emerald-100 text-emerald-700' },
+  reserve:   { icon: CalendarCheck,   badge: 'bg-violet-100 text-violet-700' },
+  order:     { icon: ShoppingBag,     badge: 'bg-rose-100 text-rose-700' },
   custom:    { icon: Link2,           badge: 'bg-stone-100 text-stone-600' },
 };
 

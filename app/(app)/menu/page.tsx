@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode, ArrowUp, ArrowDown, Instagram, Phone, Briefcase, Link2 } from 'lucide-react';
+import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode, ArrowUp, ArrowDown, Instagram, Phone, Briefcase, Link2, CalendarCheck, ShoppingBag } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip, Switch } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, formatNumericInputValue } from '@/lib/utils';
@@ -668,10 +668,12 @@ function QrCard({ title, sub, path, filename, showToast }: {
 
 // ─── Hub Tab (صفحه‌ی basharaf.me/safasity) ───────────────────────
 const HUB_KIND_ICON: Record<HubItemKind, typeof Link2> = {
-  menu: UtensilsCrossed, apply: Briefcase, instagram: Instagram, phone: Phone, custom: Link2,
+  menu: UtensilsCrossed, apply: Briefcase, instagram: Instagram, phone: Phone,
+  reserve: CalendarCheck, order: ShoppingBag, custom: Link2,
 };
 const HUB_KIND_LABEL: Record<HubItemKind, string> = {
-  menu: 'منو', apply: 'استخدام', instagram: 'اینستاگرام', phone: 'تلفن', custom: 'سفارشی',
+  menu: 'منو', apply: 'استخدام', instagram: 'اینستاگرام', phone: 'تلفن',
+  reserve: 'رزرو میز', order: 'سفارش آنلاین', custom: 'سفارشی',
 };
 const EMPTY_HUB_ITEM = { kind: 'custom' as HubItemKind, label: '', url: '' };
 

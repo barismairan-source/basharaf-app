@@ -831,7 +831,7 @@ export type MenuSettings = typeof menuSettings.$inferSelect;
  * تا از پنل قابل تغییر باشد بدون نیاز به دیپلوی.
  */
 export const linkHubItemKindEnum = pgEnum('link_hub_item_kind', [
-  'menu', 'apply', 'instagram', 'phone', 'custom',
+  'menu', 'apply', 'instagram', 'phone', 'reserve', 'order', 'custom',
 ]);
 
 export const linkHubItems = pgTable('link_hub_items', {

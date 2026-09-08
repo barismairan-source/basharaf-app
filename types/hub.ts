@@ -1,5 +1,5 @@
 // ─── Link Hub module types (basharaf.me/safasity) ─────────────────
-export type HubItemKind = 'menu' | 'apply' | 'instagram' | 'phone' | 'custom';
+export type HubItemKind = 'menu' | 'apply' | 'instagram' | 'phone' | 'reserve' | 'order' | 'custom';
 
 export interface HubItem {
   id: string;
