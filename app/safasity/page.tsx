@@ -4,10 +4,15 @@ import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
 import { UtensilsCrossed, Briefcase, Instagram, Phone, Link2, MapPin, Navigation } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import type { HubItem, HubItemKind, HubSettings } from '@/types';
 
-const KIND_ICON: Record<HubItemKind, typeof Link2> = {
-  menu: UtensilsCrossed, apply: Briefcase, instagram: Instagram, phone: Phone, custom: Link2,
+const KIND_STYLE: Record<HubItemKind, { icon: typeof Link2; badge: string }> = {
+  menu:      { icon: UtensilsCrossed, badge: 'bg-amber-100 text-amber-700' },
+  apply:     { icon: Briefcase,       badge: 'bg-sky-100 text-sky-700' },
+  instagram: { icon: Instagram,       badge: 'bg-gradient-to-br from-fuchsia-500 to-amber-400 text-white' },
+  phone:     { icon: Phone,           badge: 'bg-emerald-100 text-emerald-700' },
+  custom:    { icon: Link2,           badge: 'bg-stone-100 text-stone-600' },
 };
 
 /** لینک‌های داخلی (منو/استخدام) و tel: در همان تب باز می‌شوند؛ بقیه در تب جدید. */
@@ -45,51 +50,42 @@ export default function SafasityHubPage() {
   const mapLinkHref = settings?.mapUrl
     || (settings?.addressFa ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.addressFa)}` : null);
 
+  const [hero, ...rest] = items;
+
   return (
-    <div className="mx-auto max-w-md px-6 pb-20 pt-16 sm:pt-20">
+    <div className="mx-auto max-w-md px-6 pb-20 pt-14 sm:pt-16">
       <header className="text-center">
-        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border border-border bg-white shadow-sm">
-          <Image src="/logo.jpg" alt="صفاسیتی" width={80} height={80} className="h-full w-full object-cover" />
+        <div className="relative mx-auto mb-1 h-[68px] w-[204px]">
+          <Image src="/safasity-wordmark.png" alt={settings?.title || 'صفاسیتی'} fill className="object-contain" priority />
         </div>
-        <h1 className="text-xl font-semibold text-foreground">{settings?.title || 'صفاسیتی'}</h1>
-        {settings?.bio && <p className="mt-1.5 text-sm text-muted-foreground">{settings.bio}</p>}
+        {settings?.bio && <p className="mt-1 text-sm text-muted-foreground">{settings.bio}</p>}
       </header>
 
-      <div className="mt-9 space-y-3">
-        {loading && (
-          <div className="space-y-3">
-            {[0, 1, 2].map(i => <div key={i} className="h-14 animate-pulse rounded-2xl bg-muted" />)}
-          </div>
-        )}
-        {!loading && items.map(item => {
-          const Icon = KIND_ICON[item.kind];
-          const external = isExternal(item);
-          return (
-            <a
-              key={item.id}
-              href={item.url}
-              target={external ? '_blank' : undefined}
-              rel={external ? 'noreferrer' : undefined}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-white px-5 py-4 shadow-sm transition-transform hover:-translate-y-0.5 hover:shadow-md active:translate-y-0"
-            >
-              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted text-foreground">
-                <Icon size={17} strokeWidth={1.5} />
-              </span>
-              <span className="flex-1 text-[15px] font-medium text-foreground">{item.label}</span>
-            </a>
-          );
-        })}
-      </div>
+      {loading && (
+        <div className="mt-8 grid grid-cols-2 gap-3">
+          <div className="col-span-2 h-16 animate-pulse rounded-2xl bg-muted" />
+          {[0, 1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />)}
+        </div>
+      )}
+
+      {!loading && items.length > 0 && (
+        <div className="mt-8 grid animate-fade-in grid-cols-2 gap-3">
+          {hero && <HubTile item={hero} featured />}
+          {rest.map((item, i) => (
+            <HubTile key={item.id} item={item} featured={i === rest.length - 1 && rest.length % 2 === 1} />
+          ))}
+        </div>
+      )}
 
       {!loading && settings?.showQr && (
-        <div className="mt-9 flex flex-col items-center rounded-2xl border border-border bg-white p-6 text-center shadow-sm">
+        <div className="mt-6 flex flex-col items-center rounded-2xl border border-border bg-white p-6 text-center shadow-sm">
           <canvas ref={qrRef} className="rounded-lg" />
           <p className="mt-3 text-xs text-muted-foreground">برای دیدن منو اسکن کنید</p>
         </div>
       )}
 
       {!loading && settings?.addressFa && (
-        <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
           {mapEmbedSrc && (
             <iframe
               src={mapEmbedSrc}
@@ -107,12 +103,35 @@ export default function SafasityHubPage() {
           </div>
           {mapLinkHref && (
             <a href={mapLinkHref} target="_blank" rel="noreferrer"
-              className="flex items-center justify-center gap-1.5 border-t border-border py-3 text-[12px] text-muted-foreground hover:text-foreground hover:bg-muted">
+              className="flex items-center justify-center gap-1.5 border-t border-border py-3 text-[12px] text-muted-foreground hover:bg-muted hover:text-foreground">
               <Navigation size={13} strokeWidth={1.5} /> مسیریابی در گوگل‌مپ
             </a>
           )}
         </div>
       )}
     </div>
+  );
+}
+
+function HubTile({ item, featured }: { item: HubItem; featured?: boolean }) {
+  const { icon: Icon, badge } = KIND_STYLE[item.kind];
+  const external = isExternal(item);
+  return (
+    <a
+      href={item.url}
+      target={external ? '_blank' : undefined}
+      rel={external ? 'noreferrer' : undefined}
+      className={cn(
+        'flex items-center gap-3 rounded-2xl border border-border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0',
+        featured ? 'col-span-2 px-5 py-4' : 'col-span-1 flex-col justify-center gap-2.5 px-4 py-6 text-center',
+      )}
+    >
+      <span className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full', badge)}>
+        <Icon size={18} strokeWidth={1.5} />
+      </span>
+      <span className={cn('font-medium text-foreground', featured ? 'flex-1 text-[15px]' : 'text-[13px] leading-snug')}>
+        {item.label}
+      </span>
+    </a>
   );
 }
