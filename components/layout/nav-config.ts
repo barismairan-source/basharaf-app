@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Receipt, BarChart3, Landmark, Users, UtensilsCrossed, ScrollText,
   Calculator, Package, UserPlus, Settings as SettingsIcon, UserCircle, Ticket,
   CalendarClock, Wrench, ShoppingCart, ClipboardList, Truck, TrendingUp, PackageOpen, ChefHat,
-  FileCheck, ShieldAlert, Handshake, Clock,
+  FileCheck, ShieldAlert, Handshake, Clock, BookOpen,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import type { SectionKey } from '@/lib/auth/permissions';
@@ -56,6 +56,7 @@ export const NAV_GROUPS: ReadonlyArray<NavGroup> = [
       { href: '/inventory',          label: 'انبار',      icon: Package,         roles: ['SuperAdmin', 'Warehouse', 'BranchUser'] },
       { href: '/inventory/kitchen',  label: 'آشپزخانه',   icon: ChefHat,         roles: ['SuperAdmin', 'Chef'], matchPrefix: true },
       { href: '/menu',            label: 'مدیریت منو',        icon: UtensilsCrossed, roles: ['SuperAdmin', 'Chef'] },
+      { href: '/recipe-book',     label: 'رسپی‌بوک',          icon: BookOpen,        roles: ['SuperAdmin', 'Chef'] },
       { href: '/equipment',       label: 'تجهیزات',           icon: Wrench,          roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
       { href: '/purchase-orders', label: 'سفارش خرید',        icon: ShoppingCart,    roles: ['SuperAdmin', 'BranchUser'], matchPrefix: true },
       { href: '/tasks',           label: 'وظایف روزانه',      icon: ClipboardList,   roles: ['SuperAdmin', 'BranchUser', 'Warehouse', 'Chef'] },

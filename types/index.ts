@@ -17,6 +17,7 @@ export type { Account } from './transaction';
 export type { Contact } from './transaction';
 export type { MenuCategory, MenuItem, MenuSection, MenuSettings } from './menu';
 export type { HubItem, HubItemKind, HubSettings } from './hub';
+export type { Recipe, RecipeCategory, RecipeProtein, RecipeIngredientDTO, RecipeInput, IngredientTag } from './recipe';
 export type {
   Customer, CustomerTier, LoyaltyEntry, Reservation, ReservationStatus,
   Feedback, CustomerDetail, Coupon, CouponRedemption, CouponDiscountType,

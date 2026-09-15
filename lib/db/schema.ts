@@ -859,6 +859,67 @@ export const linkHubSettings = pgTable('link_hub_settings', {
 export type LinkHubItem = typeof linkHubItems.$inferSelect;
 export type LinkHubSettings = typeof linkHubSettings.$inferSelect;
 
+// ─── Recipe Book (basharaf.me/safasity/recipes) ─────────────────
+/**
+ * رسپی‌بوک عمومی — جدا از inv_recipes (رسپی‌های داخلی برای بهای تمام‌شده).
+ * اینجا محتوای مشتری‌محور است: دسته‌بندی، پروتئین، و تگ مواد اولیه‌ی
+ * ساختاریافته تا هم روی صفحه نمایش داده شود هم بشود «با چی که دارم چی
+ * بپزم» را جستجو کرد.
+ */
+export const recipeCategories = pgTable('recipe_categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull().unique(),
+  label: text('label').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+});
+
+export const recipeProteinEnum = pgEnum('recipe_protein', [
+  'chicken', 'red_meat', 'seafood', 'vegetarian', 'vegan', 'other',
+]);
+
+export const recipes = pgTable('recipes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull().unique(),
+  title: text('title').notNull(),
+  summary: text('summary').notNull().default(''),
+  categoryId: uuid('category_id').references(() => recipeCategories.id, { onDelete: 'set null' }),
+  protein: recipeProteinEnum('protein').notNull().default('other'),
+  prepTimeMinutes: integer('prep_time_minutes'),
+  servings: text('servings'),
+  steps: jsonb('steps').$type<string[]>().notNull().default([]),
+  instagramUrl: text('instagram_url'),
+  videoUrl: text('video_url'),
+  imageUrl: text('image_url'),
+  isPublished: boolean('is_published').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** واژگان یکدست مواد اولیه — برای autocomplete در پنل و جستجوی «با چی که دارم». */
+export const ingredientTags = pgTable('ingredient_tags', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/** هر ردیف هم برای نمایش لیست مواد لازم استفاده می‌شود (name + quantityLabel) هم برای جستجوی تگ‌محور (ingredientTagId). */
+export const recipeIngredients = pgTable('recipe_ingredients', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  recipeId: uuid('recipe_id').notNull().references(() => recipes.id, { onDelete: 'cascade' }),
+  ingredientTagId: uuid('ingredient_tag_id').notNull().references(() => ingredientTags.id, { onDelete: 'restrict' }),
+  quantityLabel: text('quantity_label').notNull().default(''),
+  sortOrder: integer('sort_order').notNull().default(0),
+}, (t) => ({
+  recipeIdx: index('recipe_ingredients_recipe_idx').on(t.recipeId),
+  tagIdx: index('recipe_ingredients_tag_idx').on(t.ingredientTagId),
+}));
+
+export type RecipeCategory = typeof recipeCategories.$inferSelect;
+export type Recipe = typeof recipes.$inferSelect;
+export type IngredientTag = typeof ingredientTags.$inferSelect;
+export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
+
 // ─── System Logs (سیستم لاگ مرکزی برای تحلیل) ───────────────────
 /**
  * لاگ مرکزی رویدادها و خطاها.

@@ -8,7 +8,7 @@ const IMP_COOKIE = 'basharaf-imp';
 const PROTECTED_PREFIXES = [
   '/dashboard', '/transactions', '/settings', '/reports', '/accounts',
   '/contacts', '/menu', '/orders', '/logs',
-  '/inventory', '/customers', '/reservations', '/coupons',
+  '/inventory', '/customers', '/reservations', '/coupons', '/recipe-book',
   '/purchase-orders', '/equipment', '/tasks', '/admin',
   // یکپارچه‌سازی منابع انسانی — /employees، /payroll، /recruitment،
   // /shift-schedule، /attendance همیشه قبل از رسیدن به این چک redirect

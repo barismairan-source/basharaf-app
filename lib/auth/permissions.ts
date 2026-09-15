@@ -26,6 +26,7 @@ export type SectionKey =
   | 'recruitment'
   | 'hr'
   | 'reservations'
+  | 'recipeBook'
   | 'logs'
   | 'anomaly'
   | 'settings';
@@ -64,6 +65,7 @@ export const SECTIONS: ReadonlyArray<SectionDef> = [
   // فاز ۱ سیستم رزرو عمومی — این section از قبل در sectionForPath وجود نداشت
   // (یافته‌ی ممیزی: /reservations فقط login می‌خواست، هیچ نقشی محدود نمی‌شد).
   { key: 'reservations', label: 'رزرو میز',          defaultRoles: ['SuperAdmin', 'BranchUser'] },
+  { key: 'recipeBook',   label: 'رسپی‌بوک',          defaultRoles: ['SuperAdmin', 'Chef'] },
   { key: 'logs',         label: 'لاگ سیستم',         defaultRoles: ['SuperAdmin'] },
   { key: 'anomaly',      label: 'دستیار مالی',         defaultRoles: ['SuperAdmin'] },
   { key: 'settings',     label: 'تنظیمات',           defaultRoles: ['SuperAdmin', 'BranchUser'] },
@@ -198,6 +200,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (pathname.startsWith('/orders')) return 'orders';
   if (pathname.startsWith('/recruitment')) return 'recruitment';
   if (pathname.startsWith('/reservations')) return 'reservations';
+  if (pathname.startsWith('/recipe-book')) return 'recipeBook';
   if (pathname.startsWith('/logs')) return 'logs';
   if (pathname.startsWith('/anomaly')) return 'anomaly';
   if (pathname.startsWith('/settings')) return 'settings';
