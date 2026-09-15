@@ -22,7 +22,6 @@ interface LanguageContextValue {
 }
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
-const STORAGE_KEY = 'safasiti.menu.lang';
 
 export function LanguageProvider({
   children,
@@ -34,13 +33,10 @@ export function LanguageProvider({
   const [language, setLanguageState] = useState<Language>(initial);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(STORAGE_KEY);
-      if (stored === 'en' || stored === 'fa') setLanguageState(stored);
-    } catch {}
-    setMounted(true);
-  }, []);
+  // هر بازدید (هر بار اسکن QR یا باز کردن لینک) باید با فارسی شروع شود —
+  // زبان قبلاً در مرورگر ذخیره می‌شد که باعث می‌شد یک مشتری که یک‌بار EN
+  // را زده بود، هر بار بعدی هم منو را انگلیسی ببیند.
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -52,9 +48,6 @@ export function LanguageProvider({
 
   const setLanguage = useCallback((lang: Language) => {
     setLanguageState(lang);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, lang);
-    } catch {}
   }, []);
 
   const toggle = useCallback(
