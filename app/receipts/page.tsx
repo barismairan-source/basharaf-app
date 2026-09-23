@@ -1,11 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Check, Copy, Plus, Trash2, Receipt, ExternalLink } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Check, Copy, Plus, Trash2, Receipt, ExternalLink, Search, ChevronDown } from 'lucide-react';
 import { useAppStore } from '@/store';
 import { getTodayJalali } from '@/lib/jalali';
 
 interface ItemRow { name: string; qty: string; unitPrice: string }
+interface MenuItemLite { id: string; titleFa: string; price: number | null }
+interface MenuSectionLite { id: string; labelFa: string; items: MenuItemLite[] }
 
 function formatToman(n: number): string {
   return new Intl.NumberFormat('fa-IR').format(n);
@@ -17,6 +19,10 @@ function encodeReceipt(data: object): string {
   return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
+function isRowEmpty(r: ItemRow): boolean {
+  return !r.name.trim() && !r.unitPrice.trim();
+}
+
 export default function ReceiptsAdminPage() {
   const user = useAppStore(s => s.user);
   const [hydrated, setHydrated] = useState(false);
@@ -26,6 +32,41 @@ export default function ReceiptsAdminPage() {
   const [items, setItems] = useState<ItemRow[]>([{ name: '', qty: '1', unitPrice: '' }]);
   const [link, setLink] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // ── افزودن سریع از منوی واقعی ────────────────────────────────
+  const [menuSections, setMenuSections] = useState<MenuSectionLite[]>([]);
+  const [menuOpen, setMenuOpen] = useState(true);
+  const [menuQuery, setMenuQuery] = useState('');
+
+  useEffect(() => {
+    fetch('/api/menu?channel=hall', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : { sections: [] })
+      .then(d => setMenuSections(d.sections ?? []))
+      .catch(() => {});
+  }, []);
+
+  const filteredSections = useMemo(() => {
+    const q = menuQuery.trim();
+    if (!q) return menuSections;
+    return menuSections
+      .map(s => ({ ...s, items: s.items.filter(it => it.titleFa.includes(q)) }))
+      .filter(s => s.items.length > 0);
+  }, [menuSections, menuQuery]);
+
+  function addFromMenu(menuItem: MenuItemLite) {
+    if (menuItem.price == null) return;
+    setLink(null);
+    setItems(rows => {
+      const existingIdx = rows.findIndex(r => r.name.trim() === menuItem.titleFa);
+      if (existingIdx >= 0) {
+        return rows.map((r, i) => (i === existingIdx ? { ...r, qty: String((Number(r.qty) || 0) + 1) } : r));
+      }
+      const newRow: ItemRow = { name: menuItem.titleFa, qty: '1', unitPrice: String(menuItem.price) };
+      // ردیف خالیِ پیش‌فرض اول کار را جایگزین کن، نه این‌که کنارش اضافه شود.
+      if (rows.length === 1 && isRowEmpty(rows[0]!)) return [newRow];
+      return [...rows, newRow];
+    });
+  }
 
   function updateItem(idx: number, patch: Partial<ItemRow>) {
     setItems(rows => rows.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
@@ -73,10 +114,45 @@ export default function ReceiptsAdminPage() {
           <Receipt size={20} className="text-white" strokeWidth={1.5} />
         </div>
         <h1 className="text-lg font-semibold text-foreground">ساخت فیش برای مشتری</h1>
-        <p className="mt-1 text-[12px] text-muted-foreground">اقلام را وارد کنید، لینک بسازید و برای مشتری بفرستید</p>
+        <p className="mt-1 text-[12px] text-muted-foreground">آیتم را از منو انتخاب کنید یا دستی وارد کنید، بعد لینک بسازید</p>
       </header>
 
-      <div className="mt-7 space-y-4 rounded-2xl border border-border bg-white p-5 shadow-sm">
+      {/* افزودن سریع از منو */}
+      <div className="mt-7 overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+        <button onClick={() => setMenuOpen(o => !o)} className="flex w-full items-center gap-2.5 px-5 py-4 text-right">
+          <Search size={15} strokeWidth={1.5} className="flex-shrink-0 text-amber-600" />
+          <span className="flex-1 text-[13px] font-medium text-foreground">افزودن سریع از منو</span>
+          <ChevronDown size={15} className={`text-stone-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {menuOpen && (
+          <div className="border-t border-border p-4">
+            <input value={menuQuery} onChange={e => setMenuQuery(e.target.value)} placeholder="جست‌وجوی آیتم منو…"
+              className="h-10 w-full rounded-lg border border-stone-200 px-3 text-[13px] focus:border-stone-400 focus:outline-none" />
+            <div className="mt-3 max-h-72 space-y-4 overflow-y-auto">
+              {menuSections.length === 0 && <p className="py-4 text-center text-[12px] text-stone-400">در حال بارگذاری منو…</p>}
+              {filteredSections.map(section => (
+                <div key={section.id}>
+                  <p className="mb-1.5 text-[11px] font-medium text-stone-400">{section.labelFa}</p>
+                  <div className="space-y-1">
+                    {section.items.map(it => (
+                      <button key={it.id} onClick={() => addFromMenu(it)} disabled={it.price == null}
+                        className="flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-right text-[13px] hover:bg-stone-50 disabled:opacity-40">
+                        <span className="text-foreground">{it.titleFa}</span>
+                        <span className="flex items-center gap-1.5 text-stone-500">
+                          {it.price != null ? `${formatToman(it.price)} ت` : 'بدون قیمت'}
+                          <Plus size={13} className="text-amber-600" />
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 space-y-4 rounded-2xl border border-border bg-white p-5 shadow-sm">
         <div>
           <label className="mb-1 block text-[12px] text-muted-foreground">نام مشتری (اختیاری)</label>
           <input value={customerName} onChange={e => { setCustomerName(e.target.value); setLink(null); }}
@@ -99,7 +175,7 @@ export default function ReceiptsAdminPage() {
             ))}
           </div>
           <button onClick={addItem} className="mt-2 flex items-center gap-1.5 text-[12px] text-stone-500 hover:text-stone-800">
-            <Plus size={13} /> افزودن آیتم
+            <Plus size={13} /> افزودن ردیف دستی
           </button>
         </div>
 
