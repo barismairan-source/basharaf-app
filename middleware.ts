@@ -9,7 +9,7 @@ const PROTECTED_PREFIXES = [
   '/dashboard', '/transactions', '/settings', '/reports', '/accounts',
   '/contacts', '/menu', '/orders', '/logs',
   '/inventory', '/customers', '/reservations', '/coupons', '/recipe-book',
-  '/purchase-orders', '/equipment', '/tasks', '/admin',
+  '/purchase-orders', '/equipment', '/tasks', '/admin', '/receipts',
   // یکپارچه‌سازی منابع انسانی — /employees، /payroll، /recruitment،
   // /shift-schedule، /attendance همیشه قبل از رسیدن به این چک redirect
   // می‌شوند (rewriteLegacyHrPath بالا)، پس دیگر نیازی نیست اینجا باشند.
@@ -126,6 +126,13 @@ export function rewriteBrandedMenuPath(pathname: string): string | null {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ── استودیوی رسپی: basharaf.me/studio — کد استودیو (app/studio/*،
+  // lib/recipe-studio/*) کاملاً مستقل است (نشست/کوکی/جدول کاربر جدا)، ولی
+  // چون امکان زیردامنهٔ جدا فراهم نشد، روی همین دامنه با مسیر /studio سرو
+  // می‌شود؛ هیچ rewrite یا چک خاصی اینجا لازم نیست — routing عادی Next.js
+  // خودش /studio را به app/studio/ می‌رساند. middleware مشترک عمداً هیچ
+  // importی از ماژول‌های recipe-studio ندارد.
+
   const brandedMenuPath = rewriteBrandedMenuPath(pathname);
   if (brandedMenuPath) {
     const url = new URL(brandedMenuPath, request.url);
@@ -147,7 +154,9 @@ export async function middleware(request: NextRequest) {
   const session = token ? await verifyToken(token) : null;
   const isAuthed = !!session;
 
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  // /receipts/view عمومی است (لینک فیشی که مستقیم به مشتری داده می‌شود) —
+  // با اینکه با پیشوند محافظت‌شده‌ی /receipts شروع می‌شود، عمداً استثنا شده.
+  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p)) && !pathname.startsWith('/receipts/view');
   const isAuthRoute = AUTH_ROUTES.some((p) => pathname === p);
 
   // ── 1. Unauthenticated → login ────────────────────────────────────

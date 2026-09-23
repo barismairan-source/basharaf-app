@@ -222,7 +222,7 @@ export const useAppStore = create<AppStore>()(
               typeof window !== 'undefined' &&
               // '/' = روت عمومی (صفحه‌ی همکاری) — فقط مسیر دقیق روت allowlist می‌شود
               // (startsWith('//') هرگز true نمی‌شود، پس مسیرهای دیگر تحت‌تأثیر نیستند).
-              !['/', '/login', '/signup', '/forgot', '/apply', '/m', '/order', '/reserve', '/safasity'].some(
+              !['/', '/login', '/signup', '/forgot', '/apply', '/m', '/order', '/reserve', '/safasity', '/receipts/view'].some(
                 (p) => window.location.pathname === p || window.location.pathname.startsWith(`${p}/`)
               )
             ) {
