@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Check, Copy, Plus, Trash2, Receipt, ExternalLink, Search, ChevronDown } from 'lucide-react';
 import { useAppStore } from '@/store';
-import { getTodayJalali } from '@/lib/jalali';
 
 interface ItemRow { name: string; qty: string; unitPrice: string }
 interface MenuItemLite { id: string; titleFa: string; price: number | null }
@@ -11,12 +10,6 @@ interface MenuSectionLite { id: string; labelFa: string; items: MenuItemLite[] }
 
 function formatToman(n: number): string {
   return new Intl.NumberFormat('fa-IR').format(n);
-}
-
-/** base64url (بدون +، /، =) تا داخل query string سالم بماند — سمت خواندن در app/receipts/view/page.tsx. */
-function encodeReceipt(data: object): string {
-  const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
-  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 function isRowEmpty(r: ItemRow): boolean {
@@ -80,12 +73,26 @@ export default function ReceiptsAdminPage() {
     .map(r => ({ name: r.name.trim(), qty: Math.max(1, Number(r.qty) || 1), unitPrice: Number(r.unitPrice) }));
   const total = validItems.reduce((sum, it) => sum + it.qty * it.unitPrice, 0);
 
-  function handleGenerateLink() {
+  const [generating, setGenerating] = useState(false);
+  const [genError, setGenError] = useState<string | null>(null);
+
+  async function handleGenerateLink() {
     if (validItems.length === 0) return;
-    const payload = { customerName: customerName.trim() || undefined, items: validItems, date: getTodayJalali() };
-    const encoded = encodeReceipt(payload);
-    const url = `${window.location.origin}/receipts/view?d=${encoded}`;
-    setLink(url);
+    setGenerating(true);
+    setGenError(null);
+    try {
+      const res = await fetch('/api/receipts', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include',
+        body: JSON.stringify({ customerName: customerName.trim() || undefined, items: validItems }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setGenError(d.error ?? 'خطا در ساخت لینک'); return; }
+      setLink(`${window.location.origin}/r/${d.id}`);
+    } catch {
+      setGenError('خطا در ارتباط با سرور');
+    } finally {
+      setGenerating(false);
+    }
   }
 
   async function handleCopyLink() {
@@ -186,10 +193,12 @@ export default function ReceiptsAdminPage() {
           </div>
         )}
 
-        <button onClick={handleGenerateLink} disabled={validItems.length === 0}
+        <button onClick={handleGenerateLink} disabled={validItems.length === 0 || generating}
           className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-stone-900 text-[13px] font-medium text-white hover:bg-stone-800 disabled:opacity-50">
-          ساخت لینک برای مشتری
+          {generating ? 'در حال ساخت لینک…' : 'ساخت لینک برای مشتری'}
         </button>
+
+        {genError && <p className="rounded-lg bg-red-50 p-2.5 text-[12px] text-red-600">{genError}</p>}
 
         {link && (
           <div className="space-y-2 rounded-xl bg-stone-50 p-3">

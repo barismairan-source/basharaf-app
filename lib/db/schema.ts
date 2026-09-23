@@ -920,6 +920,22 @@ export type Recipe = typeof recipes.$inferSelect;
 export type IngredientTag = typeof ingredientTags.$inferSelect;
 export type RecipeIngredient = typeof recipeIngredients.$inferSelect;
 
+// ─── Receipts (لینک کوتاه فیش پرداخت برای مشتری) ─────────────────
+/**
+ * هر ردیف یک فیش پرداخت است که در basharaf.me/receipts ساخته می‌شود.
+ * `id` یک شناسه‌ی کوتاه تصادفی است (نه uuid) تا لینک basharaf.me/r/{id}
+ * کوتاه بماند. کاملاً جدا از transactions حسابداری — این فقط یک نمایش
+ * فیش برای مشتری است، هیچ اثر مالی/حسابداری ثبت نمی‌کند.
+ */
+export const receipts = pgTable('receipts', {
+  id: text('id').primaryKey(),
+  customerName: text('customer_name'),
+  items: jsonb('items').$type<{ name: string; qty: number; unitPrice: number }[]>().notNull(),
+  createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+export type ReceiptRow = typeof receipts.$inferSelect;
+
 // ─── System Logs (سیستم لاگ مرکزی برای تحلیل) ───────────────────
 /**
  * لاگ مرکزی رویدادها و خطاها.
