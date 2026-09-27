@@ -27,6 +27,15 @@ export interface MenuSection extends MenuCategory {
   items: MenuItem[];
 }
 
+export interface MenuSeason {
+  id: string;
+  nameFa: string;
+  nameEn: string | null;
+  note: string | null;
+  isCurrent: boolean;
+  startedAt: string;
+}
+
 export interface MenuSettings {
   faFont: string;
   enFont: string;

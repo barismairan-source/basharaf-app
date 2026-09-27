@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
-import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode, ArrowUp, ArrowDown, Instagram, Phone, Briefcase, Link2, CalendarCheck, ShoppingBag } from 'lucide-react';
+import { UtensilsCrossed, Plus, Trash2, Edit3, X, Check, Eye, EyeOff, ExternalLink, QrCode, ArrowUp, ArrowDown, Instagram, Phone, Briefcase, Link2, CalendarCheck, ShoppingBag, Leaf, Repeat, MoveRight } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Textarea, Empty, Chip, Switch } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { fmt, cn, formatNumericInputValue } from '@/lib/utils';
 import { FA_FONTS, EN_FONTS } from '@/lib/menu/fonts';
-import type { MenuItem, MenuSettings, HubItem, HubSettings, HubItemKind } from '@/types';
+import type { MenuItem, MenuSettings, MenuSeason, HubItem, HubSettings, HubItemKind } from '@/types';
 
-type Tab = 'items' | 'categories' | 'settings' | 'qr' | 'hub';
+type Tab = 'items' | 'categories' | 'season' | 'settings' | 'qr' | 'hub';
 
 export default function MenuAdminPage() {
   const user = useAppStore(s => s.user);
@@ -25,6 +25,11 @@ export default function MenuAdminPage() {
   const updateSettings = useAppStore(s => s.updateMenuSettings);
   const showToast = useAppStore(s => s.showToast);
 
+  const menuSeasons = useAppStore(s => s.menuSeasons);
+  const loadMenuSeasons = useAppStore(s => s.loadMenuSeasons);
+  const startMenuSeason = useAppStore(s => s.startMenuSeason);
+  const updateMenuSeason = useAppStore(s => s.updateMenuSeason);
+
   const hubItems = useAppStore(s => s.hubItems);
   const hubSettings = useAppStore(s => s.hubSettings);
   const loadHub = useAppStore(s => s.loadHub);
@@ -37,7 +42,7 @@ export default function MenuAdminPage() {
   const [hydrated, setHydrated] = useState(false);
   const [tab, setTab] = useState<Tab>('items');
 
-  useEffect(() => { setHydrated(true); loadMenu(); loadHub(); }, [loadMenu, loadHub]);
+  useEffect(() => { setHydrated(true); loadMenu(); loadHub(); loadMenuSeasons(); }, [loadMenu, loadHub, loadMenuSeasons]);
 
   const allItems = useMemo(
     () => sections.flatMap(s => s.items.map(it => ({ ...it, sectionLabel: s.labelFa }))),
@@ -67,7 +72,7 @@ export default function MenuAdminPage() {
 
         {/* Tabs */}
         <div className="flex gap-1 border-b border-stone-200">
-          {([['items', 'آیتم‌ها'], ['categories', 'دسته‌ها'], ['settings', 'تنظیمات'], ['qr', 'کد QR'], ['hub', 'صفحه لینک']] as [Tab, string][]).map(([t, label]) => (
+          {([['items', 'آیتم‌ها'], ['categories', 'دسته‌ها'], ['season', 'فصل و روتیشن'], ['settings', 'تنظیمات'], ['qr', 'کد QR'], ['hub', 'صفحه لینک']] as [Tab, string][]).map(([t, label]) => (
             <button key={t} onClick={() => setTab(t)}
               className={cn('px-4 h-10 text-[13px] border-b-2 -mb-px transition-colors',
                 tab === t ? 'border-stone-900 text-stone-900' : 'border-transparent text-stone-500 hover:text-stone-800')}>
@@ -82,6 +87,13 @@ export default function MenuAdminPage() {
         )}
         {tab === 'categories' && (
           <CategoriesTab sections={sections} onCreate={createCategory} onUpdate={updateCategory} onDelete={deleteCategory} showToast={showToast} />
+        )}
+        {tab === 'season' && (
+          <SeasonTab
+            sections={sections} seasons={menuSeasons}
+            onStartSeason={startMenuSeason} onUpdateSeason={updateMenuSeason}
+            onUpdateItem={updateItem} showToast={showToast}
+          />
         )}
         {tab === 'settings' && settings && (
           <SettingsTab settings={settings} onUpdate={updateSettings} showToast={showToast} />
@@ -482,6 +494,176 @@ function VatRateCell({ category, onUpdate, showToast }: any) {
       onChange={e => setValue(e.target.value.replace(/\D/g, '').slice(0, 3))}
       onBlur={handleBlur}
     />
+  );
+}
+
+// ─── Season Tab (فصل و روتیشن) ────────────────────────────────────
+function formatSeasonDate(iso: string): string {
+  try {
+    return new Intl.DateTimeFormat('fa-IR', { dateStyle: 'long' }).format(new Date(iso));
+  } catch {
+    return '';
+  }
+}
+
+function SeasonTab({ sections, seasons, onStartSeason, onUpdateSeason, onUpdateItem, showToast }: {
+  sections: any;
+  seasons: MenuSeason[];
+  onStartSeason: (input: { nameFa: string; nameEn?: string | null; note?: string | null }) => Promise<boolean>;
+  onUpdateSeason: (id: string, patch: { nameFa?: string; nameEn?: string | null; note?: string | null }) => Promise<boolean>;
+  onUpdateItem: any;
+  showToast: any;
+}) {
+  const current = seasons.find(s => s.isCurrent) ?? null;
+  const history = seasons.filter(s => !s.isCurrent);
+
+  const [showNewForm, setShowNewForm] = useState(false);
+  const [form, setForm] = useState({ nameFa: '', nameEn: '', note: '' });
+  const [saving, setSaving] = useState(false);
+
+  const [editingNote, setEditingNote] = useState(false);
+  const [noteDraft, setNoteDraft] = useState(current?.note ?? '');
+
+  async function handleStart() {
+    if (!form.nameFa.trim()) { showToast('نام فصل الزامی است', 'danger'); return; }
+    setSaving(true);
+    const ok = await onStartSeason({ nameFa: form.nameFa.trim(), nameEn: form.nameEn.trim() || null, note: form.note.trim() || null });
+    setSaving(false);
+    if (ok) { showToast('فصل جدید شروع شد', 'success'); setShowNewForm(false); setForm({ nameFa: '', nameEn: '', note: '' }); }
+    else showToast('خطا', 'danger');
+  }
+
+  async function handleSaveNote() {
+    if (!current) return;
+    const ok = await onUpdateSeason(current.id, { note: noteDraft.trim() || null });
+    if (ok) { showToast('یادداشت ذخیره شد', 'success'); setEditingNote(false); }
+    else showToast('خطا', 'danger');
+  }
+
+  const rotationSection = sections.find((s: any) => s.slug === 'rotation');
+  const otherSections = sections.filter((s: any) => s.slug !== 'rotation');
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader title="فصل جاری منو" sub="برای یادداشت و تاریخچه — روی خود منو اثری ندارد" />
+        <CardBody className="space-y-3">
+          {current ? (
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Leaf size={15} strokeWidth={1.5} className="text-emerald-600" />
+                  <span className="text-[14px] font-medium text-stone-900">{current.nameFa}</span>
+                  {current.nameEn && <span className="text-[11px] text-muted" dir="ltr">{current.nameEn}</span>}
+                </div>
+                <div className="text-[11px] text-muted mt-1">شروع: {formatSeasonDate(current.startedAt)}</div>
+                {editingNote ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <Input value={noteDraft} onChange={e => setNoteDraft(e.target.value)} placeholder="یادداشت (اختیاری)" />
+                    <Button variant="primary" size="sm" icon={Check} onClick={handleSaveNote}>ذخیره</Button>
+                    <Button variant="default" size="sm" icon={X} onClick={() => { setEditingNote(false); setNoteDraft(current.note ?? ''); }}>لغو</Button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setNoteDraft(current.note ?? ''); setEditingNote(true); }}
+                    className="text-[11px] text-stone-400 hover:text-stone-700 mt-1">
+                    {current.note ? current.note : '+ افزودن یادداشت'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <Empty title="هنوز فصلی ثبت نشده" icon={Leaf} />
+          )}
+
+          {showNewForm ? (
+            <div className="rounded-lg border border-stone-200 p-3 space-y-2 bg-stone-50/50">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Field label="نام فصل"><Input placeholder="پاییز ۱۴۰۵" value={form.nameFa} onChange={e => setForm({ ...form, nameFa: e.target.value })} /></Field>
+                <Field label="نام انگلیسی (اختیاری)"><Input dir="ltr" value={form.nameEn} onChange={e => setForm({ ...form, nameEn: e.target.value })} /></Field>
+              </div>
+              <Field label="یادداشت (اختیاری)"><Input value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} /></Field>
+              <div className="flex justify-end gap-2">
+                <Button variant="default" size="sm" onClick={() => setShowNewForm(false)}>لغو</Button>
+                <Button variant="primary" size="sm" icon={Check} loading={saving} onClick={handleStart}>شروع فصل</Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="default" size="sm" icon={Plus} onClick={() => setShowNewForm(true)}>شروع فصل جدید</Button>
+          )}
+
+          {history.length > 0 && (
+            <div className="pt-2 border-t border-stone-100 space-y-1.5">
+              <div className="text-[11px] text-muted mb-1">فصل‌های قبلی</div>
+              {history.map(s => (
+                <div key={s.id} className="flex items-center justify-between text-[12px] text-stone-600 py-1">
+                  <span>{s.nameFa}{s.note ? ` — ${s.note}` : ''}</span>
+                  <span className="text-[11px] text-muted">{formatSeasonDate(s.startedAt)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader title="روتیشن (منو روزانه)" sub="آیتم‌هایی که به‌صورت دوره‌ای می‌آیند و می‌روند" />
+        <CardBody className="p-0">
+          {!rotationSection || rotationSection.items.length === 0 ? (
+            <div className="p-5"><Empty title="آیتمی در روتیشن نیست" icon={Repeat} /></div>
+          ) : (
+            <div className="divide-y divide-stone-50">
+              {rotationSection.items.map((item: MenuItem) => (
+                <RotationItemRow key={item.id} item={item} otherSections={otherSections} onUpdateItem={onUpdateItem} showToast={showToast} />
+              ))}
+            </div>
+          )}
+        </CardBody>
+      </Card>
+    </div>
+  );
+}
+
+function RotationItemRow({ item, otherSections, onUpdateItem, showToast }: {
+  item: MenuItem;
+  otherSections: any;
+  onUpdateItem: any;
+  showToast: any;
+}) {
+  const [moveTo, setMoveTo] = useState('');
+  const [moving, setMoving] = useState(false);
+
+  async function handleMove() {
+    if (!moveTo) return;
+    setMoving(true);
+    const ok = await onUpdateItem(item.id, { categoryId: moveTo });
+    setMoving(false);
+    if (ok) showToast('به منوی اصلی منتقل شد', 'success');
+    else showToast('خطا', 'danger');
+  }
+
+  return (
+    <div className={cn('flex items-center gap-3 px-5 py-3', !item.isAvailable && 'opacity-50')}>
+      <div className="flex-1 min-w-0">
+        <div className="text-[12.5px] text-stone-800 truncate">{item.titleFa}</div>
+        <div className="text-[11px] text-muted tabular-nums">{item.price === null ? '—' : fmt(item.price)}</div>
+      </div>
+      <button onClick={async () => { await onUpdateItem(item.id, { isAvailable: !item.isAvailable }); }}
+        title={item.isAvailable ? 'فعال این هفته' : 'خارج از روتیشن'}
+        className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-stone-100 flex-shrink-0">
+        {item.isAvailable ? <Eye size={14} className="text-emerald-600" /> : <EyeOff size={14} className="text-muted" />}
+      </button>
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        <Select className="w-32 h-8 text-[11px]" value={moveTo} onChange={e => setMoveTo(e.target.value)}>
+          <option value="">انتقال به…</option>
+          {otherSections.map((s: any) => <option key={s.id} value={s.id}>{s.labelFa}</option>)}
+        </Select>
+        <button onClick={handleMove} disabled={!moveTo || moving}
+          title="انتقال به منوی اصلی"
+          className="w-7 h-7 inline-flex items-center justify-center rounded hover:bg-stone-100 text-muted hover:text-stone-700 disabled:opacity-30">
+          <MoveRight size={14} strokeWidth={1.5} />
+        </button>
+      </div>
+    </div>
   );
 }
 

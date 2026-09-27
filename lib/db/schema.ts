@@ -824,6 +824,19 @@ export type MenuCategory = typeof menuCategories.$inferSelect;
 export type MenuItem = typeof menuItems.$inferSelect;
 export type MenuSettings = typeof menuSettings.$inferSelect;
 
+/** فصل‌های منو (تابستان ۱۴۰۴، پاییز ۱۴۰۵، …) — فقط برای یادداشت/تاریخچه، به آیتم‌ها وصل نیست. */
+export const menuSeasons = pgTable('menu_seasons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  nameFa: text('name_fa').notNull(),
+  nameEn: text('name_en'),
+  note: text('note'),
+  isCurrent: boolean('is_current').notNull().default(false),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type MenuSeason = typeof menuSeasons.$inferSelect;
+
 // ─── Link Hub (صفحه‌ی لینک basharaf.me/safasity) ─────────────────
 /**
  * لیست لینک‌های صفحه‌ی basharaf.me/safasity (سبک Linktree/Bento).

@@ -15,7 +15,7 @@ export type { Preferences, AccentColor } from './preferences';
 export { DEFAULT_PREFERENCES } from './preferences';
 export type { Account } from './transaction';
 export type { Contact } from './transaction';
-export type { MenuCategory, MenuItem, MenuSection, MenuSettings } from './menu';
+export type { MenuCategory, MenuItem, MenuSection, MenuSeason, MenuSettings } from './menu';
 export type { HubItem, HubItemKind, HubSettings } from './hub';
 export type { Recipe, RecipeCategory, RecipeProtein, RecipeIngredientDTO, RecipeInput, IngredientTag } from './recipe';
 export type {

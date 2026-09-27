@@ -28,6 +28,17 @@ export function rowToMenuCategory(row: typeof schema.menuCategories.$inferSelect
   };
 }
 
+export function rowToMenuSeason(row: typeof schema.menuSeasons.$inferSelect) {
+  return {
+    id: row.id,
+    nameFa: row.nameFa,
+    nameEn: row.nameEn,
+    note: row.note,
+    isCurrent: row.isCurrent,
+    startedAt: row.startedAt.toISOString(),
+  };
+}
+
 export function rowToMenuSettings(row: typeof schema.menuSettings.$inferSelect) {
   return {
     faFont: row.faFont,
@@ -64,6 +75,7 @@ export function buildPublicMenuSections(
 
   for (const row of items) {
     const item = rowToMenuItem(row);
+    if (!item.isAvailable) continue;
     if (channel === 'takeaway' ? !item.inTakeaway : !item.inHall) continue;
     const rawPrice = channel === 'takeaway' ? (item.priceTakeaway ?? item.price) : item.price;
     const list = buckets.get(item.categoryId) ?? [];
