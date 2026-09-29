@@ -49,6 +49,8 @@ export interface Reservation {
   /** فقط برای مهمانِ بدون عضویت (customerId=null) — از صفحه‌ی عمومی رزرو */
   guestName: string | null;
   guestPhone: string | null;
+  /** نام رزروکننده (خوداظهاری، ممکن است با مهمان اصلی فرق کند). */
+  bookerName: string | null;
   trackingCode: string | null;
   canceledReason: string | null;
   source: 'staff' | 'public' | string;
@@ -131,17 +133,27 @@ export type ReservationStatus =
 export interface ReservationSettingsDTO {
   id: string | null;
   branchId: string;
-  lunchEnabled: boolean;
-  lunchStartHour: number;
-  lunchEndHour: number;
-  dinnerEnabled: boolean;
-  dinnerStartHour: number;
-  dinnerEndHour: number;
+  openHour: number;
+  /** null یعنی مدیر هنوز ساعت پایان را تنظیم نکرده — رزرو آنلاین آن شعبه هنوز فعال نیست. */
+  closeHour: number | null;
+  /** روزهای هفته‌ی تعطیل — 0=یکشنبه..6=شنبه. */
+  closedWeekdays: number[];
   maxPartySize: number;
   maxActiveReservationsPerPhone: number;
   closedMessage: string | null;
   closedPhone: string | null;
   updatedAt: string | null;
+}
+
+export interface RestaurantTableBlock {
+  id: string;
+  tableId: string;
+  branchId: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+  reason: string | null;
+  createdAt: string;
 }
 
 export interface RestaurantTable {

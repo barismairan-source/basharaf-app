@@ -9,6 +9,8 @@ export const dynamic = 'force-dynamic';
 
 const bodySchema = z.object({
   branchId: z.string().uuid(),
+  date: z.string().min(6).max(12),
+  bookerName: z.string().trim().min(2, 'نام رزروکننده را کامل وارد کنید').max(80).optional(),
   guestName: z.string().trim().min(2, 'نام را کامل وارد کنید').max(80),
   guestPhone: z.string().trim().transform((v, ctx) => {
     const normalized = normalizeIranPhone(v);
@@ -20,7 +22,9 @@ const bodySchema = z.object({
   }),
   time: z.string().regex(/^\d{1,2}:\d{2}$/, 'ساعت نامعتبر است'),
   partySize: z.number().int().positive().max(100),
+  tableType: z.enum(['normal', 'social']),
   note: z.string().trim().max(300).optional(),
+  idempotencyKey: z.string().max(100).optional(),
 });
 
 /**

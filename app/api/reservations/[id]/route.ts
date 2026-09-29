@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { updateStaffReservation } from '@/lib/reservations/adminBooking';
 
 /** state machine وضعیت رزرو — گذارهای مجاز از هر وضعیت. */
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
@@ -58,22 +59,28 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       }
     }
 
-    // اگر میز عوض شد، باید هم‌شعبه باشد
-    if (input.tableId) {
-      const [t] = await db
-        .select({ branchId: schema.restaurantTables.branchId })
-        .from(schema.restaurantTables)
-        .where(eq(schema.restaurantTables.id, input.tableId));
-      if (!t || t.branchId !== existing.branchId) {
-        throw new ApiError(400, 'میز انتخابی متعلق به این شعبه نیست', 'TABLE_BRANCH_MISMATCH');
+    const { status, canceledReason, ...capacityPatch } = input;
+    const touchesCapacity = capacityPatch.tableId !== undefined || capacityPatch.date !== undefined
+      || capacityPatch.time !== undefined || capacityPatch.partySize !== undefined;
+
+    let updated: typeof existing | undefined;
+    if (touchesCapacity) {
+      updated = await updateStaffReservation(params.id, existing.branchId, {
+        tableId: existing.tableId, date: existing.date, time: existing.time, partySize: existing.partySize,
+      }, capacityPatch);
+      if (status || canceledReason !== undefined) {
+        [updated] = await db.update(schema.reservations)
+          .set({ ...(status ? { status } : {}), ...(canceledReason !== undefined ? { canceledReason } : {}) })
+          .where(eq(schema.reservations.id, params.id))
+          .returning();
       }
+    } else {
+      [updated] = await db.update(schema.reservations)
+        .set({ ...(status ? { status } : {}), ...(canceledReason !== undefined ? { canceledReason } : {}) })
+        .where(eq(schema.reservations.id, params.id))
+        .returning();
     }
 
-    const [updated] = await db
-      .update(schema.reservations)
-      .set({ ...input })
-      .where(eq(schema.reservations.id, params.id))
-      .returning();
     if (!updated) throw new ApiError(404, 'رزرو پیدا نشد', 'NOT_FOUND');
     return NextResponse.json({
       reservation: { ...updated, createdAt: updated.createdAt.toISOString() },

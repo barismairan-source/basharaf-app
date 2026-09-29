@@ -1,7 +1,7 @@
 import { apiFetch } from './api';
 import type { ReservationPublicRepo } from './reservationPublic.types';
 import type {
-  PublicReservationBranch, PublicReservationToday, PublicReservationResult, PublicReservationDetail,
+  PublicReservationBranch, PublicReservationDay, PublicReservationResult, PublicReservationDetail,
 } from '@/types';
 
 export const reservationPublicRepo: ReservationPublicRepo = {
@@ -10,9 +10,9 @@ export const reservationPublicRepo: ReservationPublicRepo = {
     return data.branches;
   },
 
-  async getToday(branchId, partySize) {
-    const qs = new URLSearchParams({ branchId, partySize: String(partySize) });
-    return apiFetch<PublicReservationToday>(`/api/public/reservations/today?${qs}`);
+  async getDay(branchId, date, partySize, tableType) {
+    const qs = new URLSearchParams({ branchId, date, partySize: String(partySize), tableType });
+    return apiFetch<PublicReservationDay>(`/api/public/reservations/today?${qs}`);
   },
 
   async create(input) {

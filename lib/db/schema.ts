@@ -1826,6 +1826,26 @@ export const restaurantTables = pgTable(
   })
 );
 
+/** مسدودی میز — یک تاریخ + بازه‌ی ساعتی اختیاری (خالی = کل روز). با رزروهای هم‌پوشان تداخل چک می‌شود، جایگزین‌شان نمی‌کند. */
+export const tableBlocks = pgTable(
+  'table_blocks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tableId: uuid('table_id').notNull().references(() => restaurantTables.id, { onDelete: 'cascade' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    date: text('date').notNull(), // Jalali string
+    startTime: text('start_time'), // null = کل روز
+    endTime: text('end_time'),     // null = کل روز
+    reason: text('reason'),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    branchDateIdx: index('table_blocks_branch_date_idx').on(t.branchId, t.date),
+    tableDateIdx: index('table_blocks_table_date_idx').on(t.tableId, t.date),
+  })
+);
+
 export const reservations = pgTable(
   'reservations',
   {
@@ -1842,8 +1862,12 @@ export const reservations = pgTable(
     /** مهمان بدون عضویت — وقتی customerId خالی است هر دو الزامی‌اند (چک در API). */
     guestName: text('guest_name'),
     guestPhone: text('guest_phone'),
+    /** نام رزروکننده (خوداظهاری، ممکن است با مهمان اصلی فرق کند — مثلاً صدرا برای شهین رزرو می‌کند). */
+    bookerName: text('booker_name'),
     /** کد پیگیری کوتاه — فقط برای رزروهای عمومی تولید می‌شود، یکتا. */
     trackingCode: text('tracking_code'),
+    /** کلید سمت کاربر برای جلوگیری از ثبت دوباره (دوبار لمس دکمه/retry شبکه) — یکتا وقتی مقدار دارد. */
+    idempotencyKey: text('idempotency_key'),
     canceledReason: text('canceled_reason'),
     /** 'staff' = ثبت‌شده در پنل مدیریت | 'public' = ثبت‌شده از صفحه‌ی عمومی */
     source: text('source').notNull().default('staff'),
@@ -1862,6 +1886,9 @@ export const reservations = pgTable(
     trackingCodeUniq: uniqueIndex('reservations_tracking_code_uniq')
       .on(t.trackingCode)
       .where(sql`${t.trackingCode} IS NOT NULL`),
+    idempotencyKeyUniq: uniqueIndex('reservations_idempotency_key_uniq')
+      .on(t.idempotencyKey)
+      .where(sql`${t.idempotencyKey} IS NOT NULL`),
   })
 );
 
@@ -1890,6 +1917,16 @@ export const reservationSettings = pgTable(
     dinnerEnabled: boolean('dinner_enabled').notNull().default(false),
     dinnerStartHour: integer('dinner_start_hour').notNull().default(19),
     dinnerEndHour: integer('dinner_end_hour').notNull().default(23),
+    /**
+     * نسخه‌ی سوم — یک بازه‌ی فعالیت روزانه (نه دو شیفت جدا)، تاریخ‌محور (نه فقط
+     * امروز). lunch/dinner بالا دیگر خوانده نمی‌شوند (بی‌ضرر، طبق الگوی همیشگی
+     * پروژه — ستون قدیمی حذف نمی‌شود). openHour پیش‌فرض ۱۹؛ closeHour تا وقتی
+     * مدیر صریحاً تنظیم نکند null است و یعنی رزرو آنلاین آن شعبه هنوز فعال نشده.
+     */
+    openHour: integer('open_hour').notNull().default(19),
+    closeHour: integer('close_hour'),
+    /** روزهای هفته‌ی تعطیل — 0=یکشنبه..6=شنبه (طبق Date.getDay() جاوااسکریپت). */
+    closedWeekdays: jsonb('closed_weekdays').$type<number[]>().notNull().default(sql`'[]'::jsonb`),
     maxPartySize: integer('max_party_size').notNull().default(12),
     maxActiveReservationsPerPhone: integer('max_active_reservations_per_phone').notNull().default(3),
     /** متن دلخواه مدیر — وقتی هیچ شیفتی باز نیست یا همه‌ی میزها پر است. */
@@ -1905,6 +1942,7 @@ export const reservationSettings = pgTable(
 );
 
 export type ReservationSettings = typeof reservationSettings.$inferSelect;
+export type TableBlock = typeof tableBlocks.$inferSelect;
 
 export const feedback = pgTable(
   'feedback',

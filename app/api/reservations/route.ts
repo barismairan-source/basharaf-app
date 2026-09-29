@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { and, eq, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { createStaffReservation } from '@/lib/reservations/adminBooking';
 
 const createSchema = z.object({
   customerId: z.string().uuid().nullable().optional(),
@@ -13,6 +14,9 @@ const createSchema = z.object({
   time: z.string().min(3).max(8),
   partySize: z.number().int().positive().default(1),
   note: z.string().max(300).nullable().optional(),
+  guestName: z.string().max(80).nullable().optional(),
+  guestPhone: z.string().max(20).nullable().optional(),
+  bookerName: z.string().max(80).nullable().optional(),
 });
 
 type ResRow = typeof schema.reservations.$inferSelect;
@@ -30,6 +34,7 @@ function serialize(r: ResRow) {
     note: r.note,
     guestName: r.guestName,
     guestPhone: r.guestPhone,
+    bookerName: r.bookerName,
     trackingCode: r.trackingCode,
     canceledReason: r.canceledReason,
     source: r.source,
@@ -75,32 +80,24 @@ export async function POST(req: Request) {
       session.role === 'SuperAdmin' ? (input.branchId ?? null) : session.branchId;
     if (!branchId) throw new ApiError(400, 'شعبه برای رزرو مشخص نیست', 'BRANCH_REQUIRED');
 
-    // اگر میز انتخاب شده، باید متعلق به همان شعبه باشد
-    if (input.tableId) {
-      const [t] = await db
-        .select({ branchId: schema.restaurantTables.branchId })
-        .from(schema.restaurantTables)
-        .where(eq(schema.restaurantTables.id, input.tableId));
-      if (!t || t.branchId !== branchId) {
-        throw new ApiError(400, 'میز انتخابی متعلق به این شعبه نیست', 'TABLE_BRANCH_MISMATCH');
-      }
+    if (!input.customerId && !input.guestName) {
+      throw new ApiError(400, 'برای رزرو مهمان، نام مهمان لازم است', 'GUEST_NAME_REQUIRED');
     }
 
-    const [r] = await db
-      .insert(schema.reservations)
-      .values({
-        customerId: input.customerId ?? null,
-        branchId,
-        tableId: input.tableId ?? null,
-        date: input.date,
-        time: input.time,
-        partySize: input.partySize,
-        note: input.note ?? null,
-        createdBy: session.sub,
-      })
-      .returning();
-    if (!r) throw new ApiError(500, 'خطا در ثبت رزرو', 'INSERT_FAILED');
-    return NextResponse.json({ reservation: serialize(r) }, { status: 201 });
+    const row = await createStaffReservation({
+      branchId,
+      customerId: input.customerId ?? null,
+      tableId: input.tableId ?? null,
+      date: input.date,
+      time: input.time.trim(),
+      partySize: input.partySize,
+      note: input.note ?? null,
+      guestName: input.guestName ?? null,
+      guestPhone: input.guestPhone ?? null,
+      bookerName: input.bookerName ?? null,
+      createdBy: session.sub,
+    });
+    return NextResponse.json({ reservation: serialize(row as ResRow) }, { status: 201 });
   } catch (e) {
     return handleError(e);
   }

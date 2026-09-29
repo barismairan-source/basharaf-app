@@ -2,33 +2,40 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Loader2, Minus, Phone, PhoneCall, Plus, User, Users } from 'lucide-react';
-import { Button, Card, CardBody, Empty, Field, Input, Select, Textarea } from '@/components/ui';
+import { CheckCircle2, Loader2, Minus, Phone, PhoneCall, Plus, User, Users, Table2, Users2 } from 'lucide-react';
+import { Button, Card, CardBody, Empty, Field, Input, Select, Textarea, JalaliDatePicker } from '@/components/ui';
 import { normalizeDigits, toFa, cn } from '@/lib/utils';
+import { getTodayJalali } from '@/lib/jalali';
 import { reservationPublicRepo } from '@/lib/repos/reservationPublic.api';
-import type { PublicReservationBranch, PublicReservationToday, PublicReservationResult } from '@/types';
+import type { PublicReservationBranch, PublicReservationDay, PublicReservationResult } from '@/types';
+
+type TableType = 'normal' | 'social';
 
 export default function PublicReservePage() {
   const [branches, setBranches] = useState<PublicReservationBranch[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const [branchId, setBranchId] = useState('');
+  const [date, setDate] = useState(getTodayJalali());
   const [partySize, setPartySize] = useState(2);
+  const [tableType, setTableType] = useState<TableType>('normal');
   const [time, setTime] = useState('');
+  const [bookerName, setBookerName] = useState('');
   const [guestName, setGuestName] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [note, setNote] = useState('');
+  const [idempotencyKey] = useState(() => (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`));
 
-  const [today, setToday] = useState<PublicReservationToday | null>(null);
-  const [todayLoading, setTodayLoading] = useState(false);
-  const [todayError, setTodayError] = useState<string | null>(null);
+  const [day, setDay] = useState<PublicReservationDay | null>(null);
+  const [dayLoading, setDayLoading] = useState(false);
+  const [dayError, setDayError] = useState<string | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<PublicReservationResult | null>(null);
 
   const branch = useMemo(() => branches?.find((b) => b.id === branchId) ?? null, [branches, branchId]);
-  const selectedSlot = useMemo(() => today?.slots.find((s) => s.time === time) ?? null, [today, time]);
+  const selectedSlot = useMemo(() => day?.slots.find((s) => s.time === time) ?? null, [day, time]);
 
   useEffect(() => {
     reservationPublicRepo.getBranches()
@@ -43,28 +50,31 @@ export default function PublicReservePage() {
     if (branch && partySize > branch.maxPartySize) setPartySize(branch.maxPartySize);
   }, [branch, partySize]);
 
+  // با تغییر تاریخ/نفرات/نوع میز، ساعت‌ها دوباره محاسبه و انتخاب قبلی پاک می‌شود
   useEffect(() => {
-    if (!branchId) { setToday(null); return; }
-    setTodayLoading(true);
-    setTodayError(null);
+    if (!branchId || !date) { setDay(null); return; }
+    setDayLoading(true);
+    setDayError(null);
     setTime('');
-    reservationPublicRepo.getToday(branchId, partySize)
-      .then(setToday)
-      .catch((e: Error) => setTodayError(e.message))
-      .finally(() => setTodayLoading(false));
-  }, [branchId, partySize]);
+    reservationPublicRepo.getDay(branchId, date, partySize, tableType)
+      .then(setDay)
+      .catch((e: Error) => setDayError(e.message))
+      .finally(() => setDayLoading(false));
+  }, [branchId, date, partySize, tableType]);
 
   async function handleSubmit() {
     if (!branchId || !time) return;
-    if (guestName.trim().length < 2) { setSubmitError('نام را کامل وارد کنید'); return; }
+    if (guestName.trim().length < 2) { setSubmitError('نام مهمان را کامل وارد کنید'); return; }
     setSubmitting(true);
     setSubmitError(null);
     try {
       const res = await reservationPublicRepo.create({
-        branchId, time, partySize,
+        branchId, date, time, partySize, tableType,
+        bookerName: bookerName.trim() || undefined,
         guestName: guestName.trim(),
         guestPhone: normalizeDigits(guestPhone.trim()),
         note: note.trim() || undefined,
+        idempotencyKey,
       });
       setResult(res);
     } catch (e) {
@@ -123,13 +133,10 @@ export default function PublicReservePage() {
     );
   }
 
-  const lunchSlots = today?.slots.filter((s) => s.period === 'lunch') ?? [];
-  const dinnerSlots = today?.slots.filter((s) => s.period === 'dinner') ?? [];
-
   return (
     <div className="mx-auto max-w-md px-4 pb-24 pt-6 sm:px-6">
       <div className="mb-6 text-center">
-        <div className="text-[18px] font-medium text-stone-900">رزرو میز — امروز</div>
+        <div className="text-[18px] font-medium text-stone-900">رزرو میز</div>
         <div className="text-[12.5px] text-muted mt-1">با شرف</div>
       </div>
 
@@ -140,6 +147,12 @@ export default function PublicReservePage() {
               <option value="">انتخاب کنید...</option>
               {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
             </Select>
+          </Field>
+        )}
+
+        {branchId && (
+          <Field label="تاریخ">
+            <JalaliDatePicker value={date} onChange={setDate} minDate={getTodayJalali()} />
           </Field>
         )}
 
@@ -164,64 +177,93 @@ export default function PublicReservePage() {
           </Field>
         )}
 
-        {branchId && todayLoading && (
+        {branchId && (
+          <Field label="نوع میز">
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setTableType('normal')}
+                className={cn('h-12 rounded-lg border text-[13px] flex items-center justify-center gap-2 transition-colors',
+                  tableType === 'normal' ? 'border-accent bg-accent/10 text-accent font-medium' : 'border-stone-200 text-stone-600')}>
+                <Table2 size={15} strokeWidth={1.5} /> معمولی (اختصاصی)
+              </button>
+              <button type="button" onClick={() => setTableType('social')}
+                className={cn('h-12 rounded-lg border text-[13px] flex items-center justify-center gap-2 transition-colors',
+                  tableType === 'social' ? 'border-accent bg-accent/10 text-accent font-medium' : 'border-stone-200 text-stone-600')}>
+                <Users2 size={15} strokeWidth={1.5} /> سوشیال (اشتراکی)
+              </button>
+            </div>
+            {tableType === 'social' && (
+              <p className="mt-1.5 text-[11px] text-amber-700">میز سوشیال با مهمانان دیگر مشترک است — ممکن است هم‌میز شوید.</p>
+            )}
+          </Field>
+        )}
+
+        {branchId && dayLoading && (
           <div className="text-[12px] text-muted py-6 flex items-center justify-center gap-1.5">
             <Loader2 size={13} className="animate-spin" /> در حال بررسی ظرفیت...
           </div>
         )}
 
-        {branchId && todayError && (
-          <div className="text-[12.5px] text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{todayError}</div>
+        {branchId && dayError && (
+          <div className="text-[12.5px] text-rose-600 bg-rose-50 rounded-lg px-3 py-2">{dayError}</div>
         )}
 
-        {branchId && today && today.slots.length === 0 && (
+        {day && day.structurallyImpossible && (
+          <Card>
+            <CardBody className="text-center space-y-2 py-6">
+              <div className="text-[14px] text-stone-800">برای این تعداد، رزرو آنلاین در این ساعت ممکن نیست</div>
+              <p className="text-[12px] text-muted">
+                {tableType === 'normal'
+                  ? 'می‌توانید نوع میز را به «سوشیال» تغییر دهید یا تعداد نفرات را کم کنید.'
+                  : 'تعداد نفرات از ظرفیت میز سوشیال بیشتر است.'}
+              </p>
+            </CardBody>
+          </Card>
+        )}
+
+        {day && !day.structurallyImpossible && day.slots.length === 0 && (
           <Card>
             <CardBody className="text-center space-y-3 py-6">
               <div className="text-[14px] text-stone-800">
-                {today.closedMessage ?? 'رزرو امروز بسته است'}
+                {day.closedMessage ?? 'رزرو این تاریخ بسته است'}
               </div>
-              {today.closedPhone && (
-                <a href={`tel:${today.closedPhone}`} className="inline-flex items-center gap-1.5 text-[13.5px] text-accent font-medium" dir="ltr">
+              {day.closedPhone && (
+                <a href={`tel:${day.closedPhone}`} className="inline-flex items-center gap-1.5 text-[13.5px] text-accent font-medium" dir="ltr">
                   <PhoneCall size={14} strokeWidth={1.5} />
-                  {today.closedPhone}
+                  {day.closedPhone}
                 </a>
               )}
             </CardBody>
           </Card>
         )}
 
-        {today && today.slots.length > 0 && (
+        {day && day.slots.length > 0 && (
           <>
-            {[
-              { key: 'lunch', label: 'ناهار', slots: lunchSlots },
-              { key: 'dinner', label: 'شام', slots: dinnerSlots },
-            ].filter((g) => g.slots.length > 0).map((g) => (
-              <div key={g.key}>
-                <div className="text-xs font-medium text-gray-500 mb-1.5">{g.label}</div>
-                <div className="grid grid-cols-4 gap-2">
-                  {g.slots.map((s) => (
-                    <button
-                      key={s.time}
-                      type="button"
-                      disabled={!s.available}
-                      onClick={() => setTime(s.time)}
-                      className={cn(
-                        'h-10 rounded-lg text-[12.5px] tabular-nums border transition-colors',
-                        !s.available && 'opacity-40 cursor-not-allowed border-stone-100 text-muted line-through',
-                        s.available && time === s.time && 'border-accent bg-accent/10 text-accent font-medium',
-                        s.available && time !== s.time && 'border-stone-200 text-stone-700 hover:border-stone-300',
-                      )}
-                    >
-                      {toFa(s.time)}
-                    </button>
-                  ))}
-                </div>
+            <div>
+              <div className="text-xs font-medium text-gray-500 mb-1.5">ساعت شروع</div>
+              <div className="grid grid-cols-4 gap-2">
+                {day.slots.map((s) => (
+                  <button
+                    key={s.time}
+                    type="button"
+                    disabled={!s.available}
+                    onClick={() => setTime(s.time)}
+                    className={cn(
+                      'h-10 rounded-lg text-[12.5px] tabular-nums border transition-colors',
+                      !s.available && 'opacity-40 cursor-not-allowed border-stone-100 text-muted line-through',
+                      s.available && time === s.time && 'border-accent bg-accent/10 text-accent font-medium',
+                      s.available && time !== s.time && 'border-stone-200 text-stone-700 hover:border-stone-300',
+                    )}
+                  >
+                    {toFa(s.time)}
+                  </button>
+                ))}
               </div>
-            ))}
+              <p className="mt-1.5 text-[11px] text-muted">هر رزرو ۶۰ دقیقه میز/صندلی را در اختیار شما می‌گذارد.</p>
+            </div>
 
             {selectedSlot?.social && (
               <div className="text-[11.5px] text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
-                برای این ساعت فقط میز اشتراکی/سوشیال خالی است — ممکن است با مهمانان دیگر هم‌میز شوید.
+                میز شما اشتراکی/سوشیال خواهد بود — ممکن است با مهمانان دیگر هم‌میز شوید.
               </div>
             )}
           </>
@@ -229,11 +271,15 @@ export default function PublicReservePage() {
 
         {time && (
           <>
-            <Field label="نام و نام خانوادگی">
-              <Input icon={User} value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="مثلاً علی رضایی" />
+            <Field label="نام رزروکننده (اختیاری)" hint="اگر برای دیگری رزرو می‌کنید — مثلاً نام شما">
+              <Input icon={User} value={bookerName} onChange={(e) => setBookerName(e.target.value)} placeholder="مثلاً صدرا" />
             </Field>
 
-            <Field label="شماره موبایل">
+            <Field label="نام مهمان اصلی">
+              <Input icon={User} value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="مثلاً شهین" />
+            </Field>
+
+            <Field label="شماره تماس مهمان">
               <Input icon={Phone} dir="ltr" value={guestPhone}
                 onChange={(e) => setGuestPhone(e.target.value)} placeholder="0912xxxxxxx" />
             </Field>
@@ -247,6 +293,7 @@ export default function PublicReservePage() {
             <Button variant="primary" className="w-full" loading={submitting} onClick={handleSubmit}>
               ثبت رزرو
             </Button>
+            <p className="text-center text-[10.5px] text-muted">نام رزروکننده خوداظهاری است و هویت تأییدشده محسوب نمی‌شود.</p>
           </>
         )}
       </div>

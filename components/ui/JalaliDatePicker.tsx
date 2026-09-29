@@ -51,6 +51,8 @@ interface JalaliDatePickerProps {
   disabled?: boolean;
   /** ID for label association */
   id?: string;
+  /** رشته‌ی شمسی 'YYYY/MM/DD' — روزهای قبل از این تاریخ در تقویم انتخاب‌پذیر نیستند. */
+  minDate?: string;
 }
 
 export function JalaliDatePicker({
@@ -60,6 +62,7 @@ export function JalaliDatePicker({
   hasError,
   disabled,
   id,
+  minDate,
 }: JalaliDatePickerProps) {
   // local DateObject state — picker نیاز به DateObject دارد، ما string می‌خواهیم
   const [internal, setInternal] = useState<DateObject | null>(() => parseJalali(value));
@@ -118,6 +121,7 @@ export function JalaliDatePicker({
         calendarPosition="bottom-right"
         disabled={disabled}
         placeholder={placeholder}
+        minDate={minDate ? (parseJalali(minDate) ?? undefined) : undefined}
         // رشته‌ی تاریخ (YYYY/MM/DD) همیشه چپ‌به‌راست و راست‌چین بماند —
         // در متن RTL بدون این، ترتیب سال/ماه/روز و اسلش‌ها می‌تواند به‌هم بریزد.
         // نکته: چون این input خودش direction:ltr دارد، پدینگ آیکون باید physical

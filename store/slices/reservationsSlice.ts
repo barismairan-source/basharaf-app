@@ -1,5 +1,5 @@
 import type { StateCreator } from 'zustand';
-import type { Reservation, ReservationStatus, RestaurantTable, ReservationSettingsDTO } from '@/types';
+import type { Reservation, ReservationStatus, RestaurantTable, RestaurantTableBlock, ReservationSettingsDTO } from '@/types';
 
 /**
  * ReservationsSlice — رزرو میز + مدیریت میزها (branch-scoped، CRUD optimistic).
@@ -11,6 +11,8 @@ export interface ReservationsSlice {
   tables: RestaurantTable[];
   tablesLoaded: boolean;
   reservationSettings: ReservationSettingsDTO | null;
+  tableBlocks: RestaurantTableBlock[];
+  tableBlocksLoaded: boolean;
 
   loadReservations: () => Promise<void>;
   createReservation: (params: {
@@ -21,14 +23,17 @@ export interface ReservationsSlice {
     time: string;
     partySize?: number;
     note?: string | null;
-  }) => Promise<Reservation | null>;
+    guestName?: string | null;
+    guestPhone?: string | null;
+    bookerName?: string | null;
+  }) => Promise<Reservation | { error: string } | null>;
   updateReservation: (id: string, patch: {
     tableId?: string | null;
     date?: string;
     time?: string;
     partySize?: number;
     note?: string | null;
-  }) => Promise<boolean>;
+  }) => Promise<{ ok: boolean; error?: string }>;
   setReservationStatus: (id: string, status: ReservationStatus) => Promise<boolean>;
   deleteReservation: (id: string) => Promise<boolean>;
 
@@ -47,6 +52,16 @@ export interface ReservationsSlice {
     branchId: string | null,
     patch: Omit<ReservationSettingsDTO, 'id' | 'branchId' | 'updatedAt'>,
   ) => Promise<boolean>;
+
+  loadTableBlocks: (date?: string) => Promise<void>;
+  createTableBlock: (params: {
+    tableId: string;
+    date: string;
+    startTime?: string | null;
+    endTime?: string | null;
+    reason?: string | null;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  deleteTableBlock: (id: string) => Promise<boolean>;
 }
 
 export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, get) => ({
@@ -56,6 +71,8 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
   tables: [],
   tablesLoaded: false,
   reservationSettings: null,
+  tableBlocks: [],
+  tableBlocksLoaded: false,
 
   async loadReservations() {
     try {
@@ -69,26 +86,6 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
   },
 
   async createReservation(params) {
-    const tempId = `optimistic-${Date.now()}`;
-    const optimistic: Reservation = {
-      id: tempId,
-      customerId: params.customerId ?? null,
-      branchId: params.branchId ?? '',
-      tableId: params.tableId ?? null,
-      date: params.date,
-      time: params.time,
-      partySize: params.partySize ?? 1,
-      status: 'pending',
-      note: params.note ?? null,
-      guestName: null,
-      guestPhone: null,
-      trackingCode: null,
-      canceledReason: null,
-      source: 'staff',
-      createdBy: '',
-      createdAt: new Date().toISOString(),
-    };
-    set((s) => ({ reservations: [optimistic, ...s.reservations], reservationsError: null }));
     try {
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -97,26 +94,19 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
         body: JSON.stringify(params),
       });
       const data = (await res.json()) as { reservation?: Reservation; error?: string };
-      if (!res.ok || !data.reservation) throw new Error(data.error ?? 'خطا');
-      set((s) => ({
-        reservations: s.reservations.map((r) => (r.id === tempId ? data.reservation! : r)),
-      }));
+      if (!res.ok || !data.reservation) {
+        set({ reservationsError: data.error ?? 'خطا' });
+        return { error: data.error ?? 'خطا' };
+      }
+      set((s) => ({ reservations: [data.reservation!, ...s.reservations], reservationsError: null }));
       return data.reservation;
-    } catch (e) {
-      set((s) => ({
-        reservations: s.reservations.filter((r) => r.id !== tempId),
-        reservationsError: e instanceof Error ? e.message : 'خطا',
-      }));
-      return null;
+    } catch {
+      set({ reservationsError: 'خطا در ارتباط با سرور' });
+      return { error: 'خطا در ارتباط با سرور' };
     }
   },
 
   async updateReservation(id, patch) {
-    const snapshot = get().reservations.find((r) => r.id === id);
-    if (!snapshot) return false;
-    set((s) => ({
-      reservations: s.reservations.map((r) => r.id === id ? { ...r, ...patch } : r),
-    }));
     try {
       const res = await fetch(`/api/reservations/${id}`, {
         method: 'PATCH',
@@ -124,15 +114,12 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
         credentials: 'include',
         body: JSON.stringify(patch),
       });
-      if (!res.ok) throw new Error('خطا');
-      const data = (await res.json()) as { reservation?: Reservation };
-      if (data.reservation) {
-        set((s) => ({ reservations: s.reservations.map((r) => r.id === id ? data.reservation! : r) }));
-      }
-      return true;
+      const data = (await res.json()) as { reservation?: Reservation; error?: string };
+      if (!res.ok || !data.reservation) return { ok: false, error: data.error ?? 'خطا' };
+      set((s) => ({ reservations: s.reservations.map((r) => r.id === id ? data.reservation! : r) }));
+      return { ok: true };
     } catch {
-      set((s) => ({ reservations: s.reservations.map((r) => r.id === id ? snapshot : r) }));
-      return false;
+      return { ok: false, error: 'خطا در ارتباط با سرور' };
     }
   },
 
@@ -240,6 +227,48 @@ export const createReservationsSlice: StateCreator<ReservationsSlice> = (set, ge
       set({ reservationSettings: settings });
       return true;
     } catch {
+      return false;
+    }
+  },
+
+  async loadTableBlocks(date) {
+    try {
+      const qs = date ? `?${new URLSearchParams({ date })}` : '';
+      const res = await fetch(`/api/reservations/blocks${qs}`, { credentials: 'include' });
+      if (!res.ok) return;
+      const { blocks } = (await res.json()) as { blocks: RestaurantTableBlock[] };
+      set({ tableBlocks: blocks, tableBlocksLoaded: true });
+    } catch {
+      set({ tableBlocksLoaded: true });
+    }
+  },
+
+  async createTableBlock(params) {
+    try {
+      const res = await fetch('/api/reservations/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(params),
+      });
+      const data = (await res.json()) as { block?: RestaurantTableBlock; error?: string };
+      if (!res.ok || !data.block) return { ok: false, error: data.error ?? 'خطا' };
+      set((s) => ({ tableBlocks: [...s.tableBlocks, data.block!] }));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: 'خطا در ارتباط با سرور' };
+    }
+  },
+
+  async deleteTableBlock(id) {
+    const snapshot = get().tableBlocks;
+    set((s) => ({ tableBlocks: s.tableBlocks.filter((b) => b.id !== id) }));
+    try {
+      const res = await fetch(`/api/reservations/blocks/${id}`, { method: 'DELETE', credentials: 'include' });
+      if (!res.ok) throw new Error('خطا');
+      return true;
+    } catch {
+      set({ tableBlocks: snapshot });
       return false;
     }
   },

@@ -21,7 +21,7 @@ export type { Recipe, RecipeCategory, RecipeProtein, RecipeIngredientDTO, Recipe
 export type {
   Customer, CustomerTier, LoyaltyEntry, Reservation, ReservationStatus,
   Feedback, CustomerDetail, Coupon, CouponRedemption, CouponDiscountType,
-  CouponValidationResult, RestaurantTable, FeedbackSummaryRow, ReservationSettingsDTO,
+  CouponValidationResult, RestaurantTable, RestaurantTableBlock, FeedbackSummaryRow, ReservationSettingsDTO,
 } from './customer';
 export * from './payroll';
 export * from './inventory';

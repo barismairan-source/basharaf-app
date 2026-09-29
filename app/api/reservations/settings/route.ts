@@ -11,12 +11,9 @@ function serialize(s: SettingsRow) {
   return {
     id: s.id,
     branchId: s.branchId,
-    lunchEnabled: s.lunchEnabled,
-    lunchStartHour: s.lunchStartHour,
-    lunchEndHour: s.lunchEndHour,
-    dinnerEnabled: s.dinnerEnabled,
-    dinnerStartHour: s.dinnerStartHour,
-    dinnerEndHour: s.dinnerEndHour,
+    openHour: s.openHour,
+    closeHour: s.closeHour,
+    closedWeekdays: s.closedWeekdays,
     maxPartySize: s.maxPartySize,
     maxActiveReservationsPerPhone: s.maxActiveReservationsPerPhone,
     closedMessage: s.closedMessage,
@@ -25,17 +22,14 @@ function serialize(s: SettingsRow) {
   };
 }
 
-/** برای شعبه‌ای که هنوز ردیف تنظیمات ندارد — مقادیر پیش‌فرض ستون‌ها (بدون insert). */
+/** برای شعبه‌ای که هنوز ردیف تنظیمات ندارد — مقادیر پیش‌فرض ستون‌ها (بدون insert). closeHour=null یعنی رزرو آنلاین هنوز فعال نشده. */
 function defaults(branchId: string) {
   return {
     id: null as string | null,
     branchId,
-    lunchEnabled: false,
-    lunchStartHour: 12,
-    lunchEndHour: 16,
-    dinnerEnabled: false,
-    dinnerStartHour: 19,
-    dinnerEndHour: 23,
+    openHour: 19,
+    closeHour: null as number | null,
+    closedWeekdays: [] as number[],
     maxPartySize: 12,
     maxActiveReservationsPerPhone: 3,
     closedMessage: null as string | null,
@@ -72,12 +66,9 @@ export async function GET(req: Request) {
 
 const putSchema = z.object({
   branchId: z.string().uuid().optional(),
-  lunchEnabled: z.boolean(),
-  lunchStartHour: z.number().int().min(0).max(23),
-  lunchEndHour: z.number().int().min(1).max(24),
-  dinnerEnabled: z.boolean(),
-  dinnerStartHour: z.number().int().min(0).max(23),
-  dinnerEndHour: z.number().int().min(1).max(24),
+  openHour: z.number().int().min(0).max(23),
+  closeHour: z.number().int().min(1).max(24).nullable(),
+  closedWeekdays: z.array(z.number().int().min(0).max(6)).max(7),
   maxPartySize: z.number().int().min(1).max(200),
   maxActiveReservationsPerPhone: z.number().int().min(1).max(50),
   closedMessage: z.string().trim().max(300).nullable().optional(),
@@ -91,21 +82,15 @@ export async function PUT(req: Request) {
     const input = putSchema.parse(await req.json());
     const branchId = resolveScopedBranchId(session, input.branchId ?? null);
 
-    if (input.lunchEndHour <= input.lunchStartHour) {
-      throw new ApiError(400, 'ساعت پایان ناهار باید بعد از ساعت شروع باشد', 'INVALID_LUNCH_HOURS');
-    }
-    if (input.dinnerEndHour <= input.dinnerStartHour) {
-      throw new ApiError(400, 'ساعت پایان شام باید بعد از ساعت شروع باشد', 'INVALID_DINNER_HOURS');
+    if (input.closeHour != null && input.closeHour <= input.openHour) {
+      throw new ApiError(400, 'ساعت پایان باید بعد از ساعت شروع باشد', 'INVALID_HOURS');
     }
 
     const values = {
       branchId,
-      lunchEnabled: input.lunchEnabled,
-      lunchStartHour: input.lunchStartHour,
-      lunchEndHour: input.lunchEndHour,
-      dinnerEnabled: input.dinnerEnabled,
-      dinnerStartHour: input.dinnerStartHour,
-      dinnerEndHour: input.dinnerEndHour,
+      openHour: input.openHour,
+      closeHour: input.closeHour,
+      closedWeekdays: input.closedWeekdays,
       maxPartySize: input.maxPartySize,
       maxActiveReservationsPerPhone: input.maxActiveReservationsPerPhone,
       closedMessage: input.closedMessage || null,
