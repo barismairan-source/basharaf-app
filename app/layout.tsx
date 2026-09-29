@@ -27,6 +27,7 @@ const vazirmatn = localFont({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://basharaf.me'),
   title: {
     default: 'با شرف',
     template: '%s | با شرف',
@@ -45,6 +46,17 @@ export const metadata: Metadata = {
       { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
     ],
+  },
+  // پیش‌فرض پیش‌نمایش لینک (واتس‌اپ/تلگرام/...) — لوگوی صفاسیتی، صفحه‌ها می‌تونن override کنن.
+  // عمداً بدون title اینجا: هر صفحه عنوان خودش را می‌گذارد، فقط عکس/siteName مشترک است.
+  openGraph: {
+    siteName: 'با شرف',
+    images: [{ url: '/og-image.jpg', width: 1920, height: 1080 }],
+    locale: 'fa_IR',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    images: ['/og-image.jpg'],
   },
   formatDetection: { telephone: false, email: false, address: false },
   other: { 'mobile-web-app-capable': 'yes' },
