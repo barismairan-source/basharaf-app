@@ -4,7 +4,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applicationCreateSchema } from '@/lib/validations/recruitment';
-import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 import type { FieldSnapshot } from '@/lib/recruitment/form-types';
 import { SYSTEM_FIELD_COLUMN_MAP } from '@/lib/recruitment/form-types';
 import { fireRecruitmentNotification } from '@/lib/recruitment/notify';
@@ -17,7 +17,7 @@ import { fireRecruitmentNotification } from '@/lib/recruitment/notify';
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = checkRateLimit(ip);
+    const rl = consumeRequestLimit('recruitment-submit', ip, PUBLIC_LIMITS.recruitmentSubmit);
     if (!rl.allowed) {
       throw new ApiError(429, `تعداد درخواست‌ها زیاد است. ${rl.retryAfter ?? 60} ثانیه دیگر تلاش کنید.`, 'RATE_LIMITED');
     }
@@ -52,7 +52,6 @@ export async function POST(req: Request) {
       }
     }
 
-    recordFailedAttempt(ip);
 
     const [row] = await db
       .insert(schema.jobApplications)

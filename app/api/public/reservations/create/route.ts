@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApiError, handleError } from '@/lib/api-error';
 import { normalizeIranPhone } from '@/lib/sms/phone';
-import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 import { createPublicReservation } from '@/lib/reservations/publicReservations';
 
 export const dynamic = 'force-dynamic';
@@ -34,13 +34,12 @@ const bodySchema = z.object({
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = checkRateLimit(ip);
+    const rl = consumeRequestLimit('reservation-create', ip, PUBLIC_LIMITS.reservationCreate);
     if (!rl.allowed) {
       throw new ApiError(429, `تعداد درخواست‌ها زیاد است. ${rl.retryAfter ?? 60} ثانیه دیگر تلاش کنید.`, 'RATE_LIMITED');
     }
 
     const input = bodySchema.parse(await req.json());
-    recordFailedAttempt(ip);
 
     const result = await createPublicReservation(input);
     return NextResponse.json({ reservation: result }, { status: 201 });

@@ -10,6 +10,9 @@ import {
   recordFailedAttempt,
   clearAttempts,
   getClientIp,
+  checkEmailLoginLimit,
+  recordEmailLoginFailure,
+  clearEmailLoginFailures,
 } from '@/lib/auth/rateLimit';
 import { audit } from '@/lib/auth/audit';
 
@@ -61,6 +64,13 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { email, password } = loginBodySchema.parse(body);
 
+    // محدودیت بر اساس ایمیل — حتی با عوض‌کردن IP، حدس رمز روی یک حساب محدود است
+    const emailCheck = checkEmailLoginLimit(email);
+    if (!emailCheck.allowed) {
+      audit({ action: 'login.blocked', ip, meta: { email, retryAfter: emailCheck.retryAfter } });
+      throw new ApiError(429, `تعداد تلاش‌های ناموفق برای این حساب زیاد است. ${Math.ceil((emailCheck.retryAfter ?? 60) / 60)} دقیقه دیگر تلاش کنید.`, 'RATE_LIMITED');
+    }
+
     // ─── Database lookup ───
     const [user] = await db
       .select()
@@ -77,6 +87,7 @@ export async function POST(req: Request) {
 
     if (!user || !passwordValid) {
       recordFailedAttempt(ip);
+      recordEmailLoginFailure(email);
       audit({ action: 'login.failed', ip, meta: { email } });
       throw new ApiError(401, 'ایمیل یا رمز عبور نادرست است', 'INVALID_CREDENTIALS');
     }
@@ -88,6 +99,7 @@ export async function POST(req: Request) {
 
     // ─── Success ───
     clearAttempts(ip);
+    clearEmailLoginFailures(email);
     // audit: login success
     audit({ action: 'login.success', userId: user.id, ip });
 

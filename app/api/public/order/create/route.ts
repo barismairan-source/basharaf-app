@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { handleError } from '@/lib/api-error';
+import { ApiError, handleError } from '@/lib/api-error';
+import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 import { createPublicOrder } from '@/lib/ordering/publicOrders';
 
 export const dynamic = 'force-dynamic';
@@ -22,7 +23,8 @@ const bodySchema = z.object({
         qty: z.number().int().positive().max(99),
       })
     )
-    .min(1, 'سبد خرید خالی است'),
+    .min(1, 'سبد خرید خالی است')
+    .max(100, 'تعداد اقلام سبد بیش از حد مجاز است'),
 });
 
 /**
@@ -31,6 +33,10 @@ const bodySchema = z.object({
  */
 export async function POST(req: Request) {
   try {
+    const rl = consumeRequestLimit('order-create', getClientIp(req), PUBLIC_LIMITS.orderCreate);
+    if (!rl.allowed) {
+      throw new ApiError(429, `تعداد درخواست‌ها زیاد است. ${rl.retryAfter ?? 60} ثانیه دیگر تلاش کنید.`, 'RATE_LIMITED');
+    }
     const input = bodySchema.parse(await req.json());
     const { order, isNew } = await createPublicOrder(input);
     return NextResponse.json({ order }, { status: isNew ? 201 : 200 });

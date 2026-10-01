@@ -74,8 +74,8 @@ vi.mock('drizzle-orm', () => ({
 }));
 
 vi.mock('@/lib/auth/rateLimit', () => ({
-  checkRateLimit: vi.fn(() => ({ allowed: true })),
-  recordFailedAttempt: vi.fn(),
+  consumeRequestLimit: vi.fn(() => ({ allowed: true })),
+  PUBLIC_LIMITS: { recruitmentSubmit: { max: 5, windowMs: 3600000 } },
   getClientIp: vi.fn(() => '127.0.0.1'),
 }));
 

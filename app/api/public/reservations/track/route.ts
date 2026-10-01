@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { ApiError, handleError } from '@/lib/api-error';
 import { normalizeIranPhone } from '@/lib/sms/phone';
-import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 import { getPublicReservationByCodeAndPhone } from '@/lib/reservations/publicReservations';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ const querySchema = z.object({
 export async function GET(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = checkRateLimit(ip);
+    const rl = consumeRequestLimit('reservation-lookup', ip, PUBLIC_LIMITS.reservationLookup);
     if (!rl.allowed) {
       throw new ApiError(429, `تعداد درخواست‌ها زیاد است. ${rl.retryAfter ?? 60} ثانیه دیگر تلاش کنید.`, 'RATE_LIMITED');
     }
@@ -32,13 +32,11 @@ export async function GET(req: Request) {
     });
     const phone = parsed.success ? normalizeIranPhone(parsed.data.phone) : null;
     if (!parsed.success || !phone) {
-      recordFailedAttempt(ip);
       throw new ApiError(400, 'کد یا شماره نامعتبر است', 'INVALID_QUERY');
     }
 
     const detail = await getPublicReservationByCodeAndPhone(parsed.data.code, phone);
     if (!detail) {
-      recordFailedAttempt(ip);
       throw new ApiError(404, 'رزرو پیدا نشد — کد و شماره را بررسی کنید', 'NOT_FOUND');
     }
     return NextResponse.json({ reservation: detail });

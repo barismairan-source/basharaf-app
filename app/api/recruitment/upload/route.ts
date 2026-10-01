@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { handleError, ApiError } from '@/lib/api-error';
-import { checkRateLimit, recordFailedAttempt, getClientIp } from '@/lib/auth/rateLimit';
+import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 
 const MAX_SIZE_MB = 5;
 const ALLOWED_TYPES = [
@@ -18,7 +18,7 @@ const ALLOWED_TYPES = [
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const rl = checkRateLimit(ip);
+    const rl = consumeRequestLimit('recruitment-upload', ip, PUBLIC_LIMITS.recruitmentUpload);
     if (!rl.allowed) {
       throw new ApiError(429, `تعداد درخواست‌ها زیاد است. ${rl.retryAfter ?? 60} ثانیه دیگر تلاش کنید.`, 'RATE_LIMITED');
     }
@@ -34,7 +34,6 @@ export async function POST(req: Request) {
       throw new ApiError(400, `حجم فایل نباید بیش از ${MAX_SIZE_MB} مگابایت باشد.`, 'FILE_TOO_LARGE');
     }
 
-    recordFailedAttempt(ip);
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const base64 = buffer.toString('base64');

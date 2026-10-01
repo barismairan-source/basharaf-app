@@ -1,5 +1,6 @@
 /**
- * Rate limiter ساده برای login endpoint.
+ * Rate limiter ساده برای login endpoint (checkRateLimit/recordFailedAttempt
+ * فقط مخصوص لاگین‌اند — مسیرهای عمومی از consumeRequestLimit استفاده می‌کنند).
  *
  * چرا in-memory به‌جای Redis؟
  * - در Vercel serverless، هر function instance حافظه‌ی جداگانه دارد
@@ -84,15 +85,109 @@ export function clearAttempts(ip: string): void {
 }
 
 /**
- * گرفتن IP از request.
- * Vercel: از header X-Forwarded-For می‌خواند.
+ * گرفتن IP کلاینت از request.
+ *
+ * مقدار اول X-Forwarded-For را خودِ کلاینت می‌تواند بنویسد (جعل)، پس از آن
+ * استفاده نمی‌کنیم: اول x-real-ip (که پروکسی جلویی بازنویسی می‌کند)، وگرنه
+ * مقدار N-امِ از انتهای X-Forwarded-For — N = تعداد پروکسی‌های مورد اعتماد
+ * (`TRUSTED_PROXY_HOPS`، پیش‌فرض ۱ = آخرین مقداری که پروکسی لیارا اضافه کرده).
  */
 export function getClientIp(req: Request): string {
+  const realIp = req.headers.get('x-real-ip')?.trim();
+  if (realIp) return realIp;
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) {
-    return forwarded.split(',')[0]?.trim() ?? 'unknown';
+    const hops = Math.max(1, parseInt(process.env.TRUSTED_PROXY_HOPS ?? '1', 10) || 1);
+    const parts = forwarded.split(',').map((p) => p.trim()).filter(Boolean);
+    const ip = parts[Math.max(0, parts.length - hops)];
+    if (ip) return ip;
   }
-  return req.headers.get('x-real-ip') ?? 'unknown';
+  return 'unknown';
+}
+
+// ─── محدودکننده‌ی جدا برای هر مسیر عمومی ──────────────────────────────────
+// قبلاً رزرو/پیگیری/لغو رزرو و فرم استخدام از همان Map لاگین استفاده می‌کردند
+// و حتی درخواست موفق را «تلاش ناموفق» ثبت می‌کردند ← ۵ رزرو از وای‌فای رستوران
+// ورود کارکنان را ۳۰ دقیقه قفل می‌کرد. حالا هر مسیر سطل خودش را دارد و
+// «تعداد درخواست» در یک پنجره‌ی زمانی شمرده می‌شود (نه شکست).
+
+interface BucketRecord { count: number; windowStart: number }
+const buckets = new Map<string, BucketRecord>();
+
+export interface RequestLimit {
+  /** حداکثر درخواست در پنجره */
+  max: number;
+  /** طول پنجره (میلی‌ثانیه) */
+  windowMs: number;
+}
+
+/** یک درخواست را می‌شمارد؛ اگر از سقف گذشته باشد allowed=false. */
+export function consumeRequestLimit(
+  bucket: string,
+  key: string,
+  limit: RequestLimit,
+): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const id = `${bucket}:${key}`;
+  const rec = buckets.get(id);
+  if (!rec || now - rec.windowStart >= limit.windowMs) {
+    buckets.set(id, { count: 1, windowStart: now });
+    pruneBuckets(now);
+    return { allowed: true };
+  }
+  if (rec.count >= limit.max) {
+    return { allowed: false, retryAfter: Math.ceil((rec.windowStart + limit.windowMs - now) / 1000) };
+  }
+  rec.count += 1;
+  return { allowed: true };
+}
+
+let lastPrune = 0;
+function pruneBuckets(now: number): void {
+  if (now - lastPrune < 10 * 60 * 1000) return;
+  lastPrune = now;
+  for (const [id, rec] of buckets) {
+    if (now - rec.windowStart > 60 * 60 * 1000) buckets.delete(id);
+  }
+}
+
+/** سقف‌های مسیرهای عمومی — سخاوتمند برای مشتری واقعی، تنگ برای اسپم. */
+export const PUBLIC_LIMITS = {
+  reservationCreate: { max: 10, windowMs: 60 * 60 * 1000 },
+  reservationLookup: { max: 30, windowMs: 15 * 60 * 1000 },
+  recruitmentSubmit: { max: 5, windowMs: 60 * 60 * 1000 },
+  recruitmentUpload: { max: 20, windowMs: 60 * 60 * 1000 },
+  orderCreate: { max: 20, windowMs: 60 * 60 * 1000 },
+  otpSend: { max: 5, windowMs: 60 * 60 * 1000 },
+} as const satisfies Record<string, RequestLimit>;
+
+// ─── لاگین: علاوه بر IP، بر اساس ایمیل ─────────────────────────────────────
+// حتی اگر مهاجم IP را عوض کند، حدس رمز روی یک حساب محدود می‌ماند.
+const LOGIN_PER_EMAIL: RequestLimit = { max: 20, windowMs: 15 * 60 * 1000 };
+const failedByEmail = new Map<string, BucketRecord>();
+
+export function checkEmailLoginLimit(email: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const rec = failedByEmail.get(email);
+  if (!rec || now - rec.windowStart >= LOGIN_PER_EMAIL.windowMs) return { allowed: true };
+  if (rec.count >= LOGIN_PER_EMAIL.max) {
+    return { allowed: false, retryAfter: Math.ceil((rec.windowStart + LOGIN_PER_EMAIL.windowMs - now) / 1000) };
+  }
+  return { allowed: true };
+}
+
+export function recordEmailLoginFailure(email: string): void {
+  const now = Date.now();
+  const rec = failedByEmail.get(email);
+  if (!rec || now - rec.windowStart >= LOGIN_PER_EMAIL.windowMs) {
+    failedByEmail.set(email, { count: 1, windowStart: now });
+  } else {
+    rec.count += 1;
+  }
+}
+
+export function clearEmailLoginFailures(email: string): void {
+  failedByEmail.delete(email);
 }
 
 // ─── OTP verify rate limiter — keyed by phone number ─────────────────────────
