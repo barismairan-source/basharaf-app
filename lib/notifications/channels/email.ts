@@ -17,7 +17,7 @@
  * - SMTP errors are redacted before being returned or stored
  */
 
-import nodemailer from 'nodemailer';
+import nodemailer, { type Transporter } from 'nodemailer';
 import { redactError } from '@/lib/notifications/redaction';
 import type { DeliveryResult } from '@/lib/notifications/types';
 import type { NotificationEmailData } from '@/lib/notifications/templates';
@@ -65,9 +65,9 @@ export function isEmailConfigured(): boolean {
 
 // ─── Singleton transporter ───────────────────────────────────────
 
-let _transporter: nodemailer.Transporter<any> | null = null;
+let _transporter: Transporter<any> | null = null;
 
-function getTransporter(): nodemailer.Transporter<any> {
+function getTransporter(): Transporter<any> {
   if (_transporter) return _transporter;
 
   const cfg = readConfig();
