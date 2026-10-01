@@ -156,6 +156,35 @@ describe('Concurrency + API access — گزارش بررسی ۲۰۲۶-۱۰', { s
     });
   });
 
+  describe('B4 — ستون «موجودی» انبار بعد از تأیید برگه', () => {
+    it('بعد از تأیید ورود و خروج، موجودی نمایشی با موجودی قطعی برابر می‌ماند', async () => {
+      await db.update(schema.invItems)
+        .set({ qtyPhysical: schema.invItems.qtyBase })
+        .where(eq(schema.invItems.id, f.itemId));
+      const read = async () => {
+        const [it] = await db.select().from(schema.invItems).where(eq(schema.invItems.id, f.itemId));
+        return { base: parseFloat(it!.qtyBase), physical: parseFloat(it!.qtyPhysical) };
+      };
+      const start = await read();
+
+      for (const [kind, qty] of [['in', 40], ['out', 15]] as const) {
+        const created = await admin.fetchJson<{ voucher: { id: string } }>('/api/inventory/vouchers', {
+          method: 'POST',
+          body: JSON.stringify({ kind, branchId: f.branchId, date: DATE, lines: [{ itemId: f.itemId, qtyBase: qty, estUnitCost: 20_000 }] }),
+        });
+        assert.equal(created.status, 201, `ثبت برگه‌ی ${kind}`);
+        const approved = await admin.fetchJson(`/api/inventory/vouchers/${created.body.voucher.id}/approve`, {
+          method: 'POST', body: JSON.stringify({ accountId: f.accountId }),
+        });
+        assert.equal(approved.status, 200, `تأیید برگه‌ی ${kind}`);
+      }
+
+      const end = await read();
+      assert.equal(end.base, start.base + 40 - 15);
+      assert.equal(end.physical, end.base, 'موجودی نمایشی = موجودی قطعی (قبلاً به عدد قبل از برگه برمی‌گشت)');
+    });
+  });
+
   describe('B1/B2 — دسترسی API', () => {
     it('آشپز تراکنش‌ها، گزارش، حقوق و پرونده‌ی پرسنل را از API نمی‌گیرد', async () => {
       const chef = await makeUser('Chef');

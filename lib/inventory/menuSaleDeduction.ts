@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm';
 import { schema } from '@/lib/db/client';
-import { issueConfirmed } from '@/lib/db/inventoryHelpers';
+import { issueConfirmedDetailed } from '@/lib/db/inventoryHelpers';
 
 /**
  * Backflushing — کسر خودکار انبار از روی فروش منو (Batch 3 / Step 3).
@@ -109,15 +109,18 @@ export async function applyMenuSaleDeduction(
         );
       }
 
-      const cost = await issueConfirmed(dbTx, item.id, qtyPerSale);
+      // مقدار «واقعاً» کسرشده (بعد از clamp) ثبت می‌شود، نه مقدار درخواستی — وگرنه حذف
+      // این فروش بیشتر از آنچه کم شده بود به انبار برمی‌گرداند (موجودی شبح).
+      const { cost, qty: deducted } = await issueConfirmedDetailed(dbTx, item.id, qtyPerSale);
       recipeCogs += cost;
       totalCogs += cost;
-      deductionLines.push({ itemId: item.id, qtyBase: qtyPerSale, cost });
+      if (!(deducted > 0)) continue;
+      deductionLines.push({ itemId: item.id, qtyBase: deducted, cost });
 
       await dbTx.insert(schema.invStockTx).values({
         itemId: item.id,
         kind: 'sale',
-        deltaBase: String(-qtyPerSale),
+        deltaBase: String(-deducted),
         value: Math.round(cost),
         note: `فروش منو — ${saleLine.qty} پرس`,
         jalaliDate,

@@ -76,7 +76,16 @@ export async function receiveConfirmed(
   const newAvg = newQty > 0 ? (oldVal + totalCost) / newQty : 0;
 
   await tx.update(schema.invItems)
-    .set({ qtyBase: String(newQty), avgCostPerBase: String(newAvg), updatedAt: new Date() })
+    .set({
+      qtyBase: String(newQty),
+      avgCostPerBase: String(newAvg),
+      // لایه‌ی نمایشی (ستون «موجودی»، پیشنهاد خرید، کمبود) هم همراه موجودی قطعی حرکت
+      // می‌کند. approveVoucherTx قبل از این، اثر موقتِ ثبت (pending) را برمی‌گرداند؛
+      // پس نتیجه = موجودی قبلی + حرکت واقعی. قبلاً این‌جا qty_physical دست نمی‌خورد و
+      // بعد از هر تأیید به عدد قبل از برگه برمی‌گشت.
+      qtyPhysical: sql`GREATEST(0, ${schema.invItems.qtyPhysical} + ${qtyBase})`,
+      updatedAt: new Date(),
+    })
     .where(eq(schema.invItems.id, itemId));
 }
 
@@ -93,7 +102,20 @@ export async function issueConfirmed(
   qtyBase: number,
   ctx?: { voucherId?: string | null }
 ): Promise<number> {
-  if (!(qtyBase > 0)) return 0;
+  return (await issueConfirmedDetailed(tx, itemId, qtyBase, ctx)).cost;
+}
+
+/**
+ * مثل issueConfirmed، ولی مقدار واقعاً کسرشده (بعد از clamp به موجودی) را هم
+ * برمی‌گرداند — برای جاهایی که باید دقیقاً همان مقدار را بعداً برگردانند.
+ */
+export async function issueConfirmedDetailed(
+  tx: any,
+  itemId: string,
+  qtyBase: number,
+  ctx?: { voucherId?: string | null }
+): Promise<{ cost: number; qty: number }> {
+  if (!(qtyBase > 0)) return { cost: 0, qty: 0 };
   const [it] = await tx.select({
     q: schema.invItems.qtyBase,
     a: schema.invItems.avgCostPerBase,
@@ -101,7 +123,7 @@ export async function issueConfirmed(
     unit: schema.invItems.unit,
     branchId: schema.invItems.branchId,
   }).from(schema.invItems).where(eq(schema.invItems.id, itemId)).for('update');
-  if (!it) return 0;
+  if (!it) return { cost: 0, qty: 0 };
 
   const have = n(it.q);
   const avg = n(it.a);
@@ -117,9 +139,13 @@ export async function issueConfirmed(
   }
 
   await tx.update(schema.invItems)
-    .set({ qtyBase: String(have - q), updatedAt: new Date() })
+    .set({
+      qtyBase: String(have - q),
+      qtyPhysical: sql`GREATEST(0, ${schema.invItems.qtyPhysical} - ${q})`,
+      updatedAt: new Date(),
+    })
     .where(eq(schema.invItems.id, itemId));
-  return cost;
+  return { cost, qty: q };
 }
 
 /* ───────────────────────────────────────────────────────────────

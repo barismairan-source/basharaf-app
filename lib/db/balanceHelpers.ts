@@ -163,7 +163,11 @@ export async function reverseSaleDeduction(
 
     // اعمال اتمیک و امن برای هم‌روندی — برگرداندن مقدار به موجودی قطعی (qty_base)
     await tx.update(schema.invItems)
-      .set({ qtyBase: sql`${schema.invItems.qtyBase} + ${line.qtyBase}`, updatedAt: new Date() })
+      .set({
+        qtyBase: sql`${schema.invItems.qtyBase} + ${line.qtyBase}`,
+        qtyPhysical: sql`${schema.invItems.qtyPhysical} + ${line.qtyBase}`,
+        updatedAt: new Date(),
+      })
       .where(eq(schema.invItems.id, line.itemId));
 
     // ردپای حسابرسی معکوس — تا گزارش حرکت موجودی این بازگشت را هم نشان دهد
