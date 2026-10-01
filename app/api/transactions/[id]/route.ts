@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
@@ -107,6 +107,19 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     // از این نقطه به بعد: یا تراکنش pending است (ویرایش مالی هم آزاد)، یا approved
     // است و فقط فیلدهای غیرمالی در payload حضور دارند — در هر دو حالت یک UPDATE ساده
     // کافی است؛ هیچ چرخه‌ی reverse/apply لازم نیست چون balance/contact/انبار اثری نمی‌خورند.
+    // همان قانون ثبت: انتقال وجه بدون صندوق مقصد یا با مبدا=مقصد در زمان تأیید بی‌صدا هیچ اثری نداشت
+    const effType = input.type ?? tx.type;
+    if (effType === 'transfer') {
+      const src = input.accountId !== undefined ? input.accountId : tx.accountId;
+      const dst = input.destinationAccountId !== undefined ? input.destinationAccountId : tx.destinationAccountId;
+      if (!src || !dst) {
+        throw new ApiError(400, 'برای انتقال وجه، صندوق مبدا و مقصد الزامی است', 'TRANSFER_ACCOUNTS_REQUIRED');
+      }
+      if (src === dst) {
+        throw new ApiError(400, 'صندوق مبدا و مقصد نمی‌توانند یکسان باشند', 'SAME_ACCOUNT');
+      }
+    }
+
     const updates: Partial<typeof schema.transactions.$inferInsert> = {
       ...input,
       updatedAt: new Date(),
@@ -119,8 +132,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       updates.categoryName = cat.name;
     }
 
-    await db.update(schema.transactions).set(updates)
-      .where(eq(schema.transactions.id, params.id));
+    // شرط وضعیت در UPDATE: اگر تراکنش بین خواندن و نوشتن تأیید شده باشد، ویرایش مبلغ/صندوقِ
+    // pending نباید روی ردیفی بنشیند که balance آن با مقدار قبلی اعمال شده است.
+    const written = await db.update(schema.transactions).set(updates)
+      .where(and(eq(schema.transactions.id, params.id), eq(schema.transactions.status, tx.status)))
+      .returning({ id: schema.transactions.id });
+    if (written.length === 0) {
+      throw new ApiError(409, 'وضعیت این تراکنش هم‌زمان تغییر کرد — صفحه را تازه کنید', 'INVALID_STATE');
+    }
 
     // ردپای حسابرسی برای تغییراتی که می‌توانند روی گزارش‌های گذشته اثر بگذارند
     // (دسته‌بندی/تاریخ) — حتی اگر روی balance اثر نداشته باشند (سند صحت مالی §۳.۱)
@@ -149,19 +168,6 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
       throw new ApiError(403, 'فقط مدیر کل می‌تواند حذف کند', 'FORBIDDEN');
     }
 
-    const [tx] = await db.select().from(schema.transactions)
-      .where(eq(schema.transactions.id, params.id)).limit(1);
-    if (!tx) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
-
-    // ── قفل دوره‌ی مالی: حذف تراکنش approved در دوره‌ی بسته مسدود می‌شود ──
-    if (tx.status === 'approved' && tx.date) {
-      const closedPeriods = await loadClosedPeriods();
-      if (isDateInClosedPeriod(tx.date, closedPeriods)) {
-        throw new ApiError(422, PERIOD_CLOSED_MESSAGE, 'FINANCIAL_PERIOD_CLOSED');
-      }
-    }
-
-    // ── اگر تراکنش approved بود، balance را معکوس کن قبل از حذف ──
     // ── Rollback کامل و اتمیک یک تراکنش approved (می‌بندد Bug #1 از سند صحت مالی) ──
     // ترتیب معکوسِ دقیقِ اعمال در زمان approve، تا هیچ ردپای مالی/انباری یتیم نماند:
     //   ۱. reverseBalance         — خنثی‌سازی اثر روی موجودی صندوق (account)
@@ -170,11 +176,24 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     //   ۴. voidCogsTransaction    — ابطال سند هزینه‌ی COGس خودکارساخته‌شده
     //   ۵. حذف خودِ رکورد تراکنش
     // همه درون یک db.transaction — یا همه باهم انجام می‌شود یا هیچ‌کدام (atomic).
-    const saleMeta = (tx.saleMeta ?? null) as
-      | { deductedAt?: string | null; deductionLines?: import('@/lib/inventory/menuSaleDeduction').SaleDeductionLine[] | null; cogsTransactionId?: string | null }
-      | null;
+    //
+    // ردیف داخل تراکنش با FOR UPDATE خوانده می‌شود: دو DELETE هم‌زمان (دوبار کلیک)
+    // قبلاً هر دو وضعیت approved را می‌دیدند و موجودی را دو بار برمی‌گرداندند.
+    // حالا دومی بعد از commit اولی ردیف را پیدا نمی‌کند و 404 می‌گیرد.
+    const tx = await db.transaction(async (dbTx) => {
+      const [tx] = await dbTx.select().from(schema.transactions)
+        .where(eq(schema.transactions.id, params.id)).for('update').limit(1);
+      if (!tx) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
 
-    await db.transaction(async (dbTx) => {
+      // ── قفل دوره‌ی مالی: حذف تراکنش approved در دوره‌ی بسته مسدود می‌شود ──
+      if (tx.status === 'approved' && tx.date) {
+        const closedPeriods = await loadClosedPeriods();
+        if (isDateInClosedPeriod(tx.date, closedPeriods)) {
+          throw new ApiError(422, PERIOD_CLOSED_MESSAGE, 'FINANCIAL_PERIOD_CLOSED');
+        }
+      }
+
+      const saleMeta = (tx.saleMeta ?? null) as SaleMetaWithLines | null;
       if (tx.status === 'approved') {
         if (tx.accountId) {
           await reverseBalance(dbTx, tx);
@@ -190,7 +209,9 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
       }
       await dbTx.delete(schema.transactions)
         .where(eq(schema.transactions.id, params.id));
+      return tx;
     });
+    const saleMeta = (tx.saleMeta ?? null) as SaleMetaWithLines | null;
 
     audit({
       action: 'transaction.deleted',
@@ -208,6 +229,12 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     return handleError(e);
   }
 }
+
+type SaleMetaWithLines = {
+  deductedAt?: string | null;
+  deductionLines?: import('@/lib/inventory/menuSaleDeduction').SaleDeductionLine[] | null;
+  cogsTransactionId?: string | null;
+};
 
 async function fetchAndAuthorize(
   id: string,

@@ -88,15 +88,24 @@ export async function transitionOrderStatus(
     );
   }
 
-  // باکس ۵: اثر مالی/انباری فقط در وضعیت نهایی موفق (delivered/completed) —
-  // آنلاین: فقط اگر pay_status=paid؛ نقدی: همین تحویل/تکمیل = تسویه‌شدن.
-  const isSuccessfulCompletion = toStatus === 'delivered' || toStatus === 'completed';
-  const paymentSettled = existing.payMethod === 'online' ? existing.payStatus === 'paid' : true;
-  const shouldPostSale = isSuccessfulCompletion && paymentSettled && !existing.saleTransactionId;
-
   const updated = await db.transaction(async (tx) => {
+    // قفل ردیف سفارش: دو درخواست هم‌زمان «تحویل شد» (دوبار لمس/retry) قبلاً هر دو
+    // از چک وضعیت عبور می‌کردند و فروش، کسر انبار و COGS دو بار ثبت می‌شد.
+    const [locked] = await tx.select().from(schema.orders)
+      .where(eq(schema.orders.id, existing.id)).for('update').limit(1);
+    if (!locked) throw new ApiError(404, 'سفارش پیدا نشد', 'ORDER_NOT_FOUND');
+    if (locked.status !== fromStatus) {
+      throw new ApiError(409, 'وضعیت این سفارش هم‌زمان تغییر کرد — صفحه را تازه کنید', 'STATUS_CHANGED');
+    }
+
+    // باکس ۵: اثر مالی/انباری فقط در وضعیت نهایی موفق (delivered/completed) —
+    // آنلاین: فقط اگر pay_status=paid؛ نقدی: همین تحویل/تکمیل = تسویه‌شدن.
+    const isSuccessfulCompletion = toStatus === 'delivered' || toStatus === 'completed';
+    const paymentSettled = locked.payMethod === 'online' ? locked.payStatus === 'paid' : true;
+    const shouldPostSale = isSuccessfulCompletion && paymentSettled && !locked.saleTransactionId;
+
     const statusUpdate: Partial<typeof schema.orders.$inferInsert> = { status: toStatus };
-    if (shouldPostSale && existing.payMethod === 'cash' && existing.payStatus !== 'paid') {
+    if (shouldPostSale && locked.payMethod === 'cash' && locked.payStatus !== 'paid') {
       statusUpdate.payStatus = 'paid';
     }
 

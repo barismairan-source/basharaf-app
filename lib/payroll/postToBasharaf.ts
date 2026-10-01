@@ -1,6 +1,6 @@
-import { eq, sql, inArray, and, gte, lte } from 'drizzle-orm';
+import { eq, inArray, and, gte, lte } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
-import { applyBalance } from '@/lib/db/balanceHelpers';
+import { applyBalance, reverseBalance } from '@/lib/db/balanceHelpers';
 import { jalaliMonthRange } from '@/lib/jalali';
 
 /**
@@ -92,7 +92,8 @@ export async function postPayrollRunToBasharaf(
 ): Promise<PostResult> {
   return db.transaction(async (dbTx) => {
     // ۱. اجرا را بخوان و وضعیت را چک کن
-    const [run] = await dbTx.select().from(schema.payrollRuns).where(eq(schema.payrollRuns.id, runId)).limit(1);
+    // FOR UPDATE: دو «ثبت» هم‌زمان پشت هم صف می‌شوند؛ دومی وضعیت posted را می‌بیند.
+    const [run] = await dbTx.select().from(schema.payrollRuns).where(eq(schema.payrollRuns.id, runId)).for('update').limit(1);
     if (!run) throw new Error('اجرای حقوق پیدا نشد');
     if (run.status !== 'approved') throw new Error('فقط اجرای تأییدشده قابل ثبت است');
 
@@ -220,8 +221,10 @@ export async function postPayrollRunToBasharaf(
  */
 export async function reversePayrollPost(runId: string): Promise<{ ok: boolean }> {
   return db.transaction(async (dbTx) => {
+    // FOR UPDATE: دو «برگشت» هم‌زمان قبلاً هر دو سند posted را می‌دیدند و مبلغ حقوق
+    // دو بار به صندوق برمی‌گشت. حالا دومی بعد از commit اولی وضعیت reversed را می‌بیند.
     const [voucher] = await dbTx.select().from(schema.journalVouchers)
-      .where(eq(schema.journalVouchers.idempotencyKey, `payroll_run:${runId}`)).limit(1);
+      .where(eq(schema.journalVouchers.idempotencyKey, `payroll_run:${runId}`)).for('update').limit(1);
     if (!voucher || voucher.status !== 'posted') {
       const err = new Error('این دوره سند حسابداری ندارد — نیاز به بازنشانی اجباری دارد');
       (err as NodeJS.ErrnoException).code = 'NO_JOURNAL_VOUCHER';
@@ -232,11 +235,11 @@ export async function reversePayrollPost(runId: string): Promise<{ ok: boolean }
     if (voucher.basharafVoucherId) {
       const [coreTx] = await dbTx.select().from(schema.transactions)
         .where(eq(schema.transactions.id, voucher.basharafVoucherId)).limit(1);
-      if (coreTx && coreTx.status === 'approved' && coreTx.accountId) {
-        // expense reverse → موجودی برمی‌گردد
-        await dbTx.update(schema.accounts)
-          .set({ balance: sql`balance + ${Number(coreTx.amount)}`, updatedAt: new Date() })
-          .where(eq(schema.accounts.id, coreTx.accountId));
+      if (coreTx) {
+        // expense reverse → موجودی برمی‌گردد (همان helper مشترک بقیه‌ی مسیرها)
+        if (coreTx.status === 'approved') await reverseBalance(dbTx, coreTx);
+        // حتی بدون صندوق هم سند هزینه حذف می‌شود؛ قبلاً فقط وقتی accountId داشت حذف
+        // می‌شد و در غیر این صورت هزینه‌ی حقوق در گزارش‌ها باقی می‌ماند.
         await dbTx.delete(schema.transactions).where(eq(schema.transactions.id, coreTx.id));
       }
     }

@@ -113,6 +113,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       .limit(1);
 
     const { updatedOrder, voucher, coreTx } = await db.transaction(async (dbTx) => {
+      // قفل سفارش خرید و چک دوباره‌ی وضعیت داخل تراکنش: دو «دریافت» هم‌زمان
+      // (دوبار کلیک) قبلاً هر دو رسید انبار و بدهی تأمین‌کننده را دو بار ثبت می‌کردند.
+      const [lockedOrder] = await dbTx.select({ status: schema.purchaseOrders.status })
+        .from(schema.purchaseOrders).where(eq(schema.purchaseOrders.id, params.id)).for('update');
+      if (!lockedOrder || lockedOrder.status !== 'sent') {
+        throw new ApiError(409, 'این سفارش خرید قبلاً دریافت شده یا وضعیتش تغییر کرده است', 'INVALID_STATE');
+      }
+
       let voucher: typeof schema.invVouchers.$inferSelect | null = null;
 
       if (voucherLines.length > 0) {
@@ -190,9 +198,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           refInvVoucherId: voucher?.id ?? null,
           finalTotal: grandTotal,
         })
-        .where(eq(schema.purchaseOrders.id, params.id))
+        .where(and(eq(schema.purchaseOrders.id, params.id), eq(schema.purchaseOrders.status, 'sent')))
         .returning();
-      if (!updated) throw new ApiError(500, 'خطا در به‌روزرسانی سفارش خرید', 'UPDATE_FAILED');
+      if (!updated) throw new ApiError(409, 'این سفارش خرید قبلاً دریافت شده است', 'INVALID_STATE');
 
       return { updatedOrder: updated, voucher, coreTx };
     });

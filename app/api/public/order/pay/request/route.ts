@@ -26,6 +26,9 @@ export async function POST(req: Request) {
     if (order.payMethod !== 'online') {
       throw new ApiError(422, 'این سفارش با پرداخت نقدی ثبت شده است', 'NOT_ONLINE');
     }
+    if (order.status === 'cancelled' || order.status === 'rejected') {
+      throw new ApiError(422, 'این سفارش لغو شده است و قابل پرداخت نیست', 'ORDER_CANCELLED');
+    }
     if (order.payStatus === 'paid') {
       throw new ApiError(422, 'این سفارش قبلاً پرداخت شده است', 'ALREADY_PAID');
     }

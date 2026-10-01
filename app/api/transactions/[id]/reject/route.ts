@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
@@ -58,11 +58,13 @@ export async function POST(
         rejectionReason: finalReason,
         updatedAt: now,
       })
-      .where(eq(schema.transactions.id, params.id))
+      // شرط وضعیت در خودِ UPDATE: اگر هم‌زمان تأیید شده باشد (و اثرش روی صندوق
+      // اعمال شده)، رد نباید آن را «rejected» کند و balance را جا بگذارد.
+      .where(and(eq(schema.transactions.id, params.id), eq(schema.transactions.status, 'pending')))
       .returning();
 
     if (!updated) {
-      throw new ApiError(500, 'خطا در به‌روزرسانی', 'UPDATE_FAILED');
+      throw new ApiError(409, 'وضعیت این تراکنش هم‌زمان تغییر کرد — صفحه را تازه کنید', 'INVALID_STATE');
     }
 
     if (updated.createdBy !== session.sub) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { getPaymentGateway } from '@/lib/payments';
 
@@ -48,9 +48,10 @@ export async function GET(req: Request) {
   if (canceledEarly) {
     if (order.payStatus !== 'failed') {
       await db.transaction(async (tx) => {
+        // هرگز paid را (که شاید یک callback هم‌زمان ثبت کرده) به failed برنگردان
         await tx.update(schema.orders)
           .set({ payStatus: 'failed' })
-          .where(eq(schema.orders.id, order.id));
+          .where(and(eq(schema.orders.id, order.id), ne(schema.orders.payStatus, 'paid')));
         await tx.insert(schema.orderEvents).values({
           orderId: order.id,
           fromStatus: order.status,
@@ -84,7 +85,7 @@ export async function GET(req: Request) {
     } else {
       await tx.update(schema.orders)
         .set({ payStatus: 'failed' })
-        .where(eq(schema.orders.id, order.id));
+        .where(and(eq(schema.orders.id, order.id), ne(schema.orders.payStatus, 'paid')));
       await tx.insert(schema.orderEvents).values({
         orderId: order.id,
         fromStatus: order.status,
