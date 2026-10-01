@@ -9,6 +9,7 @@ import { receiveConfirmed } from '@/lib/db/inventoryHelpers';
 import { createExpenseTx, notifyPendingTransaction } from '@/lib/db/createExpenseTx';
 import { getTodayJalali } from '@/lib/jalali';
 import { audit } from '@/lib/auth/audit';
+import { assertPeriodOpen } from '@/lib/financial-period';
 
 /**
  * POST /api/purchase-orders/[id]/receive
@@ -73,6 +74,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     const isWarehouse = session.role === 'Warehouse';
     const date = getTodayJalali();
+    await assertPeriodOpen(date);
 
     interface EffLine {
       poItem: PoItemRow;

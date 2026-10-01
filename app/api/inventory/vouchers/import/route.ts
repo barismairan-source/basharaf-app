@@ -5,7 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
-import { isValidJalaliString } from '@/lib/jalali';
+import { normalizeJalaliDate } from '@/lib/jalali';
 
 export const dynamic = 'force-dynamic';
 
@@ -68,8 +68,8 @@ export async function POST(req: Request) {
       const ln = i + 2;
       const invoiceNoRaw = cell(row, 'شماره فاکتور', 'فاکتور', 'invoice');
       const invoiceNo = invoiceNoRaw || `_row${i}`;
-      const date = cell(row, 'تاریخ', 'date');
-      if (!isValidJalaliString(date)) { errors.push(`ردیف ${ln}: تاریخ شمسی نامعتبر`); return; }
+      const date = normalizeJalaliDate(cell(row, 'تاریخ', 'date'));
+      if (!date) { errors.push(`ردیف ${ln}: تاریخ شمسی نامعتبر`); return; }
 
       const branchName = cell(row, 'شعبه', 'branch');
       const branch = findBranch(branchName);

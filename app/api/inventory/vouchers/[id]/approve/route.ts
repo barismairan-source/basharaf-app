@@ -13,6 +13,7 @@ import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting, 
 import { computeAutoRecost } from '@/lib/inventory/costing';
 import { audit } from '@/lib/auth/audit';
 import { canDo } from '@/lib/auth/permissions';
+import { assertPeriodOpen } from '@/lib/financial-period';
 
 /**
  * POST /api/inventory/vouchers/[id]/approve — Atomic با موجودی قطعی + میانگین موزون.
@@ -105,6 +106,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       if (!lockedVoucher || lockedVoucher.status !== 'pending') {
         throw new ApiError(409, 'فقط برگه‌های در انتظار قابل تأیید هستند', 'INVALID_STATE');
       }
+      // تأیید برگه سند حسابداری با تاریخ برگه می‌سازد — در ماهِ بسته ممنوع
+      await assertPeriodOpen(current.makerDate, dbTx);
 
       // خطوط را با قیمت نهایی (در صورت وجود) آماده کن
       const prepared = lines.map((l) => ({

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleErrorLogged } from '@/lib/api-error';
+import { jalaliDateField } from '@/lib/validations/jalaliDate';
+import { assertPeriodOpen } from '@/lib/financial-period';
 import { postPayrollRunToBasharaf, reversePayrollPost } from '@/lib/payroll/postToBasharaf';
 import { audit } from '@/lib/auth/audit';
 
@@ -9,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const postSchema = z.object({
   accountId: z.string().uuid('شناسه صندوق نامعتبر است'),
-  date: z.string().min(1, 'تاریخ الزامی است'),
+  date: jalaliDateField,
 });
 
 /**
@@ -22,6 +24,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const session = await requireAdmin();
     const body = await req.json();
     const { accountId, date } = postSchema.parse(body);
+    await assertPeriodOpen(date);
 
     const result = await postPayrollRunToBasharaf(params.id, accountId, session.sub, date);
     if (!result.alreadyPosted) {

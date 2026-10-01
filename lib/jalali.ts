@@ -35,6 +35,30 @@ export function isValidJalaliString(input: string): boolean {
 }
 
 /**
+ * یکسان‌سازی تاریخ شمسی ورودی به فرمت استاندارد پروژه (`۱۴۰۵/۰۲/۳۱`).
+ * ارقام فارسی/عربی/لاتین، جداکننده‌ی / یا -، و ماه/روز تک‌رقمی را می‌پذیرد.
+ * null اگر قابل‌تفسیر نباشد.
+ *
+ * چرا: گزارش‌ها تاریخ را با مقایسه‌ی متنی فیلتر و با SUBSTRING گروه‌بندی می‌کنند؛
+ * تاریخی مثل `1405/3/6` (ارقام لاتین یا بدون صفر) از گزارش‌های بازه‌ای جا می‌افتاد.
+ */
+export function normalizeJalaliDate(input: string | null | undefined): string | null {
+  if (typeof input !== 'string') return null;
+  const ascii = input
+    .trim()
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const m = /^(\d{4})[/-](\d{1,2})[/-](\d{1,2})$/.exec(ascii);
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  if (y < 1300 || y > 1500 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  if (mo > 6 && d > 30) return null;
+  return formatJalali(y, mo, d);
+}
+
+/**
  * فرمت کردن سه عدد سال/ماه/روز به رشته فارسی استاندارد.
  * `formatJalali(1405, 2, 31)` → '۱۴۰۵/۰۲/۳۱'
  */

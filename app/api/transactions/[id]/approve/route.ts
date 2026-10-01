@@ -7,6 +7,7 @@ import { rowToTransaction } from '@/lib/db/serializers';
 import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
 import { applyMenuSaleDeduction, type MenuSaleLine } from '@/lib/inventory/menuSaleDeduction';
 import { audit } from '@/lib/auth/audit';
+import { assertPeriodOpen } from '@/lib/financial-period';
 import { notify, notifyAdmins, getRuleThreshold } from '@/lib/notify';
 
 /**
@@ -29,6 +30,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       if (current.status !== 'pending' && current.status !== 'proforma') {
         throw new ApiError(409, 'فقط تراکنش‌های در انتظار یا پیش‌فاکتور قابل تایید هستند', 'INVALID_STATE');
       }
+
+      // تأیید = اثر روی صندوق/انبار؛ در ماهِ بسته ممنوع
+      await assertPeriodOpen(current.date, dbTx);
 
       approvedCreatedBy = current.createdBy;
 

@@ -3,6 +3,8 @@ import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { jalaliDateField } from '@/lib/validations/jalaliDate';
+import { assertPeriodOpen } from '@/lib/financial-period';
 import { assertSection, branchScope, assertBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
@@ -21,7 +23,7 @@ const createBodySchema = z.object({
   branchId: z.string().uuid(),
   method: z.string().min(1),
   receipt: z.string().max(40).optional().default('—'),
-  date: z.string().min(1),
+  date: jalaliDateField,
   note: z.string().max(500).optional().default(''),
   hasReceipt: z.boolean().optional().default(false),
   accountId: z.string().uuid().optional().nullable(),
@@ -80,6 +82,9 @@ export async function POST(req: Request) {
         }
       }
     }
+
+    // دوره‌ی بسته: ثبت سند جدید با تاریخ ماهِ بسته ممنوع (قبلاً فقط ویرایش/حذف قفل بود)
+    await assertPeriodOpen(input.date);
 
     let categoryName = 'انتقال وجه';
     if (input.categoryId && input.type !== 'transfer') {

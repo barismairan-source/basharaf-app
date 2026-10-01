@@ -61,3 +61,38 @@ export const PERIOD_CLOSED_MESSAGE =
   'این تراکنش در یک دوره‌ی مالی بسته‌شده قرار دارد و غیرقابل تغییر است. ' +
   'برای اصلاح، ابتدا دوره‌ی مالی را بازگشایی کنید. ' +
   '(This transaction belongs to a closed financial period and cannot be modified.)';
+
+export const PERIOD_CLOSED_POST_MESSAGE =
+  'ماه این تاریخ در دوره‌ی مالی بسته‌شده است و ثبت/تأیید سند در آن ممکن نیست. ' +
+  'تاریخ را اصلاح کنید یا ابتدا دوره را بازگشایی کنید.';
+
+/**
+ * قفل واقعی دوره‌ی بسته روی همه‌ی مسیرهای ثبت (نه فقط ویرایش/حذف):
+ * اگر ماه تاریخ داده‌شده بسته باشد، ApiError 422 می‌اندازد.
+ * تاریخ نامعتبر (قدیمی/غیراستاندارد) را رد نمی‌کند — اعتبارسنجی تاریخ کار مرز API است.
+ *
+ * `dbOrTx` اختیاری تا داخل همان db.transaction هم قابل استفاده باشد.
+ */
+export async function assertPeriodOpen(
+  dateStr: string | null | undefined,
+  dbOrTx: Pick<typeof db, 'select'> = db,
+  message: string = PERIOD_CLOSED_POST_MESSAGE,
+): Promise<void> {
+  if (!dateStr) return;
+  const rows = await dbOrTx
+    .select({
+      jalaliYear: schema.financialPeriods.jalaliYear,
+      jalaliMonth: schema.financialPeriods.jalaliMonth,
+    })
+    .from(schema.financialPeriods);
+  let closed = false;
+  try {
+    closed = isDateInClosedPeriod(dateStr, rows);
+  } catch {
+    closed = false;
+  }
+  if (closed) {
+    const { ApiError } = await import('@/lib/api-error');
+    throw new ApiError(422, message, 'FINANCIAL_PERIOD_CLOSED');
+  }
+}

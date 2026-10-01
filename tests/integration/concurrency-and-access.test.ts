@@ -185,6 +185,33 @@ describe('Concurrency + API access — گزارش بررسی ۲۰۲۶-۱۰', { s
     });
   });
 
+  describe('M1/M2 — دوره‌ی مالی بسته و یکسان‌سازی تاریخ', () => {
+    it('ثبت تراکنش جدید در ماه بسته رد می‌شود؛ تاریخ لاتین به فرمت استاندارد ذخیره می‌شود', async () => {
+      const [period] = await db.insert(schema.financialPeriods).values({
+        jalaliYear: 1404, jalaliMonth: 1, closedBy: f.userId,
+      }).returning();
+      try {
+        const body = (date: string) => JSON.stringify({
+          type: 'expense', title: `${PREFIX} دوره`, categoryId: f.expenseCategoryId, amount: 1_000,
+          payee: 'تست', branchId: f.branchId, method: 'نقد', accountId: f.accountId, date,
+        });
+        const closed = await admin.fetchJson('/api/transactions', { method: 'POST', body: body('1404/1/10') });
+        assert.equal(closed.status, 422, 'ماه بسته');
+
+        const ok = await admin.fetchJson<{ transaction: { id: string; date: string } }>('/api/transactions', { method: 'POST', body: body('1405/3/5') });
+        assert.equal(ok.status, 201);
+        assert.equal(ok.body.transaction.date, '۱۴۰۵/۰۳/۰۵', 'تاریخ یکسان‌سازی شده');
+
+        const moved = await admin.fetchJson(`/api/transactions/${ok.body.transaction.id}`, {
+          method: 'PATCH', body: JSON.stringify({ date: '۱۴۰۴/۰۱/۲۰' }),
+        });
+        assert.equal(moved.status, 422, 'انتقال تاریخ به داخل ماه بسته');
+      } finally {
+        await db.delete(schema.financialPeriods).where(eq(schema.financialPeriods.id, period!.id));
+      }
+    });
+  });
+
   describe('B1/B2 — دسترسی API', () => {
     it('آشپز تراکنش‌ها، گزارش، حقوق و پرونده‌ی پرسنل را از API نمی‌گیرد', async () => {
       const chef = await makeUser('Chef');

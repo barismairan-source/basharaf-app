@@ -7,6 +7,7 @@ import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
+import { jalaliDateField } from '@/lib/validations/jalaliDate';
 import { createPendingNotifications } from '@/lib/inventory/pendingNotifications';
 
 /**
@@ -36,7 +37,7 @@ const createVoucherSchema = z.object({
   kind: z.enum(['in', 'out', 'waste', 'sale', 'produce', 'stocktake']),
   branchId: z.string().uuid(),
   note: z.string().max(500).optional().default(''),
-  date: z.string().min(1), // Jalali
+  date: jalaliDateField, // Jalali — به فرمت استاندارد تبدیل می‌شود
   lines: z.array(lineSchema).min(1),
   saleMeta: z.any().optional().nullable(),
   supplierInvoiceNo: z.string().trim().max(60).optional().nullable(),

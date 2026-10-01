@@ -11,7 +11,8 @@ import {
   reverseSaleDeduction, voidCogsTransaction,
 } from '@/lib/db/balanceHelpers';
 import { audit } from '@/lib/auth/audit';
-import { loadClosedPeriods, isDateInClosedPeriod, PERIOD_CLOSED_MESSAGE } from '@/lib/financial-period';
+import { loadClosedPeriods, isDateInClosedPeriod, PERIOD_CLOSED_MESSAGE, assertPeriodOpen } from '@/lib/financial-period';
+import { jalaliDateField } from '@/lib/validations/jalaliDate';
 
 /**
  * سیاست «ویرایش پس از تأیید» (Edit-After-Approval Policy) — طبق
@@ -43,7 +44,7 @@ const patchBodySchema = z.object({
   payee: z.string().min(1).max(120).optional(),
   method: z.string().min(1).optional(),
   receipt: z.string().max(40).optional(),
-  date: z.string().min(1).optional(),
+  date: jalaliDateField.optional(),
   note: z.string().max(500).optional(),
 
   // ── مالی — فقط روی تراکنش‌های pending قابل‌قبول؛ روی approved مسدود می‌شوند (پایین‌تر) ──
@@ -102,6 +103,11 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
       if (isDateInClosedPeriod(tx.date, closedPeriods)) {
         throw new ApiError(422, PERIOD_CLOSED_MESSAGE, 'FINANCIAL_PERIOD_CLOSED');
       }
+    }
+
+    // انتقال تاریخ به داخل یک ماه بسته هم ممنوع است (قبلاً فقط تاریخ قبلی چک می‌شد)
+    if (input.date && input.date !== tx.date) {
+      await assertPeriodOpen(input.date);
     }
 
     // از این نقطه به بعد: یا تراکنش pending است (ویرایش مالی هم آزاد)، یا approved

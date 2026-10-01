@@ -1,6 +1,7 @@
 import { eq, inArray, and, gte, lte } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { applyBalance, reverseBalance } from '@/lib/db/balanceHelpers';
+import { assertPeriodOpen } from '@/lib/financial-period';
 import { jalaliMonthRange } from '@/lib/jalali';
 
 /**
@@ -236,6 +237,8 @@ export async function reversePayrollPost(runId: string): Promise<{ ok: boolean }
       const [coreTx] = await dbTx.select().from(schema.transactions)
         .where(eq(schema.transactions.id, voucher.basharafVoucherId)).limit(1);
       if (coreTx) {
+        // برگشت ثبت حقوقِ ماهِ بسته، دفاتر بسته را تغییر می‌دهد
+        await assertPeriodOpen(coreTx.date, dbTx);
         // expense reverse → موجودی برمی‌گردد (همان helper مشترک بقیه‌ی مسیرها)
         if (coreTx.status === 'approved') await reverseBalance(dbTx, coreTx);
         // حتی بدون صندوق هم سند هزینه حذف می‌شود؛ قبلاً فقط وقتی accountId داشت حذف

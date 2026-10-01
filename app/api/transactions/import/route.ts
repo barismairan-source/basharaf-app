@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { eq, and } from 'drizzle-orm';
+import { and, inArray } from 'drizzle-orm';
 import * as XLSX from 'xlsx';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applyBalance, applyContactBalance } from '@/lib/db/balanceHelpers';
-import { isValidJalaliString } from '@/lib/jalali';
+import { normalizeJalaliDate } from '@/lib/jalali';
+import { loadClosedPeriods, isDateInClosedPeriod } from '@/lib/financial-period';
 import { audit } from '@/lib/auth/audit';
 
 export const dynamic = 'force-dynamic';
@@ -61,6 +62,7 @@ export async function POST(req: Request) {
       db.select().from(schema.categories),
       db.select().from(schema.contacts),
     ]);
+    const closedPeriods = await loadClosedPeriods();
     const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
     const findBranch = (n: string) => branches.find(b => norm(b.name) === norm(n));
     const findAccount = (n: string) => accounts.find(a => norm(a.name) === norm(n));
@@ -84,8 +86,11 @@ export async function POST(req: Request) {
       const amount = normNum(row['مبلغ'] ?? row['amount']);
       if (amount <= 0) { errors.push(`ردیف ${ln}: مبلغ نامعتبر`); return; }
 
-      const date = cell(row, 'تاریخ', 'date');
-      if (!isValidJalaliString(date)) { errors.push(`ردیف ${ln}: تاریخ شمسی نامعتبر (مثل 1405/03/16)`); return; }
+      // تاریخ به فرمت استاندارد (۱۴۰۵/۰۳/۱۶) تبدیل می‌شود؛ قبلاً ارقام لاتین/بدون صفر
+      // همان‌طور ذخیره می‌شد و از گزارش‌های بازه‌ای جا می‌افتاد.
+      const date = normalizeJalaliDate(cell(row, 'تاریخ', 'date'));
+      if (!date) { errors.push(`ردیف ${ln}: تاریخ شمسی نامعتبر (مثل 1405/03/16)`); return; }
+      if (isDateInClosedPeriod(date, closedPeriods)) { errors.push(`ردیف ${ln}: ماه این تاریخ در دوره‌ی مالی بسته است`); return; }
 
       const branchName = cell(row, 'شعبه', 'branch');
       const branch = findBranch(branchName);
@@ -128,6 +133,28 @@ export async function POST(req: Request) {
         approvedAt: new Date(),
       });
     });
+
+    // ضد تکرار: آپلود دوباره‌ی همان فایل قبلاً همه‌ی مبالغ صندوق را دو برابر می‌کرد.
+    // ردیفی که همان شعبه/تاریخ/نوع/مبلغ/عنوان را دارد (در فایل یا دیتابیس) تکراری است؛
+    // با فیلد allowDuplicates=1 در فرم، عمداً قابل ثبت است.
+    const allowDuplicates = formData.get('allowDuplicates') === '1';
+    if (errors.length === 0 && !allowDuplicates && prepared.length > 0) {
+      const key = (p: { branchId: unknown; date: unknown; type: unknown; amount: unknown; title: unknown }) =>
+        `${p.branchId}|${p.date}|${p.type}|${Number(p.amount)}|${norm(String(p.title))}`;
+      const existing = await db.select({
+        branchId: schema.transactions.branchId, date: schema.transactions.date, type: schema.transactions.type,
+        amount: schema.transactions.amount, title: schema.transactions.title,
+      }).from(schema.transactions).where(and(
+        inArray(schema.transactions.branchId, [...new Set(prepared.map((p) => p.branchId as string))]),
+        inArray(schema.transactions.date, [...new Set(prepared.map((p) => p.date as string))]),
+      ));
+      const seen = new Set(existing.map(key));
+      prepared.forEach((p, i) => {
+        const k = key(p as Parameters<typeof key>[0]);
+        if (seen.has(k)) errors.push(`ردیف ${i + 2}: مشابه این ردیف (همان شعبه، تاریخ، نوع، مبلغ و عنوان) قبلاً ثبت شده — تکراری است`);
+        seen.add(k);
+      });
+    }
 
     if (errors.length > 0) {
       // هیچ‌چیز وارد نشد — گزارش خطا
