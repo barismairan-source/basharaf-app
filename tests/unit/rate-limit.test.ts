@@ -52,6 +52,19 @@ describe('consumeRequestLimit — سطل‌های جدا', () => {
   });
 });
 
+describe('کلید مشترک (IP نامعلوم/داخلی)', () => {
+  it('سقف ۱۰ برابر می‌شود تا مشتریان واقعی پشت یک IP همدیگر را قفل نکنند', () => {
+    const limit = { max: 2, windowMs: 60_000 };
+    for (let i = 0; i < 20; i++) expect(consumeRequestLimit('shared', 'unknown', limit).allowed).toBe(true);
+    expect(consumeRequestLimit('shared', 'unknown', limit).allowed).toBe(false);
+    for (let i = 0; i < 20; i++) consumeRequestLimit('shared', '10.0.0.5', limit);
+    expect(consumeRequestLimit('shared', '10.0.0.5', limit).allowed).toBe(false);
+    consumeRequestLimit('shared', '5.6.7.8', limit);
+    consumeRequestLimit('shared', '5.6.7.8', limit);
+    expect(consumeRequestLimit('shared', '5.6.7.8', limit).allowed).toBe(false);
+  });
+});
+
 describe('محدودیت لاگین بر اساس ایمیل', () => {
   it('بعد از ۲۰ شکست روی یک ایمیل، حتی از IP دیگر هم رد می‌شود', () => {
     const email = 'victim@example.com';

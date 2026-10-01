@@ -129,17 +129,25 @@ export function consumeRequestLimit(
 ): { allowed: boolean; retryAfter?: number } {
   const now = Date.now();
   const id = `${bucket}:${key}`;
+  // اگر IP واقعی کلاینت به ما نرسد (unknown یا IP داخلی پروکسی)، همه‌ی کاربران یک
+  // کلید مشترک دارند — سقف ۱۰ برابر می‌شود تا مشتریان واقعی همدیگر را قفل نکنند.
+  const max = isSharedKey(key) ? limit.max * 10 : limit.max;
   const rec = buckets.get(id);
   if (!rec || now - rec.windowStart >= limit.windowMs) {
     buckets.set(id, { count: 1, windowStart: now });
     pruneBuckets(now);
     return { allowed: true };
   }
-  if (rec.count >= limit.max) {
+  if (rec.count >= max) {
     return { allowed: false, retryAfter: Math.ceil((rec.windowStart + limit.windowMs - now) / 1000) };
   }
   rec.count += 1;
   return { allowed: true };
+}
+
+function isSharedKey(key: string): boolean {
+  return key === 'unknown'
+    || /^(10\.|127\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1$|fc|fd)/i.test(key);
 }
 
 let lastPrune = 0;
@@ -153,12 +161,12 @@ function pruneBuckets(now: number): void {
 
 /** سقف‌های مسیرهای عمومی — سخاوتمند برای مشتری واقعی، تنگ برای اسپم. */
 export const PUBLIC_LIMITS = {
-  reservationCreate: { max: 10, windowMs: 60 * 60 * 1000 },
-  reservationLookup: { max: 30, windowMs: 15 * 60 * 1000 },
-  recruitmentSubmit: { max: 5, windowMs: 60 * 60 * 1000 },
-  recruitmentUpload: { max: 20, windowMs: 60 * 60 * 1000 },
-  orderCreate: { max: 20, windowMs: 60 * 60 * 1000 },
-  otpSend: { max: 5, windowMs: 60 * 60 * 1000 },
+  reservationCreate: { max: 20, windowMs: 60 * 60 * 1000 },
+  reservationLookup: { max: 60, windowMs: 15 * 60 * 1000 },
+  recruitmentSubmit: { max: 10, windowMs: 60 * 60 * 1000 },
+  recruitmentUpload: { max: 30, windowMs: 60 * 60 * 1000 },
+  orderCreate: { max: 40, windowMs: 60 * 60 * 1000 },
+  otpSend: { max: 10, windowMs: 60 * 60 * 1000 },
 } as const satisfies Record<string, RequestLimit>;
 
 // ─── لاگین: علاوه بر IP، بر اساس ایمیل ─────────────────────────────────────
