@@ -4,7 +4,9 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
-import { serializeEmployee } from '@/lib/payroll/employeeSerializer';
+import { serializeEmployee, redactEmployee } from '@/lib/payroll/employeeSerializer';
+import { assertSection, assertCanAny, assertBranch } from '@/lib/auth/apiAccess';
+import { canDo } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,10 +35,16 @@ const patchSchema = z.object({
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertSection(session, 'hr');
+    assertCanAny(session, ['hr.people.view', 'hr.schedule.view', 'hr.attendance.view']);
     const [e] = await db.select().from(schema.employees).where(eq(schema.employees.id, params.id)).limit(1);
     if (!e) throw new ApiError(404, 'پرسنل پیدا نشد', 'NOT_FOUND');
-    return NextResponse.json({ employee: serializeEmployee(e) });
+    assertBranch(session, e.branchId);
+    const serialized = serializeEmployee(e);
+    return NextResponse.json({
+      employee: canDo(session, 'hr.people.viewSensitive') ? serialized : redactEmployee(serialized),
+    });
   } catch (e) {
     return await handleErrorLogged(e, undefined, { category: 'payroll' });
   }

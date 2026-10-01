@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
+import { assertCanAny } from '@/lib/auth/apiAccess';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,8 @@ function rowToRate(row: typeof schema.employeeHourlyRates.$inferSelect) {
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertCanAny(session, ['hr.compensation.view', 'hr.payroll.calculate', 'hr.payroll.approve', 'hr.payroll.post']);
     const rows = await db.select().from(schema.employeeHourlyRates)
       .where(eq(schema.employeeHourlyRates.employeeId, params.id))
       .orderBy(desc(schema.employeeHourlyRates.effectiveFrom));

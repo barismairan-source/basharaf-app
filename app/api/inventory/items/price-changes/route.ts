@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertCan } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { jalaliToDate } from '@/lib/jalali';
 
@@ -14,7 +15,9 @@ export type ItemPriceChange = {
 
 export async function GET() {
   try {
-    await requireSession();
+    const session = await requireSession();
+    // بها/حاشیه‌ی سود — فقط برای کسی که اجازه‌ی دیدن بهای انبار را دارد
+    assertCan(session, 'inventory.viewCosts');
 
     const rows = await db
       .select({

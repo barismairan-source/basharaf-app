@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { getContactLedger } from '@/lib/db/contactLedger';
 
@@ -10,7 +11,10 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertSection(session, 'contacts');
+    // غیر SuperAdmin: فقط ردیف‌های شعبه‌ی خودش (طرف‌حساب سراسری است، تراکنش‌ها شعبه‌ای‌اند)
+    const scope = branchScope(session);
 
     const [contact] = await db
       .select()
@@ -20,7 +24,7 @@ export async function GET(
 
     if (!contact) throw new ApiError(404, 'طرف‌حساب یافت نشد', 'CONTACT_NOT_FOUND');
 
-    const { entries, balance } = await getContactLedger(params.id);
+    const { entries, balance } = await getContactLedger(params.id, scope);
 
     return NextResponse.json({
       contact: {

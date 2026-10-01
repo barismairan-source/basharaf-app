@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, assertBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { audit } from '@/lib/auth/audit';
 
@@ -53,9 +54,11 @@ async function loadCheque(id: string) {
 /** GET /api/cheques/[id] */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertSection(session, 'contacts');
     const row = await loadCheque(params.id);
     if (!row) throw new ApiError(404, 'چک پیدا نشد', 'NOT_FOUND');
+    assertBranch(session, row.cheque.branchId);
     return NextResponse.json({ cheque: rowToCheque(row.cheque, row.contactName ?? null) });
   } catch (e) {
     return handleError(e);
@@ -71,12 +74,10 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const existing = await loadCheque(params.id);
     if (!existing) throw new ApiError(404, 'چک پیدا نشد', 'NOT_FOUND');
 
-    if (
-      session.role === 'BranchUser' &&
-      session.branchId &&
-      existing.cheque.branchId !== session.branchId
-    ) {
-      throw new ApiError(403, 'دسترسی ندارید', 'FORBIDDEN');
+    assertSection(session, 'contacts');
+    assertBranch(session, existing.cheque.branchId);
+    if (session.role !== 'SuperAdmin' && input.branchId !== undefined && input.branchId !== existing.cheque.branchId) {
+      throw new ApiError(403, 'انتقال چک به شعبه‌ی دیگر فقط توسط مدیر کل ممکن است', 'FORBIDDEN');
     }
 
     const oldStatus = existing.cheque.status;

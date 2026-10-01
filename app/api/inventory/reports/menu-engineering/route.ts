@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertCan } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { costRecipe, type CostingItem, type CostingLine } from '@/lib/inventory/costing';
 
@@ -23,7 +24,9 @@ export type MenuEngineItem = {
 
 export async function GET(req: Request) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    // بها/حاشیه‌ی سود — فقط برای کسی که اجازه‌ی دیدن بهای انبار را دارد
+    assertCan(session, 'inventory.viewCosts');
     const { searchParams } = new URL(req.url);
     const branchId = searchParams.get('branchId');
     const dateFrom = searchParams.get('dateFrom');

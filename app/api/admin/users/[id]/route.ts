@@ -5,6 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 import { audit } from '@/lib/auth/audit';
+import { invalidateFreshAccess } from '@/lib/auth/freshAccess';
 import type { NextRequest } from 'next/server';
 
 const patchSchema = z.object({
@@ -29,6 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       .returning();
 
     if (!updated) throw new ApiError(500, 'خطا در ویرایش کاربر', 'UPDATE_FAILED');
+    invalidateFreshAccess(params.id);
 
     const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;
 

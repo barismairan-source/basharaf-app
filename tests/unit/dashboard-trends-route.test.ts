@@ -92,11 +92,16 @@ describe('GET trends — SuperAdmin می‌تواند هر branchId درخواس
   });
 });
 
-describe('GET trends — BranchUser/Warehouse/Chef فقط شعبه‌ی نشست خودشان (رفع باگ RBAC)', () => {
-  it.each(['BranchUser', 'Warehouse', 'Chef'] as const)(
-    '%s نمی‌تواند با ارسال branchId دیگر به شعبه‌ی دیگر دسترسی پیدا کند',
-    async (role) => {
-      mockRequireSession.mockResolvedValue({ sub: 'u2', role, branchId: 'branch-own' });
+describe('GET trends — کاربران غیر SuperAdmin فقط شعبه‌ی نشست خودشان (رفع باگ RBAC)', () => {
+  it.each([
+    { role: 'BranchUser' as const, permissions: null },
+    // Warehouse/Chef به‌طور پیش‌فرض بخش مالی ندارند؛ با دسترسی صریح، فقط شعبه‌ی خودشان.
+    { role: 'Warehouse' as const, permissions: ['transactions'] },
+    { role: 'Chef' as const, permissions: ['transactions'] },
+  ])(
+    '$role نمی‌تواند با ارسال branchId دیگر به شعبه‌ی دیگر دسترسی پیدا کند',
+    async ({ role, permissions }) => {
+      mockRequireSession.mockResolvedValue({ sub: 'u2', role, branchId: 'branch-own', permissions });
 
       const res = await GET(makeRequest('?branchId=branch-attacker-target'));
       expect(res.status).toBe(200);
@@ -109,6 +114,22 @@ describe('GET trends — BranchUser/Warehouse/Chef فقط شعبه‌ی نشست
       }
     },
   );
+
+  it.each(['Warehouse', 'Chef'] as const)(
+    '%s بدون دسترسی مالی، روند مالی را نمی‌بیند',
+    async (role) => {
+      mockRequireSession.mockResolvedValue({ sub: 'u2', role, branchId: 'branch-own', permissions: null });
+      const res = await GET(makeRequest());
+      expect(res.status).not.toBe(200);
+      expect(mockEq.mock.calls.filter(([col]) => col === 'col_branchId')).toHaveLength(0);
+    },
+  );
+
+  it('کاربر غیر SuperAdmin بدون شعبه، داده‌ی همه‌ی شعب را نمی‌گیرد', async () => {
+    mockRequireSession.mockResolvedValue({ sub: 'u2', role: 'BranchUser', branchId: null, permissions: null });
+    const res = await GET(makeRequest());
+    expect(res.status).not.toBe(200);
+  });
 });
 
 describe('GET trends — پارامتر days', () => {

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { canAccessSection, canDo } from '@/lib/auth/permissions';
 
 const createSchema = z.object({
   name: z.string().min(2).max(80).transform(v => v.trim()),
@@ -13,17 +14,27 @@ const createSchema = z.object({
 
 export async function GET() {
   try {
-    await requireSession();
-    const rows = await db
+    const session = await requireSession();
+    // فهرست صندوق‌ها در فرم تراکنش، تأیید رسید خرید و صفحه‌ی صندوق‌ها لازم است؛
+    // مبلغ موجودی فقط برای کسی که بخش «صندوق‌ها» را دارد برگردانده می‌شود.
+    if (!canAccessSection(session, 'accounts') && !canAccessSection(session, 'transactions') && !canDo(session, 'inventory.approve')) {
+      throw new ApiError(403, 'دسترسی غیرمجاز', 'FORBIDDEN');
+    }
+    const showBalance = canAccessSection(session, 'accounts');
+    const all = await db
       .select()
       .from(schema.accounts)
       .where(eq(schema.accounts.isActive, true));
+    // غیر SuperAdmin: صندوق‌های شعبه‌ی خودش + صندوق‌های مشترک (بدون شعبه)
+    const rows = session.role === 'SuperAdmin'
+      ? all
+      : all.filter(a => a.branchId == null || a.branchId === session.branchId);
     return NextResponse.json({
       accounts: rows.map(a => ({
         id: a.id,
         name: a.name,
         type: a.type,
-        balance: Number(a.balance),
+        balance: showBalance ? Number(a.balance) : 0,
         isActive: a.isActive,
         branchId: a.branchId,
         partnerId: null, // Faz 3: از DB خواهد آمد بعد از اضافه‌شدن ستون به Drizzle

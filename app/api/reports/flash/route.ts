@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireSession } from '@/lib/auth/session';
+import { assertAnySection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { getFlashReport } from '@/lib/reports/flashReport';
 import { getTodayJalali } from '@/lib/jalali';
@@ -13,6 +14,8 @@ const querySchema = z.object({
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertAnySection(session, ['reports', 'transactions']);
+    const scope = branchScope(session);
     const url = new URL(req.url);
 
     const params = querySchema.parse({
@@ -22,10 +25,7 @@ export async function GET(req: Request) {
 
     const dateJalali = params.date ?? getTodayJalali();
 
-    let branchId = params.branchId;
-    if (session.role === 'BranchUser' && session.branchId) {
-      branchId = session.branchId;
-    }
+    const branchId = scope ?? params.branchId;
 
     const data = await getFlashReport(dateJalali, branchId);
     return NextResponse.json(data);

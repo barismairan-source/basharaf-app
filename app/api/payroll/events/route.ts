@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
+import { assertCanAny } from '@/lib/auth/apiAccess';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,8 @@ const EVENT_LABELS: Record<string, string> = {
 
 export async function GET(req: Request) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertCanAny(session, ['hr.compensation.view', 'hr.payroll.calculate', 'hr.payroll.approve', 'hr.payroll.post']);
     const { searchParams } = new URL(req.url);
     const period = searchParams.get('period');
     const employeeId = searchParams.get('employeeId');

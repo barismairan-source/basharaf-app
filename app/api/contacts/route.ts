@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { canAccessSection } from '@/lib/auth/permissions';
+import { assertAnySection } from '@/lib/auth/apiAccess';
 
 const createSchema = z.object({
   name: z.string().min(2).max(120).transform(v => v.trim()),
@@ -14,7 +16,10 @@ const createSchema = z.object({
 
 export async function GET() {
   try {
-    await requireSession();
+    const session = await requireSession();
+    // فهرست طرف‌حساب‌ها در فرم تراکنش و سفارش خرید هم لازم است؛ مانده فقط برای بخش «طرف‌حساب‌ها».
+    assertAnySection(session, ['contacts', 'transactions', 'inventory']);
+    const showBalance = canAccessSection(session, 'contacts');
 
     const rows = await db.select().from(schema.contacts).where(eq(schema.contacts.isActive, true));
 
@@ -52,7 +57,7 @@ export async function GET() {
     return NextResponse.json({
       contacts: rows.map(c => ({
         id: c.id, name: c.name, type: c.type, phone: c.phone, note: c.note,
-        balance: balanceMap.get(c.id) ?? 0,
+        balance: showBalance ? (balanceMap.get(c.id) ?? 0) : 0,
         isActive: c.isActive,
         createdAt: c.createdAt.toISOString(), updatedAt: c.updatedAt.toISOString(),
       })),

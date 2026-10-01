@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireRole } from '@/lib/auth/session';
+import { assertCan } from '@/lib/auth/apiAccess';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { minutesBetween, validateShiftMinutes } from '@/lib/payroll/attendanceEngine';
 
@@ -31,6 +32,7 @@ async function assertNotLocked(assignmentId: string): Promise<void> {
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
+    assertCan(session, 'hr.schedule.manage');
     const input = patchSchema.parse(await req.json());
 
     const [existing] = await db.select().from(schema.employeeShiftAssignments)
@@ -85,6 +87,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
+    assertCan(session, 'hr.schedule.manage');
     const [existing] = await db.select().from(schema.employeeShiftAssignments)
       .where(eq(schema.employeeShiftAssignments.id, params.id)).limit(1);
     if (!existing) throw new ApiError(404, 'تخصیص شیفت پیدا نشد', 'NOT_FOUND');

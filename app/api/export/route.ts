@@ -3,6 +3,7 @@ import { eq, and, gte, lte, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertAnySection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 
 /**
@@ -32,6 +33,8 @@ const querySchema = z.object({
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertAnySection(session, ['reports', 'transactions']);
+    const scope = branchScope(session);
     const url = new URL(req.url);
 
     const params = querySchema.parse({
@@ -47,9 +50,9 @@ export async function GET(req: Request) {
     const conditions = [];
 
     // RBAC scope
-    if (session.role === 'BranchUser' && session.branchId) {
-      conditions.push(eq(schema.transactions.branchId, session.branchId));
-    } else if (session.role === 'SuperAdmin' && params.branchId) {
+    if (scope) {
+      conditions.push(eq(schema.transactions.branchId, scope));
+    } else if (params.branchId) {
       conditions.push(eq(schema.transactions.branchId, params.branchId));
     }
 

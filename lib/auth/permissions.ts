@@ -181,6 +181,7 @@ export function sectionForPath(pathname: string): SectionKey | null {
   if (pathname.startsWith('/transactions')) return 'transactions';
   if (pathname.startsWith('/accounts')) return 'accounts';
   if (pathname.startsWith('/contacts')) return 'contacts';
+  if (pathname.startsWith('/cheques')) return 'contacts';
   if (pathname.startsWith('/reports')) return 'reports';
   // مسیرهای جدید یکپارچه‌ی منابع انسانی + مسیرهای قدیمی که فعلاً روی همان
   // بخش «hr» نگاشت می‌شوند (shift-schedule/attendance هیچ‌وقت section

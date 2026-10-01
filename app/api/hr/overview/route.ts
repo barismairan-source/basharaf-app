@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, eq, gte, lte, inArray, isNull } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { handleErrorLogged } from '@/lib/api-error';
 import { computeReadinessForEmployees } from '@/lib/payroll/payrollReadiness';
 import { getTodayJalali } from '@/lib/jalali';
@@ -31,9 +32,10 @@ function addDaysIso(iso: string, days: number): string {
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertSection(session, 'hr');
     const url = new URL(req.url);
     const branchIdParam = url.searchParams.get('branchId');
-    const branchId = session.role === 'BranchUser' ? (session.branchId ?? null) : (branchIdParam || null);
+    const branchId = branchScope(session) ?? (branchIdParam || null);
 
     const today = todayIso();
     const period = currentPeriodYearMonth();

@@ -18,3 +18,23 @@ export function serializeEmployee(e: typeof schema.employees.$inferSelect) {
     createdAt: e.createdAt.toISOString(), updatedAt: e.updatedAt.toISOString(),
   };
 }
+
+/**
+ * نسخه‌ی بدون اطلاعات حساس — برای کاربرانی که قابلیت
+ * `hr.people.viewSensitive` ندارند (کدملی، شبا، حساب، آدرس، بیمه، حقوق پایه).
+ * قبلاً این فیلدها فقط در UI پنهان می‌شدند ولی API همه را برمی‌گرداند.
+ */
+export function redactEmployee(e: ReturnType<typeof serializeEmployee>): ReturnType<typeof serializeEmployee> {
+  return {
+    ...e,
+    nationalId: null,
+    address: null,
+    emergencyContactName: null,
+    emergencyContactPhone: null,
+    iban: null,
+    bankAccount: null,
+    insuranceNumber: null,
+    healthCardNumber: null,
+    baseMonthlySalary: 0,
+  };
+}

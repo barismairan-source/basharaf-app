@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireRole } from '@/lib/auth/session';
+import { assertCan } from '@/lib/auth/apiAccess';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { canEditAttendance, type AttendanceIntervalInput } from '@/lib/payroll/attendanceEngine';
 import { computeDerivedFields, assertNoAttendanceOverlap } from '@/lib/payroll/attendanceEntryHelpers';
@@ -29,6 +30,7 @@ const patchSchema = z.object({
 export async function PATCH(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
+    assertCan(session, 'hr.attendance.record');
     const input = patchSchema.parse(await req.json());
 
     const [existing] = await db.select().from(schema.attendanceEntries)
@@ -112,6 +114,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
+    assertCan(session, 'hr.attendance.record');
     const [existing] = await db.select().from(schema.attendanceEntries)
       .where(eq(schema.attendanceEntries.id, params.id)).limit(1);
     if (!existing) throw new ApiError(404, 'رکورد حضور پیدا نشد', 'NOT_FOUND');

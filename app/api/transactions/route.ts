@@ -3,6 +3,7 @@ import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, branchScope, assertBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
 import { createExpenseTx, notifyPendingTransaction } from '@/lib/db/createExpenseTx';
@@ -35,9 +36,9 @@ const createBodySchema = z.object({
 export async function GET() {
   try {
     const session = await requireSession();
-    const whereClause = session.role === 'BranchUser' && session.branchId
-      ? eq(schema.transactions.branchId, session.branchId)
-      : undefined;
+    assertSection(session, 'transactions');
+    const scope = branchScope(session);
+    const whereClause = scope ? eq(schema.transactions.branchId, scope) : undefined;
 
     const rows = await db.select().from(schema.transactions)
       .where(whereClause).orderBy(desc(schema.transactions.createdAt));
@@ -50,9 +51,10 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
+    assertSection(session, 'transactions');
     const input = createBodySchema.parse(await req.json());
 
-    if (session.role === 'BranchUser' && input.branchId !== session.branchId) {
+    if (session.role !== 'SuperAdmin' && input.branchId !== session.branchId) {
       throw new ApiError(403, 'شما فقط می‌توانید برای شعبه‌ی خود تراکنش ثبت کنید', 'BRANCH_MISMATCH');
     }
 
@@ -63,6 +65,19 @@ export async function POST(req: Request) {
       }
       if (input.accountId === input.destinationAccountId) {
         throw new ApiError(400, 'صندوق مبدا و مقصد نمی‌توانند یکسان باشند', 'SAME_ACCOUNT');
+      }
+    }
+
+    // غیر SuperAdmin فقط می‌تواند صندوق شعبه‌ی خودش یا صندوق مشترک (بدون شعبه) را انتخاب کند
+    if (session.role !== 'SuperAdmin') {
+      const accountIds = [input.accountId, input.destinationAccountId].filter((x): x is string => !!x);
+      for (const id of accountIds) {
+        const [acc] = await db.select({ branchId: schema.accounts.branchId }).from(schema.accounts)
+          .where(eq(schema.accounts.id, id)).limit(1);
+        if (!acc) throw new ApiError(400, 'صندوق انتخاب‌شده پیدا نشد', 'ACCOUNT_NOT_FOUND');
+        if (acc.branchId && acc.branchId !== session.branchId) {
+          throw new ApiError(403, 'این صندوق متعلق به شعبه‌ی دیگری است', 'ACCOUNT_BRANCH_MISMATCH');
+        }
       }
     }
 

@@ -2,16 +2,18 @@ import { NextResponse } from 'next/server';
 import { and, desc, eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 
 /** GET /api/contacts/[id]/cheques — چک‌های مرتبط با یک طرف‌حساب */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
     const session = await requireSession();
+    assertSection(session, 'contacts');
+    const scope = branchScope(session);
 
     const clauses = [eq(schema.cheques.contactId, params.id)];
-    if (session.role === 'BranchUser' && session.branchId)
-      clauses.push(eq(schema.cheques.branchId, session.branchId));
+    if (scope) clauses.push(eq(schema.cheques.branchId, scope));
 
     const rows = await db
       .select()

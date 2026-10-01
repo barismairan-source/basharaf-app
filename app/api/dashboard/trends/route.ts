@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { and, eq, gte, lte, inArray, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertAnySection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { getTodayJalali, jalaliToDate, dateToJalali } from '@/lib/jalali';
 
@@ -53,10 +54,11 @@ async function sumRange(fromJalali: string, toJalali: string, branchId: string |
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertAnySection(session, ['reports', 'transactions']);
     const { searchParams } = new URL(req.url);
 
     const requestedBranchId = searchParams.get('branchId');
-    const branchId = session.role === 'SuperAdmin' ? requestedBranchId : session.branchId;
+    const branchId = branchScope(session) ?? requestedBranchId;
 
     const daysParam = Number(searchParams.get('days') ?? 14);
     const days = (ALLOWED_DAYS as readonly number[]).includes(daysParam) ? daysParam : 14;

@@ -38,14 +38,16 @@ export interface ContactLedgerEntry {
 
 // همه تراکنش‌های طرف‌حساب (نقدی + نسیه) برمی‌گردند برای شفافیت.
 // balance فقط از نسیه‌ی approved است.
-export async function getContactLedger(contactId: string): Promise<{
+export async function getContactLedger(contactId: string, branchId: string | null = null): Promise<{
   entries: ContactLedgerEntry[];
   balance: number;
 }> {
   const rows = await db
     .select()
     .from(schema.transactions)
-    .where(eq(schema.transactions.contactId, contactId))
+    .where(branchId
+      ? and(eq(schema.transactions.contactId, contactId), eq(schema.transactions.branchId, branchId))
+      : eq(schema.transactions.contactId, contactId))
     .orderBy(desc(schema.transactions.createdAt));
 
   const balance = rows.reduce((sum, r) => {

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { invalidateFreshAccess } from '@/lib/auth/freshAccess';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,6 +97,7 @@ export async function PATCH(
     if (!updated) {
       throw new ApiError(404, 'کاربر پیدا نشد', 'USER_NOT_FOUND');
     }
+    invalidateFreshAccess(params.id);
 
     return NextResponse.json({
       user: {
@@ -149,6 +151,7 @@ export async function DELETE(
     if (result.length === 0) {
       throw new ApiError(404, 'کاربر پیدا نشد', 'USER_NOT_FOUND');
     }
+    invalidateFreshAccess(params.id);
 
     return NextResponse.json({ ok: true });
   } catch (e) {

@@ -3,6 +3,7 @@ import { eq, and, or, sql, gte, lte, desc, inArray, isNull, notInArray } from 'd
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertAnySection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 
 /**
@@ -28,6 +29,8 @@ const querySchema = z.object({
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertAnySection(session, ['reports', 'transactions']);
+    const scope = branchScope(session);
     const url = new URL(req.url);
 
     const params = querySchema.parse({
@@ -45,9 +48,9 @@ export async function GET(req: Request) {
     ];
 
     // RBAC scope — باید قبل از محاسبه‌ی setupExcludedExpense اضافه شود
-    if (session.role === 'BranchUser' && session.branchId) {
-      conditions.push(eq(schema.transactions.branchId, session.branchId));
-    } else if (session.role === 'SuperAdmin' && params.branchId) {
+    if (scope) {
+      conditions.push(eq(schema.transactions.branchId, scope));
+    } else if (params.branchId) {
       conditions.push(eq(schema.transactions.branchId, params.branchId));
     }
 
@@ -226,9 +229,9 @@ export async function GET(req: Request) {
 
     // ─── ۷. سفارش‌های بیرون‌بر (تکمیل‌شده) — تعداد، فروش، میانگین سبد، نسبت ارسال/پیکاپ ──
     const orderConditions = [inArray(schema.orders.status, ['delivered', 'completed'])];
-    if (session.role === 'BranchUser' && session.branchId) {
-      orderConditions.push(eq(schema.orders.branchId, session.branchId));
-    } else if (session.role === 'SuperAdmin' && params.branchId) {
+    if (scope) {
+      orderConditions.push(eq(schema.orders.branchId, scope));
+    } else if (params.branchId) {
       orderConditions.push(eq(schema.orders.branchId, params.branchId));
     }
     if (params.from) orderConditions.push(gte(schema.orders.jalaliDate, params.from));

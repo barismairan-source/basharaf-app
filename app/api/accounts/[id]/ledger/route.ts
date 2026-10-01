@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq, or, and, asc } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, assertBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 
 /**
@@ -12,11 +13,14 @@ import { ApiError, handleError } from '@/lib/api-error';
  */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertSection(session, 'accounts');
 
     const [account] = await db.select().from(schema.accounts)
       .where(eq(schema.accounts.id, params.id)).limit(1);
     if (!account) throw new ApiError(404, 'حساب پیدا نشد', 'NOT_FOUND');
+    // صندوق مشترک (بدون شعبه) یا صندوق شعبه‌ی دیگر، تراکنش‌های شعب دیگر را نشان می‌دهد
+    assertBranch(session, account.branchId);
 
     // همه تراکنش‌های approved که این حساب مبدا یا مقصد است
     const rows = await db.select().from(schema.transactions)

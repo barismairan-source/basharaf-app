@@ -3,12 +3,14 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
+import { assertCanAny } from '@/lib/auth/apiAccess';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertCanAny(session, ['hr.compensation.view', 'hr.payroll.calculate', 'hr.payroll.approve', 'hr.payroll.post']);
     const [run] = await db.select().from(schema.payrollRuns).where(eq(schema.payrollRuns.id, params.id)).limit(1);
     if (!run) throw new ApiError(404, 'اجرا پیدا نشد', 'NOT_FOUND');
 

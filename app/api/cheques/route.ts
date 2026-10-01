@@ -3,6 +3,7 @@ import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { notifyAdmins } from '@/lib/notify';
 import { jalaliToDate } from '@/lib/jalali';
@@ -47,6 +48,8 @@ const createSchema = z.object({
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertSection(session, 'contacts');
+    const scope = branchScope(session);
     const { searchParams } = new URL(req.url);
     const kind   = searchParams.get('kind');
     const status = searchParams.get('status');
@@ -54,8 +57,7 @@ export async function GET(req: Request) {
     const to     = searchParams.get('dateTo');
 
     const clauses = [];
-    if (session.role === 'BranchUser' && session.branchId)
-      clauses.push(eq(schema.cheques.branchId, session.branchId));
+    if (scope) clauses.push(eq(schema.cheques.branchId, scope));
     if (kind)   clauses.push(eq(schema.cheques.kind, kind));
     if (status) clauses.push(eq(schema.cheques.status, status));
     if (from)   clauses.push(gte(schema.cheques.dueDateJalali, from));
@@ -86,9 +88,11 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const session = await requireSession();
+    assertSection(session, 'contacts');
     const input = createSchema.parse(await req.json());
 
-    const branchId = input.branchId ?? (session.branchId ?? null);
+    // غیر SuperAdmin فقط برای شعبه‌ی خودش چک ثبت می‌کند
+    const branchId = session.role === 'SuperAdmin' ? (input.branchId ?? session.branchId ?? null) : session.branchId;
 
     const [row] = await db.insert(schema.cheques).values({
       kind: input.kind,

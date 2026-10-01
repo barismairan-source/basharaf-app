@@ -3,6 +3,7 @@ import { signToken, verifyToken, type JWTPayload } from './jwt';
 import { getImpersonationSession, IMP_COOKIE } from './impersonation';
 import type { CapabilityKey } from './permissions';
 import { canDo } from './permissions';
+import { getFreshAccess } from './freshAccess';
 
 /**
  * Server-side session management.
@@ -78,17 +79,22 @@ export function clearServerSession(): void {
 export async function getServerSession(): Promise<JWTPayload | null> {
   const imp = await getImpersonationSession();
   if (imp) {
-    return {
-      sub: imp.sub,
-      role: imp.role,
-      branchId: imp.branchId,
-      permissions: imp.permissions,
-      impersonatedBy: imp.impersonatedBy,
-    };
+    // جعل هویت فقط تا وقتی معتبر است که ادمین واقعی هنوز SuperAdmin فعال باشد.
+    const admin = await getFreshAccess(imp.impersonatedBy);
+    const target = admin?.role === 'SuperAdmin' ? await getFreshAccess(imp.sub) : null;
+    if (target) {
+      return {
+        sub: imp.sub,
+        role: target.role,
+        branchId: target.branchId,
+        permissions: target.permissions,
+        impersonatedBy: imp.impersonatedBy,
+      };
+    }
   }
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return withFreshAccess(await verifyToken(token));
 }
 
 /**
@@ -98,7 +104,19 @@ export async function getServerSession(): Promise<JWTPayload | null> {
 export async function getRealAdminSession(): Promise<JWTPayload | null> {
   const token = cookies().get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return verifyToken(token);
+  return withFreshAccess(await verifyToken(token));
+}
+
+/**
+ * role/branchId/permissions را از دیتابیس جایگزین مقادیر baked در JWT می‌کند؛
+ * کاربر حذف‌شده یا غیرفعال ← null (یعنی 401). بدون این، غیرفعال‌سازی یا تنزل
+ * نقش تا انقضای ۳۰ روزه‌ی توکن روی API اثری نداشت.
+ */
+async function withFreshAccess(payload: JWTPayload | null): Promise<JWTPayload | null> {
+  if (!payload) return null;
+  const fresh = await getFreshAccess(payload.sub);
+  if (!fresh) return null;
+  return { ...payload, role: fresh.role, branchId: fresh.branchId, permissions: fresh.permissions };
 }
 
 /**

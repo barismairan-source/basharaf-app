@@ -3,6 +3,7 @@ import { eq, and, gte, lte } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
+import { assertCan, branchScope } from '@/lib/auth/apiAccess';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { computeDerivedFields, assertNoAttendanceOverlap, hasActiveShiftAssignment } from '@/lib/payroll/attendanceEntryHelpers';
 import type { AttendanceIntervalInput } from '@/lib/payroll/attendanceEngine';
@@ -35,6 +36,8 @@ function rowToEntry(row: typeof schema.attendanceEntries.$inferSelect, employeeN
 export async function GET(req: Request) {
   try {
     const session = await requireSession();
+    assertCan(session, 'hr.attendance.view');
+    const scope = branchScope(session);
     const url = new URL(req.url);
     const from = url.searchParams.get('from');
     const to = url.searchParams.get('to');
@@ -45,8 +48,8 @@ export async function GET(req: Request) {
     }
 
     const clauses = [gte(schema.attendanceEntries.workDate, toDate(from)), lte(schema.attendanceEntries.workDate, toDate(to))];
-    if (session.role === 'BranchUser' && session.branchId) {
-      clauses.push(eq(schema.attendanceEntries.branchId, session.branchId));
+    if (scope) {
+      clauses.push(eq(schema.attendanceEntries.branchId, scope));
     } else if (branchIdParam) {
       clauses.push(eq(schema.attendanceEntries.branchId, branchIdParam));
     }
@@ -84,6 +87,7 @@ const createSchema = z.object({
 export async function POST(req: Request) {
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
+    assertCan(session, 'hr.attendance.record');
     const input = createSchema.parse(await req.json());
 
     if (session.role === 'BranchUser' && input.branchId && input.branchId !== session.branchId) {

@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { assertSection, canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToTransaction } from '@/lib/db/serializers';
 import {
@@ -210,12 +211,13 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
 
 async function fetchAndAuthorize(
   id: string,
-  session: { sub: string; role: string; branchId: string | null }
+  session: Parameters<typeof canUseBranch>[0]
 ) {
+  assertSection(session, 'transactions');
   const [tx] = await db.select().from(schema.transactions)
     .where(eq(schema.transactions.id, id)).limit(1);
   if (!tx) throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
-  if (session.role === 'BranchUser' && tx.branchId !== session.branchId) {
+  if (!canUseBranch(session, tx.branchId)) {
     throw new ApiError(404, 'تراکنش پیدا نشد', 'TX_NOT_FOUND');
   }
   return tx;

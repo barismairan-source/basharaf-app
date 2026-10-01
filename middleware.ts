@@ -10,6 +10,7 @@ const PROTECTED_PREFIXES = [
   '/contacts', '/menu', '/orders', '/logs',
   '/inventory', '/customers', '/reservations', '/coupons', '/recipe-book',
   '/purchase-orders', '/equipment', '/tasks', '/admin', '/receipts',
+  '/cheques', '/anomaly', '/notifications', '/partners',
   // یکپارچه‌سازی منابع انسانی — /employees، /payroll، /recruitment،
   // /shift-schedule، /attendance همیشه قبل از رسیدن به این چک redirect
   // می‌شوند (rewriteLegacyHrPath بالا)، پس دیگر نیازی نیست اینجا باشند.

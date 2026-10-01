@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
-import { serializeEmployee as serialize } from '@/lib/payroll/employeeSerializer';
+import { serializeEmployee as serialize, redactEmployee } from '@/lib/payroll/employeeSerializer';
+import { assertSection, assertCanAny, branchScope } from '@/lib/auth/apiAccess';
+import { canDo } from '@/lib/auth/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,17 +43,22 @@ void serializeUnused;
 
 export async function GET(req: Request) {
   try {
-    await requireSession();
+    const session = await requireSession();
+    assertSection(session, 'hr');
+    assertCanAny(session, ['hr.people.view', 'hr.schedule.view', 'hr.attendance.view']);
+    const scope = branchScope(session);
     const status = new URL(req.url).searchParams.get('status'); // 'all' | 'inactive' | (default: active)
-    const where = status === 'all'
+    const statusWhere = status === 'all'
       ? undefined
       : status === 'inactive'
         ? eq(schema.employees.isActive, false)
         : eq(schema.employees.isActive, true);
+    const where = scope ? and(statusWhere, eq(schema.employees.branchId, scope)) : statusWhere;
     const rows = await db.select().from(schema.employees)
       .where(where)
       .orderBy(desc(schema.employees.createdAt));
-    return NextResponse.json({ employees: rows.map(serialize) });
+    const sensitive = canDo(session, 'hr.people.viewSensitive');
+    return NextResponse.json({ employees: rows.map((r) => (sensitive ? serialize(r) : redactEmployee(serialize(r)))) });
   } catch (e) {
     return await handleErrorLogged(e, undefined, { category: 'payroll' });
   }

@@ -21,8 +21,27 @@ const createBodySchema = z
 
 export async function GET() {
   try {
-    await requireSession();
+    const session = await requireSession();
     const rows = await db.select().from(schema.users);
+    if (session.role !== 'SuperAdmin') {
+      // کاربران عادی فقط برای نمایش نام ثبت‌کننده/تأییدکننده به این فهرست نیاز دارند —
+      // ایمیل، موبایل و دسترسی‌های بقیه را نمی‌بینند.
+      return NextResponse.json({
+        users: rows.map(u => ({
+          id: u.id,
+          name: u.name,
+          email: '',
+          role: u.role,
+          assignedBranch: u.assignedBranchId,
+          initials: u.initials,
+          lastSeen: null,
+          joined: u.joined,
+          permissions: null,
+          isActive: u.isActive,
+          smsPhone: null,
+        })),
+      });
+    }
     return NextResponse.json({
       users: rows.map(u => ({
         id: u.id,
