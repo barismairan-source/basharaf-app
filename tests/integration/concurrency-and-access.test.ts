@@ -185,6 +185,36 @@ describe('Concurrency + API access — گزارش بررسی ۲۰۲۶-۱۰', { s
     });
   });
 
+  describe('M5 — برگه‌ی اصلاحی خرید، پول را هم برمی‌گرداند', () => {
+    it('خرید → تأیید → اصلاحی → تأیید: موجودی صندوق و انبار به نقطه‌ی شروع برمی‌گردند', async () => {
+      const [it0] = await db.select().from(schema.invItems).where(eq(schema.invItems.id, f.itemId));
+      const qtyStart = parseFloat(it0!.qtyBase);
+      const balStart = await accountBalance(f.accountId);
+
+      const created = await admin.fetchJson<{ voucher: { id: string } }>('/api/inventory/vouchers', {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'in', branchId: f.branchId, date: DATE, lines: [{ itemId: f.itemId, qtyBase: 5, estUnitCost: 30_000 }] }),
+      });
+      assert.equal(created.status, 201);
+      const approve = await admin.fetchJson(`/api/inventory/vouchers/${created.body.voucher.id}/approve`, {
+        method: 'POST', body: JSON.stringify({ accountId: f.accountId }),
+      });
+      assert.equal(approve.status, 200);
+      assert.equal(await accountBalance(f.accountId), balStart - 150_000, 'خرید از صندوق کم شد');
+
+      const reversal = await admin.fetchJson<{ reversalId: string }>(`/api/inventory/vouchers/${created.body.voucher.id}/reversal`, { method: 'POST' });
+      assert.equal(reversal.status, 201);
+      const approveRev = await admin.fetchJson(`/api/inventory/vouchers/${reversal.body.reversalId}/approve`, {
+        method: 'POST', body: JSON.stringify({ accountId: f.accountId }),
+      });
+      assert.equal(approveRev.status, 200);
+
+      const [it1] = await db.select().from(schema.invItems).where(eq(schema.invItems.id, f.itemId));
+      assert.equal(parseFloat(it1!.qtyBase), qtyStart, 'کالا برگشت');
+      assert.equal(await accountBalance(f.accountId), balStart, 'پول خرید به صندوق برگشت (قبلاً می‌ماند)');
+    });
+  });
+
   describe('M1/M2 — دوره‌ی مالی بسته و یکسان‌سازی تاریخ', () => {
     it('ثبت تراکنش جدید در ماه بسته رد می‌شود؛ تاریخ لاتین به فرمت استاندارد ذخیره می‌شود', async () => {
       const [period] = await db.insert(schema.financialPeriods).values({

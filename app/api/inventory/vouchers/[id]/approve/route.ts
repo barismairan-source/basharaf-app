@@ -9,7 +9,7 @@ import { approveVoucherTx } from '@/lib/db/inventoryHelpers';
 import { wasteSpikeRule } from '@/lib/anomaly/rules/wasteSpikeRule';
 import { priceJumpRule } from '@/lib/anomaly/rules/priceJumpRule';
 import { saveFindings } from '@/lib/anomaly/engine';
-import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting, postStocktakeToAccounting } from '@/lib/inventory/postToAccounting';
+import { postPurchaseToAccounting, postSaleToAccounting, postWasteToAccounting, postStocktakeToAccounting, reversePurchasePost } from '@/lib/inventory/postToAccounting';
 import { computeAutoRecost } from '@/lib/inventory/costing';
 import { audit } from '@/lib/auth/audit';
 import { canDo } from '@/lib/auth/permissions';
@@ -181,8 +181,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         .set({ status: 'approved', finalTotal: total, approvedBy: session.sub, approvedAt: now, updatedAt: now })
         .where(and(eq(schema.invVouchers.id, params.id), eq(schema.invVouchers.status, 'pending')));
 
+      // برگه‌ی «اصلاحی» (reversal): به‌جای سند جدید، سند حسابداری برگه‌ی اصلی برمی‌گردد.
+      // قبلاً اصلاحیِ خرید کالا را کم می‌کرد ولی هزینه و کسر صندوق می‌ماند، و اصلاحیِ
+      // ضایعات/فروش (که از نوع «ورود» است) یک خرید نقدی جدید هم می‌ساخت.
+      const isReversal = !!current.parentVoucherId;
+      if (isReversal) {
+        const [parent] = await dbTx.select({ linkedTransactionId: schema.invVouchers.linkedTransactionId })
+          .from(schema.invVouchers).where(eq(schema.invVouchers.id, current.parentVoucherId!)).limit(1);
+        if (parent?.linkedTransactionId) {
+          const [parentTx] = await dbTx.select({ date: schema.transactions.date })
+            .from(schema.transactions).where(eq(schema.transactions.id, parent.linkedTransactionId)).limit(1);
+          await assertPeriodOpen(parentTx?.date, dbTx);
+        }
+        await reversePurchasePost(dbTx, current.parentVoucherId!);
+      }
+
       // اتصال به حسابداری: برگه‌ی خرید → سند هزینه‌ی واقعی + کسر از صندوق
-      if (kind === 'in') {
+      if (kind === 'in' && !isReversal) {
         await postPurchaseToAccounting(
           dbTx,
           { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
@@ -190,7 +205,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           session.sub,
           purchaseAccountId,
         );
+      }
 
+      if (kind === 'in') {
         // نوسان قیمت / WAC: قیمت ماده‌ی خام تغییر کرد → بهای نیمه‌آماده‌های متأثر را
         // خودکار بازمحاسبه کن (همان زنجیره‌ی resolvePrepCostChain، بدون تکرار منطق)
         const branchFilter = current.branchId ? eq(schema.invItems.branchId, current.branchId) : undefined;
@@ -214,7 +231,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }
 
       // ضایعات → سند هزینه‌ی ضایعات (دفترداری، بدون اثر بر صندوق — مثل COGS فروش منو)
-      if (kind === 'waste') {
+      if (kind === 'waste' && !isReversal) {
         await postWasteToAccounting(
           dbTx,
           { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
@@ -224,7 +241,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }
 
       // انبارگردانی → سند P&L مغایرت (بدون اثر روی صندوق)
-      if (kind === 'stocktake') {
+      if (kind === 'stocktake' && !isReversal) {
         await postStocktakeToAccounting(
           dbTx,
           { id: current.id, no: current.no, branchId: current.branchId, makerDate: current.makerDate, linkedTransactionId: current.linkedTransactionId },
@@ -234,7 +251,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       }
 
       // اگر فروش بود، گزارش فروش روزانه ثبت کن
-      if (kind === 'sale' && current.saleMeta) {
+      if (kind === 'sale' && current.saleMeta && !isReversal) {
         const meta = current.saleMeta as { lines?: any[]; revenue?: number };
         await dbTx.insert(schema.invDailySales).values({
           voucherId: current.id,
