@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTodayJalali, normalizeJalaliDate } from '@/lib/jalali';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
@@ -32,7 +33,8 @@ export async function POST(req: Request) {
       throw new ApiError(403, 'دسترسی شعبه', 'BRANCH_MISMATCH');
     }
 
-    const jalali = input.date ?? new Date().toISOString().slice(0, 10);
+    // قبلاً پیش‌فرض، تاریخ میلادی (2026-10-05) بود نه شمسی
+    const jalali = (input.date ? normalizeJalaliDate(input.date) : null) ?? getTodayJalali();
 
     const { diff } = await db.transaction(async (dbTx) => {
       const r = await stocktakeConfirmed(dbTx, input.itemId, input.countedBase);

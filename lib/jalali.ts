@@ -18,12 +18,31 @@ import persian_fa from 'react-date-object/locales/persian_fa';
  * تاریخ امروز به شمسی، با ارقام فارسی.
  * `getTodayJalali()` → '۱۴۰۵/۰۲/۳۱' (مثلاً)
  */
-export function getTodayJalali(): string {
+export function getTodayJalali(now: Date = new Date()): string {
+  // روز تقویمی «تهران» — مستقل از timezone سرور (لیارا احتمالاً UTC است و بدون این،
+  // از ۰۰:۰۰ تا ۰۳:۳۰ بامداد تهران «امروز» روز قبل حساب می‌شد). ظهرِ همان روز ساخته
+  // می‌شود تا هیچ اختلاف ساعتی تاریخ را جابه‌جا نکند.
+  const { y, m, d } = tehranYmd(now);
   const today = new DateObject({
+    date: new Date(y, m - 1, d, 12),
     calendar: persian,
     locale: persian_fa,
   });
   return today.format('YYYY/MM/DD');
+}
+
+function tehranYmd(now: Date): { y: number; m: number; d: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tehran', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(now);
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value);
+  return { y: get('year'), m: get('month'), d: get('day') };
+}
+
+/** امروزِ تهران به‌صورت میلادی `YYYY-MM-DD` (برای ستون‌های date میلادی مثل workDate). */
+export function todayIsoTehran(now: Date = new Date()): string {
+  const { y, m, d } = tehranYmd(now);
+  return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 }
 
 /**

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getTodayJalali } from '@/lib/jalali';
 import { eq, and } from 'drizzle-orm';
 import * as XLSX from 'xlsx';
 import { db, schema } from '@/lib/db/client';
@@ -122,7 +123,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, imported: 0, errors }, { status: 422 });
     }
 
-    const todayJalali = new Date().toISOString().slice(0, 10);
+    // قبلاً تاریخ میلادی (2026-10-05) به‌جای شمسی ذخیره می‌شد
+    const todayJalali = getTodayJalali();
     let imported = 0;
 
     // مجموع ارزش موجودی اولیه به تفکیک شعبه — برای ثبت یک تراکنش حسابداری تجمیعی

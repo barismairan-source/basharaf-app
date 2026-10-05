@@ -5,12 +5,12 @@ import { requireSession } from '@/lib/auth/session';
 import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { handleErrorLogged } from '@/lib/api-error';
 import { computeReadinessForEmployees } from '@/lib/payroll/payrollReadiness';
-import { getTodayJalali } from '@/lib/jalali';
+import { getTodayJalali, todayIsoTehran } from '@/lib/jalali';
 
 export const dynamic = 'force-dynamic';
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayIsoTehran();
 }
 
 function currentPeriodYearMonth(): string {
