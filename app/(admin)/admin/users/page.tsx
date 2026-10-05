@@ -59,6 +59,8 @@ export default function AdminUsersPage() {
   const [actionUser, setActionUser] = useState<UserRow | null>(null);
   const [busy, setBusy] = useState(false);
   const [impLoading, setImpLoading] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [pwMessage, setPwMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     fetch('/api/admin/users')
@@ -79,6 +81,31 @@ export default function AdminUsersPage() {
       setActionUser(null);
     }
     setBusy(false);
+  }
+
+  async function resetPassword(user: UserRow) {
+    setBusy(true);
+    setPwMessage(null);
+    const res = await fetch(`/api/admin/users/${user.id}/password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newPassword }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      setNewPassword('');
+      setPwMessage({ ok: true, text: 'رمز جدید ثبت شد — آن را به کاربر بدهید و بخواهید بعد از ورود عوضش کند.' });
+    } else {
+      const fieldError = data?.details?.newPassword?.[0];
+      setPwMessage({ ok: false, text: fieldError ?? data?.error ?? 'ثبت رمز ناموفق بود' });
+    }
+    setBusy(false);
+  }
+
+  function closeModal() {
+    setActionUser(null);
+    setNewPassword('');
+    setPwMessage(null);
   }
 
   async function impersonate(user: UserRow) {
@@ -115,7 +142,7 @@ export default function AdminUsersPage() {
       )}
 
       {actionUser && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setActionUser(null)}>
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={closeModal}>
           <div className="bg-stone-900 border border-stone-700 rounded-2xl p-6 w-full max-w-sm space-y-4" onClick={e => e.stopPropagation()}>
             <h2 className="text-base font-semibold text-stone-100">{actionUser.name}</h2>
             <p className="text-xs text-stone-400">{actionUser.email} — {ROLE_LABELS[actionUser.role] ?? actionUser.role}</p>
@@ -140,8 +167,35 @@ export default function AdminUsersPage() {
                   {impLoading ? '...' : 'جعل هویت (Login As)'}
                 </button>
               )}
+              <div className="border-t border-stone-800 pt-3 space-y-2">
+                <label htmlFor="admin-new-password" className="block text-xs text-stone-400">
+                  تنظیم رمز جدید (برای کاربری که رمزش را فراموش کرده)
+                </label>
+                <input
+                  id="admin-new-password"
+                  type="text"
+                  dir="ltr"
+                  autoComplete="off"
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  placeholder="حداقل ۸ کاراکتر، حرف و عدد"
+                  className="w-full rounded-lg bg-stone-800 border border-stone-700 px-3 py-2 text-sm text-stone-100 placeholder:text-stone-500"
+                />
+                <button
+                  onClick={() => resetPassword(actionUser)}
+                  disabled={busy || newPassword.length < 8}
+                  className="w-full py-2 rounded-lg text-sm font-medium bg-stone-700 hover:bg-stone-600 text-white disabled:opacity-50 transition-colors"
+                >
+                  {busy ? '...' : 'ثبت رمز جدید'}
+                </button>
+                {pwMessage && (
+                  <p role="status" className={`text-xs leading-6 ${pwMessage.ok ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {pwMessage.text}
+                  </p>
+                )}
+              </div>
               <button
-                onClick={() => setActionUser(null)}
+                onClick={closeModal}
                 className="w-full py-2 rounded-lg text-sm text-stone-400 hover:text-stone-200 transition-colors"
               >
                 بستن

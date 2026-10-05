@@ -53,6 +53,7 @@ export type AuditAction =
   | 'admin.user.suspended'
   | 'admin.user.activated'
   | 'admin.user.roleChanged'
+  | 'admin.user.passwordReset'
   | 'admin.user.branchChanged'
   | 'inv.recipe.priceChanged'
   | 'payroll.forceReset'

@@ -69,6 +69,7 @@ const ACTION_META: Record<string, { icon: typeof Shield; label: string; color: s
   'admin.user.suspended':      { icon: UserX,          label: 'تعلیق کاربر توسط ادمین',      color: 'text-rose-700' },
   'admin.user.activated':      { icon: UserCheck,      label: 'فعال‌سازی کاربر توسط ادمین',   color: 'text-emerald-700' },
   'admin.user.roleChanged':    { icon: UserCog,        label: 'تغییر نقش کاربر',             color: 'text-blue-700' },
+  'admin.user.passwordReset':  { icon: UserCog,        label: 'تنظیم رمز جدید توسط ادمین',     color: 'text-amber-700' },
   'admin.user.branchChanged':  { icon: Users,          label: 'تغییر شعبه کاربر',            color: 'text-blue-700' },
   // Inventory
   'inv.produce':               { icon: Package,        label: 'تولید انبار',                  color: 'text-emerald-700' },
