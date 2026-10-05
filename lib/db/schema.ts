@@ -214,6 +214,12 @@ export const transactions = pgTable(
       table.branchId,
       table.status
     ),
+    // گزارش‌ها روی بازه‌ی تاریخ سند و دفترها روی صندوق/طرف‌حساب فیلتر می‌کنند
+    // (project-docs/migrations/db-transactions-indexes.sql)
+    statusDateIdx: index('tx_status_date_idx').on(table.status, table.date),
+    accountIdx: index('tx_account_idx').on(table.accountId),
+    destAccountIdx: index('tx_dest_account_idx').on(table.destinationAccountId),
+    contactIdx: index('tx_contact_idx').on(table.contactId),
   })
 );
 
