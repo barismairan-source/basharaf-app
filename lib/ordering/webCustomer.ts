@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import { and, eq, gt, desc } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { ApiError } from '@/lib/api-error';
@@ -53,6 +54,8 @@ export async function getOrCreateWebCustomer(
 export async function createWebOtp(phone: string): Promise<string> {
   const spamCutoff = new Date(Date.now() - OTP_SPAM_MS);
 
+  // ضد-اسپم بر اساس زمان «ساخت» کد (نه انقضا) — قبلاً با expiresAt مقایسه می‌شد و
+  // پیام «۲ دقیقه صبر کنید» در عمل تا ۷ دقیقه بلاک می‌کرد.
   const [recentOtp] = await db
     .select()
     .from(schema.webCustomerOtp)
@@ -60,7 +63,7 @@ export async function createWebOtp(phone: string): Promise<string> {
       and(
         eq(schema.webCustomerOtp.phone, phone),
         eq(schema.webCustomerOtp.used, false),
-        gt(schema.webCustomerOtp.expiresAt, spamCutoff)
+        gt(schema.webCustomerOtp.createdAt, spamCutoff)
       )
     )
     .limit(1);
@@ -69,17 +72,20 @@ export async function createWebOtp(phone: string): Promise<string> {
     throw new ApiError(429, 'کد تأیید قبلی هنوز فعال است — لطفاً ۲ دقیقه صبر کنید', 'OTP_TOO_SOON');
   }
 
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(randomInt(100000, 1000000));
   const expiresAt = new Date(Date.now() + OTP_EXPIRE_MS);
 
   await db.insert(schema.webCustomerOtp).values({ phone, code, expiresAt, used: false });
 
-  // mock SMS — فقط در development؛ در production حذف شود با SMS provider واقعی
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`[OTP MOCK] شماره ${phone} — کد: ${code} (منقضی: ${expiresAt.toISOString()})`);
-  }
-
   return code;
+}
+
+/** باطل‌کردن کدهای فعال یک شماره (مثلاً وقتی ارسال پیامک شکست خورد). */
+export async function invalidateWebOtps(phone: string): Promise<void> {
+  await db
+    .update(schema.webCustomerOtp)
+    .set({ used: true })
+    .where(and(eq(schema.webCustomerOtp.phone, phone), eq(schema.webCustomerOtp.used, false)));
 }
 
 /**

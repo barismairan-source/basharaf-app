@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { eq } from 'drizzle-orm';
+import { db, schema } from '@/lib/db/client';
 import { ApiError, handleError } from '@/lib/api-error';
 import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 import { createPublicOrder } from '@/lib/ordering/publicOrders';
+import { getCustomerSession } from '@/lib/auth/customerSession';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +41,16 @@ export async function POST(req: Request) {
       throw new ApiError(429, `تعداد درخواست‌ها زیاد است. ${rl.retryAfter ?? 60} ثانیه دیگر تلاش کنید.`, 'RATE_LIMITED');
     }
     const input = bodySchema.parse(await req.json());
-    const { order, isNew } = await createPublicOrder(input);
+    // مشتری واردشده: سفارش به حسابش وصل می‌شود تا در «سفارش‌های من» دیده شود.
+    // شناسه فقط از کوکی نشست امضاشده خوانده می‌شود، هرگز از body (وگرنه هر کسی
+    // می‌توانست سفارش را به حساب دیگری بچسباند). قبلاً checkout این فیلد را در
+    // body می‌فرستاد ولی zod حذفش می‌کرد و هیچ سفارشی وصل نمی‌شد.
+    const session = await getCustomerSession().catch(() => null);
+    const [customer] = session
+      ? await db.select({ id: schema.webCustomers.id }).from(schema.webCustomers)
+          .where(eq(schema.webCustomers.id, session.customerId)).limit(1)
+      : [];
+    const { order, isNew } = await createPublicOrder({ ...input, orderCustomerId: customer?.id });
     return NextResponse.json({ order }, { status: isNew ? 201 : 200 });
   } catch (e) {
     return handleError(e);

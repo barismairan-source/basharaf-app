@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
-import { createWebOtp, isValidIranPhone } from '@/lib/ordering/webCustomer';
+import { createWebOtp, invalidateWebOtps, isValidIranPhone } from '@/lib/ordering/webCustomer';
+import { sendOtpSms } from '@/lib/sms/otp';
 import { ApiError, handleError } from '@/lib/api-error';
 import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rateLimit';
 
@@ -20,7 +21,15 @@ export async function POST(request: Request) {
       throw new ApiError(422, 'شماره موبایل نامعتبر است — ۱۱ رقم و شروع با ۰', 'INVALID_PHONE');
     }
 
-    await createWebOtp(body.phone);
+    const code = await createWebOtp(body.phone);
+    // قبلاً کد فقط در دیتابیس ذخیره می‌شد و در production هرگز پیامک نمی‌شد —
+    // یعنی هیچ مشتری‌ای نمی‌توانست وارد شود.
+    const sent = await sendOtpSms(body.phone, code);
+    if (!sent.ok) {
+      // کد ارسال‌نشده را باطل کن تا ضد-اسپم مانع تلاش دوباره نشود
+      await invalidateWebOtps(body.phone);
+      throw new ApiError(503, 'ارسال پیامک کد ورود ناموفق بود — چند دقیقه دیگر دوباره تلاش کنید', 'OTP_SMS_FAILED');
+    }
     return NextResponse.json({ ok: true });
   } catch (err) {
     return handleError(err);
