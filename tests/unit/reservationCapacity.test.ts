@@ -116,9 +116,11 @@ describe('generateSlotsForDate', () => {
   });
 
   it('a closed weekday returns nothing, independent of other days', () => {
+    // «الان» ثابت — بدون آن، این تست بعد از گذشتن ۱۴۰۵/۰۷/۱۱ (تاریخ گذشته = بدون اسلات) fail می‌شد
+    const now = jalaliNowAt('1405/07/01', 10, 0);
     const weekday = jalaliWeekday('1405/07/10')!;
-    expect(generateSlotsForDate(settings({ closedWeekdays: [weekday] }), '1405/07/10')).toEqual([]);
-    expect(generateSlotsForDate(settings({ closedWeekdays: [weekday] }), '1405/07/11').length).toBeGreaterThan(0);
+    expect(generateSlotsForDate(settings({ closedWeekdays: [weekday] }), '1405/07/10', now)).toEqual([]);
+    expect(generateSlotsForDate(settings({ closedWeekdays: [weekday] }), '1405/07/11', now).length).toBeGreaterThan(0);
   });
 });
 
