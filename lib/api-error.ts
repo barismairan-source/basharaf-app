@@ -28,7 +28,7 @@ interface ErrorBody {
   details?: unknown;
 }
 
-export function handleError(error: unknown): NextResponse<ErrorBody> {
+export function handleError(error: unknown, opts?: { skipLog?: boolean }): NextResponse<ErrorBody> {
   // Zod validation errors → 400
   if (error instanceof ZodError) {
     return NextResponse.json(
@@ -101,6 +101,13 @@ export function handleError(error: unknown): NextResponse<ErrorBody> {
 
   // Unknown error — log و generic message
   console.error('Unhandled API error:', error);
+  // قبلاً ۱۷۴ از ۲۰۴ route فقط console.error داشتند و خطاهای ۵۰۰ هرگز در «لاگ سیستم»
+  // دیده نمی‌شدند. حالا هر خطای ناشناخته (بدون منتظر ماندن پاسخ) در system_logs هم ثبت می‌شود.
+  if (!opts?.skipLog && !isNextDynamicUsageError(error)) {
+    void import('@/lib/logger')
+      .then(({ logError }) => logError(error, undefined, { statusCode: 500 }))
+      .catch(() => {});
+  }
   return NextResponse.json(
     { error: 'خطای داخلی سرور', code: 'INTERNAL_ERROR' },
     { status: 500 }
@@ -137,7 +144,12 @@ export async function handleErrorLogged(
     }
   }
 
-  return handleError(error);
+  return handleError(error, { skipLog: true });
+}
+
+/** خطای داخلی Next هنگام build/prerender (استفاده از cookies) — خطای واقعی نیست، لاگ نشود. */
+function isNextDynamicUsageError(error: unknown): boolean {
+  return error instanceof Error && (error as { digest?: string }).digest === 'DYNAMIC_SERVER_USAGE';
 }
 
 /**

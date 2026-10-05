@@ -2,6 +2,7 @@ import { eq, inArray, and, gte, lte } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { applyBalance, reverseBalance } from '@/lib/db/balanceHelpers';
 import { assertPeriodOpen } from '@/lib/financial-period';
+import { ApiError } from '@/lib/api-error';
 import { jalaliMonthRange } from '@/lib/jalali';
 
 /**
@@ -95,8 +96,8 @@ export async function postPayrollRunToBasharaf(
     // ۱. اجرا را بخوان و وضعیت را چک کن
     // FOR UPDATE: دو «ثبت» هم‌زمان پشت هم صف می‌شوند؛ دومی وضعیت posted را می‌بیند.
     const [run] = await dbTx.select().from(schema.payrollRuns).where(eq(schema.payrollRuns.id, runId)).for('update').limit(1);
-    if (!run) throw new Error('اجرای حقوق پیدا نشد');
-    if (run.status !== 'approved') throw new Error('فقط اجرای تأییدشده قابل ثبت است');
+    if (!run) throw new ApiError(404, 'اجرای حقوق پیدا نشد', 'NOT_FOUND');
+    if (run.status !== 'approved') throw new ApiError(409, 'فقط اجرای تأییدشده قابل ثبت است', 'BAD_STATE');
 
     const idempotencyKey = `payroll_run:${runId}`;
 
@@ -114,7 +115,7 @@ export async function postPayrollRunToBasharaf(
 
     // ۳. مجموع فیش‌های این اجرا
     const slips = await dbTx.select().from(schema.payslips).where(eq(schema.payslips.payrollRunId, runId));
-    if (slips.length === 0) throw new Error('این اجرا هیچ فیشی ندارد — اول محاسبه کنید');
+    if (slips.length === 0) throw new ApiError(422, 'این اجرا هیچ فیشی ندارد — اول محاسبه کنید', 'NO_PAYSLIPS');
 
     const totals = slips.reduce(
       (a, s) => ({

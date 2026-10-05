@@ -14,6 +14,9 @@ import { fireRecruitmentNotification } from '@/lib/recruitment/notify';
  * GET  /api/recruitment — فقط SuperAdmin. لیست برای پنل.
  */
 
+/** حداکثر طول هر پاسخ فیلد داینامیک (به‌صورت JSON). */
+const MAX_CUSTOM_FIELD_CHARS = 2000;
+
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
@@ -47,6 +50,9 @@ export async function POST(req: Request) {
         const fieldMeta = activeFields.find(f => f.key === key);
         if (!fieldMeta) continue;
         if (fieldMeta.isSystem) continue; // سیستمی‌ها در ستون‌های اختصاصی ذخیره می‌شوند
+        // سقف اندازه: این endpoint عمومی است و قبلاً هر مقداری با هر حجمی ذخیره می‌شد
+        // (فهرست متقاضیان customFields را برمی‌گرداند ← صفحه‌ی سنگین / رشد دیتابیس).
+        if (JSON.stringify(value).length > MAX_CUSTOM_FIELD_CHARS) continue;
         customFields[key] = value;
         fieldSnapshot.push({ key, label: fieldMeta.label, type: fieldMeta.type });
       }

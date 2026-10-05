@@ -12,27 +12,32 @@ import { audit } from '@/lib/auth/audit';
 export async function POST() {
   try {
     const session = await requireAdmin();
-    const accounts = await db.select().from(schema.accounts);
-    const oldBalances = new Map(accounts.map(a => [a.id, Number(a.balance)]));
+    // اتمیک و قفل‌شده: ردیف صندوق‌ها با FOR UPDATE قفل می‌شوند تا تراکنشی که هم‌زمان
+    // تأیید می‌شود، بین «جمع‌زدن» و «نوشتن» گم نشود (قبلاً بازنویسی می‌شد).
+    let oldBalances = new Map<string, number>();
+    await db.transaction(async (dbTx) => {
+      const accounts = await dbTx.select().from(schema.accounts).for('update');
+      oldBalances = new Map(accounts.map(a => [a.id, Number(a.balance)]));
 
-    for (const account of accounts) {
-      const [inc] = await db.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
-        .from(schema.transactions)
-        .where(and(eq(schema.transactions.accountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'income')));
-      const [exp] = await db.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
-        .from(schema.transactions)
-        .where(and(eq(schema.transactions.accountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'expense')));
-      const [tOut] = await db.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
-        .from(schema.transactions)
-        .where(and(eq(schema.transactions.accountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'transfer')));
-      const [tIn] = await db.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
-        .from(schema.transactions)
-        .where(and(eq(schema.transactions.destinationAccountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'transfer')));
+      for (const account of accounts) {
+        const [inc] = await dbTx.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
+          .from(schema.transactions)
+          .where(and(eq(schema.transactions.accountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'income')));
+        const [exp] = await dbTx.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
+          .from(schema.transactions)
+          .where(and(eq(schema.transactions.accountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'expense')));
+        const [tOut] = await dbTx.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
+          .from(schema.transactions)
+          .where(and(eq(schema.transactions.accountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'transfer')));
+        const [tIn] = await dbTx.select({ t: sql<string>`COALESCE(SUM(amount),0)` })
+          .from(schema.transactions)
+          .where(and(eq(schema.transactions.destinationAccountId, account.id), eq(schema.transactions.status, 'approved'), eq(schema.transactions.type, 'transfer')));
 
-      const balance = Number(inc?.t ?? 0) - Number(exp?.t ?? 0) - Number(tOut?.t ?? 0) + Number(tIn?.t ?? 0);
-      await db.update(schema.accounts).set({ balance, updatedAt: new Date() })
-        .where(eq(schema.accounts.id, account.id));
-    }
+        const balance = Number(inc?.t ?? 0) - Number(exp?.t ?? 0) - Number(tOut?.t ?? 0) + Number(tIn?.t ?? 0);
+        await dbTx.update(schema.accounts).set({ balance, updatedAt: new Date() })
+          .where(eq(schema.accounts.id, account.id));
+      }
+    });
 
     const updated = await db.select().from(schema.accounts);
     void audit({

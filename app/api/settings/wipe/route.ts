@@ -78,7 +78,13 @@ export async function POST(req: Request) {
     }
 
     const tableList = FACTORY_RESET_TABLES.join(', ');
-    await db.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE;`));
+    // TRUNCATE + صفرکردن موجودی‌های cache در یک تراکنش: قبلاً تراکنش‌ها پاک می‌شدند ولی
+    // accounts.balance و contacts.balance می‌ماندند ← صندوق موجودی داشت بدون هیچ سندی.
+    await db.transaction(async (tx) => {
+      await tx.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE;`));
+      await tx.execute(sql`UPDATE accounts SET balance = 0, updated_at = now()`);
+      await tx.execute(sql`UPDATE contacts SET balance = 0, updated_at = now()`);
+    });
 
     audit({
       action: 'settings.factoryReset',

@@ -115,8 +115,10 @@ export async function GET(req: Request) {
       .from(schema.transactions)
       .where(where)
       .groupBy(sql`SUBSTRING(date, 1, 7)`)
-      .orderBy(sql`SUBSTRING(date, 1, 7) ASC`)
-      .limit(24); // حداکثر ۲ سال
+      // آخرین ۲۴ ماه (نه قدیمی‌ترین‌ها): DESC + limit، بعد برای نمودار به ترتیب صعودی برمی‌گردد
+      .orderBy(sql`SUBSTRING(date, 1, 7) DESC`)
+      .limit(24)
+      .then((rows) => rows.reverse());
 
     // ماه‌های جلالی — کلید: ارقام فارسی (مطابق فرمت date)
     const MONTH_FA: Record<string, string> = {
