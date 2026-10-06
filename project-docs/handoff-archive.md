@@ -1,5 +1,13 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+
+## 📓 2026-08-05 — merge + deploy یکپارچه‌سازی «منابع انسانی» روی main
+**چه شد:** کاربر تأیید کرد که ۵ migration فاز HR را خودش قبلاً روی دیتابیس واقعی اجرا کرده، و صریحاً گفت «push و merge و دیپلوی کن». چون `main` محلی دقیقاً با `origin/main` یکی بود، branch به‌صورت fast-forward (بدون merge commit) push و merge شد؛ push روی `main` GH Actions run `31043464598` را trigger کرد که با موفقیت تمام شد. بعد از deploy با curl مستقیم روی `basharaf.me` تأیید شد: صفحه‌ی اصلی ۲۰۰، `/hr` بدون session ۳۰۷ (نه کرش)، `/employees` واقعاً به `/login?redirect=%2Fhr%2Fpeople` ریدایرکت می‌شود، و ۲ API جدید (`/api/hr/overview`, `/api/hr/payroll/readiness`) بدون session درست ۴۰۱ می‌دهند.
+**فایل‌ها:** بدون تغییر کد — فقط عملیات git (push branch + fast-forward merge + push main) + یک commit مستندسازی HANDOFF.
+**Build:** CI کامل main (deploy workflow): موفق. تست/build محلی از قبل روی همین commit سبز بود (548/548).
+**ناتمام:** smoke test دستی end-to-end هنوز با کاربر واقعی انجام نشده (چک‌لیست در `HR-UNIFICATION-ROLLOUT.md` بخش ۶). ۵ تصمیم مالک در همان سند بخش ۱۰ باز مانده.
+**برای جلسه‌ی بعد:** از کاربر بخواه یک استخدام تستی را «تبدیل به پرسنل» کند و یک چرخه‌ی شیفت→حضور→تأیید→محاسبه را در `/hr/time` و `/hr/payroll` روی داده‌ی واقعی امتحان کند.
+
 ## 📓 2026-07-24 — بازطراحی کامل معماری اطلاعات داشبورد — ادامه‌ی `feat/product-ui-v2`
 **چه شد:** طبق یک اسپک دقیق، Information Architecture داشبورد کاملاً بازطراحی شد — بدون تغییر منطق تأیید/RBAC/schema. جزئیات کامل در commit تاریخ ۲۰۲۶-۰۷-۲۴ (رفع باگ RBAC واقعی در `/api/dashboard/trends`، تفکیک stock/flow در تراز مالی، حذف ۳ fetch تکراری).
 **فایل‌ها:** `lib/reports/periodResolve.ts`، `periodReport.ts`، `app/(app)/dashboard/page.tsx` و مرتبط.

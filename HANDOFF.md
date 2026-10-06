@@ -10,7 +10,7 @@
 | | |
 |---|---|
 | **نسخه** | `main` روی `ca3a2ac` (فقط SQL منو از نشست دیگر). production هنوز روی `1f5f59b`. **همه‌ی رفع‌های گزارش بررسی روی branch `claude/nifty-mendel-ot4bwy`** — merge/دیپلوی نشده. |
-| **آخرین به‌روزرسانی** | 2026-10-05 |
+| **آخرین به‌روزرسانی** | 2026-10-06 (فقط پروژهٔ جانبی `wp-law-site/`؛ وضعیت برنامه‌ی حسابداری تغییری نکرد) |
 | **Build/tsc** | روی branch: tsc ✅ · unit 652/652 ✅ · integration 17/17 ✅ (Postgres محلی) · lint ✅ (۵ warning قدیمی) · build ✅ (Next 14.2.35) |
 | **دیپلوی** | ⛔ **CI روی main از ۲۰۲۶-۱۰-۰۳ قرمز است** (تست بمب‌ساعتی رزرو — رفعش فقط روی این branch است)؛ پس هیچ push روی main دیپلوی نمی‌شود تا این branch merge شود. merge = دیپلوی خودکار همراه کد رزرو ← قبلش migrationهای رزرو اجرا شوند. |
 | **کار نیمه‌تمام (in-progress)** | تقریباً همه‌ی یافته‌های گزارش رفع و commit شد (جدول بالای `project-docs/INVESTIGATION-full-system-review-2026-10.md`). باقی: B5 (تصمیم کاربر)، M8 استرداد، M9 چک↔حسابداری، P1 صفحه‌بندی، P11 فایل‌ها در object storage، Next 15، drizzle/xlsx. |
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-10-06 — پروژهٔ جانبی مستقل: سایت وکالت وردپرسی «دادور» در `wp-law-site/`
+**چه شد:** به درخواست کاربر یک سایت وکالت فارسی روی وردپرس ساخته شد: قالب اختصاصی سبک `dadvar` + قالب فرزند + افزونهٔ همراه `dadvar-core` (خدمات، اطلاعات دفتر به‌عنوان منبع واحد، فرم مشاوره با ضدهرزنامه و حذف خودکار، JSON-LD، ۶ ابزارک المنتور، ورود نمونهٔ تکرارپذیر، مهاجرت نسخه‌دار، WP-CLI). **کاملاً مستقل از برنامهٔ حسابداری؛ هیچ فایل برنامه‌ی Next.js تغییر نکرد.** آزمون روی WordPress 7.1.2 + MariaDB محلی: PHPCS سبز، ۳۸/۳۸ یکپارچه، ۳۷/۳۷ مرورگر + axe بدون تخلف، Lighthouse موبایل ۹۸–۹۹، نصب تازه/ارتقا/بازگشت/بازیابی سبز.
+**فایل‌ها:** فقط `wp-law-site/**` (+ همین ورودی و انتقال قدیمی‌ترین ورودی به `project-docs/handoff-archive.md`).
+**Build:** برنامه‌ی اصلی دست نخورده (فایل .ts جدیدی اضافه نشد). بسته‌های وردپرس: `wp-law-site/scripts/build.sh` ← `wp-law-site/dist/`.
+**ناتمام:** اجرای واقعی المنتور آزمون نشد (wordpress.org مسدود و ساخت المنتور از سورس در محیط مجاز نشد) — چک‌لیست در `wp-law-site/PROJECT_STATUS.md`. اطلاعات واقعی وکیل/دفتر از کاربر لازم است.
+**برای جلسه‌ی بعد:** وضعیت آن پروژه را از `wp-law-site/PROJECT_STATUS.md` بخوان، نه از بخش ۰ این فایل (بخش ۰ مربوط به برنامه‌ی حسابداری است).
+
 ## 📓 2026-10-05 — ادامه‌ی رفع گزارش بررسی: ورود مشتری، تاریخ تهران، بازیابی رمز، اصلاحی خرید، ریزرفع‌ها
 **چه شد:** با «ادامه بده» کاربر، ابتدا main (یک commit SQL منو از نشست دیگر، ۴ اکتبر) در branch merge شد. **کشف مهم:** run آن commit روی main در unit-test شکست خورده بود — تست `tests/unit/reservationCapacity.test.ts` تاریخ ثابت ۱۴۰۵/۰۷/۱۱ را بدون «الان» ثابت چک می‌کرد و از ۳ اکتبر (گذشتن آن تاریخ) قرمز شد ⇒ هیچ push روی main دیپلوی نمی‌شود؛ رفع شد (`31b4d6f`). سپس: **B6** OTP مشتری واقعاً پیامک می‌شود (`lib/sms/otp.ts`؛ ملی‌پیامک خط اشتراکی متن آزاد را رد می‌کند ← مسیر الگو با `MELIPAYAMAK_OTP_BODY_ID`، وگرنه متن ساده؛ کد در sms_log ذخیره نمی‌شود؛ شکست ارسال کد را باطل می‌کند؛ `crypto.randomInt`؛ ضد-اسپم از createdAt)، سفارش آنلاین از کوکی نشست امضاشده به مشتری وصل می‌شود (قبلاً zod فیلد را حذف می‌کرد). **M3** `getTodayJalali(now?)`/`todayIsoTehran()` به وقت تهران مستقل از TZ سرور + رفع ذخیره‌ی تاریخ میلادی در ایمپورت اقلام انبار و انبارگردانی. **M12** `POST /api/admin/users/[id]/password` + فرم در «مدیریت کل ← کاربران»؛ `/forgot` و `/signup` صادق شدند. **M10/M11/M13/M14/M15** ریست کارخانه موجودی‌ها را اتمیک صفر می‌کند؛ نمودار آخرین ۲۴ ماه؛ سقف پاسخ فیلد استخدام؛ `handleError` هر ۵۰۰ ناشناخته را در system_logs ثبت می‌کند (به‌جز DYNAMIC_SERVER_USAGE بیلد)؛ خطاهای حقوق ApiError خوانا؛ بازمحاسبه‌ی صندوق اتمیک با FOR UPDATE. **M5** تأیید برگه‌ی اصلاحی (`parentVoucherId`) سند حسابداری برگه‌ی اصلی را با `reversePurchasePost` برمی‌گرداند و سند جدید نمی‌سازد (قبلاً اصلاحی ضایعات/فروش یک خرید نقدی جدید می‌ساخت). **P3** ایندکس‌های transactions در schema + `project-docs/migrations/db-transactions-indexes.sql` (اختیاری، CONCURRENTLY).
 **فایل‌ها:** (جدید) `lib/sms/otp.ts`، `app/api/admin/users/[id]/password/route.ts`، `project-docs/migrations/db-transactions-indexes.sql`، `tests/unit/{otp-sms,tehran-today}.test.ts` · (ویرایش) `app/api/customer/auth/send-otp/route.ts`، `lib/ordering/webCustomer.ts`، `app/api/public/order/create/route.ts`، `lib/jalali.ts`، `app/api/{hr/overview,inventory/items/import,inventory/stocktake,settings/wipe,accounts/recalculate,reports,recruitment}/route.ts`، `app/api/inventory/vouchers/[id]/approve/route.ts`، `lib/api-error.ts`، `lib/payroll/postToBasharaf.ts`، `lib/auth/audit.ts`، `components/settings/SecurityPane.tsx`، `app/(admin)/admin/users/page.tsx`، `app/(auth)/{forgot,signup}/page.tsx`، `lib/db/schema.ts` (ایندکس)، `.env.example`، `tests/unit/reservationCapacity.test.ts`، `tests/integration/concurrency-and-access.test.ts` (تست M5)، گزارش بررسی (جدول وضعیت).
@@ -113,11 +120,3 @@
 **Build:** tsc ✅ ۰ خطا · tests 585/585 ✅ · build ✅ · lint ✅ (فقط warningهای preexisting بی‌ربط)
 **ناتمام:** migration جدید `db-menu-seasons.sql` هنوز اجرا/push نشده. محتوای واقعی منوی پاییز ۱۴۰۵ (آیتم‌های جدید، تغییر قیمت‌ها، ساخت دسته‌ی «ساندویچ»، انحلال دسته‌ی «هات‌داگ») هنوز به SQL تبدیل نشده — منتظر پاسخ کاربر درباره‌ی قیمت مشکوک «سوسیس و عدس» (۱۴۰۰۰ نوشته شده، بقیه‌ی بشقاب‌ها ۴ رقمی‌ان). کد فیچر فصل/روتیشن کامل و gate-سبز است ولی هنوز commit نشده.
 **برای جلسه‌ی بعد:** بعد از پاسخ کاربر، migration محتوا (`db-menu-*-autumn-1405*.sql` یا مشابه) نوشته بشه، هر دو migration (schema فصل + محتوا) به کاربر داده بشه، و بعد از تأیید اجرا، commit+push+دیپلوی. یادآوری: این فایل (HANDOFF.md) رو در طول کار به‌روز نگه دار، نه فقط آخرش.
-
-## 📓 2026-08-05 — merge + deploy یکپارچه‌سازی «منابع انسانی» روی main
-**چه شد:** کاربر تأیید کرد که ۵ migration فاز HR را خودش قبلاً روی دیتابیس واقعی اجرا کرده، و صریحاً گفت «push و merge و دیپلوی کن». چون `main` محلی دقیقاً با `origin/main` یکی بود، branch به‌صورت fast-forward (بدون merge commit) push و merge شد؛ push روی `main` GH Actions run `31043464598` را trigger کرد که با موفقیت تمام شد. بعد از deploy با curl مستقیم روی `basharaf.me` تأیید شد: صفحه‌ی اصلی ۲۰۰، `/hr` بدون session ۳۰۷ (نه کرش)، `/employees` واقعاً به `/login?redirect=%2Fhr%2Fpeople` ریدایرکت می‌شود، و ۲ API جدید (`/api/hr/overview`, `/api/hr/payroll/readiness`) بدون session درست ۴۰۱ می‌دهند.
-**فایل‌ها:** بدون تغییر کد — فقط عملیات git (push branch + fast-forward merge + push main) + یک commit مستندسازی HANDOFF.
-**Build:** CI کامل main (deploy workflow): موفق. تست/build محلی از قبل روی همین commit سبز بود (548/548).
-**ناتمام:** smoke test دستی end-to-end هنوز با کاربر واقعی انجام نشده (چک‌لیست در `HR-UNIFICATION-ROLLOUT.md` بخش ۶). ۵ تصمیم مالک در همان سند بخش ۱۰ باز مانده.
-**برای جلسه‌ی بعد:** از کاربر بخواه یک استخدام تستی را «تبدیل به پرسنل» کند و یک چرخه‌ی شیفت→حضور→تأیید→محاسبه را در `/hr/time` و `/hr/payroll` روی داده‌ی واقعی امتحان کند.
-

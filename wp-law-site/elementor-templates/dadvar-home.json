@@ -1,0 +1,1311 @@
+{
+    "version": "0.4",
+    "title": "خانه",
+    "type": "page",
+    "content": [
+        {
+            "id": "0ecb35f",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "معرفی (بالای صفحه)",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=primary"
+                }
+            },
+            "elements": [
+                {
+                    "id": "fcea0c1",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "وکالت و مشاورهٔ حقوقی با روندی روشن و قابل‌پیگیری",
+                        "header_size": "h1",
+                        "title_color": "#FFFFFF"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "c6068aa",
+                    "elType": "widget",
+                    "widgetType": "text-editor",
+                    "settings": {
+                        "editor": "<p>[متن نمونه] این‌جا در دو یا سه جمله بنویسید چه کسی هستید، در چه حوزه‌هایی و در کدام شهر فعالیت می‌کنید و مخاطب چه کمکی می‌تواند از شما بگیرد.</p>",
+                        "text_color": "#FFFFFF"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "2addd4c",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "دکمه‌های اقدام",
+                        "content_width": "full",
+                        "flex_direction": "row",
+                        "flex_direction_mobile": "column",
+                        "flex_wrap": "wrap",
+                        "flex_gap": {
+                            "unit": "px",
+                            "size": 16,
+                            "column": "16",
+                            "row": "16",
+                            "isLinked": true
+                        },
+                        "flex_align_items": "center"
+                    },
+                    "elements": [
+                        {
+                            "id": "e6b5137",
+                            "elType": "widget",
+                            "widgetType": "button",
+                            "settings": {
+                                "text": "درخواست مشاوره",
+                                "link": {
+                                    "url": "/contact/",
+                                    "is_external": "",
+                                    "nofollow": ""
+                                },
+                                "size": "md",
+                                "__globals__": {
+                                    "background_color": "globals/colors?id=accent"
+                                }
+                            },
+                            "elements": []
+                        },
+                        {
+                            "id": "73083ff",
+                            "elType": "widget",
+                            "widgetType": "dadvar-call-button",
+                            "settings": {
+                                "label": "تماس تلفنی",
+                                "button_style": "light",
+                                "show_number": "yes"
+                            },
+                            "elements": []
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "8f113a0",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "خدمات اصلی",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section"
+            },
+            "elements": [
+                {
+                    "id": "f7a292f",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "حوزه‌های تخصصی",
+                        "header_size": "h2"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "416f242",
+                    "elType": "widget",
+                    "widgetType": "text-editor",
+                    "settings": {
+                        "editor": "<p>[متن نمونه] یک جملهٔ کوتاه دربارهٔ تمرکز تخصصی دفتر. فهرست زیر خودکار از بخش «خدمات» پیشخوان خوانده می‌شود.</p>"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "b612185",
+                    "elType": "widget",
+                    "widgetType": "dadvar-services",
+                    "settings": {
+                        "count": 6
+                    },
+                    "elements": []
+                }
+            ]
+        },
+        {
+            "id": "d4e714e",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "معرفی کوتاه",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=dvsurface"
+                }
+            },
+            "elements": [
+                {
+                    "id": "c7fd725",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "تصویر و متن",
+                        "content_width": "full",
+                        "container_type": "grid",
+                        "grid_columns_grid": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_tablet": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_mobile": {
+                            "unit": "fr",
+                            "size": 1
+                        },
+                        "grid_gaps": {
+                            "unit": "px",
+                            "column": "24",
+                            "row": "24",
+                            "isLinked": true
+                        }
+                    },
+                    "elements": [
+                        {
+                            "id": "93cc86e",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "متن معرفی",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "2558946",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "دربارهٔ وکیل",
+                                        "header_size": "h2"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "41ba08b",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[متن نمونه] معرفی کوتاه و واقعی: سابقهٔ تحصیلی و حرفه‌ای قابل‌استناد، حوزه‌های تمرکز و شیوهٔ کار. از ادعاهای اثبات‌نشده و وعدهٔ نتیجه پرهیز کنید.</p>"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "8a73dbf",
+                                    "elType": "widget",
+                                    "widgetType": "dadvar-lawyer",
+                                    "settings": {
+                                        "show_license": "yes"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "8a238f6",
+                                    "elType": "widget",
+                                    "widgetType": "button",
+                                    "settings": {
+                                        "text": "بیشتر دربارهٔ وکیل",
+                                        "link": {
+                                            "url": "/about/",
+                                            "is_external": "",
+                                            "nofollow": ""
+                                        },
+                                        "size": "md",
+                                        "__globals__": {
+                                            "background_color": "globals/colors?id=accent"
+                                        }
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "919dd15",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "دلایل انتخاب",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section"
+            },
+            "elements": [
+                {
+                    "id": "de73b22",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "شیوهٔ همکاری ما",
+                        "header_size": "h2"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "19d1a14",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "دلایل",
+                        "content_width": "full",
+                        "container_type": "grid",
+                        "grid_columns_grid": {
+                            "unit": "fr",
+                            "size": 3
+                        },
+                        "grid_columns_grid_tablet": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_mobile": {
+                            "unit": "fr",
+                            "size": 1
+                        },
+                        "grid_gaps": {
+                            "unit": "px",
+                            "column": "24",
+                            "row": "24",
+                            "isLinked": true
+                        }
+                    },
+                    "elements": [
+                        {
+                            "id": "d507559",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "3e626c2",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "شفافیت دربارهٔ روند و هزینه",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "20ca328",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[نمونه] پیش از شروع، مراحل احتمالی کار و نحوهٔ محاسبهٔ حق‌الوکاله به‌روشنی گفته می‌شود.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "8affdd5",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "01b14a4",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "تمرکز بر حوزه‌های مشخص",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "8c5b6be",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[نمونه] فقط در حوزه‌هایی وکالت می‌پذیریم که در آن‌ها تجربهٔ کافی داریم.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "92046ac",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "f07baf5",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "اطلاع‌رسانی منظم",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "535966f",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[نمونه] از هر اقدام مهم در پرونده و زمان‌بندی مراحل بعدی مطلع می‌شوید.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "df4c85a",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "مراحل دریافت خدمات",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=dvsurface"
+                }
+            },
+            "elements": [
+                {
+                    "id": "76722c7",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "مراحل دریافت مشاوره",
+                        "header_size": "h2"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "0bcf452",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "مراحل",
+                        "content_width": "full",
+                        "container_type": "grid",
+                        "grid_columns_grid": {
+                            "unit": "fr",
+                            "size": 4
+                        },
+                        "grid_columns_grid_tablet": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_mobile": {
+                            "unit": "fr",
+                            "size": 1
+                        },
+                        "grid_gaps": {
+                            "unit": "px",
+                            "column": "24",
+                            "row": "24",
+                            "isLinked": true
+                        }
+                    },
+                    "elements": [
+                        {
+                            "id": "312041d",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "884c9c8",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "۱. تماس یا ثبت درخواست",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "c3d6b2e",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>از راه تلفن یا فرم سایت، موضوع کلی را اعلام کنید.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "f75bc10",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "8dd0efb",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "۲. هماهنگی اولیه",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "80ab1d2",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>برای تعیین وقت مشاوره و مدارک لازم با شما تماس می‌گیریم.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "2ef60bd",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "9360240",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "۳. جلسهٔ مشاوره",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "8a2298f",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>موضوع بررسی و راه‌های قانونی پیش رو توضیح داده می‌شود.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "c97b9c7",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "کارت",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "a4090da",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "۴. تصمیم دربارهٔ ادامه",
+                                        "header_size": "h3"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "ce57242",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>در صورت تمایل، شرایط وکالت و قرارداد به‌صورت مکتوب ارائه می‌شود.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "7295c4e",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "مقالات منتخب",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section"
+            },
+            "elements": [
+                {
+                    "id": "edcd98a",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "مقالات و راهنماهای حقوقی",
+                        "header_size": "h2"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "c3b1389",
+                    "elType": "widget",
+                    "widgetType": "dadvar-posts",
+                    "settings": {
+                        "count": 3
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "8e50aab",
+                    "elType": "widget",
+                    "widgetType": "button",
+                    "settings": {
+                        "text": "همهٔ مقالات",
+                        "link": {
+                            "url": "/articles/",
+                            "is_external": "",
+                            "nofollow": ""
+                        },
+                        "size": "md",
+                        "__globals__": {
+                            "background_color": "globals/colors?id=accent"
+                        }
+                    },
+                    "elements": []
+                }
+            ]
+        },
+        {
+            "id": "ac567c4",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "پرسش‌های متداول",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=dvsurface"
+                }
+            },
+            "elements": [
+                {
+                    "id": "02cde1e",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "پرسش‌های متداول",
+                        "header_size": "h2"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "d7e65af",
+                    "elType": "widget",
+                    "widgetType": "nested-accordion",
+                    "settings": {
+                        "items": [
+                            {
+                                "item_title": "برای مشاورهٔ اولیه چه مدارکی همراه داشته باشم؟",
+                                "_id": "49699bc"
+                            },
+                            {
+                                "item_title": "آیا مشاورهٔ اولیه هزینه دارد؟",
+                                "_id": "d5ab26d"
+                            },
+                            {
+                                "item_title": "آیا مشاورهٔ تلفنی یا آنلاین هم ممکن است؟",
+                                "_id": "ba65bf4"
+                            },
+                            {
+                                "item_title": "آیا نتیجهٔ پرونده تضمین می‌شود؟",
+                                "_id": "ecae6a8"
+                            }
+                        ],
+                        "default_state": "all_collapsed",
+                        "max_items_expended": "multiple",
+                        "title_tag": "h3"
+                    },
+                    "elements": [
+                        {
+                            "id": "5af5b6c",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "item #1",
+                                "content_width": "full"
+                            },
+                            "elements": [
+                                {
+                                    "id": "afedf28",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[پاسخ نمونه] هر سند، قرارداد، ابلاغیه یا مکاتبه‌ای که به موضوع مربوط است. هنگام هماهنگی وقت، فهرست دقیق‌تر اعلام می‌شود.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "b516a11",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "item #2",
+                                "content_width": "full"
+                            },
+                            "elements": [
+                                {
+                                    "id": "73937ea",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[پاسخ نمونه — با سیاست واقعی دفتر جایگزین کنید] هزینهٔ جلسهٔ مشاوره هنگام تعیین وقت اعلام می‌شود.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "7792095",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "item #3",
+                                "content_width": "full"
+                            },
+                            "elements": [
+                                {
+                                    "id": "ffcf064",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[پاسخ نمونه] در برخی موضوعات بله. هنگام تماس اولیه هماهنگ می‌شود.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "1bf8aff",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "item #4",
+                                "content_width": "full"
+                            },
+                            "elements": [
+                                {
+                                    "id": "3347cb9",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>خیر. هیچ وکیلی نمی‌تواند نتیجهٔ رسیدگی قضایی را تضمین کند؛ تعهد وکیل، پیگیری دقیق و قانونی پرونده است.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "9df87ef",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "دعوت نهایی به اقدام",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=primary"
+                }
+            },
+            "elements": [
+                {
+                    "id": "bce78d2",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "برای بررسی موضوع خود با دفتر در تماس باشید",
+                        "header_size": "h2",
+                        "title_color": "#FFFFFF"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "36ab45c",
+                    "elType": "widget",
+                    "widgetType": "text-editor",
+                    "settings": {
+                        "editor": "<p>[متن نمونه] یک جملهٔ کوتاه دربارهٔ زمان پاسخ‌گویی و راه‌های تماس.</p>",
+                        "text_color": "#FFFFFF"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "967cc9b",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "دکمه‌ها",
+                        "content_width": "full",
+                        "flex_direction": "row",
+                        "flex_direction_mobile": "column",
+                        "flex_wrap": "wrap",
+                        "flex_gap": {
+                            "unit": "px",
+                            "size": 16,
+                            "column": "16",
+                            "row": "16",
+                            "isLinked": true
+                        },
+                        "flex_align_items": "center"
+                    },
+                    "elements": [
+                        {
+                            "id": "98a1315",
+                            "elType": "widget",
+                            "widgetType": "button",
+                            "settings": {
+                                "text": "درخواست مشاوره",
+                                "link": {
+                                    "url": "/contact/",
+                                    "is_external": "",
+                                    "nofollow": ""
+                                },
+                                "size": "md",
+                                "__globals__": {
+                                    "background_color": "globals/colors?id=accent"
+                                }
+                            },
+                            "elements": []
+                        },
+                        {
+                            "id": "d38d9b2",
+                            "elType": "widget",
+                            "widgetType": "dadvar-call-button",
+                            "settings": {
+                                "label": "تماس تلفنی",
+                                "button_style": "light"
+                            },
+                            "elements": []
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "page_settings": {}
+}

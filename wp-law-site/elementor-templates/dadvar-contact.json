@@ -1,0 +1,239 @@
+{
+    "version": "0.4",
+    "title": "تماس و درخواست مشاوره",
+    "type": "page",
+    "content": [
+        {
+            "id": "55d0291",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "عنوان صفحه",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=dvsurface"
+                }
+            },
+            "elements": [
+                {
+                    "id": "a9b230a",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "تماس و درخواست مشاوره",
+                        "header_size": "h1"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "a75b22c",
+                    "elType": "widget",
+                    "widgetType": "text-editor",
+                    "settings": {
+                        "editor": "<p>برای هماهنگی وقت مشاوره، فرم زیر را تکمیل کنید یا در ساعات کاری تماس بگیرید. این فرم فقط برای تماس اولیه است؛ لطفاً جزئیات محرمانهٔ پرونده را در آن ننویسید.</p>"
+                    },
+                    "elements": []
+                }
+            ]
+        },
+        {
+            "id": "31b55d5",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "فرم و اطلاعات تماس",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section"
+            },
+            "elements": [
+                {
+                    "id": "28d4cb3",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "دو ستون",
+                        "content_width": "full",
+                        "container_type": "grid",
+                        "grid_columns_grid": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_tablet": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_mobile": {
+                            "unit": "fr",
+                            "size": 1
+                        },
+                        "grid_gaps": {
+                            "unit": "px",
+                            "column": "24",
+                            "row": "24",
+                            "isLinked": true
+                        }
+                    },
+                    "elements": [
+                        {
+                            "id": "5d992f6",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "فرم",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "930f93f",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "فرم درخواست مشاوره",
+                                        "header_size": "h2"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "7bb5f76",
+                                    "elType": "widget",
+                                    "widgetType": "dadvar-consultation-form",
+                                    "settings": {},
+                                    "elements": []
+                                }
+                            ]
+                        },
+                        {
+                            "id": "57b9477",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "اطلاعات تماس",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                },
+                                "padding": {
+                                    "unit": "px",
+                                    "top": "24",
+                                    "right": "24",
+                                    "bottom": "24",
+                                    "left": "24",
+                                    "isLinked": false
+                                },
+                                "border_border": "solid",
+                                "border_width": {
+                                    "unit": "px",
+                                    "top": "1",
+                                    "right": "1",
+                                    "bottom": "1",
+                                    "left": "1",
+                                    "isLinked": true
+                                },
+                                "border_radius": {
+                                    "unit": "px",
+                                    "top": "10",
+                                    "right": "10",
+                                    "bottom": "10",
+                                    "left": "10",
+                                    "isLinked": true
+                                },
+                                "background_background": "classic",
+                                "background_color": "#FFFFFF",
+                                "__globals__": {
+                                    "border_color": "globals/colors?id=dvborder"
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "414ec14",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "راه‌های ارتباطی",
+                                        "header_size": "h2"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "8dbae06",
+                                    "elType": "widget",
+                                    "widgetType": "dadvar-office-info",
+                                    "settings": {},
+                                    "elements": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "page_settings": {}
+}

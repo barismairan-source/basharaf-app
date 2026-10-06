@@ -1,0 +1,290 @@
+{
+    "version": "0.4",
+    "title": "دربارهٔ وکیل",
+    "type": "page",
+    "content": [
+        {
+            "id": "b6e96c1",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "عنوان صفحه",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=dvsurface"
+                }
+            },
+            "elements": [
+                {
+                    "id": "c88eb6a",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "دربارهٔ وکیل",
+                        "header_size": "h1"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "e27bf66",
+                    "elType": "widget",
+                    "widgetType": "text-editor",
+                    "settings": {
+                        "editor": "<p>[متن نمونه] یک پاراگراف معرفی کوتاه.</p>"
+                    },
+                    "elements": []
+                }
+            ]
+        },
+        {
+            "id": "1c91c49",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "معرفی",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section"
+            },
+            "elements": [
+                {
+                    "id": "e8205dc",
+                    "elType": "container",
+                    "isInner": true,
+                    "settings": {
+                        "_title": "تصویر و متن",
+                        "content_width": "full",
+                        "container_type": "grid",
+                        "grid_columns_grid": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_tablet": {
+                            "unit": "fr",
+                            "size": 2
+                        },
+                        "grid_columns_grid_mobile": {
+                            "unit": "fr",
+                            "size": 1
+                        },
+                        "grid_gaps": {
+                            "unit": "px",
+                            "column": "24",
+                            "row": "24",
+                            "isLinked": true
+                        }
+                    },
+                    "elements": [
+                        {
+                            "id": "3bd6d24",
+                            "elType": "container",
+                            "isInner": true,
+                            "settings": {
+                                "_title": "متن",
+                                "content_width": "full",
+                                "flex_direction": "column",
+                                "flex_direction_mobile": "column",
+                                "flex_wrap": "wrap",
+                                "flex_gap": {
+                                    "unit": "px",
+                                    "size": 16,
+                                    "column": "16",
+                                    "row": "16",
+                                    "isLinked": true
+                                }
+                            },
+                            "elements": [
+                                {
+                                    "id": "aed65f7",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "مشخصات حرفه‌ای",
+                                        "header_size": "h2"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "8085fc6",
+                                    "elType": "widget",
+                                    "widgetType": "dadvar-lawyer",
+                                    "settings": {
+                                        "show_license": "yes"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "5a6a021",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "سوابق تحصیلی و حرفه‌ای",
+                                        "header_size": "h2"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "f0abec8",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<ul><li>[نمونه] مدرک تحصیلی و دانشگاه — فقط مورد واقعی</li><li>[نمونه] سال اخذ پروانه و مرجع صدور</li><li>[نمونه] عضویت‌ها یا دوره‌های تخصصی قابل‌استناد</li></ul>"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "ebd4114",
+                                    "elType": "widget",
+                                    "widgetType": "heading",
+                                    "settings": {
+                                        "title": "رویکرد کاری",
+                                        "header_size": "h2"
+                                    },
+                                    "elements": []
+                                },
+                                {
+                                    "id": "e446f3d",
+                                    "elType": "widget",
+                                    "widgetType": "text-editor",
+                                    "settings": {
+                                        "editor": "<p>[متن نمونه] چگونه با موکل همکاری می‌کنید، چگونه اطلاع‌رسانی می‌کنید و چه انتظاری باید داشت.</p>"
+                                    },
+                                    "elements": []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "id": "56ecac0",
+            "elType": "container",
+            "isInner": false,
+            "settings": {
+                "_title": "دعوت به اقدام",
+                "content_width": "boxed",
+                "flex_direction": "column",
+                "flex_gap": {
+                    "unit": "px",
+                    "size": 20,
+                    "column": "20",
+                    "row": "20",
+                    "isLinked": true
+                },
+                "padding": {
+                    "unit": "px",
+                    "top": "72",
+                    "right": "16",
+                    "bottom": "72",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "padding_mobile": {
+                    "unit": "px",
+                    "top": "48",
+                    "right": "16",
+                    "bottom": "48",
+                    "left": "16",
+                    "isLinked": false
+                },
+                "html_tag": "section",
+                "background_background": "classic",
+                "__globals__": {
+                    "background_color": "globals/colors?id=primary"
+                }
+            },
+            "elements": [
+                {
+                    "id": "b20ceb4",
+                    "elType": "widget",
+                    "widgetType": "heading",
+                    "settings": {
+                        "title": "درخواست مشاوره",
+                        "header_size": "h2",
+                        "title_color": "#FFFFFF"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "d062cf2",
+                    "elType": "widget",
+                    "widgetType": "text-editor",
+                    "settings": {
+                        "editor": "<p>برای هماهنگی وقت مشاوره فرم را تکمیل کنید یا تماس بگیرید.</p>",
+                        "text_color": "#FFFFFF"
+                    },
+                    "elements": []
+                },
+                {
+                    "id": "d213626",
+                    "elType": "widget",
+                    "widgetType": "button",
+                    "settings": {
+                        "text": "درخواست مشاوره",
+                        "link": {
+                            "url": "/contact/",
+                            "is_external": "",
+                            "nofollow": ""
+                        },
+                        "size": "md",
+                        "__globals__": {
+                            "background_color": "globals/colors?id=accent"
+                        }
+                    },
+                    "elements": []
+                }
+            ]
+        }
+    ],
+    "page_settings": {}
+}

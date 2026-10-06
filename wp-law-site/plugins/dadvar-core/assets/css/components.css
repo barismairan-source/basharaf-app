@@ -1,0 +1,233 @@
+/* Shared components (cards, contact list, call button). Theme-independent with token fallbacks. */
+.dv-icon {
+	flex: none;
+	height: 1.25em;
+	width: 1.25em;
+}
+
+.dv-button {
+	align-items: center;
+	border: 2px solid var(--dv-c-accent, #a24a22);
+	border-radius: 6px;
+	display: inline-flex;
+	font-weight: 700;
+	gap: 0.5rem;
+	justify-content: center;
+	line-height: 1.4;
+	min-height: 3rem;
+	padding: 0.6rem 1.4rem;
+	text-decoration: none;
+}
+
+.dv-button--solid {
+	background: var(--dv-c-accent, #a24a22);
+	color: #fff;
+}
+
+.dv-button--outline {
+	background: transparent;
+	color: var(--dv-c-accent, #a24a22);
+}
+
+.dv-button--light {
+	background: transparent;
+	border-color: #fff;
+	color: #fff;
+}
+
+.dv-button:hover {
+	filter: brightness(0.92);
+}
+
+.dv-button:focus-visible,
+.dv-card__link:focus-visible,
+.dv-office a:focus-visible,
+.dv-social__link:focus-visible {
+	outline: 3px solid var(--dv-c-focus, #0b57d0);
+	outline-offset: 2px;
+}
+
+.dv-office {
+	display: grid;
+	gap: 0.85rem;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.dv-office--inline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.5rem;
+}
+
+.dv-office__item {
+	align-items: flex-start;
+	display: flex;
+	gap: 0.6rem;
+}
+
+.dv-office__item .dv-icon {
+	color: var(--dv-c-secondary, #3d6670);
+	margin-top: 0.2em;
+}
+
+.dv-office__label {
+	display: block;
+	font-size: 0.875em;
+	opacity: 0.85;
+}
+
+.dv-office__value a {
+	color: inherit;
+}
+
+.dv-office address {
+	font-style: normal;
+}
+
+.dv-social {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	list-style: none;
+	margin: 1rem 0 0;
+	padding: 0;
+}
+
+.dv-social__link {
+	border: 1px solid currentColor;
+	border-radius: 999px;
+	color: inherit;
+	display: inline-block;
+	font-size: 0.875rem;
+	padding: 0.3rem 0.9rem;
+	text-decoration: none;
+}
+
+.dv-cards {
+	display: grid;
+	gap: 1.25rem;
+	grid-template-columns: 1fr;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+@media (min-width: 640px) {
+	.dv-cards {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 1024px) {
+	.dv-cards {
+		grid-template-columns: repeat(var(--dv-cards-columns, 3), minmax(0, 1fr));
+	}
+}
+
+.dv-card {
+	background: var(--dv-c-bg, #fff);
+	border: 1px solid var(--dv-c-border, #d9d4cb);
+	border-radius: 10px;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 1.5rem;
+	position: relative;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dv-card:hover,
+.dv-card:focus-within {
+	border-color: var(--dv-c-secondary, #3d6670);
+	box-shadow: 0 6px 18px rgb(20 30 40 / 8%);
+}
+
+.dv-card__media {
+	aspect-ratio: 16 / 9;
+	border-radius: 6px;
+	margin: -0.5rem -0.5rem 0.5rem;
+	overflow: hidden;
+}
+
+.dv-card__media img {
+	display: block;
+	height: 100%;
+	object-fit: cover;
+	width: 100%;
+}
+
+.dv-card__title {
+	font-size: 1.15rem;
+	line-height: 1.6;
+	margin: 0;
+}
+
+.dv-card__link {
+	color: var(--dv-c-primary, #1e3a4a);
+	text-decoration: none;
+}
+
+/* Whole card is clickable through the title link (one link per card for screen readers). */
+.dv-card__link::after {
+	content: "";
+	inset: 0;
+	position: absolute;
+}
+
+.dv-card__text,
+.dv-card__meta {
+	color: var(--dv-c-muted, #4f5b63);
+	margin: 0;
+}
+
+.dv-card__meta {
+	font-size: 0.875rem;
+}
+
+.dv-card__more {
+	color: var(--dv-c-accent, #a24a22);
+	font-weight: 700;
+	margin-top: auto;
+}
+
+.dv-lawyer__name {
+	font-size: 1.25rem;
+	font-weight: 700;
+	margin: 0 0 0.75rem;
+}
+
+.dv-lawyer__facts {
+	display: grid;
+	gap: 0.5rem;
+	margin: 0;
+}
+
+.dv-lawyer__facts div {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.25rem 0.75rem;
+}
+
+.dv-lawyer__facts dt {
+	color: var(--dv-c-muted, #4f5b63);
+}
+
+.dv-lawyer__facts dd {
+	font-weight: 700;
+	margin: 0;
+}
+
+.dv-admin-hint {
+	background: #fff8e5;
+	border: 1px dashed #b98900;
+	color: #5c4400;
+	padding: 0.5rem 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.dv-card {
+		transition: none;
+	}
+}

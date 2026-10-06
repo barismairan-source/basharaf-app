@@ -1,0 +1,40 @@
+/* Block editor (articles) — mirrors the reading styles of the front end. */
+@font-face {
+	font-display: swap;
+	font-family: Vazirmatn;
+	font-weight: 400;
+	src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2");
+}
+
+@font-face {
+	font-display: swap;
+	font-family: Vazirmatn;
+	font-weight: 700;
+	src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2");
+}
+
+body {
+	color: #1f262b;
+	font-family: Vazirmatn, tahoma, sans-serif;
+	font-size: 17px;
+	line-height: 1.9;
+}
+
+h1,
+h2,
+h3,
+h4 {
+	color: #1e3a4a;
+	font-family: Vazirmatn, tahoma, sans-serif;
+	line-height: 1.5;
+}
+
+a {
+	color: #3d6670;
+}
+
+.dv-sample-note {
+	background: #f6f4f0;
+	border-inline-start: 4px solid #a24a22;
+	padding: 0.75rem 1rem;
+}
