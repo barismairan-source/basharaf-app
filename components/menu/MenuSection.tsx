@@ -15,7 +15,7 @@ export function MenuSection({ section }: { section: MenuSectionType }) {
   return (
     <section id={section.slug} className="mt-14 scroll-mt-6 first:mt-0 sm:mt-16">
       <header className="mb-7 text-center sm:mb-9">
-        <h2 className={cn('leading-tight text-foreground', language === 'en' ? 'text-[32px] sm:text-[40px]' : 'text-[28px] sm:text-[34px]')}>{label}</h2>
+        <h2 className={cn('menu-section-title leading-tight', language === 'en' ? 'text-[32px] sm:text-[40px]' : 'text-[28px] sm:text-[34px]')}>{label}</h2>
       </header>
       <ul className="grid grid-cols-1 gap-x-10 gap-y-7 sm:grid-cols-2">
         {visibleItems.map((item) => <MenuItem key={item.id} item={item} />)}

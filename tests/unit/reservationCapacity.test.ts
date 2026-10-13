@@ -91,12 +91,15 @@ describe('intervalsOverlap — مثال نهم (19–20 و 20–21 تداخل ن
 });
 
 describe('generateSlotsForDate', () => {
+  // ساعت ثابت (قبل از همه‌ی تاریخ‌های تست) — تا تست‌ها با گذشت زمان واقعی خراب نشوند
+  const FIXED_NOW = jalaliNowAt('1405/01/01', 9, 0);
+
   it('returns nothing when closeHour is not set (not activated yet)', () => {
-    expect(generateSlotsForDate(settings({ closeHour: null }), '1405/07/10')).toEqual([]);
+    expect(generateSlotsForDate(settings({ closeHour: null }), '1405/07/10', FIXED_NOW)).toEqual([]);
   });
 
   it('builds hourly slots from openHour to closeHour (exclusive)', () => {
-    const slots = generateSlotsForDate(settings({ openHour: 19, closeHour: 23 }), '1405/12/01');
+    const slots = generateSlotsForDate(settings({ openHour: 19, closeHour: 23 }), '1405/12/01', FIXED_NOW);
     expect(slots.map((s) => s.time)).toEqual(['19:00', '20:00', '21:00', '22:00']);
   });
 

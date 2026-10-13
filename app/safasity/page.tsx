@@ -3,18 +3,21 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
-import { UtensilsCrossed, Briefcase, Instagram, Phone, Link2, MapPin, Navigation, CalendarCheck, ShoppingBag } from 'lucide-react';
+import { Link2, MapPin, Navigation, ShoppingBag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HubItem, HubItemKind, HubSettings } from '@/types';
 
-const KIND_STYLE: Record<HubItemKind, { icon: typeof Link2; badge: string }> = {
-  menu:      { icon: UtensilsCrossed, badge: 'bg-amber-100 text-amber-700' },
-  apply:     { icon: Briefcase,       badge: 'bg-sky-100 text-sky-700' },
-  instagram: { icon: Instagram,       badge: 'bg-gradient-to-br from-fuchsia-500 to-amber-400 text-white' },
-  phone:     { icon: Phone,           badge: 'bg-emerald-100 text-emerald-700' },
-  reserve:   { icon: CalendarCheck,   badge: 'bg-violet-100 text-violet-700' },
-  order:     { icon: ShoppingBag,     badge: 'bg-rose-100 text-rose-700' },
-  custom:    { icon: Link2,           badge: 'bg-stone-100 text-stone-600' },
+/** آیکون‌های دست‌کشیده‌ی برند (public/safasity) — نوع‌هایی که آیکون اختصاصی ندارند lucide به رنگ سرمه‌ای می‌گیرند. */
+const KIND_ICON: Partial<Record<HubItemKind, string>> = {
+  menu: '/safasity/icon-menu.png',
+  reserve: '/safasity/icon-reserve.png',
+  apply: '/safasity/icon-apply.png',
+  instagram: '/safasity/icon-instagram.png',
+  phone: '/safasity/icon-phone.png',
+};
+const FALLBACK_ICON: Partial<Record<HubItemKind, typeof Link2>> = {
+  order: ShoppingBag,
+  custom: Link2,
 };
 
 /** لینک‌های داخلی (منو/استخدام) و tel: در همان تب باز می‌شوند؛ بقیه در تب جدید. */
@@ -42,7 +45,7 @@ export default function SafasityHubPage() {
   useEffect(() => {
     if (!settings?.showQr || !origin || !qrRef.current) return;
     QRCode.toCanvas(qrRef.current, `${origin}/safasity/menu`, {
-      width: 168, margin: 1, color: { dark: '#1c1917', light: '#ffffff' },
+      width: 168, margin: 1, color: { dark: '#3C4353', light: '#FAF8F3' },
     }).catch(() => {});
   }, [settings?.showQr, origin]);
 
@@ -55,23 +58,28 @@ export default function SafasityHubPage() {
   const [hero, ...rest] = items;
 
   return (
-    <div className="mx-auto max-w-md px-6 pb-20 pt-14 sm:pt-16">
-      <header className="text-center">
+    <div className="relative mx-auto max-w-md overflow-hidden px-6 pb-20 pt-14 sm:pt-16">
+      <Image
+        src="/safasity/brush.png" alt="" aria-hidden width={844} height={526} priority
+        className="pointer-events-none absolute -left-6 top-[-34px] w-[380px] max-w-none opacity-[0.16] select-none"
+      />
+
+      <header className="relative text-center">
         <div className="relative mx-auto mb-1 h-[68px] w-[204px]">
-          <Image src="/safasity-wordmark.png" alt={settings?.title || 'صفاسیتی'} fill className="object-contain" priority />
+          <Image src="/safasity/wordmark.png" alt={settings?.title || 'صفاسیتی'} fill className="object-contain" priority />
         </div>
         {settings?.bio && <p className="mt-1 text-sm text-muted-foreground">{settings.bio}</p>}
       </header>
 
       {loading && (
-        <div className="mt-8 grid grid-cols-2 gap-3">
-          <div className="col-span-2 h-16 animate-pulse rounded-2xl bg-muted" />
-          {[0, 1, 2, 3].map(i => <div key={i} className="h-24 animate-pulse rounded-2xl bg-muted" />)}
+        <div className="relative mt-8 grid grid-cols-2 gap-3">
+          <div className="col-span-2 h-20 animate-pulse rounded-2xl bg-muted" />
+          {[0, 1, 2, 3].map(i => <div key={i} className="h-32 animate-pulse rounded-2xl bg-muted" />)}
         </div>
       )}
 
       {!loading && items.length > 0 && (
-        <div className="mt-8 grid animate-fade-in grid-cols-2 gap-3">
+        <div className="relative mt-8 grid animate-fade-in grid-cols-2 gap-3">
           {hero && <HubTile item={hero} featured />}
           {rest.map((item, i) => (
             <HubTile key={item.id} item={item} featured={i === rest.length - 1 && rest.length % 2 === 1} />
@@ -80,33 +88,33 @@ export default function SafasityHubPage() {
       )}
 
       {!loading && settings?.showQr && (
-        <div className="mt-6 flex flex-col items-center rounded-2xl border border-border bg-white p-6 text-center shadow-sm">
+        <div className="sf-card relative mt-6 flex flex-col items-center rounded-2xl p-6 text-center">
           <canvas ref={qrRef} className="rounded-lg" />
           <p className="mt-3 text-xs text-muted-foreground">برای دیدن منو اسکن کنید</p>
         </div>
       )}
 
       {!loading && settings?.addressFa && (
-        <div className="mt-4 overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
+        <div className="sf-card relative mt-4 overflow-hidden rounded-2xl">
           {mapEmbedSrc && (
             <iframe
               src={mapEmbedSrc}
               width="100%"
               height="180"
-              style={{ border: 0, display: 'block' }}
+              style={{ border: 0, display: 'block', filter: 'sepia(0.25) saturate(0.85)' }}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               title="موقعیت روی نقشه"
             />
           )}
           <div className="flex items-start gap-2.5 p-4">
-            <MapPin size={16} strokeWidth={1.5} className="mt-0.5 flex-shrink-0 text-muted-foreground" />
+            <MapPin size={16} strokeWidth={1.75} className="sf-gold mt-0.5 flex-shrink-0" />
             <p className="flex-1 text-[13px] leading-relaxed text-foreground">{settings.addressFa}</p>
           </div>
           {mapLinkHref && (
             <a href={mapLinkHref} target="_blank" rel="noreferrer"
               className="flex items-center justify-center gap-1.5 border-t border-border py-3 text-[12px] text-muted-foreground hover:bg-muted hover:text-foreground">
-              <Navigation size={13} strokeWidth={1.5} /> مسیریابی در گوگل‌مپ
+              <Navigation size={13} strokeWidth={1.75} /> مسیریابی در گوگل‌مپ
             </a>
           )}
         </div>
@@ -115,8 +123,20 @@ export default function SafasityHubPage() {
   );
 }
 
+function HubIcon({ kind, size }: { kind: HubItemKind; size: number }) {
+  const src = KIND_ICON[kind];
+  if (src) {
+    return <Image src={src} alt="" aria-hidden width={size} height={size} className="flex-shrink-0 object-contain" style={{ width: size, height: size }} />;
+  }
+  const Icon = FALLBACK_ICON[kind] ?? Link2;
+  return (
+    <span className="flex flex-shrink-0 items-center justify-center text-foreground" style={{ width: size, height: size }}>
+      <Icon size={Math.round(size * 0.55)} strokeWidth={1.75} />
+    </span>
+  );
+}
+
 function HubTile({ item, featured }: { item: HubItem; featured?: boolean }) {
-  const { icon: Icon, badge } = KIND_STYLE[item.kind];
   const external = isExternal(item);
   return (
     <a
@@ -124,14 +144,13 @@ function HubTile({ item, featured }: { item: HubItem; featured?: boolean }) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       className={cn(
-        'flex items-center gap-3 rounded-2xl border border-border bg-white shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md active:translate-y-0',
-        featured ? 'col-span-2 px-5 py-4' : 'col-span-1 flex-col justify-center gap-2.5 px-4 py-6 text-center',
+        'sf-card flex items-center gap-4 rounded-2xl transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-8px_rgba(60,67,83,0.35)] active:translate-y-0',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#AD8C61] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F3F0E9]',
+        featured ? 'col-span-2 px-5 py-4' : 'col-span-1 flex-col justify-center gap-3 px-4 py-6 text-center',
       )}
     >
-      <span className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full', badge)}>
-        <Icon size={18} strokeWidth={1.5} />
-      </span>
-      <span className={cn('font-medium text-foreground', featured ? 'flex-1 text-[15px]' : 'text-[13px] leading-snug')}>
+      <HubIcon kind={item.kind} size={featured ? 60 : 76} />
+      <span className={cn('sf-hand text-foreground', featured ? 'flex-1 text-[19px]' : 'text-[17px] leading-snug')}>
         {item.label}
       </span>
     </a>

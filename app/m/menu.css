@@ -32,12 +32,16 @@
 }
 
 /* ─── tokens منو ─── */
+/* هم‌رنگ تم صفاسیتی (app/safasity/safasity.css): کرم + سرمه‌ای + طلایی */
 .menu-root {
-  --background: 30 9% 98%;
-  --foreground: 24 10% 10%;
-  --border: 24 6% 90%;
-  --muted: 30 9% 96%;
-  --muted-foreground: 25 5% 45%;
+  --background: 42 30% 93%;
+  --foreground: 222 16% 28%;
+  --border: 38 20% 82%;
+  --muted: 40 22% 89%;
+  --muted-foreground: 222 10% 45%;
+  --primary: 222 16% 28%;
+  --primary-foreground: 42 30% 96%;
+  --menu-gold: 34 32% 53%;
   --danger: 350 89% 41%;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
@@ -48,6 +52,7 @@
 .menu-root .text-muted-foreground { color: hsl(var(--muted-foreground)); }
 .menu-root .border-border { border-color: hsl(var(--border)); }
 .menu-root .divide-border > * + * { border-color: hsl(var(--border)); }
+.menu-root .menu-section-title { color: hsl(var(--menu-gold)); }
 
 /* فونت بر اساس زبان و انتخاب ادمین */
 html[data-lang='en'][data-en-font='GochiHand'] .menu-root,

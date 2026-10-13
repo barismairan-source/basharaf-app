@@ -1,0 +1,43 @@
+/* ─── تم صفاسیتی — کرم + سرمه‌ای + طلایی (هم‌رنگ آیکون‌های دست‌کشیده‌ی برند) ─── */
+.safasity-root {
+  --background: 42 30% 93%;        /* #F3F0E9 */
+  --foreground: 222 16% 28%;       /* #3C4353 */
+  --border: 38 20% 82%;
+  --muted: 40 22% 89%;
+  --muted-foreground: 222 10% 45%;
+  --primary: 222 16% 28%;
+  --primary-foreground: 42 30% 96%;
+  --sf-card: 43 41% 97%;           /* #FAF8F3 */
+  --sf-gold: 34 32% 53%;           /* #AD8C61 */
+  --sf-gold-dark: 34 32% 40%;
+  --accent: #AD8C61;
+  --accent-subtle: #EFE6D8;
+  --accent-hover: #8E7049;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  min-height: 100vh;
+}
+
+/* کلاس‌های ثابت داخل صفحه‌ها به رنگ‌های برند نگاشت می‌شوند */
+.safasity-root .bg-white { background-color: hsl(var(--sf-card)); }
+.safasity-root .bg-stone-900 { background-color: hsl(var(--foreground)); }
+.safasity-root .bg-stone-100,
+.safasity-root .bg-amber-100 { background-color: hsl(var(--muted)); }
+.safasity-root .border-stone-900 { border-color: hsl(var(--foreground)); }
+.safasity-root .border-stone-400 { border-color: hsl(var(--sf-gold)); }
+.safasity-root .text-stone-600 { color: hsl(var(--muted-foreground)); }
+.safasity-root .text-amber-600,
+.safasity-root .text-amber-700 { color: hsl(var(--sf-gold-dark)); }
+
+.safasity-root .sf-card {
+  background-color: hsl(var(--sf-card));
+  border: 1px solid hsl(var(--foreground) / 0.14);
+}
+.safasity-root .sf-gold { color: hsl(var(--sf-gold)); }
+
+@font-face {
+  font-family: 'IRANMarker';
+  src: url('/fonts/IRANMarker.ttf') format('truetype');
+  font-weight: normal; font-style: normal; font-display: swap;
+}
+.safasity-root .sf-hand { font-family: 'IRANMarker', system-ui, sans-serif; line-height: 1.6; }

@@ -10,13 +10,14 @@ const PROTEIN_LABEL: Record<RecipeProtein, string> = {
   chicken: 'مرغ', red_meat: 'گوشت قرمز', seafood: 'دریایی', vegetarian: 'گیاهی', vegan: 'وگان', other: 'سایر',
 };
 const PROTEIN_OPTIONS = Object.keys(PROTEIN_LABEL) as RecipeProtein[];
-const ACCENTS = ['amber', 'rose', 'violet', 'emerald', 'sky'] as const;
+/** طیف رنگی برند صفاسیتی (کرم/طلایی/سرمه‌ای) برای کارت‌های بدون عکس. */
+const ACCENTS = ['gold', 'slate', 'sand', 'navy', 'bronze'] as const;
 const ACCENT_BG: Record<string, string> = {
-  amber: 'bg-gradient-to-br from-amber-200 to-amber-400',
-  rose: 'bg-gradient-to-br from-rose-200 to-rose-400',
-  violet: 'bg-gradient-to-br from-violet-200 to-violet-400',
-  emerald: 'bg-gradient-to-br from-emerald-200 to-emerald-400',
-  sky: 'bg-gradient-to-br from-sky-200 to-sky-400',
+  gold: 'bg-gradient-to-br from-[#EFE6D8] to-[#AD8C61]',
+  slate: 'bg-gradient-to-br from-[#E4E1DA] to-[#8A93A6]',
+  sand: 'bg-gradient-to-br from-[#F6F1E7] to-[#C9B08A]',
+  navy: 'bg-gradient-to-br from-[#8A93A6] to-[#3C4353]',
+  bronze: 'bg-gradient-to-br from-[#EDE3D1] to-[#9C7A4E]',
 };
 
 export default function RecipesPage() {

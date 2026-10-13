@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { LanguageToggle } from '@/components/menu/LanguageToggle';
 import { MenuSection } from '@/components/menu/MenuSection';
 import { useLanguage } from '@/lib/menu/i18n';
@@ -50,6 +52,9 @@ export function PublicMenu({ channel }: { channel: MenuChannel }) {
     <div className={['menu-root', mounted ? 'animate-fade-in' : ''].join(' ')}>
       <LanguageToggle />
       <div className="mx-auto max-w-2xl px-6 pb-24 pt-20 sm:px-8 sm:pt-28">
+        <Link href="/safasity" aria-label="صفاسیتی" className="mx-auto mb-10 block w-fit">
+          <Image src="/safasity/wordmark.png" alt="صفاسیتی" width={150} height={52} priority className="h-auto w-[150px]" />
+        </Link>
         {title && (
           <header className="mb-10 text-center">
             <h1 className="text-2xl leading-snug text-foreground sm:text-3xl">{title}</h1>

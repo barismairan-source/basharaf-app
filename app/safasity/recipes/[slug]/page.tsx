@@ -48,7 +48,7 @@ export default function RecipeDetailPage({ params }: { params: { slug: string } 
         <ArrowRight size={14} strokeWidth={1.5} /> رسپی‌بوک
       </Link>
 
-      <div className="mt-4 flex h-44 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-200 to-amber-400">
+      <div className="mt-4 flex h-44 items-center justify-center rounded-2xl bg-gradient-to-br from-[#EFE6D8] to-[#AD8C61]">
         <ChefHat size={48} strokeWidth={1.2} className="text-white/90" />
       </div>
 
