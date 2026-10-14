@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   // عمداً بدون title اینجا: هر صفحه عنوان خودش را می‌گذارد، فقط عکس/siteName مشترک است.
   openGraph: {
     siteName: 'با شرف',
-    images: [{ url: '/og-image.jpg', width: 1920, height: 1080 }],
+    images: [{ url: '/og-image.jpg', width: 1200, height: 630 }],
     locale: 'fa_IR',
   },
   twitter: {

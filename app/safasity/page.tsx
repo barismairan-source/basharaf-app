@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import QRCode from 'qrcode';
-import { Link2, MapPin, Navigation, ShoppingBag } from 'lucide-react';
+import { Link2, MapPin, Navigation } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { HubItem, HubItemKind, HubSettings } from '@/types';
 
@@ -14,10 +14,7 @@ const KIND_ICON: Partial<Record<HubItemKind, string>> = {
   apply: '/safasity/icon-apply.png',
   instagram: '/safasity/icon-instagram.png',
   phone: '/safasity/icon-phone.png',
-};
-const FALLBACK_ICON: Partial<Record<HubItemKind, typeof Link2>> = {
-  order: ShoppingBag,
-  custom: Link2,
+  order: '/safasity/icon-order.png',
 };
 
 /** لینک‌های داخلی (منو/استخدام) و tel: در همان تب باز می‌شوند؛ بقیه در تب جدید. */
@@ -45,7 +42,7 @@ export default function SafasityHubPage() {
   useEffect(() => {
     if (!settings?.showQr || !origin || !qrRef.current) return;
     QRCode.toCanvas(qrRef.current, `${origin}/safasity/menu`, {
-      width: 168, margin: 1, color: { dark: '#3C4353', light: '#FAF8F3' },
+      width: 168, margin: 1, color: { dark: '#3A4454', light: '#FBF9F4' },
     }).catch(() => {});
   }, [settings?.showQr, origin]);
 
@@ -66,7 +63,7 @@ export default function SafasityHubPage() {
 
       <header className="relative text-center">
         <div className="relative mx-auto mb-1 h-[68px] w-[204px]">
-          <Image src="/safasity/wordmark.png" alt={settings?.title || 'صفاسیتی'} fill className="object-contain" priority />
+          <Image src="/safasity/wordmark.png" alt={settings?.title || 'صفاسیتی'} fill sizes="204px" className="object-contain" priority />
         </div>
         {settings?.bio && <p className="mt-1 text-sm text-muted-foreground">{settings.bio}</p>}
       </header>
@@ -119,6 +116,13 @@ export default function SafasityHubPage() {
           )}
         </div>
       )}
+
+      {!loading && (
+        <footer className="relative mt-10 flex flex-col items-center gap-2">
+          <Image src="/safasity/cat.png" alt="" aria-hidden width={420} height={286} className="h-auto w-[132px] opacity-90" />
+          <Image src="/safasity/logo-fa.png" alt="صفاسیتی" width={600} height={223} className="h-auto w-[88px] opacity-70" />
+        </footer>
+      )}
     </div>
   );
 }
@@ -128,10 +132,9 @@ function HubIcon({ kind, size }: { kind: HubItemKind; size: number }) {
   if (src) {
     return <Image src={src} alt="" aria-hidden width={size} height={size} className="flex-shrink-0 object-contain" style={{ width: size, height: size }} />;
   }
-  const Icon = FALLBACK_ICON[kind] ?? Link2;
   return (
     <span className="flex flex-shrink-0 items-center justify-center text-foreground" style={{ width: size, height: size }}>
-      <Icon size={Math.round(size * 0.55)} strokeWidth={1.75} />
+      <Link2 size={Math.round(size * 0.55)} strokeWidth={1.75} />
     </span>
   );
 }
@@ -144,8 +147,8 @@ function HubTile({ item, featured }: { item: HubItem; featured?: boolean }) {
       target={external ? '_blank' : undefined}
       rel={external ? 'noreferrer' : undefined}
       className={cn(
-        'sf-card flex items-center gap-4 rounded-2xl transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-8px_rgba(60,67,83,0.35)] active:translate-y-0',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#AD8C61] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F3F0E9]',
+        'sf-card flex items-center gap-4 rounded-2xl transition-all hover:-translate-y-0.5 hover:shadow-[0_6px_18px_-8px_rgba(58,68,84,0.35)] active:translate-y-0',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#B38B59] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F1E8]',
         featured ? 'col-span-2 px-5 py-4' : 'col-span-1 flex-col justify-center gap-3 px-4 py-6 text-center',
       )}
     >

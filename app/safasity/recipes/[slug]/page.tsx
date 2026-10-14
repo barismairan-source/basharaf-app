@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowRight, ChefHat, Clock, Users, Instagram } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowRight, Clock, Users, Instagram } from 'lucide-react';
 import type { Recipe, RecipeProtein } from '@/types';
 
 const PROTEIN_LABEL: Record<RecipeProtein, string> = {
@@ -48,8 +49,8 @@ export default function RecipeDetailPage({ params }: { params: { slug: string } 
         <ArrowRight size={14} strokeWidth={1.5} /> رسپی‌بوک
       </Link>
 
-      <div className="mt-4 flex h-44 items-center justify-center rounded-2xl bg-gradient-to-br from-[#EFE6D8] to-[#AD8C61]">
-        <ChefHat size={48} strokeWidth={1.2} className="text-white/90" />
+      <div className="mt-4 flex h-44 items-center justify-center rounded-2xl bg-muted p-8">
+        <Image src="/safasity/doodle-sieve.png" alt="" aria-hidden width={240} height={240} className="h-full w-auto object-contain" />
       </div>
 
       {recipe.category && (

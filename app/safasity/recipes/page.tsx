@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ChefHat, Clock, Users, Search, X } from 'lucide-react';
+import Image from 'next/image';
+import { Clock, Users, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Recipe, RecipeCategory, IngredientTag, RecipeProtein } from '@/types';
 
@@ -10,15 +11,8 @@ const PROTEIN_LABEL: Record<RecipeProtein, string> = {
   chicken: 'مرغ', red_meat: 'گوشت قرمز', seafood: 'دریایی', vegetarian: 'گیاهی', vegan: 'وگان', other: 'سایر',
 };
 const PROTEIN_OPTIONS = Object.keys(PROTEIN_LABEL) as RecipeProtein[];
-/** طیف رنگی برند صفاسیتی (کرم/طلایی/سرمه‌ای) برای کارت‌های بدون عکس. */
-const ACCENTS = ['gold', 'slate', 'sand', 'navy', 'bronze'] as const;
-const ACCENT_BG: Record<string, string> = {
-  gold: 'bg-gradient-to-br from-[#EFE6D8] to-[#AD8C61]',
-  slate: 'bg-gradient-to-br from-[#E4E1DA] to-[#8A93A6]',
-  sand: 'bg-gradient-to-br from-[#F6F1E7] to-[#C9B08A]',
-  navy: 'bg-gradient-to-br from-[#8A93A6] to-[#3C4353]',
-  bronze: 'bg-gradient-to-br from-[#EDE3D1] to-[#9C7A4E]',
-};
+/** کارت‌های بدون عکس — زمینه‌ی کرم + یکی از دودل‌های آشپزخانه‌ی برند (public/safasity). */
+const DOODLES = ['doodle-shaker', 'doodle-sieve', 'doodle-bottle', 'doodle-stand', 'doodle-plate'] as const;
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -138,8 +132,8 @@ export default function RecipesPage() {
             href={`/safasity/recipes/${r.slug}`}
             className="flex gap-4 overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
-            <div className={`flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl ${ACCENT_BG[ACCENTS[i % ACCENTS.length]!]}`}>
-              <ChefHat size={30} strokeWidth={1.5} className="text-white/90" />
+            <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl bg-muted p-4">
+              <Image src={`/safasity/${DOODLES[i % DOODLES.length]}.png`} alt="" aria-hidden width={240} height={240} className="h-full w-full object-contain" />
             </div>
             <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
               {r.category && <span className="w-fit rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-600">{r.category.label}</span>}
