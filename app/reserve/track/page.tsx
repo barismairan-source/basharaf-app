@@ -62,7 +62,7 @@ export default function ReservationTrackPage() {
       </Link>
 
       <div className="mb-6 text-center">
-        <div className="text-[18px] font-medium text-stone-900">پیگیری رزرو</div>
+        <h1 className="text-[18px] font-medium text-stone-900">پیگیری رزرو</h1>
         <div className="text-[12.5px] text-muted mt-1">کد پیگیری و شماره موبایل رزرو را وارد کنید</div>
       </div>
 

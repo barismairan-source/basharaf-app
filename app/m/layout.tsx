@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './menu.css';
 import { LanguageProvider } from '@/lib/menu/i18n';
+import { SafasityTheme } from '@/components/safasity/SafasityTheme';
 
 export const metadata: Metadata = {
   title: 'منو',
@@ -8,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function MenuLayout({ children }: { children: React.ReactNode }) {
-  return <LanguageProvider initial="fa">{children}</LanguageProvider>;
+  return <LanguageProvider initial="fa"><SafasityTheme>{children}</SafasityTheme></LanguageProvider>;
 }

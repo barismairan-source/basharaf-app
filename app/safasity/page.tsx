@@ -153,7 +153,7 @@ function HubTile({ item, featured }: { item: HubItem; featured?: boolean }) {
       )}
     >
       <HubIcon kind={item.kind} size={featured ? 60 : 76} />
-      <span className={cn('sf-hand text-foreground', featured ? 'flex-1 text-[19px]' : 'text-[17px] leading-snug')}>
+      <span className={cn('sf-hand text-foreground', featured ? 'flex-1 text-[16px]' : 'text-[15px] leading-snug')}>
         {item.label}
       </span>
     </a>

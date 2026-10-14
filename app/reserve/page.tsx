@@ -136,7 +136,7 @@ export default function PublicReservePage() {
   return (
     <div className="mx-auto max-w-md px-4 pb-24 pt-6 sm:px-6">
       <div className="mb-6 text-center">
-        <div className="text-[18px] font-medium text-stone-900">رزرو میز</div>
+        <h1 className="text-[18px] font-medium text-stone-900">رزرو میز</h1>
         <div className="text-[12.5px] text-muted mt-1">با شرف</div>
       </div>
 

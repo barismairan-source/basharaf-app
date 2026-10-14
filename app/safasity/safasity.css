@@ -1,49 +1,111 @@
-/* ─── تم صفاسیتی — کرم + سرمه‌ای + طلایی (هم‌رنگ آیکون‌های دست‌کشیده‌ی برند) ─── */
+/* ═══════════════════════════════════════════════════════════════════
+   تم صفاسیتی — مشترک بین همه‌ی صفحه‌هایی که از basharaf.me/safasity لینک
+   شده‌اند (هاب، منو، رزرو، سفارش، همکاری، رسپی‌بوک). پنل/CMS از این فایل
+   استفاده نمی‌کند. پالت و فونت از «Safasity assets - Oct 14».
+   کنتراست: متن اصلی ۸.۷، متن ثانوی ≥۵، دکمه‌ی سرمه‌ای با متن کرم ۸.۷ (WCAG AA).
+   طلایی #B38B59 روی کرم فقط ۲.۸ است → فقط برای گرافیک/حاشیه؛ متن طلایی از
+   سایه‌ی تیره‌تر (#8A6A42 تیتر بزرگ، #7F6139 متن ریز) استفاده می‌کند.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@font-face {
+  font-family: 'Haiku';
+  src: url('/fonts/safasity/Haiku-RavanMedium.woff2') format('woff2');
+  font-weight: 400 500; font-style: normal; font-display: swap;
+  size-adjust: 135%; /* بدنه‌ی حروف Haiku ~۳۲٪ کوچک‌تر از Vazirmatn است؛ هم‌اندازه‌شان می‌کند */
+}
+@font-face {
+  font-family: 'Haiku';
+  src: url('/fonts/safasity/Haiku-RavanBold.woff2') format('woff2');
+  font-weight: 600 900; font-style: normal; font-display: swap;
+  size-adjust: 135%;
+}
+@font-face {
+  font-family: 'Stiff Ballpoint';
+  src: url('/fonts/safasity/StiffBallpoint-Regular.otf') format('opentype');
+  font-weight: 400; font-style: normal; font-display: swap;
+  unicode-range: U+0000-00FF, U+2000-206F;
+  size-adjust: 112%;
+}
+
 .safasity-root {
-  /* پالت رسمی برند (Safasity assets - Oct 14 / Colors) */
   --background: 42 40% 94%;        /* #F5F1E8 کرم */
   --foreground: 217 18% 28%;       /* #3A4454 سرمه‌ای */
-  --border: 38 22% 82%;
+  --border: 38 26% 79%;
   --muted: 40 26% 89%;
-  --muted-foreground: 217 11% 45%;
+  --muted-foreground: 219 11% 41%; /* #5E6676 */
   --primary: 217 18% 28%;
-  --primary-foreground: 42 40% 96%;
-  --sf-card: 43 50% 97%;
-  --sf-gold: 33 37% 53%;           /* #B38B59 طلایی */
-  --sf-gold-dark: 33 37% 40%;
-  --sf-burgundy: 359 56% 27%;      /* #6C1E1F زرشکی */
-  --sf-dark: 221 24% 13%;          /* #1A1F2A سرمه‌ای تیره */
-  --accent: #B38B59;
-  --accent-subtle: #EFE6D8;
-  --accent-hover: #8F6E45;
+  --primary-foreground: 42 40% 94%;
+  --danger: 359 56% 27%;           /* #6C1E1F زرشکی — خطا هم به رنگ برند */
+  --sf-card: 43 50% 97%;           /* #FBF9F4 */
+  --sf-gold: 33 37% 53%;           /* #B38B59 */
+  --sf-burgundy: 359 56% 27%;      /* #6C1E1F */
+  --sf-dark: 221 24% 13%;          /* #1A1F2A */
+  --accent: #3A4454;               /* دکمه/انتخاب = سرمه‌ای (طلایی روی کرم خوانا نیست) */
+  --accent-subtle: #E9E5DB;
+  --accent-hover: #1A1F2A;
+  --sf-font-title: 'Stiff Ballpoint', 'Haiku', var(--font-vazir), system-ui, sans-serif;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   min-height: 100vh;
 }
 
-/* کلاس‌های ثابت داخل صفحه‌ها به رنگ‌های برند نگاشت می‌شوند */
-.safasity-root .bg-white { background-color: hsl(var(--sf-card)); }
-.safasity-root .bg-stone-900 { background-color: hsl(var(--foreground)); }
-.safasity-root .bg-stone-100,
-.safasity-root .bg-amber-100,
-.safasity-root .bg-muted,
-.safasity-root .hover\:bg-muted:hover { background-color: hsl(var(--muted)); }
-.safasity-root .border-stone-900 { border-color: hsl(var(--foreground)); }
-.safasity-root .border-stone-400 { border-color: hsl(var(--sf-gold)); }
-.safasity-root .text-stone-600 { color: hsl(var(--muted-foreground)); }
-.safasity-root .text-amber-600,
-.safasity-root .text-amber-700 { color: hsl(var(--sf-gold-dark)); }
+/* ─── فونت: تیترها/دکمه‌ها با فونت برند؛ متن بلند و فیلدها با فونت ساده (مثل منوی چاپی) ─── */
+/* فقط تیترها و دکمه‌ی اصلی — دکمه‌های کوچک (ساعت، چیپ، +/−) با فونت ساده می‌مانند تا ریز و ناخوانا نشوند */
+.safasity-root :is(h1, h2, h3, .sf-hand, button.bg-accent, a.bg-accent, button.bg-stone-900, a.bg-stone-900) { font-family: var(--sf-font-title); }
+.safasity-root :is(h1, h2, h3, .sf-hand, button.bg-accent, a.bg-accent, button.bg-stone-900, a.bg-stone-900) { font-weight: 700; }
+.safasity-root :is(input, textarea, select) { font-family: var(--font-vazir), system-ui, sans-serif; }
+.safasity-root .sf-hand { line-height: 1.6; }
 
+/* ─── توکن‌های hex ثابت پروژه (lib/design/tokens) ─── */
+.safasity-root :is(.bg-surface, .bg-white) { background-color: hsl(var(--sf-card)); }
+.safasity-root :is(.bg-bg, .hover\:bg-bg:hover) { background-color: hsl(var(--background)); }
+.safasity-root .text-text { color: #3A4454; }
+.safasity-root .text-muted { color: #5E6676; }
+.safasity-root .text-muted\/60 { color: rgb(94 102 118 / 0.8); }
+.safasity-root .bg-border { background-color: hsl(var(--border)); }
+.safasity-root .text-danger { color: #6C1E1F; }
+.safasity-root .border-danger { border-color: #6C1E1F; }
+.safasity-root .text-accent { color: #3A4454; }
+
+/* ─── طیف خاکستری (stone/gray) → طیف کرم/سرمه‌ای برند ─── */
+.safasity-root :is(.bg-stone-50, .bg-gray-50) { background-color: #F1ECE1; }
+.safasity-root :is(.bg-stone-100, .bg-gray-100, .bg-amber-100, .bg-muted, .hover\:bg-muted:hover, .hover\:bg-stone-50:hover, .hover\:bg-gray-50:hover) { background-color: #EAE4D8; }
+.safasity-root :is(.bg-stone-200, .hover\:bg-stone-100:hover, .hover\:bg-gray-100:hover) { background-color: #E0D8C8; }
+.safasity-root :is(.bg-stone-800, .bg-stone-900, .bg-gray-900, .bg-black\/80) { background-color: #3A4454; }
+.safasity-root :is(.hover\:bg-stone-800:hover, .hover\:bg-stone-700:hover) { background-color: #1A1F2A; }
+
+.safasity-root :is(.border-stone-100, .border-gray-100, .divide-stone-100 > * + *) { border-color: #E6DFD1; }
+.safasity-root :is(.border-stone-200, .border-gray-200, .border-border) { border-color: #D9D0BF; }
+.safasity-root :is(.border-stone-300, .border-stone-400, .border-gray-400, .hover\:border-stone-300:hover, .focus\:border-stone-400:focus) { border-color: #B9AD97; }
+.safasity-root :is(.border-stone-500, .border-stone-700, .border-stone-800, .border-stone-900, .focus\:border-stone-500:focus) { border-color: #3A4454; }
+.safasity-root .ring-gray-100 { --tw-ring-color: #E6DFD1; }
+
+.safasity-root :is(.text-stone-900, .text-gray-900, .text-stone-800, .text-gray-800) { color: #1A1F2A; }
+.safasity-root :is(.text-stone-700, .text-gray-700) { color: #3A4454; }
+.safasity-root :is(.text-stone-600, .text-gray-600) { color: #4F5868; }
+.safasity-root :is(.text-stone-500, .text-gray-500, .text-muted-foreground) { color: #5E6676; }
+.safasity-root :is(.text-stone-400, .text-gray-400) { color: #6F7685; }
+.safasity-root .text-stone-100 { color: #F5F1E8; }
+.safasity-root ::placeholder { color: #7A8090; opacity: 1; }
+
+/* ─── طلایی/کهربایی → طلایی خوانای برند ─── */
+.safasity-root :is(.text-amber-600, .text-amber-700) { color: #7F6139; }
+.safasity-root .bg-amber-50 { background-color: #F3EADB; }
+
+/* ─── کمکی‌های اختصاصی صفحه‌ها ─── */
 .safasity-root .sf-card {
   background-color: hsl(var(--sf-card));
-  border: 1px solid hsl(var(--foreground) / 0.14);
+  border: 1px solid rgb(58 68 84 / 0.14);
 }
 .safasity-root .sf-gold { color: hsl(var(--sf-gold)); }
+.safasity-root .sf-gold-text { color: #8A6A42; }
 .safasity-root .sf-burgundy { color: hsl(var(--sf-burgundy)); }
 
-@font-face {
-  font-family: 'IRANMarker';
-  src: url('/fonts/IRANMarker.ttf') format('truetype');
-  font-weight: normal; font-style: normal; font-display: swap;
-}
-.safasity-root .sf-hand { font-family: 'IRANMarker', system-ui, sans-serif; line-height: 1.6; }
+/* ─── فرم همکاری (/apply): مشکی ثابت #1a1a1a → سرمه‌ای برند ─── */
+.safasity-root .bg-\[\#1a1a1a\] { background-color: #3A4454; }
+.safasity-root .border-\[\#1a1a1a\] { border-color: #3A4454; }
+.safasity-root .text-\[\#1a1a1a\] { color: #3A4454; }
+.safasity-root :is(.hover\:bg-black\/80:hover) { background-color: #1A1F2A; }
+.safasity-root :is(button.bg-\[\#1a1a1a\]) { font-family: var(--sf-font-title); font-weight: 700; }
+/* لوگوی JPG «با شرف» زمینه‌ی سفید دارد — روی کرم محو می‌شود به‌جای کادر سفید */
+.safasity-root img[src*='logo.jpg'] { mix-blend-mode: multiply; filter: brightness(1.05) contrast(1.05); } /* فشرده‌سازی تصویر، سفید را ~۲۵۰ می‌کند؛ این دو، کادر محو را هم برمی‌دارند */
