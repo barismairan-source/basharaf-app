@@ -174,7 +174,7 @@ function SectionBlock({
 }) {
   return (
     <section className="mb-6">
-      <h2 className="mb-2 text-[13px] text-stone-500">{section.labelFa}</h2>
+      <h2 className="sf-gold-text mb-2 text-[17px]">{section.labelFa}</h2>
       <Card>
         <div className="divide-y divide-stone-100">
           {section.items.map((item) => (
@@ -206,7 +206,7 @@ function ItemRow({
   return (
     <div className="flex items-center gap-3 px-4 py-3">
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] text-stone-800">{item.titleFa}</div>
+        <div className="sf-hand text-[14px] text-stone-800">{item.titleFa}</div>
         {item.descriptionFa && (
           <div className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
             {item.descriptionFa}

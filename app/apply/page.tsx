@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+import { SafasityLogoLink } from '@/components/safasity/SafasityTheme';
 import { Upload, CheckCircle2, Loader2, X, ArrowRight, ChefHat, Users } from 'lucide-react';
 import { normalizeDigits } from '@/lib/utils';
 import type { ScreeningQuestion } from '@/lib/recruitment/questions';
@@ -437,7 +437,7 @@ export default function ApplyPage() {
       <div className="min-h-screen backdrop-blur-md bg-black/30 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl px-10 pt-10 pb-12 max-w-sm w-full text-center shadow-2xl">
           <div className="flex justify-center mb-7">
-            <Image src="/logo.jpg" alt="باشرف" width={150} height={75} className="object-contain" />
+            <SafasityLogoLink width={150} />
           </div>
           <h1 className="text-[22px] font-bold text-gray-900 mb-4">درخواستت با موفقیت ثبت شد!</h1>
           <p className="text-sm text-gray-600 leading-[1.9]">
@@ -494,11 +494,13 @@ export default function ApplyPage() {
             </div>
           ))}
         </div>
-        <p className="text-[12px] font-medium text-gray-700">{STEPS[step]}</p>
+        <p className="sf-hand text-[13px] text-gray-700">{STEPS[step]}</p>
       </div>
 
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col bg-[#1a1a1a] px-6 py-10 justify-between">
+        <div>
+        <SafasityLogoLink onDark width={128} className="mx-auto mb-10" />
         <nav className="space-y-1">
           {STEPS.map((label, i) => {
             const isDone   = step > i;
@@ -506,7 +508,7 @@ export default function ApplyPage() {
             return (
               <div key={i} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg ${isActive ? 'bg-white/10' : ''}`}>
                 <div className={`w-[22px] h-[22px] rounded-full flex-shrink-0 flex items-center justify-center text-[11px] font-semibold ${
-                  isDone || isActive ? 'bg-white text-[#1a1a1a]' : 'bg-white/15 text-white/50'
+                  isDone || isActive ? 'bg-white text-[#1a1a1a]' : 'bg-white/20 text-white/80'
                 }`}>
                   {isDone ? (
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
@@ -514,19 +516,20 @@ export default function ApplyPage() {
                     </svg>
                   ) : i + 1}
                 </div>
-                <span className={`text-[13px] ${isDone ? 'text-white opacity-40 line-through' : isActive ? 'text-white' : 'text-white opacity-30'}`}>{label}</span>
+                <span className={`sf-hand text-[14px] ${isDone ? 'text-white opacity-60 line-through' : isActive ? 'text-white' : 'text-white opacity-70'}`}>{label}</span>
               </div>
             );
           })}
         </nav>
-        <p className="text-[11px] text-white opacity-25">اطلاعات شما محرمانه است</p>
+        </div>
+        <p className="text-[11px] text-white opacity-60">اطلاعات شما محرمانه است</p>
       </aside>
 
       {/* Form column */}
       <main className="bg-white min-h-screen">
         <div className="mx-auto max-w-[640px] px-5 pt-6 pb-28 lg:px-10 lg:py-12">
-          <div className="flex justify-center mb-6 lg:mb-8">
-            <Image src="/logo.jpg" alt="باشرف" width={130} height={65} className="object-contain" />
+          <div className="flex justify-center mb-6 lg:hidden">
+            <SafasityLogoLink width={120} />
           </div>
 
           {/* STEP 0: area */}
@@ -543,7 +546,7 @@ export default function ApplyPage() {
                         selected ? 'border-[#1a1a1a] bg-[#1a1a1a]' : 'border-gray-200 bg-white hover:border-gray-400 hover:shadow-sm'
                       }`}>
                       <Icon size={22} strokeWidth={1.5} className={selected ? 'text-white' : 'text-gray-800'} />
-                      <p className={`text-base font-semibold mt-2.5 mb-1 ${selected ? 'text-white' : 'text-gray-800'}`}>{label}</p>
+                      <p className={`sf-hand text-base mt-2.5 mb-1 ${selected ? 'text-white' : 'text-gray-800'}`}>{label}</p>
                       <p className={`text-xs leading-relaxed ${selected ? 'text-white/70' : 'text-gray-400'}`}>{sub}</p>
                     </button>
                   );

@@ -7,25 +7,7 @@
    سایه‌ی تیره‌تر (#8A6A42 تیتر بزرگ، #7F6139 متن ریز) استفاده می‌کند.
    ═══════════════════════════════════════════════════════════════════ */
 
-@font-face {
-  font-family: 'Haiku';
-  src: url('/fonts/safasity/Haiku-RavanMedium.woff2') format('woff2');
-  font-weight: 400 500; font-style: normal; font-display: swap;
-  size-adjust: 135%; /* بدنه‌ی حروف Haiku ~۳۲٪ کوچک‌تر از Vazirmatn است؛ هم‌اندازه‌شان می‌کند */
-}
-@font-face {
-  font-family: 'Haiku';
-  src: url('/fonts/safasity/Haiku-RavanBold.woff2') format('woff2');
-  font-weight: 600 900; font-style: normal; font-display: swap;
-  size-adjust: 135%;
-}
-@font-face {
-  font-family: 'Stiff Ballpoint';
-  src: url('/fonts/safasity/StiffBallpoint-Regular.otf') format('opentype');
-  font-weight: 400; font-style: normal; font-display: swap;
-  unicode-range: U+0000-00FF, U+2000-206F;
-  size-adjust: 112%;
-}
+/* فونت‌ها با next/font در app/safasity/fonts.ts تعریف و preload می‌شوند (متغیرهای --font-haiku / --font-stiff). */
 
 .safasity-root {
   --background: 42 40% 94%;        /* #F5F1E8 کرم */
@@ -43,7 +25,7 @@
   --accent: #3A4454;               /* دکمه/انتخاب = سرمه‌ای (طلایی روی کرم خوانا نیست) */
   --accent-subtle: #E9E5DB;
   --accent-hover: #1A1F2A;
-  --sf-font-title: 'Stiff Ballpoint', 'Haiku', var(--font-vazir), system-ui, sans-serif;
+  --sf-font-title: var(--font-stiff), var(--font-haiku), var(--font-vazir), system-ui, sans-serif;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
   min-height: 100vh;
@@ -52,7 +34,7 @@
 /* ─── فونت: تیترها/دکمه‌ها با فونت برند؛ متن بلند و فیلدها با فونت ساده (مثل منوی چاپی) ─── */
 /* فقط تیترها و دکمه‌ی اصلی — دکمه‌های کوچک (ساعت، چیپ، +/−) با فونت ساده می‌مانند تا ریز و ناخوانا نشوند */
 .safasity-root :is(h1, h2, h3, .sf-hand, button.bg-accent, a.bg-accent, button.bg-stone-900, a.bg-stone-900) { font-family: var(--sf-font-title); }
-.safasity-root :is(h1, h2, h3, .sf-hand, button.bg-accent, a.bg-accent, button.bg-stone-900, a.bg-stone-900) { font-weight: 700; }
+.safasity-root :is(h1, h2, h3, .sf-hand, button.bg-accent, a.bg-accent, button.bg-stone-900, a.bg-stone-900) { font-weight: 700; font-synthesis-weight: none; } /* Stiff Ballpoint فقط یک وزن دارد؛ بولد مصنوعی نسازد */
 .safasity-root :is(input, textarea, select) { font-family: var(--font-vazir), system-ui, sans-serif; }
 .safasity-root .sf-hand { line-height: 1.6; }
 
@@ -107,5 +89,3 @@
 .safasity-root .text-\[\#1a1a1a\] { color: #3A4454; }
 .safasity-root :is(.hover\:bg-black\/80:hover) { background-color: #1A1F2A; }
 .safasity-root :is(button.bg-\[\#1a1a1a\]) { font-family: var(--sf-font-title); font-weight: 700; }
-/* لوگوی JPG «با شرف» زمینه‌ی سفید دارد — روی کرم محو می‌شود به‌جای کادر سفید */
-.safasity-root img[src*='logo.jpg'] { mix-blend-mode: multiply; filter: brightness(1.05) contrast(1.05); } /* فشرده‌سازی تصویر، سفید را ~۲۵۰ می‌کند؛ این دو، کادر محو را هم برمی‌دارند */

@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function ApplyLayout({ children }: { children: React.ReactNode }) {
-  return <SafasityTheme logo>{children}</SafasityTheme>;
+  return <SafasityTheme>{children}</SafasityTheme>;
 }
