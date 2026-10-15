@@ -30,14 +30,17 @@ function HrShell({ children }: { children: React.ReactNode }) {
   const branches = useAppStore(s => s.branches);
   const { branchId, setBranchId } = useHrBranchFilter();
   const isBranchUser = user?.role === 'BranchUser';
+  // صفحه‌ی استخدام: درخواست‌ها شعبه ندارند (فیلتر شعبه بی‌اثر است) و در دسکتاپ
+  // همین ناوبری در سایدبار هست — پس این نوار فقط در موبایل و بدون فیلتر شعبه.
+  const isRecruitment = pathname === '/hr/recruitment';
 
   return (
     <div>
-      <div className="px-4 lg:px-6 pt-4 lg:pt-6 pb-2">
+      <div className={cn('px-4 lg:px-6 pt-4 lg:pt-6 pb-2', isRecruitment && 'pt-3 pb-0 md:hidden')}>
         <div className="max-w-5xl mx-auto space-y-3">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="text-[11px] font-medium text-muted tracking-wide">منابع انسانی</div>
-            {!isBranchUser && branches.length > 0 && (
+            {!isBranchUser && !isRecruitment && branches.length > 0 && (
               <Select value={branchId} onChange={e => setBranchId(e.target.value)} className="max-w-[180px]" aria-label="فیلتر شعبه">
                 <option value="">— همه شعبه‌ها —</option>
                 {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}

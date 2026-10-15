@@ -1,5 +1,6 @@
 import type { User } from '@/types';
 import { isAdmin } from '@/lib/rbac';
+import { normalizeSearchText, searchTokens, phoneDigitsQuery } from './searchNormalize';
 import type { JobApplication, ApplicationStatus, ApplicationArea, ApplicantGender, ShiftSlot, ReferralSource } from './questions';
 
 /**
@@ -136,11 +137,14 @@ function applyNonStatusFilters(
     result = result.filter((a) => a.hasResume === wantResume);
   }
 
-  const q = filters.search.trim().toLowerCase();
-  if (q) {
-    result = result.filter((a) =>
-      `${a.firstName} ${a.lastName} ${a.phone}`.toLowerCase().includes(q)
-    );
+  const tokens = searchTokens(filters.search);
+  if (tokens.length > 0) {
+    const digits = phoneDigitsQuery(filters.search);
+    result = result.filter((a) => {
+      const hay = normalizeSearchText(`${a.firstName} ${a.lastName} ${a.phone}`);
+      if (tokens.every((tok) => hay.includes(tok))) return true;
+      return !!digits && normalizeSearchText(a.phone).replace(/\D/g, '').includes(digits);
+    });
   }
 
   for (const [fieldKey, filterVal] of Object.entries(filters.dynamicFilters)) {

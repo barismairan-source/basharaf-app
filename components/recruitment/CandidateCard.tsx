@@ -1,201 +1,134 @@
 'use client';
 
-import { Phone, PhoneCall, MapPin, FileText, Star, Check, ChevronDown } from 'lucide-react';
-import { Chip, StatusPill } from '@/components/ui';
+import { FileText, PanelLeftOpen } from 'lucide-react';
+import { Button, Chip, StatusPill } from '@/components/ui';
 import { cn } from '@/lib/utils';
-import {
-  AREA_LABELS, STATUS_LABELS, SHIFT_LABELS,
-  type JobApplication, type ApplicationStatus, type ApplicationArea,
-} from '@/lib/recruitment/questions';
-import { STATUS_TONE, detectKeywords, faDate } from '@/lib/recruitment/display';
-import type { FormFieldData } from '@/lib/recruitment/form-types';
-import { CandidateDetail } from './CandidateDetail';
+import { AREA_LABELS, STATUS_LABELS, type JobApplication } from '@/lib/recruitment/questions';
+import { STATUS_TONE, faDate } from '@/lib/recruitment/display';
+import { CallButton, PhoneText, ScoreBadge, SelectBox, ShiftSummary, faNum } from './CandidateBits';
 
-export interface CandidateCardProps {
+export interface CandidateItemProps {
   application: JobApplication;
-  isOpen: boolean;
-  onToggleOpen: () => void;
-  selectionMode: boolean;
+  /** پنل جزئیات همین داوطلب باز است */
+  active: boolean;
   selected: boolean;
   onToggleSelected: () => void;
+  /** باز کردن پنل جزئیات — trigger برای برگرداندن فوکوس هنگام بستن */
+  onOpen: (trigger: HTMLElement) => void;
   canSeePhone: boolean;
-  formFields: FormFieldData[];
-  customDisplayFields: FormFieldData[];
-  onScoreChange: (score: number | null) => void;
-  onStatusChange: (status: ApplicationStatus) => void;
-  onAreaChange: (area: ApplicationArea | null) => void;
-  onNoteSave: (note: string) => Promise<boolean>;
-  onConvert: () => void;
-  onDelete: () => Promise<boolean>;
 }
 
-/**
- * CandidateCard — یک کارت داوطلب: هدر فشرده (سه ناحیه: هویت/عملیاتی/بررسی)
- * + بدنه‌ی گسترش‌یافته (CandidateDetail) وقتی باز است.
- *
- * از پرایمیتیو مشترک `Card` استفاده نمی‌کند چون `Card` به‌طور ثابت
- * `overflow-hidden` دارد — که با هرگونه محتوای داخلی نیازمند موقعیت
- * ویژه (مثل منوی Popover که باید از لبه‌ی کارت بیرون بزند) تداخل دارد؛
- * این باکس دستی همان ظاهر (border/rounded/bg) را دارد بدون این محدودیت.
- */
-export function CandidateCard({
-  application: a,
-  isOpen,
-  onToggleOpen,
-  selectionMode,
-  selected,
-  onToggleSelected,
-  canSeePhone,
-  formFields,
-  customDisplayFields,
-  onScoreChange,
-  onStatusChange,
-  onAreaChange,
-  onNoteSave,
-  onConvert,
-  onDelete,
-}: CandidateCardProps) {
-  const keywords = detectKeywords(a.answers);
+/** ستون‌های نمای فهرستی — سرستون و ردیف از همین یک تعریف استفاده می‌کنند تا هم‌تراز بمانند. */
+export const LIST_GRID =
+  'md:grid md:grid-cols-[32px_minmax(180px,1.7fr)_88px_96px_minmax(150px,1.2fr)_92px_104px_minmax(150px,auto)] md:items-center md:gap-x-3';
 
-  function handleHeaderActivate() {
-    if (selectionMode) { onToggleSelected(); return; }
-    onToggleOpen();
-  }
-
+/** سرستون‌های نمای فهرستی (فقط دسکتاپ) */
+export function CandidateListHeader() {
   return (
-    <div
+    <div aria-hidden="true" className={cn(LIST_GRID, 'hidden px-3 py-2 text-[11px] font-medium text-muted border-b border-border')}>
+      <span />
+      <span>نام</span>
+      <span>بخش</span>
+      <span>وضعیت</span>
+      <span>شیفت</span>
+      <span>تاریخ درخواست</span>
+      <span>امتیاز</span>
+      <span />
+    </div>
+  );
+}
+
+function NameBlock({ a, onOpen, canSeePhone, size }: { a: JobApplication; onOpen: (el: HTMLElement) => void; canSeePhone: boolean; size: 'row' | 'card' }) {
+  const fullName = `${a.firstName} ${a.lastName}`;
+  return (
+    <div className="min-w-0">
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={(e) => onOpen(e.currentTarget)}
+          className={cn(
+            'truncate text-right font-semibold text-text hover:underline underline-offset-4 rounded-sm',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1',
+            size === 'card' ? 'text-[15px]' : 'text-[14px]'
+          )}
+        >
+          {fullName}
+        </button>
+        {a.hasResume && <FileText size={13} className="text-muted shrink-0" aria-label="دارای فایل رزومه" />}
+      </div>
+      <div className="mt-0.5 flex items-center gap-2 text-[11.5px] text-muted">
+        {canSeePhone && <PhoneText phone={a.phone} />}
+        {a.age != null && <span>{faNum(a.age)} ساله</span>}
+      </div>
+    </div>
+  );
+}
+
+/** یک ردیف نمای فهرستی (دسکتاپ). */
+export function CandidateRow({ application: a, active, selected, onToggleSelected, onOpen, canSeePhone }: CandidateItemProps) {
+  const fullName = `${a.firstName} ${a.lastName}`;
+  return (
+    <li
+      data-candidate-id={a.id}
       className={cn(
-        'border rounded-lg bg-surface transition-shadow',
-        isOpen && 'sm:col-span-full',
-        selected ? 'border-accent ring-1 ring-accent/30' : 'border-border'
+        LIST_GRID,
+        'px-3 py-2 border-b border-border last:border-b-0 transition-colors',
+        selected ? 'bg-accent-subtle' : active ? 'bg-bg' : 'hover:bg-bg/60',
+        active && 'shadow-[inset_-3px_0_0_var(--accent)]'
       )}
     >
-      {/* ── هدر کارت — سه ناحیه: هویت / عملیاتی / بررسی ── */}
-      <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={selectionMode ? undefined : isOpen}
-        onClick={handleHeaderActivate}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleHeaderActivate(); }
-        }}
-        className={cn(
-          'flex w-full items-start gap-3 px-4 py-3 text-right cursor-pointer select-none rounded-lg',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-inset'
-        )}
-      >
-        {selectionMode && (
-          <span
-            aria-hidden="true"
-            className={cn(
-              'mt-0.5 h-4 w-4 flex-shrink-0 rounded border-2 transition-colors',
-              selected ? 'border-accent bg-accent' : 'border-border bg-surface'
-            )}
-          >
-            {selected && <Check size={10} className="text-white" strokeWidth={3} />}
-          </span>
-        )}
+      <SelectBox checked={selected} onChange={onToggleSelected} label={`انتخاب ${fullName} برای مقایسه`} />
+      <NameBlock a={a} onOpen={onOpen} canSeePhone={canSeePhone} size="row" />
+      <span className="text-[12.5px] text-text">{a.area ? AREA_LABELS[a.area] : <span className="text-muted text-[11.5px]">تعیین نشده</span>}</span>
+      <span><StatusPill status={a.status} label={STATUS_LABELS[a.status]} tone={STATUS_TONE[a.status]} /></span>
+      <span className="min-w-0"><ShiftSummary shifts={a.shiftAvailability} /></span>
+      <span className="text-[12px] text-muted tabular-nums">{faDate(a.createdAt)}</span>
+      <ScoreBadge score={a.score} />
+      <div className="flex items-center justify-end gap-1.5">
+        {canSeePhone && <CallButton phone={a.phone} name={fullName} />}
+        <Button variant={active ? 'primary' : 'default'} size="sm" icon={PanelLeftOpen} onClick={(e) => onOpen(e.currentTarget)} aria-label={`مشاهدهٔ جزئیات ${fullName}`}>
+          مشاهدهٔ جزئیات
+        </Button>
+      </div>
+    </li>
+  );
+}
 
-        {/* ناحیه‌ی هویت: نام، بخش، سن، شماره‌ی مجاز */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 h-5">
-            <span className="text-[13.5px] font-medium text-text truncate">{a.firstName} {a.lastName}</span>
-            {a.hasResume && <FileText size={13} className="text-muted shrink-0" aria-label="دارای رزومه" />}
-          </div>
-
-          <div className="mt-1 flex items-center gap-1.5 h-5">
-            <StatusPill status={a.status} label={STATUS_LABELS[a.status]} tone={STATUS_TONE[a.status]} className="text-[10.5px]" />
-            {a.area && <Chip>{AREA_LABELS[a.area]}</Chip>}
-            {a.age && <span className="text-[11px] text-muted shrink-0">{a.age} ساله</span>}
-          </div>
-
-          {/*
-            ناحیه‌ی عملیاتی: شبکه‌ی ثابت دو-ستونه (نه flex-wrap) — طول متغیر نام
-            محله باعث می‌شد کارت‌ها بسته به طول متن، در نقاط متفاوتی بشکنند و
-            تعداد خط‌های متفاوتی داشته باشند؛ با grid ستون‌ها همیشه ثابت‌اند.
-          */}
-          <div className="mt-1.5 grid grid-cols-2 gap-x-2 gap-y-1 text-[11.5px] text-muted">
-            {canSeePhone ? (
-              <span className="inline-flex items-center gap-1 min-w-0">
-                <span dir="ltr" className="inline-flex items-center gap-1 truncate"><Phone size={11} className="shrink-0" />{a.phone}</span>
-                <a
-                  href={`tel:${a.phone}`}
-                  onClick={(e) => e.stopPropagation()}
-                  aria-label="تماس با داوطلب"
-                  title="تماس با داوطلب"
-                  className={cn(
-                    'flex items-center justify-center w-6 h-6 rounded-md transition-colors shrink-0',
-                    'text-muted hover:text-ok hover:bg-ok-subtle',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-1'
-                  )}
-                >
-                  <PhoneCall size={12} strokeWidth={1.5} aria-hidden="true" />
-                </a>
-              </span>
-            ) : <span />}
-            {a.city ? (
-              <span className="inline-flex items-center gap-1 min-w-0 truncate"><MapPin size={11} className="shrink-0" />{a.city}</span>
-            ) : <span />}
-
-            <span className="truncate">{faDate(a.createdAt)}</span>
-            {(a.shiftAvailability ?? [])[0] ? (
-              <span className="inline-flex">
-                <span className="rounded-full bg-warn-subtle px-2 py-0.5 text-[10.5px] text-warn truncate">
-                  {SHIFT_LABELS[(a.shiftAvailability ?? [])[0] as keyof typeof SHIFT_LABELS] ?? (a.shiftAvailability ?? [])[0]}
-                  {(a.shiftAvailability ?? []).length > 1 && ` +${(a.shiftAvailability ?? []).length - 1}`}
-                </span>
-              </span>
-            ) : <span />}
-          </div>
-
-          {keywords.length > 0 && (
-            <div className="mt-1.5 flex flex-wrap gap-1">
-              {keywords.slice(0, 2).map((k) => (
-                <span key={k.label} className={cn('rounded-full px-2 py-0.5 text-[10px]', k.cls)}>{k.label}</span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* ناحیه‌ی بررسی: امتیاز، اقدام گسترش */}
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <span className="sr-only">امتیاز</span>
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button
-                key={n}
-                onClick={() => onScoreChange(a.score === n ? null : n)}
-                aria-label={`امتیاز ${n} از ۵`}
-                aria-pressed={a.score != null && n <= a.score}
-                className="p-0.5 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 rounded"
-              >
-                <Star
-                  size={14}
-                  className={cn(a.score != null && n <= a.score ? 'text-amber-500' : 'text-border')}
-                  fill={a.score != null && n <= a.score ? 'currentColor' : 'none'}
-                />
-              </button>
-            ))}
-          </div>
-          {!selectionMode && (
-            <ChevronDown size={15} className={cn('text-muted transition-transform', isOpen && 'rotate-180')} aria-hidden="true" />
-          )}
-        </div>
+/** کارت داوطلب (نمای کارتی + همیشه در موبایل). */
+export function CandidateCard({ application: a, active, selected, onToggleSelected, onOpen, canSeePhone }: CandidateItemProps) {
+  const fullName = `${a.firstName} ${a.lastName}`;
+  return (
+    <li
+      data-candidate-id={a.id}
+      className={cn(
+        'flex flex-col gap-2.5 rounded-lg border bg-surface p-3.5 transition-shadow',
+        selected ? 'border-accent ring-1 ring-accent/30' : active ? 'border-accent' : 'border-border'
+      )}
+    >
+      <div className="flex items-start gap-2.5">
+        <div className="pt-0.5"><SelectBox checked={selected} onChange={onToggleSelected} label={`انتخاب ${fullName} برای مقایسه`} /></div>
+        <div className="flex-1 min-w-0"><NameBlock a={a} onOpen={onOpen} canSeePhone={canSeePhone} size="card" /></div>
+        <ScoreBadge score={a.score} className="pt-1 shrink-0" />
       </div>
 
-      {isOpen && !selectionMode && (
-        <CandidateDetail
-          application={a}
-          canSeePhone={canSeePhone}
-          formFields={formFields}
-          customDisplayFields={customDisplayFields}
-          onStatusChange={onStatusChange}
-          onAreaChange={onAreaChange}
-          onNoteSave={onNoteSave}
-          onConvert={onConvert}
-          onDelete={onDelete}
-        />
-      )}
-    </div>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <StatusPill status={a.status} label={STATUS_LABELS[a.status]} tone={STATUS_TONE[a.status]} />
+        <Chip>{a.area ? AREA_LABELS[a.area] : 'بخش تعیین نشده'}</Chip>
+      </div>
+
+      <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 text-[12px]">
+        <dt className="text-muted">شیفت</dt>
+        <dd className="min-w-0"><ShiftSummary shifts={a.shiftAvailability} /></dd>
+        <dt className="text-muted">تاریخ درخواست</dt>
+        <dd className="text-text tabular-nums">{faDate(a.createdAt)}</dd>
+      </dl>
+
+      <div className="mt-auto flex items-center gap-2 pt-1">
+        <Button variant={active ? 'primary' : 'default'} size="sm" icon={PanelLeftOpen} className="flex-1" onClick={(e) => onOpen(e.currentTarget)} aria-label={`مشاهدهٔ جزئیات ${fullName}`}>
+          مشاهدهٔ جزئیات
+        </Button>
+        {canSeePhone && <CallButton phone={a.phone} name={fullName} />}
+      </div>
+    </li>
   );
 }

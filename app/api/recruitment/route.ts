@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { desc, eq, and, asc, count } from 'drizzle-orm';
+import { desc, eq, and, asc, count, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
@@ -8,6 +8,8 @@ import { consumeRequestLimit, getClientIp, PUBLIC_LIMITS } from '@/lib/auth/rate
 import type { FieldSnapshot } from '@/lib/recruitment/form-types';
 import { SYSTEM_FIELD_COLUMN_MAP } from '@/lib/recruitment/form-types';
 import { fireRecruitmentNotification } from '@/lib/recruitment/notify';
+import { paramsToFilters } from '@/lib/recruitment/filterCandidates';
+import { nonStatusConditions } from '@/lib/recruitment/serverFilters';
 
 /**
  * POST /api/recruitment — عمومی (متقاضی login ندارد). ثبت یک درخواست استخدام.
@@ -106,8 +108,24 @@ export async function GET(req: Request) {
     const limit  = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') ?? '50', 10)));
     const offset = (page - 1) * limit;
 
-    const [countResult, rows] = await Promise.all([
+    // فیلتر/جستجو/شمارش روی کل دیتابیس (نه فقط صفحه‌ی بارگذاری‌شده) —
+    // همان پارامترهای URL صفحه‌ی پنل (status, area, q, f_*, sort ...).
+    const filters = paramsToFilters(url.searchParams);
+    const nonStatus = nonStatusConditions(filters);
+    const whereAll = filters.status === 'all'
+      ? (nonStatus.length ? and(...nonStatus) : undefined)
+      : and(...nonStatus, eq(schema.jobApplications.status, filters.status));
+    const orderBy = filters.sort === 'score'
+      ? [sql`${schema.jobApplications.score} desc nulls last`, desc(schema.jobApplications.createdAt)]
+      : [desc(schema.jobApplications.createdAt)];
+
+    const [countResult, statusRows, rows] = await Promise.all([
       db.select({ total: count() }).from(schema.jobApplications),
+      db
+        .select({ status: schema.jobApplications.status, n: count() })
+        .from(schema.jobApplications)
+        .where(nonStatus.length ? and(...nonStatus) : undefined)
+        .groupBy(schema.jobApplications.status),
       db
         .select({
           id: schema.jobApplications.id,
@@ -135,12 +153,19 @@ export async function GET(req: Request) {
           updatedAt: schema.jobApplications.updatedAt,
         })
         .from(schema.jobApplications)
-        .orderBy(desc(schema.jobApplications.createdAt))
+        .where(whereAll)
+        .orderBy(...orderBy, desc(schema.jobApplications.id))
         .limit(limit)
         .offset(offset),
     ]);
 
     const total = countResult[0]?.total ?? 0;
+    const statusCounts = { all: 0, new: 0, shortlist: 0, accepted: 0, rejected: 0 };
+    for (const r of statusRows) {
+      statusCounts[r.status] = Number(r.n);
+      statusCounts.all += Number(r.n);
+    }
+    const filteredTotal = filters.status === 'all' ? statusCounts.all : statusCounts[filters.status];
 
     return NextResponse.json({
       applications: rows.map((r) => ({
@@ -168,7 +193,12 @@ export async function GET(req: Request) {
         createdAt: r.createdAt.toISOString(),
         updatedAt: r.updatedAt.toISOString(),
       })),
+      /** کل درخواست‌های دیتابیس (بدون فیلتر) */
       total,
+      /** تعداد نتایج با فیلترهای فعلی (همه‌ی صفحه‌ها) */
+      filteredTotal,
+      /** شمارش هر وضعیت با بقیه‌ی فیلترها (بدون فیلتر وضعیت) */
+      statusCounts,
       page,
       limit,
     });
