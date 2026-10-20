@@ -5,7 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
 import { assertCan, branchScope } from '@/lib/auth/apiAccess';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
-import { computeDerivedFields, assertNoAttendanceOverlap, hasActiveShiftAssignment } from '@/lib/payroll/attendanceEntryHelpers';
+import { computeDerivedFields, assertNoAttendanceOverlap, hasActiveShiftAssignment, NEW_ATTENDANCE_CANDIDATE_ID } from '@/lib/payroll/attendanceEntryHelpers';
 import type { AttendanceIntervalInput } from '@/lib/payroll/attendanceEngine';
 
 export const dynamic = 'force-dynamic';
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     });
 
     const candidate: AttendanceIntervalInput = {
-      id: 'new-candidate', attendanceType: input.attendanceType, entryMode: input.entryMode,
+      id: NEW_ATTENDANCE_CANDIDATE_ID, attendanceType: input.attendanceType, entryMode: input.entryMode,
       clockIn: input.clockIn ?? null, clockOut: input.clockOut ?? null, crossesMidnight: input.crossesMidnight,
       shiftAssignmentId: input.shiftAssignmentId ?? null,
       assignmentStartTime: assignment?.plannedStartTime ?? null, assignmentEndTime: assignment?.plannedEndTime ?? null,
