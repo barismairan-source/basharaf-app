@@ -68,7 +68,13 @@ export type AuditAction =
   | 'notification.audience.reset'
   | 'notification.audience.copied'
   | 'hr.employee.userLinked'
-  | 'hr.employee.userUnlinked';
+  | 'hr.employee.userUnlinked'
+  | 'attendance.clock.rejected'
+  | 'attendance.clock.activated'
+  | 'attendance.network.added'
+  | 'attendance.network.deactivated'
+  | 'attendance.link.issued'
+  | 'attendance.link.revoked';
 
 export async function audit(params: {
   action: AuditAction;

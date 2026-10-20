@@ -1378,6 +1378,82 @@ export const attendanceEntries = pgTable(
   })
 );
 
+// ─── ثبت ورود/خروج پرسنل فقط از اینترنت مغازه (project-docs/ATTENDANCE-CLOCK.md) ──
+// migration: project-docs/migrations/db-attendance-clock.sql
+export const attendanceClockEventTypeEnum = pgEnum('attendance_clock_event_type', ['clock_in', 'clock_out']);
+
+// IP/بازه‌ی عمومی مجاز هر شعبه — فقط مدیر از پنل وارد می‌کند، هیچ IPی در کد ثابت نیست.
+export const branchAttendanceNetworks = pgTable(
+  'branch_attendance_networks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    cidr: text('cidr').notNull(),
+    label: text('label'),
+    isActive: boolean('is_active').notNull().default(true),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
+    deactivatedBy: uuid('deactivated_by').references(() => users.id, { onDelete: 'set null' }),
+  },
+  (t) => ({
+    branchIdx: index('branch_attendance_networks_branch_idx').on(t.branchId),
+    activeUniq: uniqueIndex('branch_attendance_networks_active_uniq').on(t.branchId, t.cidr).where(sql`${t.isActive}`),
+  })
+);
+
+// لینک شخصی یک‌بارمصرف هر نفر + گوشی‌ای که با آن فعال شده (فقط هش SHA-256 ذخیره می‌شود).
+export const attendanceClockDevices = pgTable(
+  'attendance_clock_devices',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    linkTokenHash: text('link_token_hash').notNull().unique(),
+    linkExpiresAt: timestamp('link_expires_at', { withTimezone: true }).notNull(),
+    deviceTokenHash: text('device_token_hash').unique(),
+    activatedAt: timestamp('activated_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    employeeIdx: index('attendance_clock_devices_employee_idx').on(t.employeeId),
+    activeUniq: uniqueIndex('attendance_clock_devices_active_uniq').on(t.employeeId).where(sql`${t.revokedAt} IS NULL`),
+  })
+);
+
+// رویداد خام ورود/خروج — فقط افزودنی (trigger دیتابیس حذف/بازنویسی را رد می‌کند).
+// زمان فقط now() سرور؛ IP خام ذخیره نمی‌شود، فقط شبکه‌ی تطبیق‌خورده.
+export const attendanceClockEvents = pgTable(
+  'attendance_clock_events',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    branchId: uuid('branch_id').notNull().references(() => branches.id, { onDelete: 'restrict' }),
+    eventType: attendanceClockEventTypeEnum('event_type').notNull(),
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull().defaultNow(),
+    workDate: date('work_date', { mode: 'date' }).notNull(),
+    networkId: uuid('network_id').notNull().references(() => branchAttendanceNetworks.id, { onDelete: 'restrict' }),
+    deviceId: uuid('device_id').notNull().references(() => attendanceClockDevices.id, { onDelete: 'restrict' }),
+    pairedInEventId: uuid('paired_in_event_id').references((): AnyPgColumn => attendanceClockEvents.id, { onDelete: 'restrict' }),
+    attendanceEntryId: uuid('attendance_entry_id').references(() => attendanceEntries.id, { onDelete: 'set null' }),
+    conversionError: text('conversion_error'),
+    idempotencyKey: text('idempotency_key').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    employeeTimeIdx: index('attendance_clock_events_employee_time_idx').on(t.employeeId, t.occurredAt),
+    branchDateIdx: index('attendance_clock_events_branch_date_idx').on(t.branchId, t.workDate),
+    pairedUniq: uniqueIndex('attendance_clock_events_paired_uniq').on(t.pairedInEventId).where(sql`${t.pairedInEventId} IS NOT NULL`),
+  })
+);
+
+export type BranchAttendanceNetwork = typeof branchAttendanceNetworks.$inferSelect;
+export type AttendanceClockDevice = typeof attendanceClockDevices.$inferSelect;
+export type AttendanceClockEvent = typeof attendanceClockEvents.$inferSelect;
+
 // ─── employee_compensation_type_changes — گزارش حسابرسی تغییر نوع حقوق ──
 export const employeeCompensationTypeChanges = pgTable(
   'employee_compensation_type_changes',

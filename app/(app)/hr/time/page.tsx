@@ -7,9 +7,10 @@ import { ShiftScheduleView } from '@/components/hr/ShiftScheduleView';
 import { AttendanceView } from '@/components/hr/AttendanceView';
 import { ApprovalsView } from '@/components/hr/ApprovalsView';
 import { TimesheetView } from '@/components/hr/TimesheetView';
+import { ClockView } from '@/components/hr/ClockView';
 
-type TimeTab = 'schedule' | 'attendance' | 'approvals' | 'timesheet';
-const VALID_TABS: TimeTab[] = ['schedule', 'attendance', 'approvals', 'timesheet'];
+type TimeTab = 'schedule' | 'attendance' | 'clock' | 'approvals' | 'timesheet';
+const VALID_TABS: TimeTab[] = ['schedule', 'attendance', 'clock', 'approvals', 'timesheet'];
 
 /**
  * «زمان و حضور» — فضای کاری یکپارچه‌ی برنامه شیفت + ثبت حضور + تأییدها +
@@ -37,6 +38,7 @@ export default function HrTimePage() {
           items={[
             { value: 'schedule', label: 'برنامه شیفت' },
             { value: 'attendance', label: 'ثبت حضور' },
+            { value: 'clock', label: 'ورود با مودم' },
             { value: 'approvals', label: 'تأییدها' },
             { value: 'timesheet', label: 'گزارش کارکرد' },
           ]} />
@@ -45,6 +47,9 @@ export default function HrTimePage() {
         </TabPanel>
         <TabPanel value="attendance" active={tab === 'attendance'}>
           <AttendanceView />
+        </TabPanel>
+        <TabPanel value="clock" active={tab === 'clock'}>
+          <ClockView />
         </TabPanel>
         <TabPanel value="approvals" active={tab === 'approvals'}>
           <ApprovalsView />

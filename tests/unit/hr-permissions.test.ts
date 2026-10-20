@@ -50,9 +50,9 @@ describe('canAccessHr — پل سازگاری', () => {
 });
 
 describe('hr.* capabilities — پیش‌فرض‌ها', () => {
-  it('همه‌ی ۱۹ کلید hr.* در CAPABILITIES تعریف شده‌اند', () => {
+  it('همه‌ی ۲۰ کلید hr.* در CAPABILITIES تعریف شده‌اند', () => {
     const hrCaps = CAPABILITIES.filter(c => c.key.startsWith('hr.'));
-    expect(hrCaps.length).toBe(19);
+    expect(hrCaps.length).toBe(20);
   });
 
   it('عملیات حساس (تأیید حضور، تأیید/ثبت حقوق، مدیریت نرخ) فقط پیش‌فرض SuperAdmin دارند', () => {
@@ -60,7 +60,9 @@ describe('hr.* capabilities — پیش‌فرض‌ها', () => {
     expect(canDo({ role: 'BranchUser' }, 'hr.payroll.approve')).toBe(false);
     expect(canDo({ role: 'BranchUser' }, 'hr.payroll.post')).toBe(false);
     expect(canDo({ role: 'BranchUser' }, 'hr.compensation.manage')).toBe(false);
+    expect(canDo({ role: 'BranchUser' }, 'hr.attendance.clockSetup')).toBe(false);
     expect(canDo({ role: 'SuperAdmin' }, 'hr.attendance.approve')).toBe(true);
+    expect(canDo({ role: 'SuperAdmin' }, 'hr.attendance.clockSetup')).toBe(true);
   });
 
   it('عملیات روزمره‌ی شعبه (ثبت حضور/مدیریت شیفت) پیش‌فرض BranchUser هم دارد', () => {

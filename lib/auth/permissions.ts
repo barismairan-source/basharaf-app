@@ -97,6 +97,7 @@ export type CapabilityKey =
   | 'hr.attendance.view'
   | 'hr.attendance.record'
   | 'hr.attendance.approve'
+  | 'hr.attendance.clockSetup'
   | 'hr.overtime.approve'
   | 'hr.compensation.view'
   | 'hr.compensation.manage'
@@ -141,6 +142,8 @@ export const CAPABILITIES: ReadonlyArray<CapabilityDef> = [
   { key: 'hr.attendance.view', label: 'مشاهده‌ی حضور و غیاب', defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'hr.attendance.record', label: 'ثبت حضور و غیاب', defaultRoles: ['SuperAdmin', 'BranchUser'] },
   { key: 'hr.attendance.approve', label: 'تأیید حضور و غیاب', defaultRoles: ['SuperAdmin'] },
+  // ثبت ورود/خروج با اینترنت مغازه: تنظیم IP شعبه‌ها و ساخت/لغو لینک شخصی پرسنل.
+  { key: 'hr.attendance.clockSetup', label: 'تنظیم ثبت حضور با اینترنت مغازه (IP و لینک پرسنل)', defaultRoles: ['SuperAdmin'] },
   { key: 'hr.overtime.approve', label: 'تأیید اضافه‌کاری', defaultRoles: ['SuperAdmin'] },
   { key: 'hr.compensation.view', label: 'مشاهده‌ی نرخ/حقوق پایه', defaultRoles: ['SuperAdmin'] },
   { key: 'hr.compensation.manage', label: 'مدیریت نرخ/حقوق پایه', defaultRoles: ['SuperAdmin'] },
