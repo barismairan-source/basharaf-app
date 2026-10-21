@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { resolveClockIp, normalizeIp, parseCidr, ipMatchesCidr } from '@/lib/attendance-clock/ip';
 import { relyingPartyFrom } from '@/lib/attendance-clock/origin';
+import { isPublicPath } from '@/lib/auth/sessionExpiry';
 import {
   clockStateFrom, decideClock, pairToEntryFields, tehranParts, pickClosestAssignment,
   MAX_OPEN_SHIFT_HOURS,
@@ -189,5 +190,13 @@ describe('relyingPartyFrom — نشانی سایت برای Face ID', () => {
   it('بدون Origin → از Host', () => {
     expect(relyingPartyFrom(req({ host: 'basharaf.me' }))).toEqual({ rpID: 'basharaf.me', origin: 'https://basharaf.me' });
     expect(relyingPartyFrom(req({ host: 'localhost:3105' }))).toEqual({ rpID: 'localhost', origin: 'http://localhost:3105' });
+  });
+});
+
+describe('صفحه‌ی /clock بدون ورود به حساب', () => {
+  it('عمومی است — نه bootstrap و نه interceptor کاربر را به /login نمی‌برند', () => {
+    expect(isPublicPath('/clock')).toBe(true);
+    expect(isPublicPath('/clockwork')).toBe(false);
+    expect(isPublicPath('/dashboard')).toBe(false);
   });
 });

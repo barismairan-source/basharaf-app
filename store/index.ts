@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 import { createRepos, type LocalDataStore } from '@/lib/repos';
+import { isPublicPath } from '@/lib/auth/sessionExpiry';
 import {
   DEFAULT_PREFERENCES,
   type Branch,
@@ -220,11 +221,8 @@ export const useAppStore = create<AppStore>()(
             if (
               (meRes.status === 401 || meRes.status === 403) &&
               typeof window !== 'undefined' &&
-              // '/' = روت عمومی (صفحه‌ی همکاری) — فقط مسیر دقیق روت allowlist می‌شود
-              // (startsWith('//') هرگز true نمی‌شود، پس مسیرهای دیگر تحت‌تأثیر نیستند).
-              !['/', '/login', '/signup', '/forgot', '/apply', '/m', '/order', '/reserve', '/safasity', '/receipts/view', '/r', '/pay'].some(
-                (p) => window.location.pathname === p || window.location.pathname.startsWith(`${p}/`)
-              )
+              // صفحه‌های عمومی (از جمله /clock ثبت حضور پرسنل) — فهرست مشترک در lib/auth/sessionExpiry.ts
+              !isPublicPath(window.location.pathname)
             ) {
               await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).catch(() => {});
               window.location.replace('/login');
