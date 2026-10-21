@@ -95,7 +95,8 @@ export async function POST(req: Request) {
     });
     void audit({ action: 'attendance.link.issued', userId: session.sub, meta: { employeeId } });
     return NextResponse.json({
-      path: `/clock?t=${token}`,
+      // بعد از # تا توکن هرگز به سرور/لاگ پراکسی/Referer نرسد
+      path: `/clock#t=${token}`,
       employeeName: employee.fullName,
       expiresAt: expiresAt.toISOString(),
     }, { status: 201 });

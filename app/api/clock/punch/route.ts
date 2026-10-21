@@ -7,7 +7,7 @@ import { audit } from '@/lib/auth/audit';
 import { resolveClockIp } from '@/lib/attendance-clock/ip';
 import { verifyAuthentication } from '@/lib/attendance-clock/passkey';
 import {
-  anyNetworkConfigured, faceIdRequiredFor, findPunchByKey, getDeviceFromCookie, matchBranchNetwork, recordPunch,
+  anyNetworkConfigured, assertJsonRequest, faceIdRequiredFor, findPunchByKey, getDeviceFromCookie, matchBranchNetwork, recordPunch,
 } from '@/lib/attendance-clock/service';
 
 export const dynamic = 'force-dynamic';
@@ -36,6 +36,7 @@ export async function POST(req: Request) {
     const rl = consumeRequestLimit('clock-punch', device.deviceId, { max: 20, windowMs: 10 * 60 * 1000 });
     if (!rl.allowed) throw new ApiError(429, 'تعداد تلاش‌ها زیاد است؛ چند دقیقه بعد دوباره امتحان کنید.', 'RATE_LIMITED');
 
+    assertJsonRequest(req);
     const input = bodySchema.parse(await req.json());
 
     const ipResult = resolveClockIp(req.headers);

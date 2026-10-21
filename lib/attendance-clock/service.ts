@@ -36,6 +36,18 @@ export function setClockCookie(deviceToken: string): void {
   });
 }
 
+/**
+ * مسیرهای عمومی ثبت حضور فقط JSON می‌پذیرند. فرم‌های سایت‌های دیگر نمی‌توانند بدون
+ * preflight مرورگر Content-Type: application/json بفرستند، پس یک صفحه‌ی مخرب نمی‌تواند
+ * گوشی کسی را با لینک دیگری «فعال» کند (CSRF).
+ */
+export function assertJsonRequest(req: Request): void {
+  const ct = (req.headers.get('content-type') ?? '').toLowerCase();
+  if (!ct.startsWith('application/json')) {
+    throw new ApiError(415, 'درخواست نامعتبر است', 'UNSUPPORTED_MEDIA_TYPE');
+  }
+}
+
 export interface ClockDevice {
   deviceId: string;
   employeeId: string;

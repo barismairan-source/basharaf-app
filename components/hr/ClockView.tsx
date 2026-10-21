@@ -8,6 +8,7 @@ import { useAppStore } from '@/store';
 import { getTodayJalali, jalaliToDate, dateToJalali, formatTehranTime } from '@/lib/jalali';
 import { useHrBranchFilter } from '@/lib/hr/branchFilterContext';
 import { canDo } from '@/lib/auth/permissions';
+import { csvCell } from '@/lib/attendance-clock/client-utils';
 
 interface Network { id: string; branchId: string; branchName: string; cidr: string; label: string | null }
 interface Person {
@@ -55,10 +56,6 @@ async function api<T>(url: string, init?: RequestInit): Promise<T> {
   return body as T;
 }
 
-function csvCell(v: string | number | null): string {
-  const s = v === null ? '' : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
 
 /**
  * تب «ورود با مودم» — ورود/خروج‌هایی که پرسنل با گوشی خودشان زده‌اند (گزارش بازه‌ای و
@@ -239,6 +236,9 @@ export function ClockView() {
                     {s.faceIdVerified && <span className="text-ok inline-flex items-center gap-0.5" title="با Face ID / اثر انگشت تأیید شد"><ScanFace size={14} aria-hidden /><span className="sr-only">Face ID</span></span>}
                     <Chip tone={SESSION_STATUS[s.status].tone}>{SESSION_STATUS[s.status].label}</Chip>
                     {s.conversionError && <span className="text-[12px] text-warn">{s.conversionError}</span>}
+                    {(s.status === 'incomplete' || s.status === 'needs_review') && (
+                      <a href="/hr/time?tab=attendance" className="text-[12px] text-accent underline underline-offset-2">ثبت دستی در «ثبت حضور»</a>
+                    )}
                   </li>
                 ))}
               </ul>

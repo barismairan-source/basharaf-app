@@ -5,7 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { ApiError, handleError } from '@/lib/api-error';
 import { consumeRequestLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { audit } from '@/lib/auth/audit';
-import { hashToken, newToken, setClockCookie } from '@/lib/attendance-clock/service';
+import { assertJsonRequest, getDeviceFromCookie, hashToken, newToken, setClockCookie } from '@/lib/attendance-clock/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +22,12 @@ export async function POST(req: Request) {
     const rl = consumeRequestLimit('clock-activate', getClientIp(req), { max: 30, windowMs: 60 * 60 * 1000 });
     if (!rl.allowed) throw new ApiError(429, 'تعداد تلاش‌ها زیاد است؛ کمی بعد دوباره امتحان کنید.', 'RATE_LIMITED');
 
+    assertJsonRequest(req);
     const { token } = bodySchema.parse(await req.json());
     const deviceToken = newToken();
     const now = new Date();
+    // همان گوشی‌ای که قبلاً با همین لینک فعال شده (مثلاً لینک قدیمی را دوباره از پیام باز کرده)
+    const currentDevice = await getDeviceFromCookie();
 
     const activated = await db.transaction(async (tx) => {
       const [link] = await tx.select({
@@ -46,6 +49,9 @@ export async function POST(req: Request) {
       if (!link || !link.employeeActive) {
         throw new ApiError(404, 'این لینک معتبر نیست یا لغو شده است. از مدیر لینک جدید بگیرید.', 'LINK_INVALID');
       }
+      if (link.activatedAt && currentDevice?.deviceId === link.id) {
+        return { ...link, alreadyActive: true };
+      }
       if (link.activatedAt) {
         throw new ApiError(409, 'این لینک قبلاً روی یک گوشی فعال شده است. اگر گوشی را عوض کرده‌اید، از مدیر لینک جدید بگیرید.', 'LINK_USED');
       }
@@ -55,9 +61,12 @@ export async function POST(req: Request) {
       await tx.update(schema.attendanceClockDevices)
         .set({ deviceTokenHash: hashToken(deviceToken), activatedAt: now })
         .where(eq(schema.attendanceClockDevices.id, link.id));
-      return link;
+      return { ...link, alreadyActive: false };
     });
 
+    if (activated.alreadyActive) {
+      return NextResponse.json({ employeeName: activated.employeeName, alreadyActive: true });
+    }
     setClockCookie(deviceToken);
     void audit({ action: 'attendance.clock.activated', ip: getClientIp(req), meta: { employeeId: activated.employeeId, deviceId: activated.id } });
     return NextResponse.json({ employeeName: activated.employeeName });

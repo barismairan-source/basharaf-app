@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { LogIn, LogOut, Wifi, WifiOff, RefreshCw, ScanFace } from 'lucide-react';
 import { startAuthentication, startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { Button, Card, CardBody, InlineNotice } from '@/components/ui';
 import { formatTehranTime } from '@/lib/jalali';
+import { optionsStillFresh, readLinkToken } from '@/lib/attendance-clock/client-utils';
 
 interface Status {
   device: { employeeName: string } | null;
@@ -53,8 +54,12 @@ async function postJson(url: string, body?: unknown): Promise<{ ok: boolean; sta
 /** صفحه‌ی ثبت ورود/خروج روی گوشی پرسنل — همه‌ی تصمیم‌ها (زمان، شبکه، ترتیب، Face ID) در سرور گرفته می‌شود. */
 export function ClockClient() {
   const router = useRouter();
-  const params = useSearchParams();
-  const linkToken = params.get('t');
+  // توکن لینک بعد از # است (به سرور/لاگ نمی‌رسد)؛ فقط سمت مرورگر خوانده می‌شود.
+  const [linkToken, setLinkToken] = useState<string | null | undefined>(undefined);
+  // گزینه‌های Face ID از قبل گرفته می‌شوند تا پنجره‌ی Face ID بلافاصله بعد از لمس دکمه باز شود
+  // (Safari اگر بین لمس و درخواست Face ID معطلی باشد ممکن است آن را رد کند).
+  const authOpts = useRef<{ options: unknown; at: number } | null>(null);
+  const regOpts = useRef<{ options: unknown; at: number } | null>(null);
 
   const [status, setStatus] = useState<Status | null>(null);
   const [loading, setLoading] = useState(true);
@@ -67,6 +72,7 @@ export function ClockClient() {
   const activating = useRef(false);
 
   useEffect(() => {
+    setLinkToken(readLinkToken(window.location.search, window.location.hash));
     setWebauthnOk(browserSupportsWebAuthn());
     setStandalone(Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
       || window.matchMedia?.('(display-mode: standalone)').matches);
@@ -79,6 +85,7 @@ export function ClockClient() {
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? 'خطا در دریافت وضعیت');
       setStatus(body as Status);
+      void prefetchFaceId(body as Status);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'اتصال برقرار نشد. اینترنت را بررسی کنید.');
     } finally {
@@ -86,7 +93,21 @@ export function ClockClient() {
     }
   }, []);
 
+  // وقتی کاربر به صفحه برمی‌گردد (مثلاً وای‌فای را روشن کرده) و هر دقیقه، وضعیت تازه شود.
   useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') void load(); };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    const timer = window.setInterval(refresh, 60_000);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+      window.clearInterval(timer);
+    };
+  }, [load]);
+
+  useEffect(() => {
+    if (linkToken === undefined) return;
     if (!linkToken) { load(); return; }
     if (activating.current) return;
     activating.current = true;
@@ -94,6 +115,7 @@ export function ClockClient() {
       try {
         const r = await postJson('/api/clock/activate', { token: linkToken });
         if (!r.ok) setError(r.body?.error ?? 'فعال‌سازی ناموفق بود');
+        else if (r.body.alreadyActive) setDone(`این گوشی از قبل برای ${r.body.employeeName} فعال است. از این به بعد فقط همین صفحه را باز کنید؛ لینک لازم نیست.`);
         else setDone(`این گوشی برای ${r.body.employeeName} فعال شد.`);
       } catch {
         setError('اتصال برقرار نشد. اینترنت را بررسی کنید و لینک را دوباره باز کنید.');
@@ -105,14 +127,42 @@ export function ClockClient() {
     })();
   }, [linkToken, load, router]);
 
+  async function prefetchFaceId(s: Status) {
+    if (!s.device || !s.faceId?.required || !browserSupportsWebAuthn()) return;
+    const now = Date.now();
+    try {
+      if (!s.faceId.registered) {
+        if (optionsStillFresh(regOpts.current?.at ?? null, now)) return;
+        const r = await postJson('/api/clock/passkey/register-options');
+        regOpts.current = r.ok ? { options: r.body.options, at: now } : null;
+      } else {
+        if (optionsStillFresh(authOpts.current?.at ?? null, now)) return;
+        const r = await postJson('/api/clock/passkey/auth-options');
+        authOpts.current = r.ok && r.body?.required ? { options: r.body.options, at: now } : null;
+      }
+    } catch { /* هنگام لمس دوباره امتحان می‌شود */ }
+  }
+
+  /** گزینه‌ی تازه (از قبل گرفته‌شده)؛ اگر نبود یا کهنه بود، همین حالا بگیر. */
+  async function takeOptions(kind: 'reg' | 'auth'): Promise<unknown | null> {
+    const ref = kind === 'reg' ? regOpts : authOpts;
+    const cached = ref.current;
+    ref.current = null; // هر challenge یک‌بارمصرف است
+    if (cached && optionsStillFresh(cached.at, Date.now())) return cached.options;
+    const r = await postJson(kind === 'reg' ? '/api/clock/passkey/register-options' : '/api/clock/passkey/auth-options');
+    if (!r.ok) { setError(r.body?.error ?? 'شروع Face ID ناموفق بود'); return null; }
+    if (kind === 'auth' && !r.body?.required) return undefined;
+    return r.body.options;
+  }
+
   async function registerFaceId() {
     setBusy(true); setError(null); setDone(null);
     try {
-      const opts = await postJson('/api/clock/passkey/register-options');
-      if (!opts.ok) { setError(opts.body?.error ?? 'شروع فعال‌سازی ناموفق بود'); return; }
+      const options = await takeOptions('reg');
+      if (!options) return;
       let response;
       try {
-        response = await startRegistration({ optionsJSON: opts.body.options });
+        response = await startRegistration({ optionsJSON: options as Parameters<typeof startRegistration>[0]['optionsJSON'] });
       } catch (e) {
         setError(faceIdErrorMessage(e)); return;
       }
@@ -133,11 +183,11 @@ export function ClockClient() {
     try {
       let assertion: unknown;
       if (status?.faceId?.required) {
-        const opts = await postJson('/api/clock/passkey/auth-options');
-        if (!opts.ok) { setError(opts.body?.error ?? 'تأیید Face ID شروع نشد'); return; }
-        if (opts.body?.required) {
+        const options = await takeOptions('auth');
+        if (options === null) return;
+        if (options !== undefined) {
           try {
-            assertion = await startAuthentication({ optionsJSON: opts.body.options });
+            assertion = await startAuthentication({ optionsJSON: options as Parameters<typeof startAuthentication>[0]['optionsJSON'] });
           } catch (e) {
             setError(faceIdErrorMessage(e)); return;
           }

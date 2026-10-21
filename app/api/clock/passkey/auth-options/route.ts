@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { consumeRequestLimit } from '@/lib/auth/rateLimit';
 import { beginAuthentication } from '@/lib/attendance-clock/passkey';
-import { faceIdRequiredFor, getDeviceFromCookie } from '@/lib/attendance-clock/service';
+import { assertJsonRequest, faceIdRequiredFor, getDeviceFromCookie } from '@/lib/attendance-clock/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   try {
+    assertJsonRequest(req);
     const device = await getDeviceFromCookie();
     if (!device) throw new ApiError(401, 'این گوشی برای ثبت حضور فعال نشده است.', 'NO_DEVICE');
     if (!(await faceIdRequiredFor(device))) return NextResponse.json({ required: false });

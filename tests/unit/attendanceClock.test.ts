@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveClockIp, normalizeIp, parseCidr, ipMatchesCidr } from '@/lib/attendance-clock/ip';
 import { relyingPartyFrom } from '@/lib/attendance-clock/origin';
 import { isPublicPath } from '@/lib/auth/sessionExpiry';
+import { readLinkToken, csvCell, optionsStillFresh } from '@/lib/attendance-clock/client-utils';
 import {
   clockStateFrom, decideClock, pairToEntryFields, tehranParts, pickClosestAssignment,
   MAX_OPEN_SHIFT_HOURS,
@@ -198,5 +199,28 @@ describe('صفحه‌ی /clock بدون ورود به حساب', () => {
     expect(isPublicPath('/clock')).toBe(true);
     expect(isPublicPath('/clockwork')).toBe(false);
     expect(isPublicPath('/dashboard')).toBe(false);
+  });
+});
+
+describe('کمک‌های صفحه‌ی گوشی و گزارش', () => {
+  it('توکن لینک از # (جدید) یا ?t= (قدیمی)', () => {
+    expect(readLinkToken('', '#t=abc')).toBe('abc');
+    expect(readLinkToken('?t=old', '')).toBe('old');
+    expect(readLinkToken('?t=old', '#t=new')).toBe('new');
+    expect(readLinkToken('', '')).toBeNull();
+  });
+  it('CSV: فرمول اکسل بی‌خطر می‌شود، اعداد و متن عادی دست نمی‌خورند', () => {
+    expect(csvCell('=HYPERLINK("x")')).toBe(`"'=HYPERLINK(""x"")"`);
+    expect(csvCell('+98912')).toBe("'+98912");
+    expect(csvCell('-1')).toBe("'-1");
+    expect(csvCell(-5)).toBe('-5');
+    expect(csvCell('علی')).toBe('علی');
+    expect(csvCell(null)).toBe('');
+    expect(csvCell('a,b')).toBe('"a,b"');
+  });
+  it('گزینه‌ی Face ID از قبل گرفته‌شده تا ۴ دقیقه تازه است', () => {
+    expect(optionsStillFresh(null, 1000)).toBe(false);
+    expect(optionsStillFresh(0, 3 * 60_000)).toBe(true);
+    expect(optionsStillFresh(0, 5 * 60_000)).toBe(false);
   });
 });
