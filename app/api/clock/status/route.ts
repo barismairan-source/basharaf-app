@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { ApiError, handleError } from '@/lib/api-error';
 import { consumeRequestLimit, getClientIp } from '@/lib/auth/rateLimit';
 import { resolveClockIp } from '@/lib/attendance-clock/ip';
-import { anyNetworkConfigured, getClockState, getDeviceFromCookie, matchBranchNetwork } from '@/lib/attendance-clock/service';
+import { anyNetworkConfigured, faceIdRequiredFor, getClockState, getDeviceFromCookie, matchBranchNetwork, todaySessions } from '@/lib/attendance-clock/service';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,10 +34,14 @@ export async function GET(req: Request) {
     if (!device) {
       return NextResponse.json({ device: null, network, ip: ipResult.ok ? ipResult.ip : null, serverTime: now.toISOString() });
     }
-    const state = await getClockState(device.employeeId, now);
+    const [state, today, faceIdRequired] = await Promise.all([
+      getClockState(device.employeeId, now), todaySessions(device.employeeId, now), faceIdRequiredFor(device),
+    ]);
     return NextResponse.json({
       device: { employeeName: device.employeeName },
       state: state.kind === 'out' ? { kind: 'out' } : { kind: state.kind, since: state.since.toISOString() },
+      faceId: { required: faceIdRequired, registered: device.passkeyRegistered },
+      today,
       network,
       ip: ipResult.ok ? ipResult.ip : null,
       serverTime: now.toISOString(),

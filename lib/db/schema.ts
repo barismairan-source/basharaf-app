@@ -1417,6 +1417,18 @@ export const attendanceClockDevices = pgTable(
     revokedBy: uuid('revoked_by').references(() => users.id, { onDelete: 'set null' }),
     createdBy: uuid('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    // ── تأیید با Face ID/اثر انگشت (WebAuthn passkey) — migration: db-attendance-clock-faceid.sql ──
+    // فقط کلید عمومی ذخیره می‌شود؛ هیچ داده‌ی بیومتریکی به سرور نمی‌رسد (گوشی خودش تأیید می‌کند).
+    passkeyCredentialId: text('passkey_credential_id').unique(),
+    passkeyPublicKey: text('passkey_public_key'),
+    passkeyCounter: bigint('passkey_counter', { mode: 'number' }).notNull().default(0),
+    passkeyTransports: text('passkey_transports'),
+    passkeyRpId: text('passkey_rp_id'),
+    passkeyRegisteredAt: timestamp('passkey_registered_at', { withTimezone: true }),
+    passkeyChallenge: text('passkey_challenge'),
+    passkeyChallengeExpiresAt: timestamp('passkey_challenge_expires_at', { withTimezone: true }),
+    // استثنای فردی: گوشی قدیمی بدون Face ID/اثر انگشت — مدیر از پنل روشن می‌کند.
+    faceIdExempt: boolean('face_id_exempt').notNull().default(false),
   },
   (t) => ({
     employeeIdx: index('attendance_clock_devices_employee_idx').on(t.employeeId),
@@ -1441,6 +1453,8 @@ export const attendanceClockEvents = pgTable(
     attendanceEntryId: uuid('attendance_entry_id').references(() => attendanceEntries.id, { onDelete: 'set null' }),
     conversionError: text('conversion_error'),
     idempotencyKey: text('idempotency_key').notNull().unique(),
+    // آیا این ثبت با Face ID/اثر انگشت صاحب گوشی تأیید شد؟
+    userVerified: boolean('user_verified').notNull().default(false),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveClockIp, normalizeIp, parseCidr, ipMatchesCidr } from '@/lib/attendance-clock/ip';
+import { relyingPartyFrom } from '@/lib/attendance-clock/origin';
 import {
   clockStateFrom, decideClock, pairToEntryFields, tehranParts, pickClosestAssignment,
   MAX_OPEN_SHIFT_HOURS,
@@ -173,5 +174,20 @@ describe('زمان تهران و تبدیل به حضور', () => {
     expect(pickClosestAssignment([], '08:00')).toBeNull();
     // ۲۳:۵۰ به شیفت ۰۰:۱۰ نزدیک‌تر است تا ۱۸:۰۰
     expect(pickClosestAssignment([{ id: 'n', plannedStartTime: '00:10' }, { id: 'x', plannedStartTime: '18:00' }], '23:50')?.id).toBe('n');
+  });
+});
+
+describe('relyingPartyFrom — نشانی سایت برای Face ID', () => {
+  const req = (headers: Record<string, string>, url = 'http://10.0.0.5:3000/api/clock/punch') => new Request(url, { method: 'POST', headers });
+  it('از Origin مرورگر (حتی اگر Host پشت پراکسی داخلی باشد)', () => {
+    expect(relyingPartyFrom(req({ origin: 'https://basharaf.me', host: 'internal-app:3000' }))).toEqual({ rpID: 'basharaf.me', origin: 'https://basharaf.me' });
+  });
+  it('Origin با http فقط برای localhost', () => {
+    expect(relyingPartyFrom(req({ origin: 'http://localhost:3105' }))).toEqual({ rpID: 'localhost', origin: 'http://localhost:3105' });
+    expect(relyingPartyFrom(req({ origin: 'http://basharaf.me', host: 'basharaf.me' }))).toEqual({ rpID: 'basharaf.me', origin: 'https://basharaf.me' });
+  });
+  it('بدون Origin → از Host', () => {
+    expect(relyingPartyFrom(req({ host: 'basharaf.me' }))).toEqual({ rpID: 'basharaf.me', origin: 'https://basharaf.me' });
+    expect(relyingPartyFrom(req({ host: 'localhost:3105' }))).toEqual({ rpID: 'localhost', origin: 'http://localhost:3105' });
   });
 });

@@ -28,6 +28,8 @@ export async function GET(req: Request) {
       activatedAt: schema.attendanceClockDevices.activatedAt,
       linkExpiresAt: schema.attendanceClockDevices.linkExpiresAt,
       lastUsedAt: schema.attendanceClockDevices.lastUsedAt,
+      passkeyRegisteredAt: schema.attendanceClockDevices.passkeyRegisteredAt,
+      faceIdExempt: schema.attendanceClockDevices.faceIdExempt,
     }).from(schema.employees)
       .leftJoin(schema.attendanceClockDevices, and(
         eq(schema.attendanceClockDevices.employeeId, schema.employees.id),
@@ -51,6 +53,8 @@ export async function GET(req: Request) {
           : (r.linkExpiresAt && r.linkExpiresAt.getTime() < now ? 'expired' : 'pending'),
         activatedAt: r.activatedAt?.toISOString() ?? null,
         lastUsedAt: r.lastUsedAt?.toISOString() ?? null,
+        faceIdRegistered: !!r.passkeyRegisteredAt,
+        faceIdExempt: r.faceIdExempt ?? false,
       })),
     });
   } catch (e) {
@@ -79,11 +83,14 @@ export async function POST(req: Request) {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + LINK_TTL_HOURS * 3600_000);
     await db.transaction(async (tx) => {
-      await tx.update(schema.attendanceClockDevices)
+      // استثنای Face ID نفر با گوشی جدید هم حفظ شود (تصمیم مدیر درباره‌ی نفر است، نه گوشی).
+      const previous = await tx.update(schema.attendanceClockDevices)
         .set({ revokedAt: now, revokedBy: session.sub })
-        .where(and(eq(schema.attendanceClockDevices.employeeId, employeeId), isNull(schema.attendanceClockDevices.revokedAt)));
+        .where(and(eq(schema.attendanceClockDevices.employeeId, employeeId), isNull(schema.attendanceClockDevices.revokedAt)))
+        .returning({ faceIdExempt: schema.attendanceClockDevices.faceIdExempt });
       await tx.insert(schema.attendanceClockDevices).values({
         employeeId, linkTokenHash: hashToken(token), linkExpiresAt: expiresAt, createdBy: session.sub,
+        faceIdExempt: previous.some((p) => p.faceIdExempt),
       });
     });
     void audit({ action: 'attendance.link.issued', userId: session.sub, meta: { employeeId } });

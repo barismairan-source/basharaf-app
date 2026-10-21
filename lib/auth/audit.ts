@@ -74,7 +74,10 @@ export type AuditAction =
   | 'attendance.network.added'
   | 'attendance.network.deactivated'
   | 'attendance.link.issued'
-  | 'attendance.link.revoked';
+  | 'attendance.link.revoked'
+  | 'attendance.passkey.registered'
+  | 'attendance.settings.updated'
+  | 'attendance.faceIdExempt.changed';
 
 export async function audit(params: {
   action: AuditAction;

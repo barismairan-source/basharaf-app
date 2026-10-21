@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { cookies } from 'next/headers';
-import { and, asc, desc, eq, isNull, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, isNotNull, sql } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { ApiError } from '@/lib/api-error';
 import { computeDerivedFields, assertNoAttendanceOverlap, NEW_ATTENDANCE_CANDIDATE_ID } from '@/lib/payroll/attendanceEntryHelpers';
@@ -41,6 +41,8 @@ export interface ClockDevice {
   employeeId: string;
   employeeName: string;
   employeeBranchId: string | null;
+  passkeyRegistered: boolean;
+  faceIdExempt: boolean;
 }
 
 /** گوشی فعال‌شده‌ی این درخواست (از کوکی). لینک لغوشده یا پرسنل غیرفعال → null. */
@@ -53,6 +55,8 @@ export async function getDeviceFromCookie(): Promise<ClockDevice | null> {
     employeeName: schema.employees.fullName,
     employeeBranchId: schema.employees.branchId,
     employeeActive: schema.employees.isActive,
+    passkeyCredentialId: schema.attendanceClockDevices.passkeyCredentialId,
+    faceIdExempt: schema.attendanceClockDevices.faceIdExempt,
   }).from(schema.attendanceClockDevices)
     .innerJoin(schema.employees, eq(schema.attendanceClockDevices.employeeId, schema.employees.id))
     .where(and(
@@ -61,7 +65,32 @@ export async function getDeviceFromCookie(): Promise<ClockDevice | null> {
       isNotNull(schema.attendanceClockDevices.activatedAt),
     )).limit(1);
   if (!row || !row.employeeActive) return null;
-  return { deviceId: row.deviceId, employeeId: row.employeeId, employeeName: row.employeeName, employeeBranchId: row.employeeBranchId };
+  return {
+    deviceId: row.deviceId, employeeId: row.employeeId, employeeName: row.employeeName, employeeBranchId: row.employeeBranchId,
+    passkeyRegistered: !!row.passkeyCredentialId, faceIdExempt: row.faceIdExempt,
+  };
+}
+
+export const REQUIRE_FACE_ID_KEY = 'attendance.clock.requireFaceId';
+
+/** تنظیم سراسری «ثبت حضور با Face ID». اگر ردیف تنظیم نباشد، پیش‌فرض روشن است. */
+export async function getRequireFaceId(): Promise<boolean> {
+  const [row] = await db.select({ value: schema.appSettings.value }).from(schema.appSettings)
+    .where(eq(schema.appSettings.key, REQUIRE_FACE_ID_KEY)).limit(1);
+  return row ? row.value !== 'false' : true;
+}
+
+/** برای این گوشی Face ID لازم است؟ (تنظیم سراسری روشن و نفر استثنا نشده) */
+export async function faceIdRequiredFor(device: ClockDevice): Promise<boolean> {
+  if (device.faceIdExempt) return false;
+  return getRequireFaceId();
+}
+
+/** ثبت قبلی همین گوشی با همین کلید ضدتکرار (برای تلاش دوباره پس از قطع شبکه). */
+export async function findPunchByKey(deviceId: string, clientKey: string) {
+  const [row] = await db.select().from(schema.attendanceClockEvents)
+    .where(eq(schema.attendanceClockEvents.idempotencyKey, `${deviceId}:${clientKey}`)).limit(1);
+  return row ?? null;
 }
 
 export interface MatchedNetwork { networkId: string; branchId: string; branchName: string }
@@ -103,6 +132,26 @@ export async function findOpenClockIn(tx: DbOrTx, employeeId: string): Promise<O
   return out ? null : { id: last.id, occurredAt: last.occurredAt };
 }
 
+/** ورود/خروج‌های امروزِ (به وقت تهران) همین نفر — برای نمایش در صفحه‌ی گوشی. */
+export async function todaySessions(employeeId: string, now: Date): Promise<Array<{ inAt: string; outAt: string | null }>> {
+  const ins = await db.select({ id: schema.attendanceClockEvents.id, occurredAt: schema.attendanceClockEvents.occurredAt })
+    .from(schema.attendanceClockEvents)
+    .where(and(
+      eq(schema.attendanceClockEvents.employeeId, employeeId),
+      eq(schema.attendanceClockEvents.eventType, 'clock_in'),
+      eq(schema.attendanceClockEvents.workDate, new Date(tehranParts(now).date + 'T00:00:00Z')),
+    ))
+    .orderBy(asc(schema.attendanceClockEvents.occurredAt));
+  if (ins.length === 0) return [];
+  const outs = await db.select({ pairedInEventId: schema.attendanceClockEvents.pairedInEventId, occurredAt: schema.attendanceClockEvents.occurredAt })
+    .from(schema.attendanceClockEvents)
+    .where(inArray(schema.attendanceClockEvents.pairedInEventId, ins.map((i) => i.id)));
+  return ins.map((i) => ({
+    inAt: i.occurredAt.toISOString(),
+    outAt: outs.find((o) => o.pairedInEventId === i.id)?.occurredAt.toISOString() ?? null,
+  }));
+}
+
 export async function getClockState(employeeId: string, now: Date): Promise<ClockState> {
   return clockStateFrom(await findOpenClockIn(db, employeeId), now);
 }
@@ -121,7 +170,7 @@ export interface PunchResult {
  * (دو لمس هم‌زمان پشت سر هم اجرا می‌شوند، نه موازی). زمان = now() دیتابیس.
  */
 export async function recordPunch(input: {
-  device: ClockDevice; network: MatchedNetwork; action: ClockAction; clientKey: string;
+  device: ClockDevice; network: MatchedNetwork; action: ClockAction; clientKey: string; userVerified: boolean;
 }): Promise<PunchResult> {
   const idempotencyKey = `${input.device.deviceId}:${input.clientKey}`;
 
@@ -156,6 +205,7 @@ export async function recordPunch(input: {
       deviceId: input.device.deviceId,
       pairedInEventId: decision.action === 'clock_out' ? decision.pairedInEventId : null,
       idempotencyKey,
+      userVerified: input.userVerified,
     }).returning();
 
     await tx.update(schema.attendanceClockDevices).set({ lastUsedAt: nowDate })
