@@ -26,6 +26,8 @@ function uuid(): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
+const TIP_KEY = 'basharaf-clock-home-tip-dismissed';
+
 const NETWORK_MESSAGES: Record<string, string> = {
   OFF_NETWORK: 'به اینترنت مغازه وصل نیستید. وای‌فای مغازه را روشن کنید و VPN را خاموش کنید.',
   NOT_CONFIGURED: 'ثبت حضور با اینترنت مغازه هنوز راه‌اندازی نشده است. به مدیر بگویید.',
@@ -70,6 +72,8 @@ export function ClockClient() {
   const [webauthnOk, setWebauthnOk] = useState(true);
   const [standalone, setStandalone] = useState(false);
   const [justActivated, setJustActivated] = useState(false);
+  const [platform, setPlatform] = useState<'ios' | 'android' | 'other'>('other');
+  const [tipDismissed, setTipDismissed] = useState(true);
   const activating = useRef(false);
 
   useEffect(() => {
@@ -77,6 +81,10 @@ export function ClockClient() {
     setWebauthnOk(browserSupportsWebAuthn());
     setStandalone(Boolean((navigator as Navigator & { standalone?: boolean }).standalone)
       || window.matchMedia?.('(display-mode: standalone)').matches);
+    const ua = navigator.userAgent;
+    // iPadOS خودش را «Macintosh» معرفی می‌کند؛ با لمسی بودن تشخیص داده می‌شود.
+    setPlatform(/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(ua) ? 'android' : 'other');
+    try { setTipDismissed(localStorage.getItem(TIP_KEY) === '1'); } catch { setTipDismissed(false); }
   }, []);
 
   const load = useCallback(async () => {
@@ -230,11 +238,21 @@ export function ClockClient() {
       </div>
 
       {done && <InlineNotice tone="success">{done}</InlineNotice>}
-      {justActivated && (
-        <InlineNotice tone="info" title="دسترسی سریع از صفحه‌ی اصلی گوشی">
-          آیفون: در Safari دکمه‌ی اشتراک‌گذاری (مربع با فلش) ← «Add to Home Screen».
-          اندروید: در Chrome منوی ⋮ ← «Add to Home screen».
-          از این به بعد همان آیکن را بزنید؛ لینک دیگر لازم نیست و ورود به حساب هم نمی‌خواهد.
+      {status?.device && !standalone && (justActivated || !tipDismissed) && (
+        <InlineNotice tone="info" title="آیکن basharaf روی صفحه‌ی اصلی گوشی">
+          <div className="space-y-1.5">
+            {platform !== 'android' && (
+              <p>آیفون: همین صفحه در <b>Safari</b> → دکمه‌ی اشتراک‌گذاری (مربع با فلش رو به بالا) → «Add to Home Screen» → «Add».</p>
+            )}
+            {platform !== 'ios' && (
+              <p>اندروید: همین صفحه در <b>Chrome</b> → منوی ⋮ بالا → «Add to Home screen» → «Add».</p>
+            )}
+            <p>از این به بعد آیکن basharaf را بزنید؛ لینک لازم نیست و ورود به حساب هم نمی‌خواهد.</p>
+            <Button size="sm" variant="ghost" onClick={() => {
+              setTipDismissed(true); setJustActivated(false);
+              try { localStorage.setItem(TIP_KEY, '1'); } catch { /* حالت خصوصی */ }
+            }}>متوجه شدم</Button>
+          </div>
         </InlineNotice>
       )}
       {error && <InlineNotice tone="danger">{error}</InlineNotice>}

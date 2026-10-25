@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
 import { ClockClient } from '@/components/clock/ClockClient';
 
@@ -12,9 +12,26 @@ export const metadata: Metadata = {
   title: 'ثبت حضور',
   robots: { index: false, follow: false },
   manifest: '/clock.webmanifest',
-  appleWebApp: { capable: false, title: 'ثبت حضور' },
-  applicationName: 'ثبت حضور',
+  // نام آیکن روی صفحه‌ی اصلی گوشی
+  appleWebApp: { capable: false, title: 'basharaf' },
+  applicationName: 'basharaf',
   other: { 'mobile-web-app-capable': 'no' },
+  // آیکن صفاسیتی (کرم روی سرمه‌ای) — آیفون apple-touch-icon را برمی‌دارد، نه manifest را
+  icons: {
+    icon: [
+      { url: '/icons/basharaf-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/basharaf-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/basharaf-apple-180.png', sizes: '180x180', type: 'image/png' }],
+  },
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  colorScheme: 'light',
+  themeColor: '#3A4454',
 };
 
 export const dynamic = 'force-dynamic';
