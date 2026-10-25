@@ -69,6 +69,7 @@ export function ClockClient() {
   const [confirmOut, setConfirmOut] = useState(false);
   const [webauthnOk, setWebauthnOk] = useState(true);
   const [standalone, setStandalone] = useState(false);
+  const [justActivated, setJustActivated] = useState(false);
   const activating = useRef(false);
 
   useEffect(() => {
@@ -116,7 +117,7 @@ export function ClockClient() {
         const r = await postJson('/api/clock/activate', { token: linkToken });
         if (!r.ok) setError(r.body?.error ?? 'فعال‌سازی ناموفق بود');
         else if (r.body.alreadyActive) setDone(`این گوشی از قبل برای ${r.body.employeeName} فعال است. از این به بعد فقط همین صفحه را باز کنید؛ لینک لازم نیست.`);
-        else setDone(`این گوشی برای ${r.body.employeeName} فعال شد.`);
+        else { setDone(`این گوشی برای ${r.body.employeeName} فعال شد.`); setJustActivated(true); }
       } catch {
         setError('اتصال برقرار نشد. اینترنت را بررسی کنید و لینک را دوباره باز کنید.');
       } finally {
@@ -229,6 +230,13 @@ export function ClockClient() {
       </div>
 
       {done && <InlineNotice tone="success">{done}</InlineNotice>}
+      {justActivated && (
+        <InlineNotice tone="info" title="دسترسی سریع از صفحه‌ی اصلی گوشی">
+          آیفون: در Safari دکمه‌ی اشتراک‌گذاری (مربع با فلش) ← «Add to Home Screen».
+          اندروید: در Chrome منوی ⋮ ← «Add to Home screen».
+          از این به بعد همان آیکن را بزنید؛ لینک دیگر لازم نیست و ورود به حساب هم نمی‌خواهد.
+        </InlineNotice>
+      )}
       {error && <InlineNotice tone="danger">{error}</InlineNotice>}
 
       {loading && !status ? (
@@ -236,7 +244,7 @@ export function ClockClient() {
       ) : status && !status.device ? (
         <InlineNotice tone="warning" title="این گوشی فعال نشده است">
           {standalone
-            ? 'این صفحه را از آیکن صفحه‌ی اصلی باز کرده‌اید. لینک شخصی را دوباره داخل همین صفحه باز کنید، یا صفحه را در Safari/Chrome باز کنید.'
+            ? 'این آیکن قدیمی است و حافظه‌اش از مرورگر جداست. آن را از صفحه‌ی اصلی حذف کنید، همین صفحه را در Safari (یا Chrome) باز کنید و دوباره «Add to Home Screen» بزنید.'
             : 'لینک شخصی ثبت حضور را از مدیر بگیرید و روی همین گوشی باز کنید.'}
         </InlineNotice>
       ) : status ? (

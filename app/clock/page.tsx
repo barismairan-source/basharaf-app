@@ -2,9 +2,19 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { ClockClient } from '@/components/clock/ClockClient';
 
+/**
+ * آیکن صفحه‌ی اصلی گوشی برای پرسنل باید مستقیم /clock را باز کند، نه /dashboard
+ * (manifest اصلی سایت) که ورود به حساب می‌خواهد. و باید داخل خود مرورگر باز شود
+ * (display: browser، بدون apple-mobile-web-app-capable): آیکنِ «standalone» در آیفون
+ * حافظه و کوکی جدا از Safari دارد، پس کلید گوشی که در Safari فعال شده آنجا نیست.
+ */
 export const metadata: Metadata = {
   title: 'ثبت حضور',
   robots: { index: false, follow: false },
+  manifest: '/clock.webmanifest',
+  appleWebApp: { capable: false, title: 'ثبت حضور' },
+  applicationName: 'ثبت حضور',
+  other: { 'mobile-web-app-capable': 'no' },
 };
 
 export const dynamic = 'force-dynamic';
