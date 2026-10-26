@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, UserPlus, Users, Clock, Calculator } from 'lucide-react';
+import { LayoutDashboard, UserPlus, Users, Clock, Calculator, Wallet } from 'lucide-react';
 import { Select } from '@/components/ui';
 import { useAppStore } from '@/store';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,7 @@ const HR_NAV = [
   { href: '/hr/recruitment', label: 'استخدام', icon: UserPlus },
   { href: '/hr/people', label: 'افراد', icon: Users },
   { href: '/hr/time', label: 'زمان و حضور', icon: Clock },
+  { href: '/hr/staff', label: 'پرسنل و حقوق', icon: Wallet },
   { href: '/hr/payroll', label: 'حقوق و مزایا', icon: Calculator },
 ];
 

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
 import { assertCan, branchScope } from '@/lib/auth/apiAccess';
+import { assertEmployeesInScope } from '@/lib/hr/employeeScope';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { minutesBetween, validateShiftMinutes, shiftRangesOverlap } from '@/lib/payroll/attendanceEngine';
 
@@ -91,6 +92,7 @@ export async function POST(req: Request) {
       throw new ApiError(403, 'دسترسی خارج از شعبه‌ی شما مجاز نیست', 'FORBIDDEN_BRANCH');
     }
     const branchId = session.role === 'BranchUser' ? (session.branchId ?? null) : (input.branchId ?? null);
+    await assertEmployeesInScope(session, input.employeeIds);
 
     const plannedMinutes = minutesBetween(input.startTime, input.endTime, input.crossesMidnight);
     if (!validateShiftMinutes(plannedMinutes)) {

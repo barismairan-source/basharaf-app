@@ -3,7 +3,7 @@ import { and, desc, eq, isNull, lte, or, gte } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { handleErrorLogged } from '@/lib/api-error';
 import { isUnlocked, requireMe } from '@/lib/staff-panel/session';
-import { maskTail } from '@/lib/staff-panel/pure';
+import { maskTail, sectionOfRole } from '@/lib/staff-panel/pure';
 import { DEFAULT_ROLES } from '@/types/payroll';
 
 export const dynamic = 'force-dynamic';
@@ -23,7 +23,8 @@ export async function GET(req: Request) {
     const unlocked = await isUnlocked(device.deviceId);
     const basic = {
       fullName: e?.fullName ?? device.employeeName,
-      role: DEFAULT_ROLES.find((r) => r.value === e?.role)?.label ?? e?.role ?? '',
+      // بالای پنل «سالن» یا «آشپزخانه» نشان داده می‌شود، نه عنوان شغلی
+      role: sectionOfRole(e?.role, DEFAULT_ROLES.find((r) => r.value === e?.role)?.label ?? e?.role) ?? '',
       branch: branch?.name ?? e?.branchName ?? null,
       joinDate: e?.joinDate ? e.joinDate.toISOString().slice(0, 10) : null,
       phone: e?.phone ?? null,

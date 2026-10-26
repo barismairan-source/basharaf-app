@@ -107,3 +107,16 @@ describe('آرگومان‌های اسکریپت وارد کردن پرسنل', 
     expect(parseArgs(['/a/b.xlsx'])).toEqual({ input: '/a/b.xlsx', branch: undefined, out: undefined });
   });
 });
+
+import { sectionOfRole } from '@/lib/staff-panel/pure';
+describe('بخش کاری به‌جای عنوان شغلی', () => {
+  it('آشپز/سرآشپز/ظرفشور → آشپزخانه، گارسون/صندوق‌دار → سالن، بقیه همان برچسب', () => {
+    expect(sectionOfRole('cook', 'آشپز')).toBe('آشپزخانه');
+    expect(sectionOfRole('chef', 'سرآشپز')).toBe('آشپزخانه');
+    expect(sectionOfRole('dishwasher', 'ظرفشور')).toBe('آشپزخانه');
+    expect(sectionOfRole('waiter', 'گارسون')).toBe('سالن');
+    expect(sectionOfRole('cashier', 'صندوق‌دار')).toBe('سالن');
+    expect(sectionOfRole('manager', 'مدیر')).toBe('مدیر');
+    expect(sectionOfRole(null, null)).toBeNull();
+  });
+});

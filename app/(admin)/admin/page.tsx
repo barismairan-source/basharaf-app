@@ -2,6 +2,10 @@ import { db, schema } from '@/lib/db/client';
 import { desc, count } from 'drizzle-orm';
 import { Users, Shield, ClipboardList, Activity } from 'lucide-react';
 
+// آمار باید از دیتابیس همان لحظه خوانده شود؛ بدون این، Next صفحه را یک بار هنگام build می‌سازد
+// (آمار منجمد روی سایت + تلاش بی‌فایده برای اتصال به دیتابیس روی سرور build).
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboardPage() {
   const [userCount] = await db.select({ count: count() }).from(schema.users);
   const recentAudit = await db
