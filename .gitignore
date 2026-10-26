@@ -54,3 +54,6 @@ Screenshot*
 
 # Playwright output artifacts
 test-results/
+
+# فایل SQL ساخته‌شده از فهرست پرسنل — اطلاعات شخصی دارد
+staff-import*.sql

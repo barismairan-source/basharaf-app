@@ -77,7 +77,9 @@ export type AuditAction =
   | 'attendance.link.revoked'
   | 'attendance.passkey.registered'
   | 'attendance.settings.updated'
-  | 'attendance.faceIdExempt.changed';
+  | 'attendance.faceIdExempt.changed'
+  | 'staff.panel.unlocked'
+  | 'staff.payslip.viewed';
 
 export async function audit(params: {
   action: AuditAction;

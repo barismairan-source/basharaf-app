@@ -17,7 +17,7 @@
 // match می‌کند (startsWith('//') هرگز true نیست) — پس مسیرهای دیگر تحت‌تأثیر نیستند.
 // همین فهرست در bootstrap استور (store/index.ts) هم استفاده می‌شود — فقط همین‌جا تعریف شود.
 // '/clock' = صفحه‌ی ثبت حضور پرسنل روی گوشی خودشان؛ با لینک شخصی کار می‌کند، نه با حساب کاربری.
-export const PUBLIC_PATH_PREFIXES = ['/', '/login', '/signup', '/forgot', '/apply', '/m', '/order', '/reserve', '/safasity', '/receipts/view', '/r', '/pay', '/clock'];
+export const PUBLIC_PATH_PREFIXES = ['/', '/login', '/signup', '/forgot', '/apply', '/m', '/order', '/reserve', '/safasity', '/receipts/view', '/r', '/pay', '/clock', '/me'];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATH_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));

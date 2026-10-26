@@ -235,6 +235,7 @@ export function ClockClient() {
       <div className="text-center space-y-1">
         <h1 className="text-[18px] font-semibold text-text">ثبت حضور</h1>
         {status?.device && <p className="text-[14px] text-muted">{status.device.employeeName}</p>}
+        {status?.device && <a href="/me" className="inline-block text-[12.5px] text-accent underline underline-offset-2">پنل من: حضور، شیفت و حقوق</a>}
       </div>
 
       {done && <InlineNotice tone="success">{done}</InlineNotice>}
