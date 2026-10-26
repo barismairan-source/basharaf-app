@@ -1,0 +1,28 @@
+# فایل‌هایی که هنگام «liara deploy» آپلود نمی‌شوند (برای build لازم نیستند).
+# ⚠️ وقتی این فایل هست، ممکن است .gitignore برای آپلود خوانده نشود؛ پس موارد آن هم اینجا تکرار شده‌اند.
+node_modules
+.next
+.git
+.github
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+tsconfig.tsbuildinfo
+coverage
+test-results
+playwright-report
+tests
+graphify-out
+project-docs
+release-artifacts
+v0.9.*
+v9.1.0
+scripts
+Screenshot*.png
+staff-import*.sql
+staff-statements*.sql
+CURRENT_STATE_REPORT.md
+RECIPE_STUDIO_PLAN.md
+PROJECT_HISTORY.md

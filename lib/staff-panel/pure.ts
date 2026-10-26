@@ -66,3 +66,13 @@ export function formatMinutes(m: number): string {
   const h = Math.floor(m / 60), mm = m % 60;
   return mm ? `${h} ساعت و ${mm} دقیقه` : `${h} ساعت`;
 }
+
+/** بخش کاری از روی سمت: آشپزخانه یا سالن (به‌جای عنوان شغلی مثل «گارسون»). سمت‌های دیگر همان برچسب خودشان. */
+const KITCHEN_ROLES = new Set(['chef', 'cook', 'dishwasher']);
+const HALL_ROLES = new Set(['waiter', 'cashier']);
+export function sectionOfRole(role: string | null | undefined, roleLabel?: string | null): string | null {
+  if (!role) return roleLabel ?? null;
+  if (KITCHEN_ROLES.has(role)) return 'آشپزخانه';
+  if (HALL_ROLES.has(role)) return 'سالن';
+  return roleLabel ?? role;
+}

@@ -357,7 +357,7 @@ export function MeClient() {
               <SfCard>
                 <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-[13.5px]">
                   <dt style={{ color: '#5E6676' }}>نام</dt><dd>{profile.fullName}</dd>
-                  <dt style={{ color: '#5E6676' }}>سمت</dt><dd>{profile.role || '—'}</dd>
+                  <dt style={{ color: '#5E6676' }}>بخش</dt><dd>{profile.role || '—'}</dd>
                   <dt style={{ color: '#5E6676' }}>شعبه</dt><dd>{profile.branch ?? '—'}</dd>
                   <dt style={{ color: '#5E6676' }}>شروع همکاری</dt><dd>{profile.joinDate ? toFa(isoToJalali(profile.joinDate)) : '—'}</dd>
                   <dt style={{ color: '#5E6676' }}>تلفن</dt><dd dir="ltr" className="text-start">{profile.phone ? toFa(profile.phone) : '—'}</dd>

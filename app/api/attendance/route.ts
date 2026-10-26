@@ -5,6 +5,7 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession, requireRole } from '@/lib/auth/session';
 import { assertCan, branchScope } from '@/lib/auth/apiAccess';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
+import { assertEmployeesInScope } from '@/lib/hr/employeeScope';
 import { computeDerivedFields, assertNoAttendanceOverlap, hasActiveShiftAssignment, NEW_ATTENDANCE_CANDIDATE_ID } from '@/lib/payroll/attendanceEntryHelpers';
 import type { AttendanceIntervalInput } from '@/lib/payroll/attendanceEngine';
 
@@ -94,6 +95,7 @@ export async function POST(req: Request) {
       throw new ApiError(403, 'دسترسی خارج از شعبه‌ی شما مجاز نیست', 'FORBIDDEN_BRANCH');
     }
     const branchId = session.role === 'BranchUser' ? (session.branchId ?? null) : (input.branchId ?? null);
+    await assertEmployeesInScope(session, [input.employeeId]);
 
     let plannedMinutes = 0;
     let assignment: typeof schema.employeeShiftAssignments.$inferSelect | undefined;
@@ -101,6 +103,9 @@ export async function POST(req: Request) {
       [assignment] = await db.select().from(schema.employeeShiftAssignments)
         .where(eq(schema.employeeShiftAssignments.id, input.shiftAssignmentId)).limit(1);
       if (!assignment) throw new ApiError(404, 'تخصیص شیفت پیدا نشد', 'ASSIGNMENT_NOT_FOUND');
+      if (assignment.employeeId !== input.employeeId || assignment.workDate.toISOString().slice(0, 10) !== input.workDate) {
+        throw new ApiError(400, 'این تخصیص شیفت متعلق به همین کارمند/روز نیست', 'ASSIGNMENT_MISMATCH');
+      }
       plannedMinutes = assignment.plannedMinutes;
     }
 
