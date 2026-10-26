@@ -58,7 +58,7 @@ describe('پنل پرسنل — کمک‌های خالص', () => {
   });
 });
 
-import { normalizePhone, parseStaff, buildSql, sqlStr } from '@/scripts/staff-import-sql';
+import { normalizePhone, parseStaff, buildSql, sqlStr, parseArgs } from '@/scripts/staff-import-sql';
 
 describe('وارد کردن پرسنل — ساخت SQL (بدون اتصال به دیتابیس)', () => {
   it('تلفن: ارقام فارسی، فاصله، +98 → ۰۹…؛ نامعتبر → null', () => {
@@ -95,5 +95,15 @@ describe('وارد کردن پرسنل — ساخت SQL (بدون اتصال ب�
     expect(sql).toContain('BEGIN;');
     expect(sql).toContain('COMMIT;');
     expect(sqlStr("a'b")).toBe("'a''b'");
+  });
+});
+
+describe('آرگومان‌های اسکریپت وارد کردن پرسنل', () => {
+  it('بدون --out هم مسیر ورودی شناخته می‌شود (باگ نسخه‌ی اول)', () => {
+    expect(parseArgs(['/a/b.xlsx', '--branch', 'شعبه یک'])).toEqual({ input: '/a/b.xlsx', branch: 'شعبه یک', out: undefined });
+  });
+  it('با --out و ترتیب‌های مختلف', () => {
+    expect(parseArgs(['--branch', 'X', '/a/b.xlsx', '--out', '/t/x.sql'])).toEqual({ input: '/a/b.xlsx', branch: 'X', out: '/t/x.sql' });
+    expect(parseArgs(['/a/b.xlsx'])).toEqual({ input: '/a/b.xlsx', branch: undefined, out: undefined });
   });
 });

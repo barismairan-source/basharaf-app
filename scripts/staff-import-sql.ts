@@ -73,12 +73,20 @@ export function buildSql(staff: StaffRow[], branchName: string): string {
   return lines.join('\n') + '\n';
 }
 
+/** آرگومان‌ها: یک مسیر ورودی + --branch نام + اختیاری --out فایل. (نسخه‌ی اول وقتی --out نبود، ورودی را اشتباه کنار می‌گذاشت.) */
+export function parseArgs(args: string[]): { input?: string; branch?: string; out?: string } {
+  const res: { input?: string; branch?: string; out?: string } = {};
+  for (let i = 0; i < args.length; i++) {
+    const a = args[i]!;
+    if (a === '--branch') res.branch = args[++i];
+    else if (a === '--out') res.out = args[++i];
+    else if (!a.startsWith('--') && res.input === undefined) res.input = a;
+  }
+  return res;
+}
+
 function main() {
-  const args = process.argv.slice(2);
-  const input = args.find((a) => !a.startsWith('--') && a !== args[args.indexOf('--branch') + 1] && a !== args[args.indexOf('--out') + 1]);
-  const bi = args.indexOf('--branch');
-  const branch = bi >= 0 ? args[bi + 1] : undefined;
-  const oi = args.indexOf('--out');
+  const { input, branch, out: outArg } = parseArgs(process.argv.slice(2));
   if (!input || !branch) {
     console.error('استفاده: npx tsx scripts/staff-import-sql.ts "<اکسل>" --branch "<نام شعبه>" [--out فایل.sql]');
     process.exit(1);
@@ -86,7 +94,7 @@ function main() {
   const wb = XLSX.readFile(input);
   const sheet = wb.Sheets[wb.SheetNames[0]!]!;
   const staff = parseStaff(XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' }));
-  const out = oi >= 0 && args[oi + 1] ? args[oi + 1]! : path.join(path.dirname(input), 'staff-import.sql');
+  const out = outArg ?? path.join(path.dirname(input), 'staff-import.sql');
   fs.writeFileSync(out, buildSql(staff, branch), { mode: 0o600 });
   // عمداً هیچ نام یا شماره‌ای چاپ نمی‌شود.
   console.log(`✓ ${staff.length} نفر → ${out}`);
