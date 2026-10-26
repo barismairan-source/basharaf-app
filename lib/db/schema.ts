@@ -1464,6 +1464,31 @@ export const attendanceClockEvents = pgTable(
   })
 );
 
+// ─── ریز کارکرد و محاسبه‌ی حقوق ماهانه — سابقه‌ی واردشده از اکسل‌های حقوق (فقط‌خواندنی برای پرسنل) ──
+// migration: project-docs/migrations/db-staff-statements.sql. به payslips/payroll_runs دست نمی‌زند:
+// فیش سیستم حقوق با تأیید و ثبت حسابداری کار می‌کند؛ این‌ها فقط سابقه‌ی نمایشی هستند.
+export const staffStatements = pgTable(
+  'staff_statements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    periodYearMonth: text('period_year_month').notNull(),
+    model: text('model').notNull(), // 'hourly' | 'daily'
+    title: text('title').notNull(),
+    basis: jsonb('basis').notNull(),
+    weeks: jsonb('weeks').notNull().default(sql`'[]'::jsonb`),
+    lines: jsonb('lines').notNull().default(sql`'[]'::jsonb`),
+    notes: jsonb('notes').notNull().default(sql`'[]'::jsonb`),
+    totalAmount: bigint('total_amount', { mode: 'number' }).notNull(),
+    source: text('source'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    employeePeriodUniq: uniqueIndex('staff_statements_employee_period_uniq').on(t.employeeId, t.periodYearMonth),
+  })
+);
+export type StaffStatement = typeof staffStatements.$inferSelect;
+
 export type BranchAttendanceNetwork = typeof branchAttendanceNetworks.$inferSelect;
 export type AttendanceClockDevice = typeof attendanceClockDevices.$inferSelect;
 export type AttendanceClockEvent = typeof attendanceClockEvents.$inferSelect;

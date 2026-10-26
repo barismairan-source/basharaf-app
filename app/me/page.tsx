@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { MeClient } from '@/components/me/MeClient';
+import { SafasityTheme } from '@/components/safasity/SafasityTheme';
 
 /**
  * /me — پنل پرسنل: حضور، شیفت، حقوق و مشخصات خودِ هر نفر. بدون حساب کاربری؛ با همان گوشی
@@ -18,8 +19,10 @@ export const dynamic = 'force-dynamic';
 
 export default function MePage() {
   return (
-    <main className="min-h-screen bg-bg px-4 py-6">
-      <MeClient />
-    </main>
+    <SafasityTheme>
+      <main className="min-h-screen px-4 py-5">
+        <MeClient />
+      </main>
+    </SafasityTheme>
   );
 }
