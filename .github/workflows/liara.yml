@@ -80,4 +80,7 @@ jobs:
           LIARA_TOKEN: ${{ secrets.LIARA_API_TOKEN }}
         run: |
           npm i -g @liara/cli@9
+          # فقط روی سرور build لیارا: ابزارهای تست/توسعه نصب نشوند تا build زیر سقف زمانی بماند
+          # (lint/tsc/vitest همین بالا در GitHub اجرا شده‌اند). این فایل commit نمی‌شود.
+          echo "omit=dev" > .npmrc
           liara deploy --app="basharaff" --api-token="$LIARA_TOKEN" --no-app-logs
