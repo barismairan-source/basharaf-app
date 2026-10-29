@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` = `08a2852` (= origin/main؛ آخرین دیپلوی ۲۰۲۶-۱۰-۲۸). branch محلی `fix/branch-scope-all-roles` (۳ commit رفع امنیتی) **push نشده**. |
+| **نسخه** | `main` = `08a2852` (= origin/main؛ آخرین دیپلوی ۲۰۲۶-۱۰-۲۸). branch محلی `fix/branch-scope-all-roles` (۴ commit رفع + ۱ commit مستندات) **push نشده**. |
 | **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
 | **Build/tsc** | روی branch رفع: tsc ✅ · unit 735/735 ✅ · lint ✅ (۸ warning) · build ✅ |
 | **دیپلوی** | push روی main = دیپلوی خودکار Liara. تست بمب‌ساعتی رزرو رفع شده (31b4d6f). |
@@ -65,8 +65,8 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
-## 📓 2026-10-30 — ممیزی کامل در `~/Claude-Projects` + رفع ۳ نقص دسترسی/یکپارچگی — روی branch `fix/branch-scope-all-roles`
-**چه شد:** پروژه به `~/Claude-Projects/01-Active/basharaf-app` کپی شد (نسخه‌ی کاری از ۲۰۲۶-۱۰-۲۹؛ `~/Documents/basharaf-app` بکاپ ثابت است). ممیزی کامل کد (گزارش: `~/Claude-Projects/_audit/basharaf-app-audit.md`). سه نقص تأییدشده رفع شد: (۱) ۲۵ route فقط `role === 'BranchUser'` را به شعبه محدود می‌کردند و Chef/Warehouse به داده‌ی شعب دیگر دسترسی داشتند → `canUseBranch`/`branchScope` (f1cf927) + تست نگهبان ایستا. (۲) `/api/inventory/expiry` اقلام همه‌ی شعب را برمی‌گرداند → فیلتر شعبه (8182820). (۳) محاسبه‌ی مجدد حقوق وضعیت را بیرون تراکنش چک می‌کرد و می‌توانست اجرای تأییدشده را بازنویسی کند → قفل `FOR UPDATE` و چک مجدد داخل تراکنش (e855187). کار WIP استودیو رسپی دست نخورد.
+## 📓 2026-10-30 — ممیزی کامل در `~/Claude-Projects` + رفع ۴ نقص دسترسی/یکپارچگی — روی branch `fix/branch-scope-all-roles`
+**چه شد:** پروژه به `~/Claude-Projects/01-Active/basharaf-app` کپی شد (نسخه‌ی کاری از ۲۰۲۶-۱۰-۲۹؛ `~/Documents/basharaf-app` بکاپ ثابت است). ممیزی کامل کد (گزارش: `~/Claude-Projects/_audit/basharaf-app-audit.md`). سه نقص تأییدشده رفع شد: (۱) ۲۵ route فقط `role === 'BranchUser'` را به شعبه محدود می‌کردند و Chef/Warehouse به داده‌ی شعب دیگر دسترسی داشتند → `canUseBranch`/`branchScope` (f1cf927) + تست نگهبان ایستا. (۲) `/api/inventory/expiry` اقلام همه‌ی شعب را برمی‌گرداند → فیلتر شعبه (8182820). (۳) محاسبه‌ی مجدد حقوق وضعیت را بیرون تراکنش چک می‌کرد و می‌توانست اجرای تأییدشده را بازنویسی کند → قفل `FOR UPDATE` و چک مجدد داخل تراکنش (e855187). (۴) رمز پیش‌فرض hard-code `basharaf123` در `lib/repos/api.ts` حذف شد (2e8da9e). ⚠️ seed قدیمی (`v0.9.7-*/basharaf-deploy`) حساب‌هایی با همین رمز می‌ساخت — کاربر باید چک کند در production حسابی با این رمز نمانده باشد. کار WIP استودیو رسپی دست نخورد.
 **فایل‌ها:** ۲۳ فایل زیر `app/api/**` (attendance، shift-assignments، purchase-orders، inventory/*، equipment، maintenance، orders/*، dashboard/overview، transactions/import)، `app/api/inventory/expiry/route.ts`، `app/api/payroll/runs/[id]/calculate/route.ts`، `tests/unit/branch-scope-routes.test.ts`.
 **Build:** tsc ✅ · unit 735/735 ✅ · lint ✅ (۸ warning قدیمی، ۰ خطا) · build ✅ — بدون `DATABASE_URL`. تست‌های integration/e2e اجرا نشدند (دیتابیس آزمایشی لازم است).
 **ناتمام:** branch push/merge نشده (منتظر تأیید کاربر). رفتار جدید: کاربر Chef/Warehouse فقط شعبه‌ی خودش؛ کاربر غیر SuperAdmin بدون شعبه حالا ۴۰۳ می‌گیرد (قبلاً همه‌ی شعب را می‌دید) — قبل از merge با کاربران واقعی چک شود.
