@@ -8,7 +8,8 @@ import { canConfirmAttendance } from '@/lib/payroll/attendanceEngine';
 export const dynamic = 'force-dynamic';
 
 /** تأیید حضور — فقط مدیر مجاز است؛ فقط رکورد draft قابل تأیید است. */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const [existing] = await db.select().from(schema.attendanceEntries)

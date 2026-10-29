@@ -11,7 +11,8 @@ import { describeBasis, type StatementBasis, type StatementLine, type StatementW
 export const dynamic = 'force-dynamic';
 
 /** GET /api/me/statements/[id] — جزئیات یک ماه: هفته‌به‌هفته، روزها، مبلغ‌ها و «بر چه اساسی». ماه دیگران → ۴۰۴. */
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const device = await requireMe();
     await requireUnlocked(device);

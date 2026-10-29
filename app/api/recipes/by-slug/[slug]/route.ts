@@ -7,7 +7,8 @@ import { rowToRecipe, rowToRecipeCategory, rowToRecipeIngredient } from '@/lib/d
 export const dynamic = 'force-dynamic';
 
 /** GET /api/recipes/by-slug/[slug] — عمومی، فقط اگر published باشد. */
-export async function GET(_req: Request, { params }: { params: { slug: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   try {
     const [row] = await db.select().from(schema.recipes).where(eq(schema.recipes.slug, params.slug));
     if (!row || !row.isPublished) throw new ApiError(404, 'رسپی پیدا نشد', 'NOT_FOUND');

@@ -21,7 +21,8 @@ const patchSchema = z.object({
  * است، در غیر این صورت 422. اتمیک: update orders.status + insert order_events.
  * رهگیری مشتری (/order/track/[token]) همین orders.status را می‌خواند.
  */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
     const input = patchSchema.parse(await req.json());

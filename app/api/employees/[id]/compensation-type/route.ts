@@ -18,7 +18,8 @@ const changeSchema = z.object({
 /**
  * GET — تاریخچه‌ی تغییر نوع حقوق (گزارش حسابرسی).
  */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const rows = await db.select().from(schema.employeeCompensationTypeChanges)
@@ -41,7 +42,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
  * فیش‌ها و دوره‌های گذشته (که snapshot خودشان را دارند) تغییر نمی‌کنند —
  * این فقط مسیر محاسبه‌ی *بعدی* را عوض می‌کند.
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const input = changeSchema.parse(await req.json());

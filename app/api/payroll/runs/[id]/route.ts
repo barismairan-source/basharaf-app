@@ -7,7 +7,8 @@ import { assertCanAny } from '@/lib/auth/apiAccess';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertCanAny(session, ['hr.compensation.view', 'hr.payroll.calculate', 'hr.payroll.approve', 'hr.payroll.post']);
@@ -66,7 +67,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireRole('SuperAdmin');
     const [run] = await db.select().from(schema.payrollRuns)

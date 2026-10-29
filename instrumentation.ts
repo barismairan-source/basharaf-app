@@ -7,31 +7,10 @@
  * app, so the outbox is now processed in-process on a setInterval instead.
  */
 
-const PROCESS_INTERVAL_MS = 60 * 1000;
-
 export async function register() {
-  if (process.env.NEXT_RUNTIME !== 'nodejs') return;
-
-  const { processOutboxBatch } = await import('@/lib/notifications/processor');
-  const { logEvent } = await import('@/lib/logger');
-
-  let isRunning = false;
-
-  setInterval(() => {
-    if (isRunning) return;
-    isRunning = true;
-
-    processOutboxBatch()
-      .catch((err) =>
-        logEvent({
-          level: 'error',
-          category: 'notification',
-          message: 'in-process outbox scheduler tick failed',
-          context: { error: String(err) },
-        }).catch(() => {})
-      )
-      .finally(() => {
-        isRunning = false;
-      });
-  }, PROCESS_INTERVAL_MS);
+  // شرط به همین شکل لازم است تا webpack شاخه‌ی Node را از bundle Edge حذف کند
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { startOutboxScheduler } = await import('./instrumentation-node');
+    await startOutboxScheduler();
+  }
 }

@@ -11,10 +11,8 @@ import { isTrustedResumeUrl, safeResumeMimeType } from '@/lib/recruitment/resume
  * اگر base64 data URI باشد، decode شده به‌صورت binary سرو می‌شود.
  * اگر URL باشد، فقط وقتی روی storage خود پروژه (Supabase) است redirect می‌دهد.
  */
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } },
-) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
 

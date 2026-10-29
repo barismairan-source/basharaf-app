@@ -29,7 +29,8 @@ async function assertNotLocked(assignmentId: string): Promise<void> {
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
     assertCan(session, 'hr.schedule.manage');
@@ -84,7 +85,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
     assertCan(session, 'hr.schedule.manage');

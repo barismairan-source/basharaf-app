@@ -6,10 +6,8 @@ import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { getContactLedger } from '@/lib/db/contactLedger';
 
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertSection(session, 'contacts');

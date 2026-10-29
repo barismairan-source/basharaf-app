@@ -12,10 +12,8 @@ const patchSchema = z.object({
   isDefault: z.boolean().optional(),
 });
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireCustomer();
     const body = patchSchema.parse(await request.json());
@@ -30,10 +28,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireCustomer();
     const deleted = await deleteWebCustomerAddress(session.customerId, params.id);

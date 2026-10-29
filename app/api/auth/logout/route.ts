@@ -10,7 +10,7 @@ import { clearImpersonationSession } from '@/lib/auth/impersonation';
  * middleware doesn't see a stale cookie and bounce the user back to /dashboard.
  */
 export async function POST() {
-  clearServerSession();
-  clearImpersonationSession();
+  await clearServerSession();
+  await clearImpersonationSession();
   return NextResponse.json({ ok: true });
 }

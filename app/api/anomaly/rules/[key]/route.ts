@@ -18,7 +18,8 @@ const patchSchema = z.object({
  * تنها منبع کنترل، /api/admin/notification-rules و
  * /api/admin/notification-audience است (مرکز اعلان V2).
  */
-export async function PATCH(req: Request, { params }: { params: { key: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ key: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const input = patchSchema.parse(await req.json());

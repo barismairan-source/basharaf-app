@@ -21,7 +21,8 @@ const patchSchema = z.object({
  * PATCH /api/inventory/vouchers/[id] — ویرایش برگه‌ی pending.
  * اگر خطوط تغییر کنند: اثر فیزیکی قدیم برگردانده → اثر فیزیکی جدید اعمال می‌شود.
  */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const input = patchSchema.parse(await req.json());
@@ -85,7 +86,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
  * - اگر approved: سند مالی مرتبط هم برگردانده می‌شود (و اثر قطعی... فعلاً فقط pending/rejected امن است).
  *   برای امنیت، حذف approved را اجازه نمی‌دهیم (باید اول منطق reverse قطعی کامل شود).
  */
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
 

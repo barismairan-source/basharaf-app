@@ -11,7 +11,8 @@ import { VISIBLE_PAYROLL_STATUSES } from '@/lib/staff-panel/pure';
 export const dynamic = 'force-dynamic';
 
 /** GET /api/me/payslips/[id] — جزئیات یک فیش خودِ همین نفر (ردیف‌به‌ردیف). فیش دیگران → ۴۰۴. */
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const device = await requireMe();
     await requireUnlocked(device);

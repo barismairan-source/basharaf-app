@@ -16,7 +16,8 @@ const linkSchema = z.object({ userId: z.string().uuid() });
  * پرسنل و کاربران در جدول‌های جدا می‌مانند؛ این فقط یک لینک است، نه ادغام.
  * فقط مجوز hr.systemAccess.manage (پیش‌فرض: SuperAdmin).
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (!canDo(session, 'hr.systemAccess.manage')) throw new ApiError(403, 'دسترسی غیرمجاز', 'FORBIDDEN');
@@ -45,7 +46,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (!canDo(session, 'hr.systemAccess.manage')) throw new ApiError(403, 'دسترسی غیرمجاز', 'FORBIDDEN');

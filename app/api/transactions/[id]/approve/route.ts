@@ -14,7 +14,8 @@ import { notify, notifyAdmins, getRuleThreshold } from '@/lib/notify';
  * POST /api/transactions/[id]/approve — Atomic با balance update.
  * SELECT FOR UPDATE داخل transaction — جلوگیری از race condition تأیید همزمان.
  */
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const now = new Date();

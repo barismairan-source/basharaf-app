@@ -26,7 +26,8 @@ function rowToRate(row: typeof schema.employeeHourlyRates.$inferSelect) {
   };
 }
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertCanAny(session, ['hr.compensation.view', 'hr.payroll.calculate', 'hr.payroll.approve', 'hr.payroll.post']);
@@ -45,7 +46,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
  * بازه‌ی یک نرخ فعال دیگر بیفتد، آن نرخ در همان تاریخ بسته می‌شود (effectiveTo
  * = روز قبل) تا در هر لحظه فقط یک نرخ فعال وجود داشته باشد.
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const input = createSchema.parse(await req.json());

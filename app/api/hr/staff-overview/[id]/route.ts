@@ -13,7 +13,8 @@ export const dynamic = 'force-dynamic';
  * GET /api/hr/staff-overview/[statementId] — ریز کارکرد و محاسبه‌ی یک ماهِ یک نفر برای مدیر؛
  * دقیقاً همان چیزی که خود فرد در پنلش می‌بیند. فقط با hr.compensation.view و محدوده‌ی شعبه.
  */
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertCan(session, 'hr.compensation.view');

@@ -10,7 +10,8 @@ import { audit } from '@/lib/auth/audit';
 export const dynamic = 'force-dynamic';
 
 /** DELETE /api/hr/clock/links/[id] — لغو لینک/گوشی (مثلاً گوشی گم شده یا نفر رفته). */
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertCan(session, 'hr.attendance.clockSetup');
@@ -39,7 +40,8 @@ const patchSchema = z.object({ faceIdExempt: z.boolean() });
  * PATCH /api/hr/clock/links/[id] — استثنای فردی Face ID (مثلاً گوشی قدیمی بدون Face ID/اثر انگشت).
  * فقط برای همین نفر؛ تنظیم سراسری دست نمی‌خورد.
  */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertCan(session, 'hr.attendance.clockSetup');

@@ -11,7 +11,8 @@ const createSchema = z.object({
   sharePercent: z.string().max(10).optional(),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
 

@@ -6,7 +6,8 @@ import { ApiError, handleErrorLogged } from '@/lib/api-error';
 
 export const dynamic = 'force-dynamic';
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     // void به‌جای حذف فیزیکی — تاریخچه حفظ می‌شود

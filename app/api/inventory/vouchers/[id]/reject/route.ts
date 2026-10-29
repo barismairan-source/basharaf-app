@@ -18,7 +18,8 @@ import { saveFindings } from '@/lib/anomaly/engine';
 
 const bodySchema = z.object({ reason: z.string().max(500).optional().default('') });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (!canDo(session, 'inventory.approve')) {

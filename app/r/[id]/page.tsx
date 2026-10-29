@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, use } from 'react';
 import { Check, Copy, Receipt, AlertCircle } from 'lucide-react';
 
 /** همان اطلاعات ثابت حساب — فقط شماره کارت، شبا و نام صاحب حساب (بدون CVV2/انقضا). */
@@ -54,7 +54,8 @@ function CopyRow({ label, value, display, big }: { label: string; value: string;
   );
 }
 
-export default function ShortReceiptPage({ params }: { params: { id: string } }) {
+export default function ShortReceiptPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [data, setData] = useState<ReceiptData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);

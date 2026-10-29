@@ -7,7 +7,7 @@ const THIRTY_DAYS = 60 * 60 * 24 * 30;
 
 export async function setCustomerSession(customerId: string, phone: string): Promise<void> {
   const token = await signCustomerToken({ customerId, phone, role: 'customer' });
-  cookies().set(CUSTOMER_COOKIE, token, {
+  (await cookies()).set(CUSTOMER_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -16,8 +16,8 @@ export async function setCustomerSession(customerId: string, phone: string): Pro
   });
 }
 
-export function clearCustomerSession(): void {
-  cookies().set(CUSTOMER_COOKIE, '', {
+export async function clearCustomerSession(): Promise<void> {
+  (await cookies()).set(CUSTOMER_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -27,7 +27,7 @@ export function clearCustomerSession(): void {
 }
 
 export async function getCustomerSession(): Promise<CustomerJWTPayload | null> {
-  const token = cookies().get(CUSTOMER_COOKIE)?.value;
+  const token = (await cookies()).get(CUSTOMER_COOKIE)?.value;
   if (!token) return null;
   return verifyCustomerToken(token);
 }

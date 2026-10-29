@@ -6,7 +6,8 @@ import { assertSection, branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 
 /** GET /api/contacts/[id]/cheques — چک‌های مرتبط با یک طرف‌حساب */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertSection(session, 'contacts');

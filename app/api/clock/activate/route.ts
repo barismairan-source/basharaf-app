@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     if (activated.alreadyActive) {
       return NextResponse.json({ employeeName: activated.employeeName, alreadyActive: true });
     }
-    setClockCookie(deviceToken);
+    await setClockCookie(deviceToken);
     void audit({ action: 'attendance.clock.activated', ip: getClientIp(req), meta: { employeeId: activated.employeeId, deviceId: activated.id } });
     return NextResponse.json({ employeeName: activated.employeeName });
   } catch (e) {

@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic';
 /**
  * GET /api/public/order/track/[token] — رهگیری سفارش (عمومی، بدون auth، فقط‌خواندنی).
  */
-export async function GET(_req: Request, { params }: { params: { token: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   try {
     const order = await getPublicOrderByTrackToken(params.token);
     if (!order) throw new ApiError(404, 'سفارش یافت نشد', 'ORDER_NOT_FOUND');

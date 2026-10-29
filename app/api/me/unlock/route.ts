@@ -29,6 +29,6 @@ export async function POST(req: Request) {
 
 /** DELETE /api/me/unlock — قفل را فوراً می‌بندد. */
 export async function DELETE() {
-  clearUnlockCookie();
+  await clearUnlockCookie();
   return NextResponse.json({ ok: true });
 }

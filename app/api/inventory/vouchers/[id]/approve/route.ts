@@ -36,7 +36,8 @@ const bodySchema = z.object({
   accountId: z.string().uuid('شناسه‌ی صندوق معتبر نیست').optional(),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (!canDo(session, 'inventory.approve')) {

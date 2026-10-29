@@ -32,7 +32,8 @@ function ensureScope(role: string, branchId: string | null, resBranch: string): 
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (session.role === 'Warehouse' || session.role === 'Chef') {
@@ -90,7 +91,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (session.role === 'Warehouse' || session.role === 'Chef') {

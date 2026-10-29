@@ -59,7 +59,7 @@ export async function verifyImpersonationToken(
 }
 
 export async function getImpersonationSession(): Promise<ImpersonationPayload | null> {
-  const token = cookies().get(IMP_COOKIE)?.value;
+  const token = (await cookies()).get(IMP_COOKIE)?.value;
   if (!token) return null;
   return verifyImpersonationToken(token);
 }
@@ -68,7 +68,7 @@ export async function setImpersonationSession(
   payload: Omit<ImpersonationPayload, 'iat' | 'exp'>
 ): Promise<void> {
   const token = await signImpersonationToken(payload);
-  cookies().set(IMP_COOKIE, token, {
+  (await cookies()).set(IMP_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -77,8 +77,8 @@ export async function setImpersonationSession(
   });
 }
 
-export function clearImpersonationSession(): void {
-  cookies().set(IMP_COOKIE, '', {
+export async function clearImpersonationSession(): Promise<void> {
+  (await cookies()).set(IMP_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',

@@ -9,10 +9,8 @@ import { invalidateFreshAccess } from '@/lib/auth/freshAccess';
 export const dynamic = 'force-dynamic';
 
 /** GET /api/users/[id] — دریافت اطلاعات یک کاربر */
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (session.role !== 'SuperAdmin' && session.sub !== params.id) {
@@ -57,10 +55,8 @@ const patchBodySchema = z.object({
     .optional(),
 });
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     const body = await req.json();
@@ -117,10 +113,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     if (session.sub === params.id) {

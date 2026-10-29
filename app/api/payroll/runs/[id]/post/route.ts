@@ -19,7 +19,8 @@ const postSchema = z.object({
  * یک اجرای حقوق تأییدشده را به حسابداری هسته ثبت می‌کند.
  * فقط SuperAdmin.
  */
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const body = await req.json();
@@ -40,7 +41,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
  * DELETE /api/payroll/runs/[id]/post
  * post را معکوس می‌کند (در صورت اشتباه).
  */
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const result = await reversePayrollPost(params.id);

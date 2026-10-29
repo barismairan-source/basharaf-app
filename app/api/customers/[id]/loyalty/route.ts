@@ -25,7 +25,8 @@ async function readEarnRate(): Promise<number> {
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_EARN_RATE;
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
 
