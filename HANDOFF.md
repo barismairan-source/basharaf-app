@@ -9,12 +9,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` = `3f0e6af` روی GitHub (+`389890a` محلی). production = `c9eb2f0` (۲۶ اکتبر، Next 14 — آسیب‌پذیر). branch `chore/next-15-upgrade` (Next 15.5.28 + React 19) آماده‌ی push برای رفع deploy. |
+| **نسخه** | production (لیارا) = `ecfdeda` روی Next 15.5.28 (deploy موفق ۲۰۲۶-۱۰-۳۰). branch محلی `ops/vps-deploy` (انتقال به VPS) push نشده؛ `feat/tx-idempotency` push نشده. |
 | **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
-| **دیپلوی** | push روی main = GitHub Actions → `liara deploy`. از ۲۶ اکتبر fail: لیارا Next 14.2.35 را به‌خاطر CVEهای بحرانی رد می‌کند → رفع: `chore/next-15-upgrade`. |
+| **دیپلوی** | فعلاً: push روی main → GitHub Actions → لیارا (سبز). در حال انتقال به VPS پارس‌پک (`ops/server/README.md`)؛ نسخه‌ی آزمایشی داخلی روی سرور اجراست. |
 | **کار نیمه‌تمام (in-progress)** | ۱) اجرای چک‌لیست تست روی سایت واقعی (`~/Claude-Projects/CHECKLIST-merge-fix-branch.md`) — نتیجه هنوز ثبت نشده. ۲) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
-| **کار بعدی پیشنهادی** | ۱) **فوری:** merge `chore/next-15-upgrade` به main + push (با تأیید کاربر) → deploy. ۲) چک‌لیست تست. ۳) BA-15 پیش‌فاکتورهای قبلی. ۴) rebase و فعال‌سازی idempotency. |
+| **کار بعدی پیشنهادی** | ۱) ورودی‌های علی برای VPS (رمز root، دیتابیس عمومی، فایل env، DNS `vps`). ۲) تست روی `vps.basharaf.me` و سوئیچ DNS با تأیید. ۳) چک‌لیست تست. ۴) اجرای `db-staff-statements.sql` اگر اجرا نشده. |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
 | **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
 
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-10-30 (۴) — انتقال به VPS پارس‌پک: زیرساخت آماده، تست داخلی سبز — روی branch `ops/vps-deploy`
+**چه شد:** تصمیم علی: basharaf-app از لیارا به همان VPS meeez می‌رود؛ دیتابیس فعلاً روی Postgres لیارا می‌ماند. `ops/server/` اضافه شد (سرویس systemd روی ۳۰۰۱ با سخت‌گیری‌های meeez، قالب Nginx، `basharaf-release` با build روی سرور + سوئیچ اتمی + برگشت خودکار، `deploy.sh` از مک با `git archive`، `setup-server.sh`، `env.template` فقط نام متغیرها). `next.config.mjs`: خروجی standalone با `NEXT_OUTPUT=standalone` (build لیارا بی‌تغییر) و `serverExternalPackages` (کلید قدیمی در Next 15 خوانده نمی‌شد). `OUTBOX_SCHEDULER=off` تا در دوره‌ی موازی اعلان/پیامک دوبار نرود. روی سرور: swap ۲ گیگ، کاربر `basharaf`، پوشه‌ها، سرویس. build روی سرور چون `sharp` native است و مک arm64.
+**فایل‌ها:** `ops/server/*`، `next.config.mjs`، `instrumentation-node.ts`.
+**Build:** محلی tsc ✅ · ۷۶۲ تست ✅ · lint ۰ خطا · build لیارا ✅ · build standalone ✅. روی سرور: build+نصب+health check ✅ (release `20261030-024633-aae6a6`)، `/login` ۲۰۰، API ۴۰۱، رم سرویس ~۲۰۰MB؛ اوج build: رم ۱.۸ از ۲ گیگ + swap ۶۰۰MB، load ۳.۷ روی ۱ هسته → ارتقا به ≥۲ هسته/۴ گیگ توصیه شد. meeez در تمام مدت سالم.
+**ناتمام:** `/etc/basharaf/env` و `build.env` خالی‌اند (سرویس فقط داخلی روی 127.0.0.1 است، بدون Nginx/دامنه). منتظر علی: تغییر رمز root، دسترسی عمومی دیتابیس لیارا، پرکردن `~/Claude-Projects/_work/basharaf-server.env`، رکورد A برای `vps.basharaf.me`.
+**برای جلسه‌ی بعد:** بعد از ورودی‌های علی: آپلود env → `setup-server.sh site vps.basharaf.me` → `SITE=https://vps.basharaf.me ops/server/deploy.sh` → چک‌لیست → سوئیچ DNS با تأیید. branch `ops/vps-deploy` push نشده.
+
 ## 📓 2026-10-30 (۳) — ارتقای Next.js 14 → 15.5.28 و React 19 (رفع شکست deploy لیارا) — روی branch `chore/next-15-upgrade`
 **چه شد:** علت شکست همه‌ی deployهای لیارا از ۲۶ اکتبر پیدا شد (لاگ از کاربر): لیارا deploy با Next.js 14.2.35 را به‌خاطر آسیب‌پذیری‌های بحرانی (اجرای کد از راه دور بدون احراز هویت: CVE-2025-55182، CVE-2026-75604، GHSA-2464-fhr4-w9xw) رد می‌کند → production هنوز روی ۱۴.x و آسیب‌پذیر است. ارتقا به Next 15.5.28 (حداقل نسخه‌ی امن ۱۵.x) + React 19. codemod رسمی `next-async-request-api` روی ۸۳ فایل (`params`/`searchParams`/`cookies()`/`headers()` حالا await می‌شوند)؛ ۵ تابع کوکی async شدند؛ `instrumentation.ts` به `instrumentation-node.ts` تقسیم شد چون Next 15 آن را برای Edge هم compile می‌کند (web-push → http/https).
 **فایل‌ها:** `package.json`، `package-lock.json`، `instrumentation.ts`، `instrumentation-node.ts`، ۷۸ فایل زیر `app/`، `lib/auth/{session,customerSession,impersonation}.ts`، `lib/staff-panel/session.ts`، `lib/attendance-clock/service.ts`، `components/admin/ImpersonationBanner.tsx`، `app/pay/PayCard.tsx`. پوشه‌های snapshot قدیمی (`v0.9.*`) دست نخورد.
@@ -105,9 +112,3 @@
 **فایل‌ها:** (جدید) `lib/staff-panel/statements.ts`، `app/api/me/statements/{route,[id]/route}.ts`، `components/me/parts.tsx`، `scripts/staff-statements-sql.ts`، `tests/unit/staffStatements.test.ts`، `project-docs/migrations/db-staff-statements.sql`، `public/safasity/me-*.png` · (ویرایش) `lib/db/schema.ts`، `components/me/MeClient.tsx`، `app/me/page.tsx`، `project-docs/STAFF-PANEL.md`، `.gitignore`.
 **Build:** tsc ✅ · unit همه ✅ · lint ✅ · ۴۵ سناریوی سرتاسری روی Postgres واقعی محلی ✅ · ظاهر موبایل بررسی شد.
 **ناتمام:** merge/push منتظر علی. ترتیب راه‌اندازی: (۱) `db-staff-statements.sql` (۲) فهرست پرسنل (۳) ریز کارکرد مهر (۴) نرخ ساعتی و لینک شخصی هر نفر.
-
-## 📓 2026-10-26 — پنل پرسنل `/me` (حضور، شیفت، حقوق، مشخصات) + آیکن basharaf — روی branch
-**چه شد:** (۱) آیکن صفحه‌ی اصلی `/clock` با لوگوی صفاسیتی (کرم روی سرمه‌ای) و اسم «basharaf» + manifest جدا (`start_url=/clock`، `display=browser`) منتشر شد (`ced2b9a`). (۲) به درخواست علی پنل پرسنل ساخته شد (هنوز منتشر نشده): هویت = همان گوشی فعال‌شده‌ی ثبت حضور؛ حقوق و بخش حساس مشخصات با «قفل Face ID» (کوکی امضاشده‌ی ۱۰ دقیقه‌ای `basharaf-me-unlock` که به گوشی بسته است). فقط فیش دوره‌های `approved/posted`؛ سهم بیمه‌ی کارفرما جدا و «از حقوق شما کم نمی‌شود»؛ کد ملی/شبا/بیمه فقط ۴ رقم آخر؛ نرخ ساعتی و یادداشت مدیر در حضور برنمی‌گردد. دانلود قرارداد ساخته نشد (جای نگهداری فایل ندارد). اسکریپت `scripts/staff-import-sql.ts` از اکسل فقط نام/سمت/تلفن را به یک فایل SQL تبدیل می‌کند (به DB وصل نمی‌شود؛ خروجی commit نشود، در .gitignore).
-**فایل‌ها:** (جدید) `lib/staff-panel/{pure,session}.ts`، `app/api/me/{unlock,unlock/options,attendance,shifts,payslips,payslips/[id],profile}/route.ts`، `app/me/page.tsx`، `components/me/MeClient.tsx`، `scripts/staff-import-sql.ts`، `tests/unit/staffPanel.test.ts`، `project-docs/STAFF-PANEL.md`، `public/icons/*`، `public/clock.webmanifest` · (ویرایش) `lib/auth/sessionExpiry.ts` (`/me` عمومی)، `lib/auth/audit.ts`، `components/clock/ClockClient.tsx`، `.gitignore`.
-**Build:** tsc ✅ · unit همه ✅ · lint ✅ · ۳۵ سناریوی سرتاسری روی Postgres واقعی محلی با داده‌ی ساختگی ✅ (ایزوله بودن دو نفر، فیش پیش‌نویس پنهان، فیش دیگران ۴۰۴، Face ID جعلی/تکراری رد، گوشی لغوشده ۴۰۱، audit) · UI موبایل محلی ✅. **بدون migration.**
-**ناتمام:** merge/push منتظر علی. برای استفاده: فهرست پرسنل (SQL) در pgAdmin، نرخ ساعتی هر نفر، لینک شخصی برای هر نفر. قرارداد: نیاز به تصمیم درباره‌ی محل فایل.
