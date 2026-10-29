@@ -67,6 +67,8 @@ cleanup() { # keep the live release, the one before it, and the newest healthy o
   # unfinished uploads and builds older than an hour
   find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -mmin +60 -exec rm -rf -- {} +
   find "$INCOMING" -mindepth 1 -maxdepth 1 -name '*.tar.gz' -mmin +60 -delete
+  # failed builds are kept for an hour so their logs can be read
+  find "$BUILD" -mindepth 1 -maxdepth 1 -mmin +60 -exec rm -rf -- {} +
 }
 
 activate() { # switch to $1 and verify; on failure go back to $2
@@ -101,8 +103,8 @@ build() { # unpack and build $1 into $RELEASES/$1.tmp; the live release is untou
     log "next build (a few minutes on this server)"
     set -a; . "$BUILD_ENV"; set +a
     NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=1536 \
-      nice -n 10 npx --no-install next build >"$src.build.log" 2>&1
-    [ -f .next/standalone/server.js ] && [ -s .next/BUILD_ID ]
+      nice -n 10 ./node_modules/.bin/next build >"$src.build.log" 2>&1
+    if [ ! -f .next/standalone/server.js ] || [ ! -s .next/BUILD_ID ]; then exit 1; fi
     mkdir -p "$stage"
     cp -a .next/standalone/. "$stage/"
     mkdir -p "$stage/.next"
