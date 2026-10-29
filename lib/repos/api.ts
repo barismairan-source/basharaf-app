@@ -130,6 +130,9 @@ const transactionsRepo: TransactionsRepo = {
           contactId: input.contactId || undefined,
           vatAmount: input.vatAmount ?? 0,
           isCredit: input.isCredit ?? false,
+          // بدون این دو، پیش‌فاکتور admin فوراً تأیید و روی موجودی اعمال می‌شد و کد فاکتور گم می‌شد
+          invoiceCode: input.invoiceCode || undefined,
+          status: input.initialStatus,
         }),
       }
     );
