@@ -9,12 +9,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` = `3f0e6af` (merge رفع‌های امنیتی ۲۰۲۶-۱۰-۳۰؛ push شد). ⚠️ **deploy لیارا از ۲۶ اکتبر fail می‌شود** (آخرین موفق: `c9eb2f0` ۲۶ اکتبر ۱۰:۵۶ UTC) → production هنوز همان نسخه است و رفع‌ها live نیستند. branch محلی `feat/tx-idempotency` push نشده. |
+| **نسخه** | `main` = `3f0e6af` روی GitHub (+`389890a` محلی). production = `c9eb2f0` (۲۶ اکتبر، Next 14 — آسیب‌پذیر). branch `chore/next-15-upgrade` (Next 15.5.28 + React 19) آماده‌ی push برای رفع deploy. |
 | **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
-| **Build/tsc** | fix branch: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا (۸ warning) · build ✅ — feat branch: 770/770 ✅ · build ✅ |
-| **دیپلوی** | push روی main = GitHub Actions → `liara deploy`. ۵ اجرای آخر در قدم «Deploy to Liara» fail شده‌اند (۰۸a2852 هم، با وجود رفع omit=dev). build با `npm ci --omit=dev` محلی سبز است (2026-10-30) → علت سمت لیارا است (لاگ فقط در داشبورد لیارا/Actions با ورود). |
+| **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
+| **دیپلوی** | push روی main = GitHub Actions → `liara deploy`. از ۲۶ اکتبر fail: لیارا Next 14.2.35 را به‌خاطر CVEهای بحرانی رد می‌کند → رفع: `chore/next-15-upgrade`. |
 | **کار نیمه‌تمام (in-progress)** | ۱) اجرای چک‌لیست تست روی سایت واقعی (`~/Claude-Projects/CHECKLIST-merge-fix-branch.md`) — نتیجه هنوز ثبت نشده. ۲) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
-| **کار بعدی پیشنهادی** | ۱) **فوری:** متن خطای قدم «Deploy to Liara» از Actions (run 40964936005) یا لاگ build داشبورد لیارا. ۲) بعد از deploy موفق: چک‌لیست `~/Claude-Projects/CHECKLIST-merge-fix-branch.md`. ۳) BA-15 پیش‌فاکتورهای قبلی. ۴) idempotency. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
+| **کار بعدی پیشنهادی** | ۱) **فوری:** merge `chore/next-15-upgrade` به main + push (با تأیید کاربر) → deploy. ۲) چک‌لیست تست. ۳) BA-15 پیش‌فاکتورهای قبلی. ۴) rebase و فعال‌سازی idempotency. |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
 | **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
 
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-10-30 (۳) — ارتقای Next.js 14 → 15.5.28 و React 19 (رفع شکست deploy لیارا) — روی branch `chore/next-15-upgrade`
+**چه شد:** علت شکست همه‌ی deployهای لیارا از ۲۶ اکتبر پیدا شد (لاگ از کاربر): لیارا deploy با Next.js 14.2.35 را به‌خاطر آسیب‌پذیری‌های بحرانی (اجرای کد از راه دور بدون احراز هویت: CVE-2025-55182، CVE-2026-75604، GHSA-2464-fhr4-w9xw) رد می‌کند → production هنوز روی ۱۴.x و آسیب‌پذیر است. ارتقا به Next 15.5.28 (حداقل نسخه‌ی امن ۱۵.x) + React 19. codemod رسمی `next-async-request-api` روی ۸۳ فایل (`params`/`searchParams`/`cookies()`/`headers()` حالا await می‌شوند)؛ ۵ تابع کوکی async شدند؛ `instrumentation.ts` به `instrumentation-node.ts` تقسیم شد چون Next 15 آن را برای Edge هم compile می‌کند (web-push → http/https).
+**فایل‌ها:** `package.json`، `package-lock.json`، `instrumentation.ts`، `instrumentation-node.ts`، ۷۸ فایل زیر `app/`، `lib/auth/{session,customerSession,impersonation}.ts`، `lib/staff-panel/session.ts`، `lib/attendance-clock/service.ts`، `components/admin/ImpersonationBanner.tsx`، `app/pay/PayCard.tsx`. پوشه‌های snapshot قدیمی (`v0.9.*`) دست نخورد.
+**Build:** tsc ✅ (با `.next/types`) · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا (`npm ci --omit=dev`) ✅ · smoke test محلی build: صفحات عمومی ۲۰۰، redirect به login، API ۴۰۱، logout کوکی‌ها را پاک می‌کند ✅. تست با دیتابیس/کاربر واقعی انجام نشده.
+**ناتمام:** push نشده (منتظر تأیید کاربر). ⚠️ WIP استودیو رسپی (untracked) هنوز سبک Next 14 است — قبل از commit آن، همین codemod روی `app/studio`، `app/api/recipe-studio`، `lib/recipe-studio` اجرا شود. ⚠️ `feat/tx-idempotency` باید روی این branch rebase شود.
+**برای جلسه‌ی بعد:** بعد از deploy: چک‌لیست `~/Claude-Projects/CHECKLIST-merge-fix-branch.md` + ورود/خروج، پنل پرسنل `/me`، ثبت حضور `/clock`، پرداخت `/pay`.
+
 ## 📓 2026-10-30 (۲) — رفع رزومه/SSRF و پیش‌فاکتور + Idempotency تراکنش (branch جدا)
 **چه شد:** با تأیید کاربر: (الف) `db-hr-job-titles.sql` بازنویسی‌شده به نسخه‌ی commit‌شده برگشت (نسخه‌ی تغییرکرده در `~/Claude-Projects/_audit/preserved/` نگه داشته شد). (ب) `resumeUrl` فرم `/apply` فقط data URI با نوع مجاز؛ route رزومه فقط https روی Supabase پروژه را redirect می‌کند و `resumes-zip` دیگر URL دلخواه را سمت سرور fetch نمی‌کند (SSRF) — fb10613. (ج) **باگ مالی:** repo کلاینت `status`/`invoiceCode` را نمی‌فرستاد → پیش‌فاکتور مدیر کل فوراً تأیید و روی موجودی صندوق اعمال می‌شد و کد فاکتور گم می‌شد — cde097b. (د) Idempotency-Key برای ثبت تراکنش روی branch جدای `feat/tx-idempotency` (پشت flag، نیازمند migration).
 **فایل‌ها:** `lib/recruitment/resumeUrl.ts`، `lib/validations/recruitment.ts`، `app/api/recruitment/[id]/resume/route.ts`، `app/api/recruitment/resumes-zip/route.ts`، `lib/repos/api.ts`، `tests/unit/resume-url.test.ts`، `tests/unit/transactions-repo-body.test.ts`.
@@ -104,9 +111,3 @@
 **فایل‌ها:** (جدید) `lib/staff-panel/{pure,session}.ts`، `app/api/me/{unlock,unlock/options,attendance,shifts,payslips,payslips/[id],profile}/route.ts`، `app/me/page.tsx`، `components/me/MeClient.tsx`، `scripts/staff-import-sql.ts`، `tests/unit/staffPanel.test.ts`، `project-docs/STAFF-PANEL.md`، `public/icons/*`، `public/clock.webmanifest` · (ویرایش) `lib/auth/sessionExpiry.ts` (`/me` عمومی)، `lib/auth/audit.ts`، `components/clock/ClockClient.tsx`، `.gitignore`.
 **Build:** tsc ✅ · unit همه ✅ · lint ✅ · ۳۵ سناریوی سرتاسری روی Postgres واقعی محلی با داده‌ی ساختگی ✅ (ایزوله بودن دو نفر، فیش پیش‌نویس پنهان، فیش دیگران ۴۰۴، Face ID جعلی/تکراری رد، گوشی لغوشده ۴۰۱، audit) · UI موبایل محلی ✅. **بدون migration.**
 **ناتمام:** merge/push منتظر علی. برای استفاده: فهرست پرسنل (SQL) در pgAdmin، نرخ ساعتی هر نفر، لینک شخصی برای هر نفر. قرارداد: نیاز به تصمیم درباره‌ی محل فایل.
-
-## 📓 2026-10-21 — ثبت حضور: تأیید با Face ID/اثر انگشت + گزارش بازه‌ای و CSV — روی branch
-**چه شد:** نسخه‌ی اول (IP مغازه + لینک شخصی) دیروز با migration اول دیپلوی شد و آزمون جعل IP روی basharaf.me پاس شد. به درخواست علی تأیید «صاحب گوشی» با WebAuthn passkey اضافه شد (`@simplewebauthn/server@13.3.3` + `browser@13.3.0`): یک بار فعال‌سازی روی گوشی، سپس هر ورود/خروج امضای یک‌بارمصرف با UV اجباری؛ فقط کلید عمومی ذخیره می‌شود؛ کوکی گوشی + passkey هر دو لازم‌اند. کلید سراسری روشن/خاموش (`app_settings: attendance.clock.requireFaceId`، پیش‌فرض روشن) و استثنای فردی (`face_id_exempt`، با لینک جدید حفظ می‌شود). rpID/origin از سرآیند Origin مرورگر (پشت پراکسی Host ممکن است داخلی باشد). بهبودها: تاریخچه‌ی امروز روی گوشی، گزارش بازه‌ای (≤۳ ماه) با فیلتر نفر، مدت، نشان Face ID، جمع هر نفر، خروجی CSV با BOM؛ راهنمای حالت صفحه‌ی اصلی آیفون.
-**فایل‌ها:** (جدید) `lib/attendance-clock/{passkey,origin}.ts`، `app/api/clock/passkey/{register-options,register,auth-options}/route.ts`، `app/api/hr/clock/settings/route.ts`، `project-docs/migrations/db-attendance-clock-faceid.sql` · (ویرایش) `lib/db/schema.ts`، `lib/attendance-clock/service.ts`، `app/api/clock/{punch,status}/route.ts`، `app/api/hr/clock/{events,links,links/[id]}/route.ts`، `components/clock/ClockClient.tsx`، `components/hr/ClockView.tsx`، `lib/auth/audit.ts`، `tests/unit/attendanceClock.test.ts`، `project-docs/ATTENDANCE-CLOCK.md`، `package.json`/`package-lock.json`.
-**Build:** tsc ✅ · unit 692/692 ✅ · lint ✅ · migration دوم روی Postgres واقعی محلی روی داده‌ی موجود دوبار ✅ و برابر schema ✅ · ۲۵ سناریوی قبلی (Face ID خاموش) ✅ · ۲۳ سناریوی Face ID با authenticator نرم‌افزاری ✅ (یک انتظار اشتباه در خود اسکریپت آزمون اصلاح شد) · UI محلی ✅ · build: نتیجه در گزارش نشست.
-**ناتمام:** migration دوم اجرا نشده؛ merge/push منتظر علی. ترتیب: اول `db-attendance-clock-faceid.sql`، بعد push. Face ID واقعی آیفون فقط روی سایت https قابل آزمون است.
