@@ -3,12 +3,13 @@ import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { handleError } from '@/lib/api-error';
+import { isTrustedResumeUrl, safeResumeMimeType } from '@/lib/recruitment/resumeUrl';
 
 /**
  * GET /api/recruitment/[id]/resume
  * رزومه را با Content-Disposition: attachment برمی‌گرداند.
  * اگر base64 data URI باشد، decode شده به‌صورت binary سرو می‌شود.
- * اگر URL معمولی باشد، redirect می‌دهد.
+ * اگر URL باشد، فقط وقتی روی storage خود پروژه (Supabase) است redirect می‌دهد.
  */
 export async function GET(
   _req: Request,
@@ -37,7 +38,7 @@ export async function GET(
       const commaIdx = resumeUrl.indexOf(',');
       const meta     = resumeUrl.slice(0, commaIdx);
       const b64      = resumeUrl.slice(commaIdx + 1);
-      const mimeType = meta.split(';')[0]?.replace('data:', '') ?? 'application/octet-stream';
+      const mimeType = safeResumeMimeType(meta.split(';')[0]?.replace('data:', ''));
       const buffer   = Buffer.from(b64, 'base64');
       const rawName  = (resumePath ?? '').replace(/^base64:/, '') || 'resume';
       const filename = encodeURIComponent(rawName);
@@ -48,10 +49,14 @@ export async function GET(
           'Content-Disposition': `attachment; filename*=UTF-8''${filename}`,
           'Content-Length': String(buffer.byteLength),
           'Cache-Control': 'no-store',
+          'X-Content-Type-Options': 'nosniff',
         },
       });
     }
 
+    if (!isTrustedResumeUrl(resumeUrl)) {
+      return new NextResponse('آدرس رزومه مجاز نیست', { status: 404 });
+    }
     return NextResponse.redirect(resumeUrl);
   } catch (e) {
     return handleError(e);
