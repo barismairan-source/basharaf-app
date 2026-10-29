@@ -38,7 +38,7 @@ describe('safeResumeMimeType', () => {
 });
 
 describe('isTrustedResumeUrl', () => {
-  const env = { SUPABASE_URL: 'https://abcd.supabase.co' } as NodeJS.ProcessEnv;
+  const env = { SUPABASE_URL: 'https://abcd.supabase.co' } as unknown as NodeJS.ProcessEnv;
   it('https روی میزبان Supabase پروژه', () =>
     expect(isTrustedResumeUrl('https://abcd.supabase.co/storage/v1/object/r.pdf', env)).toBe(true));
   it.each([
@@ -49,7 +49,7 @@ describe('isTrustedResumeUrl', () => {
     'not a url',
   ])('رد: %s', (v) => expect(isTrustedResumeUrl(v, env)).toBe(false));
   it('بدون تنظیم Supabase هیچ URL مجاز نیست', () =>
-    expect(isTrustedResumeUrl('https://abcd.supabase.co/r.pdf', {} as NodeJS.ProcessEnv)).toBe(false));
+    expect(isTrustedResumeUrl('https://abcd.supabase.co/r.pdf', {} as unknown as NodeJS.ProcessEnv)).toBe(false));
 });
 
 describe('applicationCreateSchema.resumeUrl', () => {
