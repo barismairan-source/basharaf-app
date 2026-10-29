@@ -88,10 +88,11 @@ export async function POST(req: Request) {
     assertCan(session, 'hr.schedule.manage');
     const input = createSchema.parse(await req.json());
 
-    if (session.role === 'BranchUser' && input.branchId && input.branchId !== session.branchId) {
+    const scopedBranchId = branchScope(session);
+    if (scopedBranchId && input.branchId && input.branchId !== scopedBranchId) {
       throw new ApiError(403, 'دسترسی خارج از شعبه‌ی شما مجاز نیست', 'FORBIDDEN_BRANCH');
     }
-    const branchId = session.role === 'BranchUser' ? (session.branchId ?? null) : (input.branchId ?? null);
+    const branchId = scopedBranchId ?? (input.branchId ?? null);
     await assertEmployeesInScope(session, input.employeeIds);
 
     const plannedMinutes = minutesBetween(input.startTime, input.endTime, input.crossesMidnight);

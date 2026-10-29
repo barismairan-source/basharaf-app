@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireRole } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { getOrderRow, transitionOrderStatus } from '@/lib/ordering/orders';
 
@@ -27,7 +28,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 
     const existing = await getOrderRow(params.id);
     if (!existing) throw new ApiError(404, 'سفارش پیدا نشد', 'ORDER_NOT_FOUND');
-    if (session.role === 'BranchUser' && session.branchId !== existing.branchId) {
+    if (!canUseBranch(session, existing.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید سفارش‌های شعبه‌ی خود را تغییر دهید', 'BRANCH_MISMATCH');
     }
 

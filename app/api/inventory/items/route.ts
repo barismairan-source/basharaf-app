@@ -3,6 +3,7 @@ import { eq, desc, and, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch, branchScope } from '@/lib/auth/apiAccess';
 import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvItem } from '@/lib/db/inventory.serializers';
@@ -34,8 +35,9 @@ export async function GET() {
   try {
     const session = await requireSession();
     const activeFilter = ne(schema.invItems.isActive, false);
-    const where = session.role === 'BranchUser' && session.branchId
-      ? and(activeFilter, eq(schema.invItems.branchId, session.branchId))
+    const scopedBranchId = branchScope(session);
+    const where = scopedBranchId
+      ? and(activeFilter, eq(schema.invItems.branchId, scopedBranchId))
       : activeFilter;
 
     const rows = await db.select().from(schema.invItems)
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
     const session = await requireSession();
     const input = createItemSchema.parse(await req.json());
 
-    if (session.role === 'BranchUser' && input.branchId !== session.branchId) {
+    if (!canUseBranch(session, input.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید برای شعبه‌ی خود قلم ثبت کنید', 'BRANCH_MISMATCH');
     }
 
