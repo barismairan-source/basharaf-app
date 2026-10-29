@@ -9,13 +9,13 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` — آخرین دیپلوی: `9d5ef29` (تم/فونت صفاسیتی). بازطراحی استخدام commit شده، **push نشده** (منتظر دستور کاربر). |
-| **آخرین به‌روزرسانی** | 2026-10-15 |
-| **Build/tsc** | tsc ✅ · unit 659/659 ✅ · lint ✅ · build ✅ (Next 14.2.35) |
+| **نسخه** | `main` = `08a2852` (= origin/main؛ آخرین دیپلوی ۲۰۲۶-۱۰-۲۸). branch محلی `fix/branch-scope-all-roles` (۳ commit رفع امنیتی) **push نشده**. |
+| **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
+| **Build/tsc** | روی branch رفع: tsc ✅ · unit 735/735 ✅ · lint ✅ (۸ warning) · build ✅ |
 | **دیپلوی** | push روی main = دیپلوی خودکار Liara. تست بمب‌ساعتی رزرو رفع شده (31b4d6f). |
-| **کار نیمه‌تمام (in-progress)** | بازطراحی `/hr/recruitment` تمام و commit شده؛ فقط push مانده. باقی‌مانده‌های گزارش بررسی: B5، M8، M9، P1، P11، Next 15، drizzle/xlsx. |
-| **کار بعدی پیشنهادی** | ۱) push بازطراحی استخدام (با دستور کاربر) و بررسی روی داده‌ی واقعی. ۲) `MELIPAYAMAK_OTP_BODY_ID` برای ورود مشتری؛ IP لاگین‌ها در `/admin/audit`. ۳) اختیاری: `db-inventory-resync-physical.sql` و `db-transactions-indexes.sql`. ۴) تصمیم B5. |
-| **یافته‌ی مهم این نشست** | تست `reservationCapacity` «بمب ساعتی» بود (تاریخ ثابت ۱۴۰۵/۰۷/۱۱ با «الان» واقعی) و از ۳ اکتبر CI روی main را قرمز کرده — push نشست دیگر (۴ اکتبر) به همین دلیل fail شد. ⚠️ آن نشست هم‌زمان روی main کار کرده بود (CLAUDE.md: فقط یک نشست فعال). |
+| **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده روی main؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). ۲) branch `fix/branch-scope-all-roles` منتظر بازبینی/merge. |
+| **کار بعدی پیشنهادی** | ۱) تصمیم کاربر درباره‌ی `db-hr-job-titles.sql` بازنویسی‌شده. ۲) بازبینی و merge branch رفع (با دستور کاربر). ۳) idempotency برای ثبت تراکنش. ۴) محدودکردن `resumeUrl`. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
+| **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
 | **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-10-30 — ممیزی کامل در `~/Claude-Projects` + رفع ۳ نقص دسترسی/یکپارچگی — روی branch `fix/branch-scope-all-roles`
+**چه شد:** پروژه به `~/Claude-Projects/01-Active/basharaf-app` کپی شد (نسخه‌ی کاری از ۲۰۲۶-۱۰-۲۹؛ `~/Documents/basharaf-app` بکاپ ثابت است). ممیزی کامل کد (گزارش: `~/Claude-Projects/_audit/basharaf-app-audit.md`). سه نقص تأییدشده رفع شد: (۱) ۲۵ route فقط `role === 'BranchUser'` را به شعبه محدود می‌کردند و Chef/Warehouse به داده‌ی شعب دیگر دسترسی داشتند → `canUseBranch`/`branchScope` (f1cf927) + تست نگهبان ایستا. (۲) `/api/inventory/expiry` اقلام همه‌ی شعب را برمی‌گرداند → فیلتر شعبه (8182820). (۳) محاسبه‌ی مجدد حقوق وضعیت را بیرون تراکنش چک می‌کرد و می‌توانست اجرای تأییدشده را بازنویسی کند → قفل `FOR UPDATE` و چک مجدد داخل تراکنش (e855187). کار WIP استودیو رسپی دست نخورد.
+**فایل‌ها:** ۲۳ فایل زیر `app/api/**` (attendance، shift-assignments، purchase-orders، inventory/*، equipment، maintenance، orders/*، dashboard/overview، transactions/import)، `app/api/inventory/expiry/route.ts`، `app/api/payroll/runs/[id]/calculate/route.ts`، `tests/unit/branch-scope-routes.test.ts`.
+**Build:** tsc ✅ · unit 735/735 ✅ · lint ✅ (۸ warning قدیمی، ۰ خطا) · build ✅ — بدون `DATABASE_URL`. تست‌های integration/e2e اجرا نشدند (دیتابیس آزمایشی لازم است).
+**ناتمام:** branch push/merge نشده (منتظر تأیید کاربر). رفتار جدید: کاربر Chef/Warehouse فقط شعبه‌ی خودش؛ کاربر غیر SuperAdmin بدون شعبه حالا ۴۰۳ می‌گیرد (قبلاً همه‌ی شعب را می‌دید) — قبل از merge با کاربران واقعی چک شود.
+**برای جلسه‌ی بعد:** ⚠️ WIP commit‌نشده روی main: `project-docs/migrations/db-hr-job-titles.sql` با محتوای `db-hr-attendance-integrity.sql` بازنویسی شده (احتمالاً اشتباه) — بدون تأیید کاربر commit نشود. ⚠️ `app/api/recipe-studio/auth/bootstrap` (WIP) احراز هویت ندارد. باقی یافته‌ها (double-submit تراکنش، `resumeUrl` آزاد در `/apply`، نبود منبع واحد migration، rate-limit درون‌حافظه) در `~/Claude-Projects/MASTER_ROADMAP.md`.
+
 ## 📓 2026-10-28 — دیپلوی لیارا از ۲۶ اکتبر fail می‌شد: سبک‌کردن نصب روی سرور build
 **چه شد:** ۳ دیپلوی آخر (3b4b49e، c3d3498، 9f7f22a + اجرای دوباره‌ی ۲۸ اکتبر) در مرحله‌ی «Deploy to Liara» fail شدند؛ lint/tsc/تست همه سبز. لاگ لیارا در دسترس نبود (API گیت‌هاب ۴۰۳، توکن لیارا را عمداً نخواندم). شواهد: دیپلوی‌های موفق ۱۰–۱۴ دقیقه و همه‌ی failها حدود ۱۵–۱۶ دقیقه → به‌احتمال زیاد **سقف زمانی build لیارا**، نه خطای کد. تأیید محلی: build تمیز از git (Node 20) در ~۴۰ ثانیه موفق؛ build با DATABASE_URL غیرقابل‌دسترس هم ~۴۰ ثانیه (build به دیتابیس وصل نمی‌شود)؛ هیچ پکیجی بین آخرین موفق و failها عوض نشده. رفع: در workflow قبل از `liara deploy` فایل `.npmrc` با `omit=dev` ساخته می‌شود (فقط روی runner، commit نمی‌شود) تا لیارا ابزارهای تست/توسعه را نصب نکند (۶۶۵ → ۳۳۸ پکیج، ۵۹۰ → ۴۷۰ مگابایت). tailwindcss، tailwindcss-rtl، postcss، autoprefixer و typescript به dependencies منتقل شدند چون build به آن‌ها نیاز دارد (بدون typescript مسیرهای `@/` resolve نمی‌شوند — تست شد).
 **فایل‌ها:** `.github/workflows/liara.yml`، `package.json`، `package-lock.json`.
@@ -102,10 +109,3 @@
 **فایل‌ها:** (جدید) `lib/attendance-clock/{ip,rules,service}.ts`، `app/api/clock/{activate,status,punch}/route.ts`، `app/api/hr/clock/{networks,networks/[id],links,links/[id],events,my-ip}/route.ts`، `app/clock/page.tsx`، `components/clock/ClockClient.tsx`، `components/hr/ClockView.tsx`، `project-docs/migrations/db-attendance-clock.sql`، `project-docs/ATTENDANCE-CLOCK.md`، `tests/unit/attendanceClock.test.ts` · (ویرایش) `lib/db/schema.ts` (۱ enum + ۳ جدول)، `lib/auth/permissions.ts` (`hr.attendance.clockSetup`)، `lib/auth/audit.ts`، `app/(app)/hr/time/page.tsx`، `lib/payroll/attendanceEntryHelpers.ts` + `app/api/attendance/route.ts` (رفع باگ)، `tests/unit/hr-permissions.test.ts` (۱۹→۲۰).
 **Build:** tsc ✅ · unit همه ✅ · lint ✅ · migration روی Postgres واقعی محلی (embedded) دوبار ✅ و برابر با schema درایزل ✅ · ۲۵ سناریوی سرتاسری HTTP روی همان ✅ · UI در مرورگر محلی (دسکتاپ + موبایل) ✅. build: نتیجه در گزارش نشست.
 **ناتمام:** migration اجرا نشده؛ merge/push/دیپلوی منتظر علی. بعد از دیپلوی: یک بار «IP همین‌جا را نشان بده» داخل مغازه + آزمون جعل X-Real-IP از بیرون (رفتار پراکسی لیارا مستند نیست).
-
-## 📓 2026-10-15 — بازطراحی صفحه‌ی استخدام پنل + (قبل‌تر) تم/فونت/لوگوی صفاسیتی
-**چه شد:** (۱) صفاسیتی: پالت/آیکن‌ها/لوگو/فونت‌های برند روی همه‌ی صفحه‌های لینک‌شده از `/safasity` (commitهای f74b8fb..9d5ef29، دیپلوی شده). (۲) صفحه‌ی `/hr/recruitment` بازطراحی شد: **جستجو/فیلتر/شمارش وضعیت‌ها حالا سمت سرور و روی کل دیتابیس** است (قبلاً فقط روی ۵۰ رکورد اول بارگذاری‌شده بود → جستجو داوطلب‌های قدیمی را پیدا نمی‌کرد و شمارش تب‌ها غلط بود). جستجو ارقام فارسی/عربی/انگلیسی، «ي/ك» عربی و قالب‌های شماره (۰۹…، ‎+98…، با فاصله) را یکسان می‌گیرد. نمای فهرستی فشرده (پیش‌فرض دسکتاپ) + نمای کارتی (همیشه در موبایل)؛ جزئیات در پنل کناری با قبلی/بعدی (فیلترها و اسکرول حفظ می‌شوند)؛ امتیاز ثبت‌نشده = «امتیاز ثبت نشده»؛ ویرایش امتیاز فقط در پنل؛ مقایسه با چک‌باکس + شمارنده + دلیل غیرفعال‌بودن؛ «صبح و ۳ شیفت دیگر»؛ خروجی اکسل همه‌ی نتایج فیلتر را می‌گیرد. باگ مسیر `router.replace('/recruitment…')` رفع شد. برچسب‌های خودکار «فشاری/باتجربه/…» حذف شد: فقط regex روی متن پاسخ‌ها بودند (هر پاسخ به سوال «کار در فشار» که کلمه‌ی «فشار» داشت «فشاری» می‌گرفت) — ارزیابی واقعی نبودند. در `/hr/recruitment` نوار تب HR و فیلتر شعبه در دسکتاپ پنهان شد (سایدبار همان لینک‌ها را دارد؛ درخواست‌ها ستون شعبه ندارند).
-**فایل‌ها:** `app/(app)/hr/recruitment/page.tsx`، `app/(app)/hr/layout.tsx`، `app/api/recruitment/route.ts` (GET: فیلتر/جستجو/`filteredTotal`/`statusCounts`)، `lib/recruitment/{searchNormalize,serverFilters}.ts` (جدید)، `lib/recruitment/{filterCandidates,display}.ts`، `store/slices/recruitmentSlice.ts`، `components/recruitment/{CandidateBits,CandidateCard,CandidateDetail}.tsx`، حذف `SelectionToolbar.tsx`، `tests/unit/recruitmentSearchNormalize.test.ts`.
-**Build:** tsc ✅ · unit 659/659 ✅ · lint ✅ (۲ warning قدیمی form-builder) · build ✅. SQL جدید روی Postgres درون‌حافظه‌ای (PGlite) با ۱۲۰ رکورد تست شد. UI با داده‌ی آزمایشی mock در مرورگر محلی تست شد (route موقت پیش‌نمایش حذف شد). **بدون migration.**
-**ناتمام:** push/دیپلوی منتظر دستور کاربر.
-**برای جلسه‌ی بعد:** جستجو روی جدول کوچک با `like` کافی است؛ اگر درخواست‌ها به چند هزار رسید، index trigram لازم می‌شود (migration جدا). قبلی/بعدی در پنل فقط بین نتایج بارگذاری‌شده جابه‌جا می‌شود.
