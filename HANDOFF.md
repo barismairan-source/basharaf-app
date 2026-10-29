@@ -9,12 +9,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` = `08a2852` (= origin/main؛ production). branchهای محلی push‌نشده: `fix/branch-scope-all-roles` (۷ رفع + مستندات) و روی آن `feat/tx-idempotency` (پشت flag). |
+| **نسخه** | `main` = merge `fix/branch-scope-all-roles` (2026-10-30، با تأیید کاربر push و deploy شد؛ قبلی `08a2852`). branch محلی `feat/tx-idempotency` (پشت flag) هنوز push نشده. |
 | **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
 | **Build/tsc** | fix branch: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا (۸ warning) · build ✅ — feat branch: 770/770 ✅ · build ✅ |
 | **دیپلوی** | push روی main = دیپلوی خودکار Liara. تست بمب‌ساعتی رزرو رفع شده (31b4d6f). |
-| **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده روی main؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). ۲) branch `fix/branch-scope-all-roles` منتظر بازبینی/merge. |
-| **کار بعدی پیشنهادی** | ۱) تست با کاربر واقعی Chef/Warehouse و پیش‌فاکتور، بعد merge fix branch (با دستور کاربر). ۲) بررسی پیش‌فاکتورهای قبلی که اشتباهاً تأیید شده‌اند. ۳) migration idempotency + flag. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
+| **کار نیمه‌تمام (in-progress)** | ۱) اجرای چک‌لیست تست روی سایت واقعی (`~/Claude-Projects/CHECKLIST-merge-fix-branch.md`) — نتیجه هنوز ثبت نشده. ۲) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
+| **کار بعدی پیشنهادی** | ۱) نتیجه‌ی چک‌لیست؛ اگر مشکل جدی: `git revert -m 1 <merge>` + push (با تأیید کاربر؛ migration ندارد). ۲) بررسی پیش‌فاکتورهای قبلی که اشتباهاً تأیید شده‌اند (BA-15). ۳) idempotency: push `feat/tx-idempotency` → migration → `TX_IDEMPOTENCY_ENABLED=1`. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
 | **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
 
