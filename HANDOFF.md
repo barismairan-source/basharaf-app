@@ -9,12 +9,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` = merge `fix/branch-scope-all-roles` (2026-10-30، با تأیید کاربر push و deploy شد؛ قبلی `08a2852`). branch محلی `feat/tx-idempotency` (پشت flag) هنوز push نشده. |
+| **نسخه** | `main` = `3f0e6af` (merge رفع‌های امنیتی ۲۰۲۶-۱۰-۳۰؛ push شد). ⚠️ **deploy لیارا از ۲۶ اکتبر fail می‌شود** (آخرین موفق: `c9eb2f0` ۲۶ اکتبر ۱۰:۵۶ UTC) → production هنوز همان نسخه است و رفع‌ها live نیستند. branch محلی `feat/tx-idempotency` push نشده. |
 | **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
 | **Build/tsc** | fix branch: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا (۸ warning) · build ✅ — feat branch: 770/770 ✅ · build ✅ |
-| **دیپلوی** | push روی main = دیپلوی خودکار Liara. تست بمب‌ساعتی رزرو رفع شده (31b4d6f). |
+| **دیپلوی** | push روی main = GitHub Actions → `liara deploy`. ۵ اجرای آخر در قدم «Deploy to Liara» fail شده‌اند (۰۸a2852 هم، با وجود رفع omit=dev). build با `npm ci --omit=dev` محلی سبز است (2026-10-30) → علت سمت لیارا است (لاگ فقط در داشبورد لیارا/Actions با ورود). |
 | **کار نیمه‌تمام (in-progress)** | ۱) اجرای چک‌لیست تست روی سایت واقعی (`~/Claude-Projects/CHECKLIST-merge-fix-branch.md`) — نتیجه هنوز ثبت نشده. ۲) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
-| **کار بعدی پیشنهادی** | ۱) نتیجه‌ی چک‌لیست؛ اگر مشکل جدی: `git revert -m 1 <merge>` + push (با تأیید کاربر؛ migration ندارد). ۲) بررسی پیش‌فاکتورهای قبلی که اشتباهاً تأیید شده‌اند (BA-15). ۳) idempotency: push `feat/tx-idempotency` → migration → `TX_IDEMPOTENCY_ENABLED=1`. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
+| **کار بعدی پیشنهادی** | ۱) **فوری:** متن خطای قدم «Deploy to Liara» از Actions (run 40964936005) یا لاگ build داشبورد لیارا. ۲) بعد از deploy موفق: چک‌لیست `~/Claude-Projects/CHECKLIST-merge-fix-branch.md`. ۳) BA-15 پیش‌فاکتورهای قبلی. ۴) idempotency. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
 | **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
 
