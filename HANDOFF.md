@@ -9,12 +9,12 @@
 
 | | |
 |---|---|
-| **نسخه** | `main` = `08a2852` (= origin/main؛ آخرین دیپلوی ۲۰۲۶-۱۰-۲۸). branch محلی `fix/branch-scope-all-roles` (۴ commit رفع + ۱ commit مستندات) **push نشده**. |
+| **نسخه** | `main` = `08a2852` (= origin/main؛ production). branchهای محلی push‌نشده: `fix/branch-scope-all-roles` (۷ رفع + مستندات) و روی آن `feat/tx-idempotency` (پشت flag). |
 | **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
-| **Build/tsc** | روی branch رفع: tsc ✅ · unit 735/735 ✅ · lint ✅ (۸ warning) · build ✅ |
+| **Build/tsc** | fix branch: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا (۸ warning) · build ✅ — feat branch: 770/770 ✅ · build ✅ |
 | **دیپلوی** | push روی main = دیپلوی خودکار Liara. تست بمب‌ساعتی رزرو رفع شده (31b4d6f). |
 | **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده روی main؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). ۲) branch `fix/branch-scope-all-roles` منتظر بازبینی/merge. |
-| **کار بعدی پیشنهادی** | ۱) تصمیم کاربر درباره‌ی `db-hr-job-titles.sql` بازنویسی‌شده. ۲) بازبینی و merge branch رفع (با دستور کاربر). ۳) idempotency برای ثبت تراکنش. ۴) محدودکردن `resumeUrl`. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
+| **کار بعدی پیشنهادی** | ۱) تست با کاربر واقعی Chef/Warehouse و پیش‌فاکتور، بعد merge fix branch (با دستور کاربر). ۲) بررسی پیش‌فاکتورهای قبلی که اشتباهاً تأیید شده‌اند. ۳) migration idempotency + flag. فهرست کامل: `~/Claude-Projects/MASTER_ROADMAP.md`. |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
 | **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
 
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-10-30 (۲) — رفع رزومه/SSRF و پیش‌فاکتور + Idempotency تراکنش (branch جدا)
+**چه شد:** با تأیید کاربر: (الف) `db-hr-job-titles.sql` بازنویسی‌شده به نسخه‌ی commit‌شده برگشت (نسخه‌ی تغییرکرده در `~/Claude-Projects/_audit/preserved/` نگه داشته شد). (ب) `resumeUrl` فرم `/apply` فقط data URI با نوع مجاز؛ route رزومه فقط https روی Supabase پروژه را redirect می‌کند و `resumes-zip` دیگر URL دلخواه را سمت سرور fetch نمی‌کند (SSRF) — fb10613. (ج) **باگ مالی:** repo کلاینت `status`/`invoiceCode` را نمی‌فرستاد → پیش‌فاکتور مدیر کل فوراً تأیید و روی موجودی صندوق اعمال می‌شد و کد فاکتور گم می‌شد — cde097b. (د) Idempotency-Key برای ثبت تراکنش روی branch جدای `feat/tx-idempotency` (پشت flag، نیازمند migration).
+**فایل‌ها:** `lib/recruitment/resumeUrl.ts`، `lib/validations/recruitment.ts`، `app/api/recruitment/[id]/resume/route.ts`، `app/api/recruitment/resumes-zip/route.ts`، `lib/repos/api.ts`، `tests/unit/resume-url.test.ts`، `tests/unit/transactions-repo-body.test.ts`.
+**Build:** tsc ✅ · unit 762/762 ✅ (روی feat: 770) · lint ۰ خطا · build ✅.
+**ناتمام:** هیچ‌کدام push نشده. ⚠️ پیش‌فاکتورهایی که قبلاً مدیر کل ثبت کرده احتمالاً به‌عنوان تراکنش تأییدشده روی موجودی اثر گذاشته‌اند — بررسی داده‌ی production با کاربر (فقط خواندن).
+**برای جلسه‌ی بعد:** ترتیب merge: اول `fix/branch-scope-all-roles`، بعد `feat/tx-idempotency`. فعال‌سازی idempotency: push کد → اجرای `project-docs/migrations/db-idempotency-keys.sql` → `TX_IDEMPOTENCY_ENABLED=1` در Liara.
+
 ## 📓 2026-10-30 — ممیزی کامل در `~/Claude-Projects` + رفع ۴ نقص دسترسی/یکپارچگی — روی branch `fix/branch-scope-all-roles`
 **چه شد:** پروژه به `~/Claude-Projects/01-Active/basharaf-app` کپی شد (نسخه‌ی کاری از ۲۰۲۶-۱۰-۲۹؛ `~/Documents/basharaf-app` بکاپ ثابت است). ممیزی کامل کد (گزارش: `~/Claude-Projects/_audit/basharaf-app-audit.md`). سه نقص تأییدشده رفع شد: (۱) ۲۵ route فقط `role === 'BranchUser'` را به شعبه محدود می‌کردند و Chef/Warehouse به داده‌ی شعب دیگر دسترسی داشتند → `canUseBranch`/`branchScope` (f1cf927) + تست نگهبان ایستا. (۲) `/api/inventory/expiry` اقلام همه‌ی شعب را برمی‌گرداند → فیلتر شعبه (8182820). (۳) محاسبه‌ی مجدد حقوق وضعیت را بیرون تراکنش چک می‌کرد و می‌توانست اجرای تأییدشده را بازنویسی کند → قفل `FOR UPDATE` و چک مجدد داخل تراکنش (e855187). (۴) رمز پیش‌فرض hard-code `basharaf123` در `lib/repos/api.ts` حذف شد (2e8da9e). ⚠️ seed قدیمی (`v0.9.7-*/basharaf-deploy`) حساب‌هایی با همین رمز می‌ساخت — کاربر باید چک کند در production حسابی با این رمز نمانده باشد. کار WIP استودیو رسپی دست نخورد.
 **فایل‌ها:** ۲۳ فایل زیر `app/api/**` (attendance، shift-assignments، purchase-orders، inventory/*، equipment، maintenance، orders/*، dashboard/overview، transactions/import)، `app/api/inventory/expiry/route.ts`، `app/api/payroll/runs/[id]/calculate/route.ts`، `tests/unit/branch-scope-routes.test.ts`.
@@ -103,9 +110,3 @@
 **فایل‌ها:** (جدید) `lib/attendance-clock/{passkey,origin}.ts`، `app/api/clock/passkey/{register-options,register,auth-options}/route.ts`، `app/api/hr/clock/settings/route.ts`، `project-docs/migrations/db-attendance-clock-faceid.sql` · (ویرایش) `lib/db/schema.ts`، `lib/attendance-clock/service.ts`، `app/api/clock/{punch,status}/route.ts`، `app/api/hr/clock/{events,links,links/[id]}/route.ts`، `components/clock/ClockClient.tsx`، `components/hr/ClockView.tsx`، `lib/auth/audit.ts`، `tests/unit/attendanceClock.test.ts`، `project-docs/ATTENDANCE-CLOCK.md`، `package.json`/`package-lock.json`.
 **Build:** tsc ✅ · unit 692/692 ✅ · lint ✅ · migration دوم روی Postgres واقعی محلی روی داده‌ی موجود دوبار ✅ و برابر schema ✅ · ۲۵ سناریوی قبلی (Face ID خاموش) ✅ · ۲۳ سناریوی Face ID با authenticator نرم‌افزاری ✅ (یک انتظار اشتباه در خود اسکریپت آزمون اصلاح شد) · UI محلی ✅ · build: نتیجه در گزارش نشست.
 **ناتمام:** migration دوم اجرا نشده؛ merge/push منتظر علی. ترتیب: اول `db-attendance-clock-faceid.sql`، بعد push. Face ID واقعی آیفون فقط روی سایت https قابل آزمون است.
-
-## 📓 2026-10-20 — ثبت ورود/خروج پرسنل فقط با اینترنت (IP ثابت) مغازه — روی branch
-**چه شد:** به درخواست علی («IP ثابت دارم؛ وقتی به مودم مغازه وصل‌اند حضور بزنند، فقط با مودم مغازه») ماژول جدید ساخته شد، روی همان سیستم حضور موجود (بدون مدل موازی): لینک شخصی یک‌بارمصرف هر نفر → گوشی با کوکی httpOnly فعال می‌شود → صفحه‌ی `/clock` ورود/خروج را فقط از IP ثبت‌شده‌ی شعبه می‌پذیرد، زمان از ساعت دیتابیس، هر خروج یک **پیش‌نویس** در attendance_entries (متصل به نزدیک‌ترین شیفت) می‌سازد؛ تأیید و حقوق بدون تغییر. رویداد خام فقط‌افزودنی (trigger)، IP خام ذخیره نمی‌شود. تب جدید «ورود با مودم» در `/hr/time`. شرح کامل: `project-docs/ATTENDANCE-CLOCK.md`. **باگ موجود رفع شد:** `POST /api/attendance` (ثبت دستی حضور از پنل) از فاز ۱ HR (`3772681`) روی Postgres واقعی ۵۰۰ می‌داد چون شناسه‌ی موقت `'new-candidate'` uuid نبود (خطای 22P02) — حالا `NEW_ATTENDANCE_CANDIDATE_ID`؛ قبل/بعد روی Postgres محلی تأیید شد (۵۰۰ → ۲۰۱).
-**فایل‌ها:** (جدید) `lib/attendance-clock/{ip,rules,service}.ts`، `app/api/clock/{activate,status,punch}/route.ts`، `app/api/hr/clock/{networks,networks/[id],links,links/[id],events,my-ip}/route.ts`، `app/clock/page.tsx`، `components/clock/ClockClient.tsx`، `components/hr/ClockView.tsx`، `project-docs/migrations/db-attendance-clock.sql`، `project-docs/ATTENDANCE-CLOCK.md`، `tests/unit/attendanceClock.test.ts` · (ویرایش) `lib/db/schema.ts` (۱ enum + ۳ جدول)، `lib/auth/permissions.ts` (`hr.attendance.clockSetup`)، `lib/auth/audit.ts`، `app/(app)/hr/time/page.tsx`، `lib/payroll/attendanceEntryHelpers.ts` + `app/api/attendance/route.ts` (رفع باگ)، `tests/unit/hr-permissions.test.ts` (۱۹→۲۰).
-**Build:** tsc ✅ · unit همه ✅ · lint ✅ · migration روی Postgres واقعی محلی (embedded) دوبار ✅ و برابر با schema درایزل ✅ · ۲۵ سناریوی سرتاسری HTTP روی همان ✅ · UI در مرورگر محلی (دسکتاپ + موبایل) ✅. build: نتیجه در گزارش نشست.
-**ناتمام:** migration اجرا نشده؛ merge/push/دیپلوی منتظر علی. بعد از دیپلوی: یک بار «IP همین‌جا را نشان بده» داخل مغازه + آزمون جعل X-Real-IP از بیرون (رفتار پراکسی لیارا مستند نیست).
