@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# /usr/local/bin/basharaf-release (owned by root, run by the deploy user)
+# Builds, installs, switches, verifies and rolls back basharaf-app releases under /srv/basharaf.
+#
+#   basharaf-release install <name>   build the uploaded source /srv/basharaf/incoming/<name>.tar.gz, switch to it,
+#                                     verify, roll back on failure
+#   basharaf-release rollback         switch to the newest healthy release before the current one
+#   basharaf-release status           show the live release and the kept ones
+#
+# Unlike meeez, the build runs here: the app ships a native module (sharp) and the Mac is arm64 while this
+# server is x86_64. Build-time values come from /etc/basharaf/build.env (public NEXT_PUBLIC_* only);
+# runtime secrets stay in /etc/basharaf/env, which only root and systemd read.
+#
+# Exit codes: 0 ok, 1 refused or nothing to roll back to, 2 new release failed and the previous one is live again,
+#             3 rollback also failed (site down), 4 another deploy or rollback is running, 5 build failed (nothing changed).
+set -uo pipefail
+
+ROOT=/srv/basharaf
+RELEASES=$ROOT/releases
+CURRENT=$ROOT/current
+CACHE=$ROOT/cache
+INCOMING=$ROOT/incoming
+BUILD=$ROOT/build
+NPM_CACHE=$ROOT/npm-cache
+BUILD_ENV=/etc/basharaf/build.env
+PORT=3001
+HEALTH_PATH=/login
+KEEP=5
+NAME_RE='^[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$'
+export PATH=/usr/local/bin:/usr/bin:/bin
+
+exec 9>"$ROOT/.lock"
+flock -w 120 9 || { echo "basharaf-release: another deploy or rollback is running" >&2; exit 4; }
+
+log() { echo "basharaf-release: $*" >&2; }
+
+is_release() { # complete release folder with a valid name, not a link
+  [[ "$1" =~ $NAME_RE ]] && [ -d "$RELEASES/$1" ] && [ ! -L "$RELEASES/$1" ] && [ -f "$RELEASES/$1/.complete" ]
+}
+
+live_name() { local t; t=$(readlink "$CURRENT" 2>/dev/null) || return 0; basename "$t"; }
+
+switch_to() { # atomic: build the new link beside the old one, then rename it over the old one
+  ln -sfn "$RELEASES/$1" "$ROOT/.current.new" && mv -T "$ROOT/.current.new" "$CURRENT"
+}
+
+serves() { # restart and wait until the app answers the health page with this release's build id (max ~60 s)
+  local id i
+  id=$(cat "$RELEASES/$1/.build-id" 2>/dev/null) || return 1
+  [ -n "$id" ] || return 1
+  sudo /usr/bin/systemctl restart basharaf || return 1
+  for i in $(seq 1 30); do
+    if curl -fsS --connect-timeout 2 --max-time 5 "http://127.0.0.1:$PORT$HEALTH_PATH" 2>/dev/null | grep -qF "$id"; then return 0; fi
+    sleep 2
+  done
+  return 1
+}
+
+cleanup() { # keep the live release, the one before it, and the newest healthy ones up to KEEP
+  local live=$1 prev=$2 kept=0 name
+  for name in $(ls -1 "$RELEASES" | sort -r); do
+    [[ "$name" =~ $NAME_RE ]] || continue
+    if [ "$name" = "$live" ] || [ "$name" = "$prev" ]; then kept=$((kept + 1)); continue; fi
+    if [ -f "$RELEASES/$name/.healthy" ] && [ "$kept" -lt "$KEEP" ]; then kept=$((kept + 1)); continue; fi
+    rm -rf -- "${RELEASES:?}/$name"
+  done
+  # unfinished uploads and builds older than an hour
+  find "$RELEASES" -mindepth 1 -maxdepth 1 -type d -name '*.tmp' -mmin +60 -exec rm -rf -- {} +
+  find "$INCOMING" -mindepth 1 -maxdepth 1 -name '*.tar.gz' -mmin +60 -delete
+}
+
+activate() { # switch to $1 and verify; on failure go back to $2
+  local new=$1 prev=$2
+  switch_to "$new" || { log "could not switch to $new"; return 1; }
+  if serves "$new"; then
+    touch "$RELEASES/$new/.healthy"
+    cleanup "$new" "$prev"
+    log "live: $new"
+    return 0
+  fi
+  log "release $new did not pass the health check (journalctl -u basharaf)"
+  if [ -n "$prev" ] && is_release "$prev"; then
+    switch_to "$prev"
+    if serves "$prev"; then log "rolled back: $prev is live again"; return 2; fi
+    log "ROLLBACK FAILED: $prev does not pass the health check either; the site is down"
+    return 3
+  fi
+  log "no previous release to roll back to; the app is not serving"
+  return 3
+}
+
+build() { # unpack and build $1 into $RELEASES/$1.tmp; the live release is untouched
+  local name=$1 src=$BUILD/$1 stage=$RELEASES/$1.tmp
+  rm -rf -- "$src" "$stage"
+  mkdir -p "$src" && tar -xzf "$INCOMING/$name.tar.gz" -C "$src" || { log "could not unpack $name"; return 1; }
+  (
+    set -e
+    cd "$src"
+    log "npm ci"
+    nice -n 10 npm ci --no-audit --no-fund --cache "$NPM_CACHE" >"$src.npm.log" 2>&1
+    log "next build (a few minutes on this server)"
+    set -a; . "$BUILD_ENV"; set +a
+    NEXT_OUTPUT=standalone NEXT_TELEMETRY_DISABLED=1 NODE_OPTIONS=--max-old-space-size=1536 \
+      nice -n 10 npx --no-install next build >"$src.build.log" 2>&1
+    [ -f .next/standalone/server.js ] && [ -s .next/BUILD_ID ]
+    mkdir -p "$stage"
+    cp -a .next/standalone/. "$stage/"
+    mkdir -p "$stage/.next"
+    cp -a .next/static "$stage/.next/static"
+    [ -d public ] && cp -a public "$stage/public"
+    cp .next/BUILD_ID "$stage/.build-id"
+  ) || { log "build failed; logs: $src.npm.log $src.build.log (live release unchanged)"; rm -rf -- "$stage"; return 1; }
+  rm -rf -- "$src" "$src.npm.log" "$src.build.log" "$INCOMING/$name.tar.gz"
+}
+
+cmd=${1:-}
+case "$cmd" in
+  install)
+    name=${2:-}
+    [[ "$name" =~ $NAME_RE ]] || { log "bad release name: $name"; exit 1; }
+    [ -f "$INCOMING/$name.tar.gz" ] && [ ! -L "$INCOMING/$name.tar.gz" ] || { log "no upload found for $name"; exit 1; }
+    [ ! -e "$RELEASES/$name" ] || { log "release $name already exists"; exit 1; }
+    [ -r "$BUILD_ENV" ] || { log "missing $BUILD_ENV"; exit 1; }
+    build "$name" || exit 5
+    chmod -R u=rwX,go=rX "$RELEASES/$name.tmp" || { log "could not set permissions on $name"; exit 1; }
+    # Next's cache is the only place the app may write
+    rm -rf -- "$RELEASES/$name.tmp/.next/cache" && ln -s "$CACHE" "$RELEASES/$name.tmp/.next/cache"
+    mv -T "$RELEASES/$name.tmp" "$RELEASES/$name" && touch "$RELEASES/$name/.complete"
+    activate "$name" "$(live_name)"
+    exit $?
+    ;;
+  rollback)
+    live=$(live_name)
+    target=""
+    for name in $(ls -1 "$RELEASES" | sort -r); do
+      [ "$name" != "$live" ] && is_release "$name" && [ -f "$RELEASES/$name/.healthy" ] && { target=$name; break; }
+    done
+    [ -n "$target" ] || { log "no earlier healthy release to roll back to"; exit 1; }
+    activate "$target" "$live"
+    exit $?
+    ;;
+  status)
+    echo "live: $(live_name)"
+    for name in $(ls -1 "$RELEASES" | sort -r); do
+      flags=""
+      [ -f "$RELEASES/$name/.complete" ] && flags="$flags complete"
+      [ -f "$RELEASES/$name/.healthy" ] && flags="$flags healthy"
+      echo "  $name$flags"
+    done
+    ;;
+  *)
+    echo "usage: basharaf-release install <name> | rollback | status" >&2
+    exit 1
+    ;;
+esac

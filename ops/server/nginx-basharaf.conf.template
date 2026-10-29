@@ -1,0 +1,37 @@
+# /etc/nginx/sites-available/basharaf — generated from this template by setup-server.sh:
+#   __CANONICAL__  the one address the app is served on (e.g. vps.basharaf.me while testing, basharaf.me after the switch)
+#   __ALIASES__    other names that redirect to it (e.g. www.basharaf.me), or empty
+#   __CERT__       certificate name under /etc/letsencrypt/live/
+# The upstream and the $connection_upgrade map are defined once in the meeez site; only the upstream is added here.
+
+upstream basharaf_app {
+  server 127.0.0.1:3001;
+  keepalive 16;
+}
+
+server {
+  listen 80;
+  listen [::]:80;
+  server_name __CANONICAL__ __ALIASES__;
+
+  # certbot renewals answer their challenge over HTTP
+  location /.well-known/acme-challenge/ { root /var/www/html; }
+  location / { return 301 https://__CANONICAL__$request_uri; }
+}
+
+__ALIAS_BLOCK__
+
+server {
+  # Nginx 1.24: http2 goes on the listen line
+  listen 443 ssl http2;
+  listen [::]:443 ssl http2;
+  server_name __CANONICAL__;
+
+  ssl_certificate /etc/letsencrypt/live/__CERT__/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/__CERT__/privkey.pem;
+  include /etc/letsencrypt/options-ssl-nginx.conf;
+  ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+  add_header Strict-Transport-Security "max-age=15552000" always;
+  include /etc/nginx/snippets/basharaf-proxy.conf;
+}

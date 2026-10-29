@@ -1,0 +1,2 @@
+# /etc/sudoers.d/basharaf-deploy — the deploy user may only restart and inspect the basharaf service.
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart basharaf, /usr/bin/systemctl is-active basharaf

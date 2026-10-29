@@ -1,0 +1,50 @@
+# /etc/systemd/system/basharaf.service — runs the Next.js standalone server for basharaf-app.
+# Nginx proxies to it on 127.0.0.1:3001 (meeez uses 3000); it is never reachable from outside directly.
+#
+# The app runs as "basharaf", a login-less user that owns nothing but /srv/basharaf/cache.
+# Releases and the "current" link belong to "deploy", so the running app cannot change its own code
+# or the releases kept for rollback. Secrets come from /etc/basharaf/env (root-only, read by systemd).
+[Unit]
+Description=basharaf-app (Next.js standalone)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=basharaf
+Group=basharaf
+WorkingDirectory=/srv/basharaf/current
+EnvironmentFile=/etc/basharaf/env
+Environment=NODE_ENV=production
+Environment=PORT=3001
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/usr/local/bin/node server.js
+Restart=always
+RestartSec=3
+# leave room for meeez and nginx on a small server
+MemoryHigh=900M
+MemoryMax=1200M
+
+# filesystem: everything read-only except Next's cache
+ProtectSystem=strict
+ReadWritePaths=/srv/basharaf/cache
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+
+# privileges and kernel
+NoNewPrivileges=true
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target

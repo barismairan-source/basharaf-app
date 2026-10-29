@@ -7,6 +7,9 @@
 const PROCESS_INTERVAL_MS = 60 * 1000;
 
 export async function startOutboxScheduler() {
+  // روی سرور دوم (مثلاً VPS در دوره‌ی موازی با لیارا) خاموش می‌شود تا اعلان/پیامک دوبار ارسال نشود.
+  if (process.env.OUTBOX_SCHEDULER === 'off') return;
+
   const { processOutboxBatch } = await import('@/lib/notifications/processor');
   const { logEvent } = await import('@/lib/logger');
 

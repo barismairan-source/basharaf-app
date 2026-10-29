@@ -1,4 +1,7 @@
-/** @type {import('next').NextConfig} */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 // Security headers — فاز ۱۵
 const securityHeaders = [
@@ -26,8 +29,17 @@ const securityHeaders = [
     : []),
 ];
 
+/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
+  // سرور خودمان (VPS): خروجی مستقل Node با `NEXT_OUTPUT=standalone` (ops/server/basharaf-release).
+  // روی لیارا این متغیر تنظیم نیست و همان `next start` معمولی اجرا می‌شود.
+  ...(process.env.NEXT_OUTPUT === 'standalone' ? { output: 'standalone' } : {}),
+  outputFileTracingRoot: projectRoot,
+
+  // Next 15: جای `experimental.serverComponentsExternalPackages` (که دیگر خوانده نمی‌شد)
+  serverExternalPackages: ['postgres', 'bcryptjs'],
 
   // ⛔ مرحله‌ی «Linting and checking validity of types» داخل `next build` روی
   // builder محدود Liara بیش از ۲۰ دقیقه طول می‌کشد و timeout می‌شود.
@@ -47,7 +59,6 @@ const nextConfig = {
   },
 
   experimental: {
-    serverComponentsExternalPackages: ['postgres', 'bcryptjs'],
     serverActions: {
       bodySizeLimit: '10mb',
     },
