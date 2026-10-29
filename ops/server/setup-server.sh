@@ -20,7 +20,8 @@ base() {
 
   id basharaf >/dev/null 2>&1 || useradd --system --no-create-home --home-dir /nonexistent --shell /usr/sbin/nologin basharaf
 
-  install -d -o root -g root -m 755 "$ROOT"
+  # like /srv/meeez: deploy owns the folder so it can swap the "current" link atomically
+  install -d -o deploy -g deploy -m 755 "$ROOT"
   install -d -o deploy -g deploy -m 755 "$ROOT/releases" "$ROOT/incoming" "$ROOT/build" "$ROOT/npm-cache"
   install -d -o basharaf -g basharaf -m 755 "$ROOT/cache"
   touch "$ROOT/.lock" && chown deploy:deploy "$ROOT/.lock"
