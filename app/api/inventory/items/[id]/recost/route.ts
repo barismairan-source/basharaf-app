@@ -29,7 +29,8 @@ export const dynamic = 'force-dynamic';
  * موجودی واقعی و میانگین موزون فقط با گردش انبار (produceConfirmed/...) تغییر می‌کند —
  * اینجا دست به qtyBase/qtyPhysical نمی‌زنیم.
  */
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     // محاسبه‌ی بهای تمام‌شده یک عملیات مالی است — تفکیک وظایف: انباردار اجازه ندارد

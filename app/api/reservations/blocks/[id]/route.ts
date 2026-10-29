@@ -4,7 +4,8 @@ import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (session.role === 'Warehouse' || session.role === 'Chef') {

@@ -24,10 +24,8 @@ import { applicationReviewSchema } from '@/lib/validations/recruitment';
  */
 
 /** GET /api/recruitment/[id] — یک متقاضی (برای تب «منبع استخدام» پرونده‌ی پرسنلی). */
-export async function GET(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const [row] = await db.select().from(schema.jobApplications).where(eq(schema.jobApplications.id, params.id)).limit(1);
@@ -46,10 +44,8 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const patch = applicationReviewSchema.parse(await req.json());
@@ -82,10 +78,8 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     await db.delete(schema.jobApplications).where(eq(schema.jobApplications.id, params.id));

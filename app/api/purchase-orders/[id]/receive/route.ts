@@ -40,7 +40,8 @@ const receiveSchema = z.object({
 
 type PoItemRow = typeof schema.purchaseOrderItems.$inferSelect;
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     const input = receiveSchema.parse(await req.json());

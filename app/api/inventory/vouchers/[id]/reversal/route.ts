@@ -24,7 +24,8 @@ const REVERSED_KIND: Record<'in' | 'out' | 'waste' | 'sale' | 'produce', Voucher
  * فقط SuperAdmin. برگه‌ی جدید pending با kind معکوس و parentVoucherId = برگه‌ی اصلی
  * ساخته می‌شود — اثر آن فقط بعد از تأیید جداگانه روی موجودی/حسابداری اعمال می‌شود.
  */
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
 

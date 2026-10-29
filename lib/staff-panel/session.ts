@@ -33,13 +33,13 @@ export async function setUnlockCookie(deviceId: string): Promise<void> {
     .setIssuedAt()
     .setExpirationTime(`${UNLOCK_TTL_SECONDS}s`)
     .sign(secret());
-  cookies().set(UNLOCK_COOKIE, token, {
+  (await cookies()).set(UNLOCK_COOKIE, token, {
     httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/', maxAge: UNLOCK_TTL_SECONDS,
   });
 }
 
 export async function isUnlocked(deviceId: string): Promise<boolean> {
-  const token = cookies().get(UNLOCK_COOKIE)?.value;
+  const token = (await cookies()).get(UNLOCK_COOKIE)?.value;
   if (!token) return false;
   try {
     const { payload } = await jwtVerify(token, secret(), { audience: AUDIENCE, algorithms: ['HS256'] });
@@ -55,6 +55,6 @@ export async function requireUnlocked(device: ClockDevice): Promise<void> {
   }
 }
 
-export function clearUnlockCookie(): void {
-  cookies().set(UNLOCK_COOKIE, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/', maxAge: 0 });
+export async function clearUnlockCookie(): Promise<void> {
+  (await cookies()).set(UNLOCK_COOKIE, '', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', path: '/', maxAge: 0 });
 }

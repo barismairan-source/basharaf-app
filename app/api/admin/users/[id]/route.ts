@@ -14,7 +14,8 @@ const patchSchema = z.object({
   assignedBranchId: z.string().uuid().nullable().optional(),
 }).strict();
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const admin = await requireAdmin();
     const body = await req.json();

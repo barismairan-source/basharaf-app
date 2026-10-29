@@ -14,7 +14,8 @@ export const dynamic = 'force-dynamic';
  * فقط payrollRuns.status را به 'approved' برمی‌گرداند — بدون هیچ اثر مالی.
  * اگر journal_voucher posted وجود داشته باشد → خطا (از reverse عادی استفاده کنید).
  */
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin');
 

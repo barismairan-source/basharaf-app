@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     const imp = await getImpersonationSession();
     if (!imp) throw new ApiError(400, 'جلسه جعل هویتی فعال نیست', 'NO_IMP_SESSION');
 
-    clearImpersonationSession();
+    await clearImpersonationSession();
 
     const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? undefined;
     await audit({

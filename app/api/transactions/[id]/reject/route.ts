@@ -20,10 +20,8 @@ const rejectBodySchema = z.object({
  * فقط SuperAdmin. تراکنش pending → rejected با دلیل.
  * یک اعلان rejected برای creator می‌سازد.
  */
-export async function POST(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const body = await req.json().catch(() => ({}));

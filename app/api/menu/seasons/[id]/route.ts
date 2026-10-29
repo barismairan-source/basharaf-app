@@ -15,7 +15,8 @@ const patchSchema = z.object({
 });
 
 /** PATCH /api/menu/seasons/[id] — فقط ویرایش نام/یادداشت (تغییر فصل جاری فقط با POST جدید انجام می‌شود). */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const input = patchSchema.parse(await req.json());

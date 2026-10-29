@@ -28,7 +28,8 @@ export type PriceHistoryResponse = {
   summary: PriceHistorySummary | null;
 };
 
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     // بها/حاشیه‌ی سود — فقط برای کسی که اجازه‌ی دیدن بهای انبار را دارد

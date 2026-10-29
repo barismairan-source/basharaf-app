@@ -23,7 +23,8 @@ const patchTaskTemplateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const input = patchTaskTemplateSchema.parse(await req.json());

@@ -41,7 +41,8 @@ const ALLOWED_TRANSITIONS: Record<PoStatus, PoStatus[]> = {
   cancelled: [],
 };
 
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
 
@@ -68,7 +69,8 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     const input = patchPoSchema.parse(await req.json());

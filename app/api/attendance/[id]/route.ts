@@ -27,7 +27,8 @@ const patchSchema = z.object({
   shiftAssignmentId: z.string().uuid().nullable().optional(),
 });
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
     assertCan(session, 'hr.attendance.record');
@@ -111,7 +112,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin', 'BranchUser');
     assertCan(session, 'hr.attendance.record');

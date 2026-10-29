@@ -49,7 +49,7 @@ export async function setServerSession(payload: {
     permissions: payload.permissions ?? null,
   });
 
-  cookies().set(SESSION_COOKIE, token, {
+  (await cookies()).set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -61,8 +61,8 @@ export async function setServerSession(payload: {
 /**
  * حذف session cookie. در logout استفاده می‌شود.
  */
-export function clearServerSession(): void {
-  cookies().set(SESSION_COOKIE, '', {
+export async function clearServerSession(): Promise<void> {
+  (await cookies()).set(SESSION_COOKIE, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -92,7 +92,7 @@ export async function getServerSession(): Promise<JWTPayload | null> {
       };
     }
   }
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return withFreshAccess(await verifyToken(token));
 }
@@ -102,7 +102,7 @@ export async function getServerSession(): Promise<JWTPayload | null> {
  * جعل هویت عبور کند (ادمین باید در حین جعل هویت هم به /admin دسترسی داشته باشد).
  */
 export async function getRealAdminSession(): Promise<JWTPayload | null> {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
   return withFreshAccess(await verifyToken(token));
 }

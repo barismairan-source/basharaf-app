@@ -25,8 +25,8 @@ export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
-export function setClockCookie(deviceToken: string): void {
-  cookies().set(CLOCK_COOKIE, deviceToken, {
+export async function setClockCookie(deviceToken: string): Promise<void> {
+  (await cookies()).set(CLOCK_COOKIE, deviceToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     // strict: درخواست ثبت از سایت دیگر هرگز کوکی را با خودش نمی‌برد.
@@ -59,7 +59,7 @@ export interface ClockDevice {
 
 /** گوشی فعال‌شده‌ی این درخواست (از کوکی). لینک لغوشده یا پرسنل غیرفعال → null. */
 export async function getDeviceFromCookie(): Promise<ClockDevice | null> {
-  const token = cookies().get(CLOCK_COOKIE)?.value;
+  const token = (await cookies()).get(CLOCK_COOKIE)?.value;
   if (!token || token.length < 20 || token.length > 200) return null;
   const [row] = await db.select({
     deviceId: schema.attendanceClockDevices.id,

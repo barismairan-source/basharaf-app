@@ -4,10 +4,8 @@ import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
 
-export async function DELETE(
-  _req: Request,
-  { params }: { params: { id: string; pbId: string } }
-) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string; pbId: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const [link] = await db

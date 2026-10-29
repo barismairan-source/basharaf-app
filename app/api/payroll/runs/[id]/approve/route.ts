@@ -7,7 +7,8 @@ import { computeReadinessForEmployees } from '@/lib/payroll/payrollReadiness';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireAdmin();
     const now = new Date();

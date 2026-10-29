@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Clock, Users, Instagram } from 'lucide-react';
@@ -10,7 +10,8 @@ const PROTEIN_LABEL: Record<RecipeProtein, string> = {
   chicken: 'مرغ', red_meat: 'گوشت قرمز', seafood: 'دریایی', vegetarian: 'گیاهی', vegan: 'وگان', other: 'سایر',
 };
 
-export default function RecipeDetailPage({ params }: { params: { slug: string } }) {
+export default function RecipeDetailPage(props: { params: Promise<{ slug: string }> }) {
+  const params = use(props.params);
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);

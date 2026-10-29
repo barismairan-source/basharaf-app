@@ -24,7 +24,8 @@ const bodySchema = z.object({
     .regex(/^(?=.*[a-zA-Z])(?=.*[0-9])/, 'رمز باید حداقل یک حرف و یک عدد داشته باشد'),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const admin = await requireAdmin();
     const { newPassword } = bodySchema.parse(await req.json());

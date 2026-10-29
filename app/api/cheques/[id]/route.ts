@@ -52,7 +52,8 @@ async function loadCheque(id: string) {
 }
 
 /** GET /api/cheques/[id] */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertSection(session, 'contacts');
@@ -66,7 +67,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 }
 
 /** PATCH /api/cheques/[id] */
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     const input = patchSchema.parse(await req.json());
@@ -114,7 +116,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
 }
 
 /** DELETE /api/cheques/[id] */
-export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (session.role !== 'SuperAdmin') throw new ApiError(403, 'فقط SuperAdmin می‌تواند چک را حذف کند', 'FORBIDDEN');

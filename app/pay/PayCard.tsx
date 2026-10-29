@@ -41,7 +41,7 @@ const ToastStateContext = createContext<{ text: string; tone: Tone } | null>(nul
 
 function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<{ text: string; tone: Tone } | null>(null);
-  const timerRef = useRef<number>();
+  const timerRef = useRef<number | undefined>(undefined);
 
   const announce: Announce = (text, tone) => {
     setToast({ text, tone });

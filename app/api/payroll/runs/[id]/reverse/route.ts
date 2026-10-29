@@ -6,7 +6,8 @@ import { audit } from '@/lib/auth/audit';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireRole('SuperAdmin');
     await reversePayrollPost(params.id);

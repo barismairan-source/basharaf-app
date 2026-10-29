@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic';
  * DELETE /api/hr/clock/networks/[id] — غیرفعال‌کردن (نه حذف): رویدادهای قبلی به
  * همین ردیف ارجاع دارند و سابقه‌ی «از کدام نشانی تأیید شد» باید بماند.
  */
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertCan(session, 'hr.attendance.clockSetup');

@@ -11,7 +11,8 @@ import { ApiError, handleError } from '@/lib/api-error';
  * دفتر کل یک حساب — همه تراکنش‌های approved مرتبط با این صندوق،
  * به‌ترتیب زمانی، با مانده‌ی متحرک (running balance).
  */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     assertSection(session, 'accounts');

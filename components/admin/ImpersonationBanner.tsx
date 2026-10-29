@@ -3,7 +3,7 @@ import { verifyImpersonationToken, IMP_COOKIE } from '@/lib/auth/impersonation';
 import { ImpersonationBannerClient } from './ImpersonationBannerClient';
 
 export async function ImpersonationBanner() {
-  const token = cookies().get(IMP_COOKIE)?.value;
+  const token = (await cookies()).get(IMP_COOKIE)?.value;
   if (!token) return null;
 
   const imp = await verifyImpersonationToken(token);

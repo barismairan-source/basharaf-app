@@ -29,7 +29,8 @@ const calcSchema = z.object({
   })).optional(),
 });
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     await requireAdmin();
     const body = calcSchema.parse(await req.json().catch(() => ({})));

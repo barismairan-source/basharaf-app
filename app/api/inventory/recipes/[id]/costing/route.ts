@@ -12,7 +12,8 @@ type PrepRecipeLine = { itemId: string; qtyBase: number; overridePct?: number | 
 
 /** GET — costing کامل یک رسپی (بهای هر پرس، food cost%، قیمت پیشنهادی).
  *  برای آیتم‌های نیمه‌آماده، subLines حاوی مواد تشکیل‌دهنده‌ی آن نیمه‌آماده است. */
-export async function GET(_req: Request, { params }: { params: { id: string } }) {
+export async function GET(_req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const session = await requireSession();
     if (!canDo(session, 'inventory.viewCosts')) {
