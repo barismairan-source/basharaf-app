@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isAllowedResumeDataUri } from '@/lib/recruitment/resumeUrl';
 
 /**
  * یک منبع validation مشترک بین فرم عمومی (RHF) و API.
@@ -18,7 +19,9 @@ export const applicationCreateSchema = z.object({
   gender: z.enum(['male', 'female']).optional().nullable(),
   city: z.string().min(2, 'محل سکونت را وارد کنید').max(80).transform((v) => v.trim()),
   hasResume: z.boolean().default(false),
-  resumeUrl: z.string().max(8_000_000).optional().nullable(), // base64 data URI — تا ۶MB فایل
+  resumeUrl: z.string().max(8_000_000) // base64 data URI — تا ۶MB فایل
+    .refine(isAllowedResumeDataUri, 'فایل رزومه معتبر نیست (PDF، تصویر یا Word)')
+    .optional().nullable(),
   resumePath: z.string().max(300).optional().nullable(),
   manualInfo: z.string().max(2000).optional().nullable(),
   answers: z.record(z.string(), z.string().max(2000)).default({}),

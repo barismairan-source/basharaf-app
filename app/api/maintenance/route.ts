@@ -3,6 +3,7 @@ import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToMaintenanceLog } from '@/lib/db/operations.serializers';
 import { createExpenseTx, notifyPendingTransaction } from '@/lib/db/createExpenseTx';
@@ -26,11 +27,11 @@ const createMaintenanceSchema = z.object({
   accountId: z.string().uuid().optional().nullable(),
 });
 
-async function getEquipmentWithBranchCheck(equipmentId: string, session: { role: string; branchId: string | null }) {
+async function getEquipmentWithBranchCheck(equipmentId: string, session: Parameters<typeof canUseBranch>[0]) {
   const [equipment] = await db.select().from(schema.equipment)
     .where(eq(schema.equipment.id, equipmentId)).limit(1);
   if (!equipment) throw new ApiError(404, 'تجهیز پیدا نشد', 'NOT_FOUND');
-  if (session.role === 'BranchUser' && session.branchId !== equipment.branchId) {
+  if (!canUseBranch(session, equipment.branchId)) {
     throw new ApiError(403, 'شما فقط می‌توانید تجهیزات شعبه‌ی خود را مشاهده کنید', 'BRANCH_MISMATCH');
   }
   return equipment;

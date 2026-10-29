@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
 import { produceConfirmed } from '@/lib/db/inventoryHelpers';
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     if (!item) throw new ApiError(404, 'قلم پیدا نشد', 'ITEM_NOT_FOUND');
     if (item.kind !== 'prep') throw new ApiError(400, 'فقط نیمه‌آماده قابل تولید است', 'NOT_PREP');
 
-    if (session.role === 'BranchUser' && item.branchId !== session.branchId) {
+    if (!canUseBranch(session, item.branchId)) {
       throw new ApiError(403, 'دسترسی شعبه', 'BRANCH_MISMATCH');
     }
 

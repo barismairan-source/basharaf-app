@@ -3,6 +3,7 @@ import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToPurchaseOrder } from '@/lib/db/operations.serializers';
 import { getTodayJalali } from '@/lib/jalali';
@@ -58,7 +59,7 @@ export async function POST(req: Request) {
     const session = await requireSession();
     const input = createPoSchema.parse(await req.json());
 
-    if (session.role === 'BranchUser' && input.branchId !== session.branchId) {
+    if (!canUseBranch(session, input.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید برای شعبه‌ی خود سفارش ثبت کنید', 'BRANCH_MISMATCH');
     }
     if (session.role === 'Warehouse') {

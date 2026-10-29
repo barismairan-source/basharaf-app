@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToPurchaseOrder } from '@/lib/db/operations.serializers';
 import { audit } from '@/lib/auth/audit';
@@ -47,7 +48,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
     const [existing] = await db.select().from(schema.purchaseOrders)
       .where(eq(schema.purchaseOrders.id, params.id)).limit(1);
     if (!existing) throw new ApiError(404, 'سفارش خرید پیدا نشد', 'NOT_FOUND');
-    if (session.role === 'BranchUser' && session.branchId !== existing.branchId) {
+    if (!canUseBranch(session, existing.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید سفارش‌های شعبه‌ی خود را حذف کنید', 'BRANCH_MISMATCH');
     }
     if (session.role === 'Warehouse') {
@@ -75,7 +76,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const [existing] = await db.select().from(schema.purchaseOrders)
       .where(eq(schema.purchaseOrders.id, params.id)).limit(1);
     if (!existing) throw new ApiError(404, 'سفارش خرید پیدا نشد', 'NOT_FOUND');
-    if (session.role === 'BranchUser' && session.branchId !== existing.branchId) {
+    if (!canUseBranch(session, existing.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید سفارش‌های شعبه‌ی خود را ویرایش کنید', 'BRANCH_MISMATCH');
     }
     if (session.role === 'Warehouse') {

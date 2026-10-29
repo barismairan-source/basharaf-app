@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import {
@@ -42,7 +43,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     if (target.kind !== 'prep') {
       throw new ApiError(400, 'فقط برای اقلام نیمه‌آماده قابل بازمحاسبه است', 'NOT_PREP');
     }
-    if (session.role === 'BranchUser' && target.branchId !== session.branchId) {
+    if (!canUseBranch(session, target.branchId)) {
       throw new ApiError(403, 'شما به این قلم دسترسی ندارید', 'BRANCH_MISMATCH');
     }
 

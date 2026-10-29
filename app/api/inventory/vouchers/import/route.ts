@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm';
 import * as XLSX from 'xlsx';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { applyPhysicalLine } from '@/lib/db/inventoryHelpers';
 import { normalizeJalaliDate } from '@/lib/jalali';
@@ -74,7 +75,7 @@ export async function POST(req: Request) {
       const branchName = cell(row, 'شعبه', 'branch');
       const branch = findBranch(branchName);
       if (!branch) { errors.push(`ردیف ${ln}: شعبه‌ی «${branchName}» پیدا نشد`); return; }
-      if (session.role === 'BranchUser' && branch.id !== session.branchId) {
+      if (!canUseBranch(session, branch.id)) {
         errors.push(`ردیف ${ln}: اجازه‌ی این شعبه را ندارید`); return;
       }
 

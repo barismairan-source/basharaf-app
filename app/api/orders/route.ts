@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/session';
+import { branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { listBoardOrders } from '@/lib/ordering/orders';
 
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const branchIdParam = url.searchParams.get('branchId');
 
-    const branchId = session.role === 'BranchUser' ? session.branchId ?? undefined : branchIdParam ?? undefined;
+    const branchId = branchScope(session) ?? branchIdParam ?? undefined;
 
     const orders = await listBoardOrders({ branchId });
     return NextResponse.json({ orders });

@@ -5,6 +5,7 @@ import JSZip from 'jszip';
 import { db, schema } from '@/lib/db/client';
 import { requireAdmin } from '@/lib/auth/session';
 import { ApiError, handleError } from '@/lib/api-error';
+import { isTrustedResumeUrl } from '@/lib/recruitment/resumeUrl';
 import { sanitizeFilename } from '@/lib/recruitment/resumeZip';
 
 const bodySchema = z.object({
@@ -58,6 +59,8 @@ export async function POST(req: Request) {
         }
       } else {
         try {
+          // فقط storage خود پروژه؛ واکشی URL دلخواه سمت سرور = SSRF
+          if (!isTrustedResumeUrl(row.resumeUrl)) continue;
           const res = await fetch(row.resumeUrl);
           if (!res.ok) continue;
           buffer = Buffer.from(await res.arrayBuffer());

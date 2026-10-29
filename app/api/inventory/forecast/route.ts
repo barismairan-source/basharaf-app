@@ -3,6 +3,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { branchScope } from '@/lib/auth/apiAccess';
 import { handleError } from '@/lib/api-error';
 import { forecast, type SalesDay, type RecipeLite, type ItemLite } from '@/lib/inventoryLogic';
 
@@ -27,9 +28,10 @@ export async function POST(req: Request) {
   try {
     const session = await requireSession();
     const opts = bodySchema.parse(await req.json().catch(() => ({})));
+    const scopedBranchId = branchScope(session);
 
-    const branchWhere = session.role === 'BranchUser' && session.branchId
-      ? eq(schema.invItems.branchId, session.branchId)
+    const branchWhere = scopedBranchId
+      ? eq(schema.invItems.branchId, scopedBranchId)
       : undefined;
 
     // اقلام
@@ -50,8 +52,8 @@ export async function POST(req: Request) {
     }
 
     // رسپی‌ها + خطوط
-    const recipeWhere = session.role === 'BranchUser' && session.branchId
-      ? eq(schema.invRecipes.branchId, session.branchId)
+    const recipeWhere = scopedBranchId
+      ? eq(schema.invRecipes.branchId, scopedBranchId)
       : undefined;
     const recipeRows = await db.select().from(schema.invRecipes).where(recipeWhere);
     const recipes: Record<string, RecipeLite> = {};
@@ -62,8 +64,8 @@ export async function POST(req: Request) {
     }
 
     // فروش روزانه (تأییدشده) — جدیدترین‌ها
-    const salesWhere = session.role === 'BranchUser' && session.branchId
-      ? eq(schema.invDailySales.branchId, session.branchId)
+    const salesWhere = scopedBranchId
+      ? eq(schema.invDailySales.branchId, scopedBranchId)
       : undefined;
     const saleRows = await db.select().from(schema.invDailySales)
       .where(salesWhere).orderBy(desc(schema.invDailySales.createdAt)).limit(120);

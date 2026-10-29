@@ -3,6 +3,7 @@ import { eq, and, desc } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch, branchScope } from '@/lib/auth/apiAccess';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToEquipment } from '@/lib/db/operations.serializers';
 import { audit } from '@/lib/auth/audit';
@@ -27,8 +28,9 @@ const createEquipmentSchema = z.object({
 export async function GET() {
   try {
     const session = await requireSession();
-    const where = session.role === 'BranchUser' && session.branchId
-      ? eq(schema.equipment.branchId, session.branchId)
+    const scopedBranchId = branchScope(session);
+    const where = scopedBranchId
+      ? eq(schema.equipment.branchId, scopedBranchId)
       : undefined;
 
     const rows = await db.select().from(schema.equipment)
@@ -44,7 +46,7 @@ export async function POST(req: Request) {
     const session = await requireSession();
     const input = createEquipmentSchema.parse(await req.json());
 
-    if (session.role === 'BranchUser' && input.branchId !== session.branchId) {
+    if (!canUseBranch(session, input.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید برای شعبه‌ی خود تجهیز ثبت کنید', 'BRANCH_MISMATCH');
     }
 

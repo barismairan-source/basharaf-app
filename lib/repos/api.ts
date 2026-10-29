@@ -130,6 +130,9 @@ const transactionsRepo: TransactionsRepo = {
           contactId: input.contactId || undefined,
           vatAmount: input.vatAmount ?? 0,
           isCredit: input.isCredit ?? false,
+          // بدون این دو، پیش‌فاکتور admin فوراً تأیید و روی موجودی اعمال می‌شد و کد فاکتور گم می‌شد
+          invoiceCode: input.invoiceCode || undefined,
+          status: input.initialStatus,
         }),
       }
     );
@@ -206,7 +209,8 @@ const usersRepo: UsersRepo = {
       body: JSON.stringify({
         name,
         email,
-        password: password ?? 'basharaf123',
+        // بدون رمز پیش‌فرض: اگر رمز داده نشود، سرور (min 8) درخواست را رد می‌کند.
+        password,
         role,
         assignedBranchId: assignedBranch,
       }),

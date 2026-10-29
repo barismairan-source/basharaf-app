@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireRole } from '@/lib/auth/session';
-import { assertCan } from '@/lib/auth/apiAccess';
+import { assertCan, canUseBranch } from '@/lib/auth/apiAccess';
 import { ApiError, handleErrorLogged } from '@/lib/api-error';
 import { canEditAttendance, type AttendanceIntervalInput } from '@/lib/payroll/attendanceEngine';
 import { computeDerivedFields, assertNoAttendanceOverlap } from '@/lib/payroll/attendanceEntryHelpers';
@@ -36,7 +36,7 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     const [existing] = await db.select().from(schema.attendanceEntries)
       .where(eq(schema.attendanceEntries.id, params.id)).limit(1);
     if (!existing) throw new ApiError(404, 'رکورد حضور پیدا نشد', 'NOT_FOUND');
-    if (session.role === 'BranchUser' && existing.branchId !== session.branchId) {
+    if (!canUseBranch(session, existing.branchId)) {
       throw new ApiError(403, 'دسترسی خارج از شعبه‌ی شما مجاز نیست', 'FORBIDDEN_BRANCH');
     }
     if (!canEditAttendance(existing.status)) {
@@ -118,7 +118,7 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     const [existing] = await db.select().from(schema.attendanceEntries)
       .where(eq(schema.attendanceEntries.id, params.id)).limit(1);
     if (!existing) throw new ApiError(404, 'رکورد حضور پیدا نشد', 'NOT_FOUND');
-    if (session.role === 'BranchUser' && existing.branchId !== session.branchId) {
+    if (!canUseBranch(session, existing.branchId)) {
       throw new ApiError(403, 'دسترسی خارج از شعبه‌ی شما مجاز نیست', 'FORBIDDEN_BRANCH');
     }
     if (!canEditAttendance(existing.status)) {

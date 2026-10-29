@@ -3,6 +3,7 @@ import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { canUseBranch, branchScope } from '@/lib/auth/apiAccess';
 import { canDo } from '@/lib/auth/permissions';
 import { ApiError, handleError } from '@/lib/api-error';
 import { rowToInvVoucher } from '@/lib/db/inventory.serializers';
@@ -50,8 +51,9 @@ export async function GET(req: Request) {
     const status = searchParams.get('status') as 'pending' | 'approved' | 'rejected' | null;
 
     const clauses = [];
-    if (session.role === 'BranchUser' && session.branchId) {
-      clauses.push(eq(schema.invVouchers.branchId, session.branchId));
+    const scopedBranchId = branchScope(session);
+    if (scopedBranchId) {
+      clauses.push(eq(schema.invVouchers.branchId, scopedBranchId));
     }
     if (status) clauses.push(eq(schema.invVouchers.status, status));
     const where = clauses.length ? and(...clauses) : undefined;
@@ -80,7 +82,7 @@ export async function POST(req: Request) {
     const session = await requireSession();
     const input = createVoucherSchema.parse(await req.json());
 
-    if (session.role === 'BranchUser' && input.branchId !== session.branchId) {
+    if (!canUseBranch(session, input.branchId)) {
       throw new ApiError(403, 'شما فقط می‌توانید برای شعبه‌ی خود برگه ثبت کنید', 'BRANCH_MISMATCH');
     }
 

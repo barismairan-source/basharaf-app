@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq, and, lte, sql, desc, gt, inArray } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { branchScope } from '@/lib/auth/apiAccess';
 import { canAccessSection } from '@/lib/auth/permissions';
 import { handleError } from '@/lib/api-error';
 import { getTodayJalali } from '@/lib/jalali';
@@ -25,9 +26,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const qBranchId = searchParams.get('branchId');
 
-    const branchId = session.role === 'BranchUser'
-      ? session.branchId
-      : (qBranchId || null);
+    const branchId = branchScope(session) ?? (qBranchId || null);
 
     const branchTxFilter = branchId ? eq(schema.transactions.branchId, branchId) : undefined;
     const branchItemFilter = branchId ? eq(schema.invItems.branchId, branchId) : undefined;
