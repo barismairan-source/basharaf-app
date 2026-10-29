@@ -143,6 +143,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const warnings: Array<{ employeeId: string; employeeName: string; draftAttendanceCount: number }> = [];
 
     const result = await db.transaction(async (dbTx) => {
+      // قفل ردیف اجرا و بررسی دوباره‌ی وضعیت داخل تراکنش: اگر بین بررسی بالا و اینجا
+      // اجرا تأیید/ثبت شده باشد، فیش‌های تأییدشده نباید پاک و بازسازی شوند.
+      const [locked] = await dbTx.select({ status: schema.payrollRuns.status })
+        .from(schema.payrollRuns).where(eq(schema.payrollRuns.id, params.id)).for('update').limit(1);
+      if (!locked) throw new ApiError(404, 'اجرا پیدا نشد', 'NOT_FOUND');
+      if (locked.status === 'approved' || locked.status === 'posted')
+        throw new ApiError(409, 'اجرای تأییدشده را نمی‌توان دوباره محاسبه کرد', 'LOCKED');
+
       // پاک کردن فیش‌های قبلی این اجرا (محاسبه‌ی مجدد)
       await dbTx.delete(schema.payslips).where(eq(schema.payslips.payrollRunId, params.id));
 
