@@ -206,7 +206,8 @@ const usersRepo: UsersRepo = {
       body: JSON.stringify({
         name,
         email,
-        password: password ?? 'basharaf123',
+        // بدون رمز پیش‌فرض: اگر رمز داده نشود، سرور (min 8) درخواست را رد می‌کند.
+        password,
         role,
         assignedBranchId: assignedBranch,
       }),
