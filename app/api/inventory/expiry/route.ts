@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { isNotNull, eq } from 'drizzle-orm';
+import { isNotNull, eq, and } from 'drizzle-orm';
 import { db, schema } from '@/lib/db/client';
 import { requireSession } from '@/lib/auth/session';
+import { branchScope } from '@/lib/auth/apiAccess';
 import { jalaliToDate } from '@/lib/jalali';
 import { handleError } from '@/lib/api-error';
 
@@ -14,7 +15,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET() {
   try {
-    await requireSession();
+    const session = await requireSession();
+    const scopedBranchId = branchScope(session);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -28,7 +30,9 @@ export async function GET() {
     const itemRows = await db
       .select({ id: schema.invItems.id, name: schema.invItems.name, unit: schema.invItems.unit })
       .from(schema.invItems)
-      .where(eq(schema.invItems.isActive, true));
+      .where(scopedBranchId
+        ? and(eq(schema.invItems.isActive, true), eq(schema.invItems.branchId, scopedBranchId))
+        : eq(schema.invItems.isActive, true));
 
     const itemsById = new Map(itemRows.map(i => [i.id, i]));
 
