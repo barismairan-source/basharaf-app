@@ -50,7 +50,7 @@ serves() { # restart and wait until the app answers the health page with this re
   [ -n "$id" ] || return 1
   sudo /usr/bin/systemctl restart basharaf || return 1
   for i in $(seq 1 30); do
-    if curl -fsS --connect-timeout 2 --max-time 5 "http://127.0.0.1:$PORT$HEALTH_PATH" 2>/dev/null | grep -qF "$id"; then return 0; fi
+    if curl -fsS --connect-timeout 2 --max-time 5 "http://127.0.0.1:$PORT$HEALTH_PATH" 2>/dev/null | grep -qF -- "$id"; then return 0; fi
     sleep 2
   done
   return 1
