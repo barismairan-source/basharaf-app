@@ -1,5 +1,12 @@
 # handoff-archive.md — ژورنال‌های آرشیوشده
 
+## 📓 2026-10-26 (۲) — پنل پرسنل با تم صفاسیتی + ریز کارکرد و «حقوق بر چه اساسی» — روی branch
+**چه شد:** پنل `/me` با تم صفاسیتی بازطراحی شد (زمینه‌ی کرم، سرمه‌ای، Haiku، آیکن‌های دودل بسته‌ی برند، ناوبری پایین: خانه/حضور/حقوق/من). روش حقوق ساعتی از اکسل‌های حقوق صفاسیتی استخراج و با رسیدهای بانکی مهر ۱۴۰۵ تا تومان تطبیق داده شد (۱۰ مورد): آشپزخانه = حقوق توافقی ÷ ۲۰۸ ساعت، حقوق ثابت کامل، اضافه‌کاری (ساعت − ۲۰۸) × نرخ × ۱٫۴ گرد به ۱۰۰۰ تومان؛ سالن = حقوق ÷ ۲۴ × (روز حضور + یک روز به ازای هر ۶ شیفت). جدول جدید فقط‌خواندنی `staff_statements` (migration `db-staff-statements.sql`، اجرا نشده) برای ریز کارکرد ماه‌های واردشده؛ به payslips/payroll_runs دست نمی‌زند. اسکریپت `scripts/staff-statements-sql.ts` فقط SQL می‌سازد (روی فایل‌های واقعی ۱۳ نفر بدون هشدار؛ فقط مهر). **باگ اسکریپت قبلی** `staff-import-sql.ts` (مسیر اکسل بدون --out نادیده گرفته می‌شد) رفع شد (`9604300`).
+**نکته‌ی مهم برای جلسه‌ی بعد:** روش اکسل (اضافه‌کاری ماهانه بیش از ۲۰۸ ساعت، بدون بیمه/مالیات) با `calculateHourlyPayslip` سیستم (اضافه‌کاری بر اساس هر شیفت، با بیمه/مالیات) فرق دارد؛ پنل فعلاً روش اکسل را نشان می‌دهد. تصمیم علی لازم است کدام مبنا در سیستم برقرار شود.
+**فایل‌ها:** (جدید) `lib/staff-panel/statements.ts`، `app/api/me/statements/{route,[id]/route}.ts`، `components/me/parts.tsx`، `scripts/staff-statements-sql.ts`، `tests/unit/staffStatements.test.ts`، `project-docs/migrations/db-staff-statements.sql`، `public/safasity/me-*.png` · (ویرایش) `lib/db/schema.ts`، `components/me/MeClient.tsx`، `app/me/page.tsx`، `project-docs/STAFF-PANEL.md`، `.gitignore`.
+**Build:** tsc ✅ · unit همه ✅ · lint ✅ · ۴۵ سناریوی سرتاسری روی Postgres واقعی محلی ✅ · ظاهر موبایل بررسی شد.
+**ناتمام:** merge/push منتظر علی. ترتیب راه‌اندازی: (۱) `db-staff-statements.sql` (۲) فهرست پرسنل (۳) ریز کارکرد مهر (۴) نرخ ساعتی و لینک شخصی هر نفر.
+
 ## 📓 2026-07-24 — بازطراحی کامل معماری اطلاعات داشبورد — ادامه‌ی `feat/product-ui-v2`
 **چه شد:** طبق یک اسپک دقیق، Information Architecture داشبورد کاملاً بازطراحی شد — بدون تغییر منطق تأیید/RBAC/schema. جزئیات کامل در commit تاریخ ۲۰۲۶-۰۷-۲۴ (رفع باگ RBAC واقعی در `/api/dashboard/trends`، تفکیک stock/flow در تراز مالی، حذف ۳ fetch تکراری).
 **فایل‌ها:** `lib/reports/periodResolve.ts`، `periodReport.ts`، `app/(app)/dashboard/page.tsx` و مرتبط.

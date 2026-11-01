@@ -9,14 +9,14 @@
 
 | | |
 |---|---|
-| **نسخه** | production (لیارا) = `ecfdeda` روی Next 15.5.28 (deploy موفق ۲۰۲۶-۱۰-۳۰). branch محلی `ops/vps-deploy` (انتقال به VPS) push نشده؛ `feat/tx-idempotency` push نشده. |
-| **آخرین به‌روزرسانی** | 2026-10-30 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app`) |
+| **نسخه** | production (لیارا) = `ecfdeda` روی Next 15.5.28. branch محلی `ops/vps-deploy` (انتقال به VPS) push نشده؛ `feat/tx-idempotency` push نشده. روی VPS: release `20261030-024633-aae6a6` (داخلی، 127.0.0.1:3001). |
+| **آخرین به‌روزرسانی** | 2026-11-01 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
-| **دیپلوی** | فعلاً: push روی main → GitHub Actions → لیارا (سبز). در حال انتقال به VPS پارس‌پک (`ops/server/README.md`)؛ نسخه‌ی آزمایشی داخلی روی سرور اجراست. |
+| **دیپلوی** | فعلاً: push روی main → GitHub Actions → لیارا (سبز). انتقال به VPS پارس‌پک (`ops/server/README.md`): env روی سرور پر شد و اتصال به دیتابیس لیارا تأیید شد؛ منتظر رسیدن DNS `vps.basharaf.me`. |
 | **کار نیمه‌تمام (in-progress)** | ۱) اجرای چک‌لیست تست روی سایت واقعی (`~/Claude-Projects/CHECKLIST-merge-fix-branch.md`) — نتیجه هنوز ثبت نشده. ۲) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
-| **کار بعدی پیشنهادی** | ۱) ورودی‌های علی برای VPS (رمز root، دیتابیس عمومی، فایل env، DNS `vps`). ۲) تست روی `vps.basharaf.me` و سوئیچ DNS با تأیید. ۳) چک‌لیست تست. ۴) اجرای `db-staff-statements.sql` اگر اجرا نشده. |
+| **کار بعدی پیشنهادی** | ۱) وقتی `dig vps.basharaf.me` جواب `94.184.45.140` داد: `setup-server.sh site vps.basharaf.me` (certbot) → `SITE=https://vps.basharaf.me ops/server/deploy.sh` (build تازه با `build.env` پر). ۲) چک‌لیست روی `vps.basharaf.me`. ۳) سوئیچ DNS اصلی با تأیید علی. ۴) VPS-08: عوض کردن همه‌ی secretها. |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
-| **بلاک‌شده/منتظر کاربر** | ۱) اجرای دو migration رزرو (بالا). ۲) تصمیم درباره‌ی استودیو رسپی (بخش نیمه‌تمام قدیمی‌تر). موارد HR/Payroll قدیمی‌تر (نشست ۲۰۲۶-۰۸-۰۵) هنوز بدون پیگیری‌اند — جزئیات در آرشیو. |
+| **بلاک‌شده/منتظر کاربر** | ۱) رسیدن تغییر نیم‌سرورهای basharaf.me (ثبت‌شده ۲۰۲۶-۱۱-۰۱). ۲) VPS-02 رمز root (علی: فعلاً مهم نیست). ۳) VPS-06 ارتقای سرور. ۴) اجرای دو migration رزرو؛ تصمیم استودیو رسپی؛ موارد HR/Payroll قدیمی (آرشیو). |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-11-01 — VPS: env روی سرور، اتصال به دیتابیس لیارا سبز، DNS زون جدید پارس‌پک — روی branch `ops/vps-deploy`
+**چه شد:** دسترسی عمومی Postgres لیارا روشن است (`sahand.liara.cloud:31426`). متغیرها از «دانلود خروجی متغیرها»ی لیارا با اسکریپت (بدون نمایش مقدار) در `_work/basharaf-server.env` و `_work/basharaf-server.build.env` ادغام شدند: `DATABASE_URL` به آدرس عمومی، آدرس سایت `https://vps.basharaf.me`، `OUTBOX_SCHEDULER=off`؛ `PORT`/`NODE_ENV` عمداً منتقل نشد (systemd خودش 3001 می‌دهد و EnvironmentFile بر Environment= مقدم است). دو کلید جاافتاده‌ی قالب (`CUSTOMER_JWT_SECRET`، `NEXT_PUBLIC_NESHAN_API_KEY`) پیدا و به `env.template` اضافه شد. فایل‌ها با پشتیبان (`*.empty*.bak`) به `/etc/basharaf/` رفتند و فقط `basharaf.service` ری‌استارت شد. DNS: basharaf.me روی ns1-4.parspack.co بود ولی زون در حساب علی پیدا نشد؛ علی در CDN پارس‌پک زون جدید ساخت (`@` CNAME `sahand.liara.cloud`، `vps` A `94.184.45.140` بدون پروکسی، `_dmarc` TXT) و نیم‌سرورها را به `gorge.parspack.net` و `lightning.parspack.net` عوض کرد (W-015). هر دو سرور جدید جواب درست می‌دهند؛ رجیستری هنوز نیم‌سرورهای قدیمی را نشان می‌دهد.
+**فایل‌ها:** `ops/server/env.template`، `HANDOFF.md`، `project-docs/handoff-archive.md`. بیرون از ریپو: `_work/basharaf-server.env`، `_work/basharaf-server.build.env` (secret، commit نمی‌شوند)؛ روی سرور `/etc/basharaf/{env,build.env}`.
+**Build:** کد تغییر نکرد. روی سرور: سرویس active، `/login` ۲۰۰، `/apply` و `/reserve` ۲۰۰، `/api/recruitment/questions` و `/api/recruitment/form-structure` دیتای واقعی از دیتابیس (فقط خواندن)، بدون خطا در لاگ. meeez سالم (۳۰۷). سایت اصلی basharaf.me در تمام مدت ۲۰۰.
+**ناتمام:** رسیدن نیم‌سرورها. نسخه‌ی فعلی سرور قبل از پر شدن `build.env` ساخته شده (NEXT_PUBLIC_* خالی) → deploy تازه لازم است. ⚠️ همه‌ی secretهای production (دیتابیس، JWT، ایمیل، پیامک، VAPID، notification) در اسکرین‌شات‌های چت دیده شدند → VPS-08. `~/Downloads/envs.txt` (همه‌ی secretها) باید توسط علی پاک شود.
+**برای جلسه‌ی بعد:** `dig +short A vps.basharaf.me @1.1.1.1` → اگر `94.184.45.140`: `setup-server.sh site vps.basharaf.me` → `SITE=https://vps.basharaf.me ops/server/deploy.sh` → چک‌لیست. root SSH با `~/.ssh/meeez_parspack`. به meeez/nginx آن/Postgres آن دست نزن.
+
 ## 📓 2026-10-30 (۴) — انتقال به VPS پارس‌پک: زیرساخت آماده، تست داخلی سبز — روی branch `ops/vps-deploy`
 **چه شد:** تصمیم علی: basharaf-app از لیارا به همان VPS meeez می‌رود؛ دیتابیس فعلاً روی Postgres لیارا می‌ماند. `ops/server/` اضافه شد (سرویس systemd روی ۳۰۰۱ با سخت‌گیری‌های meeez، قالب Nginx، `basharaf-release` با build روی سرور + سوئیچ اتمی + برگشت خودکار، `deploy.sh` از مک با `git archive`، `setup-server.sh`، `env.template` فقط نام متغیرها). `next.config.mjs`: خروجی standalone با `NEXT_OUTPUT=standalone` (build لیارا بی‌تغییر) و `serverExternalPackages` (کلید قدیمی در Next 15 خوانده نمی‌شد). `OUTBOX_SCHEDULER=off` تا در دوره‌ی موازی اعلان/پیامک دوبار نرود. روی سرور: swap ۲ گیگ، کاربر `basharaf`، پوشه‌ها، سرویس. build روی سرور چون `sharp` native است و مک arm64.
 **فایل‌ها:** `ops/server/*`، `next.config.mjs`، `instrumentation-node.ts`.
@@ -105,10 +112,3 @@
 **فایل‌ها:** (جدید) `app/(app)/hr/staff/page.tsx`، `components/hr/StaffOverview.tsx`، `app/api/hr/staff-overview/{route,[id]/route}.ts`، `lib/hr/employeeScope.ts`، `.liaraignore` · (ویرایش) `app/(app)/hr/layout.tsx`، `app/api/attendance/route.ts`، `app/api/shift-assignments/route.ts`، `app/api/me/profile/route.ts`، `lib/staff-panel/pure.ts`، `components/me/MeClient.tsx`، `app/(admin)/admin/page.tsx`، `tests/unit/staffPanel.test.ts`، `project-docs/STAFF-PANEL.md`.
 **Build:** tsc ✅ · unit 734/734 ✅ · lint ✅ · build ✅ (۳۸ ثانیه) · سرتاسری روی Postgres محلی: مدیریت ۱۲/۱۲، پنل پرسنل ✅.
 **ناتمام:** لاگ واقعی fail دیپلوی از لیارا لازم است. merge/push منتظر علی؛ قبل از push، `db-staff-statements.sql` اجرا شود.
-
-## 📓 2026-10-26 (۲) — پنل پرسنل با تم صفاسیتی + ریز کارکرد و «حقوق بر چه اساسی» — روی branch
-**چه شد:** پنل `/me` با تم صفاسیتی بازطراحی شد (زمینه‌ی کرم، سرمه‌ای، Haiku، آیکن‌های دودل بسته‌ی برند، ناوبری پایین: خانه/حضور/حقوق/من). روش حقوق ساعتی از اکسل‌های حقوق صفاسیتی استخراج و با رسیدهای بانکی مهر ۱۴۰۵ تا تومان تطبیق داده شد (۱۰ مورد): آشپزخانه = حقوق توافقی ÷ ۲۰۸ ساعت، حقوق ثابت کامل، اضافه‌کاری (ساعت − ۲۰۸) × نرخ × ۱٫۴ گرد به ۱۰۰۰ تومان؛ سالن = حقوق ÷ ۲۴ × (روز حضور + یک روز به ازای هر ۶ شیفت). جدول جدید فقط‌خواندنی `staff_statements` (migration `db-staff-statements.sql`، اجرا نشده) برای ریز کارکرد ماه‌های واردشده؛ به payslips/payroll_runs دست نمی‌زند. اسکریپت `scripts/staff-statements-sql.ts` فقط SQL می‌سازد (روی فایل‌های واقعی ۱۳ نفر بدون هشدار؛ فقط مهر). **باگ اسکریپت قبلی** `staff-import-sql.ts` (مسیر اکسل بدون --out نادیده گرفته می‌شد) رفع شد (`9604300`).
-**نکته‌ی مهم برای جلسه‌ی بعد:** روش اکسل (اضافه‌کاری ماهانه بیش از ۲۰۸ ساعت، بدون بیمه/مالیات) با `calculateHourlyPayslip` سیستم (اضافه‌کاری بر اساس هر شیفت، با بیمه/مالیات) فرق دارد؛ پنل فعلاً روش اکسل را نشان می‌دهد. تصمیم علی لازم است کدام مبنا در سیستم برقرار شود.
-**فایل‌ها:** (جدید) `lib/staff-panel/statements.ts`، `app/api/me/statements/{route,[id]/route}.ts`، `components/me/parts.tsx`، `scripts/staff-statements-sql.ts`، `tests/unit/staffStatements.test.ts`، `project-docs/migrations/db-staff-statements.sql`، `public/safasity/me-*.png` · (ویرایش) `lib/db/schema.ts`، `components/me/MeClient.tsx`، `app/me/page.tsx`، `project-docs/STAFF-PANEL.md`، `.gitignore`.
-**Build:** tsc ✅ · unit همه ✅ · lint ✅ · ۴۵ سناریوی سرتاسری روی Postgres واقعی محلی ✅ · ظاهر موبایل بررسی شد.
-**ناتمام:** merge/push منتظر علی. ترتیب راه‌اندازی: (۱) `db-staff-statements.sql` (۲) فهرست پرسنل (۳) ریز کارکرد مهر (۴) نرخ ساعتی و لینک شخصی هر نفر.
