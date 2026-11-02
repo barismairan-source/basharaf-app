@@ -14,9 +14,9 @@
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
 | **دیپلوی** | **`https://basharaf.me` روی VPS** (`94.184.45.140`؛ HTTPS تا 2027-01-31؛ `www` → 301؛ `vps.basharaf.me` هم سرو می‌شود). دیپلوی: `SITE=https://basharaf.me ops/server/deploy.sh` (push به main فقط CI تست، بدون لیارا). دیتابیس هنوز Postgres لیارا (آدرس عمومی). **outbox scheduler روشن روی VPS.** |
 | **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
-| **کار بعدی پیشنهادی** | ۱) VPS-09 انتقال دیتابیس به VPS (بعد از VPS-06 ارتقای سرور؛ cluster جدا، نه Postgres مشترک meeez). ۲) VPS-08 چرخش secretها. ۳) مرتب کردن DNS: رکورد `@` فعلاً CNAME → `vps.basharaf.me`. ۴) بعد از چند روز پایداری: حذف اپ لیارا (فقط با تأیید علی). |
+| **کار بعدی پیشنهادی** | ۱) VPS-09 انتقال دیتابیس به VPS (سرور ارتقا یافت؛ cluster جدا، نه Postgres مشترک meeez؛ اتصال خواندنی به production با تأیید علی). ۲) VPS-08 چرخش secretها. ۳) مرتب کردن DNS: رکورد `@` فعلاً CNAME → `vps.basharaf.me`. ۴) بعد از چند روز پایداری: حذف اپ لیارا (فقط با تأیید علی). |
 | **یافته‌ی مهم این نشست** | ممیزی ۲۰۲۶-۱۰-۳۰: Chef/Warehouse در ۲۵ route به شعب دیگر دسترسی داشتند (رفع روی branch). گزارش کامل: `~/Claude-Projects/_audit/basharaf-app-audit.md`. |
-| **بلاک‌شده/منتظر کاربر** | ۱) VPS-06 ارتقای سرور (پیش‌نیاز VPS-09). ۲) VPS-02 رمز root (علی: فعلاً مهم نیست). ۳) دو migration رزرو؛ تصمیم استودیو رسپی. |
+| **بلاک‌شده/منتظر کاربر** | ۱) تأیید علی برای VPS-09. ۲) VPS-02 رمز root (علی: فعلاً مهم نیست). ۳) دو migration رزرو؛ تصمیم استودیو رسپی. |
 
 > ⚠️ **نکته مهم برای جلسات بعدی:** فرم `/apply` حالا کاملاً داینامیک و دیتابیس‌محور است. **دیگر فیلد hard-code به `app/apply/page.tsx` یا `lib/recruitment/` اضافه نکنید.** همه فیلدهای جدید باید از طریق `/recruitment/form-builder` ایجاد شوند.
 
@@ -71,6 +71,7 @@
 **Build:** deploy.sh سبز (tsc/lint/vitest محلی + build سرور). `https://basharaf.me` و `/login /apply /reserve /me /clock /pay` ۲۰۰، `/dashboard` → login، www → 301، meeez سالم، حافظه آزاد ۱.۴ گیگ.
 **ناتمام:** cache بعضی resolverها (مثل 1.1.1.1) تا ~۱ ساعت هنوز IP لیارا می‌دهد → لیارا روشن بماند (همان دیتابیس، بی‌خطر). بعد: Stop لیارا (علی) → حذف `OUTBOX_SCHEDULER=off` و restart. push به main منتظر تأیید علی.
 **ادامه (همان روز):** push به main با تأیید علی (`ecfdeda..4c1be51`؛ CI بدون job لیارا). ساعت ۱۴:۴۷ علی اپ لیارا را Stop کرد (`basharaff.liara.run` → ۵۰۳). `OUTBOX_SCHEDULER=off` از `/etc/basharaf/env` حذف شد (پشتیبان `env.before-scheduler-on.bak`) و `systemctl restart basharaf`؛ scheduler روشن، لاگ بدون خطا، basharaf.me ۲۰۰، meeez سالم. نکته: resolver 1.1.1.1 تا ~۱۵:۱۰ هنوز IP لیارا می‌داد (کاربران کمی ممکن است تا آن موقع خطا دیده باشند).
+**ارتقای سرور (همان روز):** با تأیید علی پلن پارس‌پک irCloud2 → irCloud3 (علی؛ ۱۴۲٬۸۶۰ تومان) → **irCloud4** (Claude؛ ۲۸۱٬۹۱۰ تومان از اعتبار): **۲ هسته، ۴ گیگ رم، ۶۰ گیگ دیسک**؛ هر بار ری‌استارت کوتاه (۱۰–۴۰ ثانیه). بعد از آن nginx/postgres/meeez/basharaf/darayi همه active، basharaf.me ۲۰۰، scheduler روشن. همچنین به درخواست علی رکورد `A darayi.meeez.me → 94.184.45.140` (بدون پروکسی) در CDN `meeez.me` ساخته شد (پروژه‌ی darayi؛ گواهی‌اش هنوز گرفته نشده).
 **برای جلسه‌ی بعد:** برگشت اضطراری: رکورد `@` در CDN پارس‌پک → `sahand.liara.cloud` و Start اپ لیارا + `OUTBOX_SCHEDULER=off` روی VPS (تا پیام دوبار نرود). دیپلوی از این به بعد فقط `SITE=https://basharaf.me ops/server/deploy.sh`. سرور در build داخلی `basharaf.me` را صدا می‌زند (cache DNS سرور ممکن است تا یک ساعت لیارا باشد — بی‌خطر).
 
 ## 📓 2026-11-01 — VPS: env روی سرور، اتصال به دیتابیس لیارا سبز، DNS زون جدید پارس‌پک — روی branch `ops/vps-deploy`
