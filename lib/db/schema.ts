@@ -1489,6 +1489,29 @@ export const staffStatements = pgTable(
 );
 export type StaffStatement = typeof staffStatements.$inferSelect;
 
+// ─── staff_payments — تاریخچه‌ی واریزی‌های هر نفر از روی رسید/لیست بانک (فقط‌خواندنی؛ جدا از حسابداری) ──
+export const staffPayments = pgTable(
+  'staff_payments',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    employeeId: uuid('employee_id').notNull().references(() => employees.id, { onDelete: 'restrict' }),
+    periodYearMonth: text('period_year_month').notNull(),
+    kind: text('kind').notNull(), // 'salary' | 'overtime' | 'advance' | 'other'
+    amount: bigint('amount', { mode: 'number' }).notNull(),
+    paidOn: text('paid_on'),
+    title: text('title').notNull(),
+    hasReceipt: boolean('has_receipt').notNull().default(false),
+    source: text('source'),
+    sourceKey: text('source_key').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    sourceKeyUniq: uniqueIndex('staff_payments_source_key_uniq').on(t.sourceKey),
+    employeeIdx: index('staff_payments_employee_idx').on(t.employeeId, t.periodYearMonth),
+  })
+);
+export type StaffPayment = typeof staffPayments.$inferSelect;
+
 export type BranchAttendanceNetwork = typeof branchAttendanceNetworks.$inferSelect;
 export type AttendanceClockDevice = typeof attendanceClockDevices.$inferSelect;
 export type AttendanceClockEvent = typeof attendanceClockEvents.$inferSelect;

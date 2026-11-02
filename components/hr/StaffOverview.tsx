@@ -7,8 +7,9 @@ import { useHrBranchFilter } from '@/lib/hr/branchFilterContext';
 import { getTodayJalali, formatTehranTime } from '@/lib/jalali';
 import { fmt, toFa } from '@/lib/utils';
 import { formatMinutes, periodLabel, shiftPeriod, toLatinDigits } from '@/lib/staff-panel/pure';
-import { StatementView } from '@/components/me/MeClient';
+import { PaymentHistory, StatementView } from '@/components/me/MeClient';
 import type { StatementBasis, StatementLine, StatementWeek } from '@/lib/staff-panel/statements';
+import type { PaymentItem } from '@/lib/staff-panel/payments';
 
 interface Person {
   id: string; fullName: string; section: string | null; compensationType: string;
@@ -17,6 +18,7 @@ interface Person {
   attendance: { confirmedMinutes: number; pendingMinutes: number; days: number };
   hourlyRate?: number | null; baseMonthlySalary?: number | null;
   statement?: { id: string; total: number; model: string } | null;
+  payments?: { count: number; paidInPeriod: number };
 }
 interface StmtDetail { id: string; period: string; title: string; total: number; basisText: string[]; basis: StatementBasis; weeks: StatementWeek[]; lines: StatementLine[]; notes: string[] }
 
@@ -37,6 +39,7 @@ export function StaffOverview() {
   const [q, setQ] = useState('');
   const [section, setSection] = useState('');
   const [open, setOpen] = useState<{ name: string; s: StmtDetail } | null>(null);
+  const [paid, setPaid] = useState<{ name: string; items: PaymentItem[] } | null>(null);
 
   useEffect(() => {
     setData(null); setError(null);
@@ -62,6 +65,13 @@ export function StaffOverview() {
     const b = await r.json();
     if (!r.ok) { setError(b?.error ?? 'خطا'); return; }
     setOpen({ name: b.fullName, s: b.statement });
+  }
+
+  async function openPayments(p: Person) {
+    const r = await fetch(`/api/hr/staff-payments?employeeId=${p.id}`, { credentials: 'include', cache: 'no-store' });
+    const b = await r.json();
+    if (!r.ok) { setError(b?.error ?? 'خطا'); return; }
+    setPaid({ name: b.fullName, items: b.payments });
   }
 
   return (
@@ -125,6 +135,14 @@ export function StaffOverview() {
                       )}
                     </div>
                   )}
+                  {data.canSeePay && p.payments && p.payments.count > 0 && (
+                    <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
+                      <span className="text-[12.5px] text-muted">
+                        {p.payments.paidInPeriod > 0 ? `واریز بابت ${toFa(periodLabel(period))}: ${fmt(p.payments.paidInPeriod)} تومان` : `واریزی بابت ${toFa(periodLabel(period))} ثبت نشده`}
+                      </span>
+                      <Button size="sm" variant="ghost" onClick={() => openPayments(p)}>تاریخچه‌ی واریز ({toFa(p.payments.count)})</Button>
+                    </div>
+                  )}
                 </CardBody>
               </Card>
             </li>
@@ -140,6 +158,14 @@ export function StaffOverview() {
         {open && (
           <div className="safasity-root rounded-xl px-3 py-3">
             <StatementView s={open.s} onBack={() => setOpen(null)} />
+          </div>
+        )}
+      </Sheet>
+
+      <Sheet open={!!paid} onClose={() => setPaid(null)} title={paid ? `واریزی‌های ${paid.name}` : undefined} maxHeight="92vh">
+        {paid && (
+          <div className="safasity-root rounded-xl px-3 py-3">
+            <PaymentHistory items={paid.items} />
           </div>
         )}
       </Sheet>

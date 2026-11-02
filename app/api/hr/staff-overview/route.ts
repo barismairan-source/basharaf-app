@@ -41,7 +41,7 @@ export async function GET(req: Request) {
     const ids = people.map((p) => p.id);
     if (ids.length === 0) return NextResponse.json({ period, canSeePay, people: [] });
 
-    const [entries, devices, opens, statements, rates] = await Promise.all([
+    const [entries, devices, opens, statements, rates, payments] = await Promise.all([
       db.select({ employeeId: schema.attendanceEntries.employeeId, status: schema.attendanceEntries.status, attendanceType: schema.attendanceEntries.attendanceType, workedMinutes: schema.attendanceEntries.workedMinutes })
         .from(schema.attendanceEntries)
         .where(and(inArray(schema.attendanceEntries.employeeId, ids),
@@ -62,6 +62,11 @@ export async function GET(req: Request) {
         ? db.select({ employeeId: schema.employeeHourlyRates.employeeId, hourlyRate: schema.employeeHourlyRates.hourlyRate, effectiveFrom: schema.employeeHourlyRates.effectiveFrom, effectiveTo: schema.employeeHourlyRates.effectiveTo })
           .from(schema.employeeHourlyRates).where(inArray(schema.employeeHourlyRates.employeeId, ids))
         : Promise.resolve([] as Array<{ employeeId: string; hourlyRate: number; effectiveFrom: Date; effectiveTo: Date | null }>),
+      // همه‌ی واریزی‌های هر نفر: جمع همین ماه + اینکه اصلاً تاریخچه دارد یا نه
+      canSeePay
+        ? db.select({ employeeId: schema.staffPayments.employeeId, period: schema.staffPayments.periodYearMonth, amount: schema.staffPayments.amount })
+          .from(schema.staffPayments).where(inArray(schema.staffPayments.employeeId, ids))
+        : Promise.resolve([] as Array<{ employeeId: string; period: string; amount: number }>),
     ]);
 
     const now = new Date();
@@ -78,6 +83,7 @@ export async function GET(req: Request) {
         const rate = rates.filter((r) => r.employeeId === p.id && r.effectiveFrom.toISOString().slice(0, 10) <= todayIso && (!r.effectiveTo || r.effectiveTo.toISOString().slice(0, 10) >= todayIso))
           .sort((a, b) => b.effectiveFrom.getTime() - a.effectiveFrom.getTime())[0];
         const roleLabel = DEFAULT_ROLES.find((r) => r.value === p.role)?.label ?? p.role;
+        const myPayments = payments.filter((x) => x.employeeId === p.id);
         return {
           id: p.id, fullName: p.fullName, section: sectionOfRole(p.role, roleLabel), branchId: p.branchId,
           compensationType: p.compensationType,
@@ -90,6 +96,10 @@ export async function GET(req: Request) {
             hourlyRate: rate ? Number(rate.hourlyRate) : null,
             baseMonthlySalary: Number(p.baseMonthlySalary) > 0 ? Number(p.baseMonthlySalary) : null,
             statement: st ? { id: st.id, total: Number(st.total), model: st.model } : null,
+            payments: {
+              count: myPayments.length,
+              paidInPeriod: myPayments.filter((x) => x.period === period).reduce((a, x) => a + Number(x.amount), 0),
+            },
           } : {}),
         };
       }),

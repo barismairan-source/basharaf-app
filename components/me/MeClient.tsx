@@ -10,6 +10,7 @@ import { fmt, toFa } from '@/lib/utils';
 import { optionsStillFresh } from '@/lib/attendance-clock/client-utils';
 import { formatMinutes, periodLabel, shiftPeriod, toLatinDigits } from '@/lib/staff-panel/pure';
 import type { StatementBasis, StatementLine, StatementWeek } from '@/lib/staff-panel/statements';
+import { PAYMENT_KIND_LABEL, summarizePayments, type PaymentItem } from '@/lib/staff-panel/payments';
 import { BottomNav, Doodle, EmptyDoodle, HoursBar, SF, SectionTitle, SfCard, Stat, WeekDays, WeekLegend } from './parts';
 
 type Tab = 'home' | 'attendance' | 'pay' | 'profile';
@@ -75,6 +76,7 @@ export function MeClient() {
 
   const [stmts, setStmts] = useState<StmtRow[] | null>(null);
   const [slips, setSlips] = useState<SlipRow[] | null>(null);
+  const [payments, setPayments] = useState<PaymentItem[] | null>(null);
   const [stmt, setStmt] = useState<StmtDetail | null>(null);
   const [slip, setSlip] = useState<SlipDetail | null>(null);
 
@@ -107,10 +109,14 @@ export function MeClient() {
   }, [noDevice]);
 
   const loadPay = useCallback(async () => {
-    const [a, b] = await Promise.all([call<{ statements: StmtRow[] }>('/api/me/statements'), call<{ payslips: SlipRow[] }>('/api/me/payslips')]);
-    if (a.status === 403 || b.status === 403) { setUnlocked(false); setStmts(null); setSlips(null); return; }
+    const [a, b, c] = await Promise.all([
+      call<{ statements: StmtRow[] }>('/api/me/statements'), call<{ payslips: SlipRow[] }>('/api/me/payslips'), call<{ payments: PaymentItem[] }>('/api/me/payments'),
+    ]);
+    if (a.status === 403 || b.status === 403 || c.status === 403) { setUnlocked(false); setStmts(null); setSlips(null); setPayments(null); return; }
     if (a.ok) setStmts(a.body.statements); else setError((a.body as any)?.error ?? 'خطا');
     if (b.ok) setSlips(b.body.payslips); else setError((b.body as any)?.error ?? 'خطا');
+    // تاریخچه‌ی واریز اختیاری است: اگر نیامد، بقیه‌ی بخش حقوق باز هم نشان داده شود
+    setPayments(c.ok ? c.body.payments : []);
   }, []);
   useEffect(() => { if (tab === 'pay' && unlocked && stmts === null) void loadPay(); }, [tab, unlocked, stmts, loadPay]);
 
@@ -332,7 +338,7 @@ export function MeClient() {
           ) : (
             <>
               <SectionTitle aside={<Button size="sm" variant="ghost" icon={Lock} onClick={lockAgain}>قفل کردن</Button>}>حقوق من</SectionTitle>
-              {stmts === null || slips === null ? <p className="text-center text-[13px] text-muted">در حال بارگذاری…</p> : stmts.length + slips.length === 0 ? (
+              {stmts === null || slips === null || payments === null ? <p className="text-center text-[13px] text-muted">در حال بارگذاری…</p> : stmts.length + slips.length + payments.length === 0 ? (
                 <SfCard><EmptyDoodle doodle="sieve" title="هنوز ریز حقوقی برای شما ثبت نشده" sub="بعد از ثبت یا تأیید مدیر اینجا نشان داده می‌شود." /></SfCard>
               ) : (
                 <ul className="space-y-2">
@@ -344,6 +350,7 @@ export function MeClient() {
                   ))}
                 </ul>
               )}
+              {payments && payments.length > 0 && (<><SectionTitle>واریزی‌های من</SectionTitle><PaymentHistory items={payments} /></>)}
             </>
           )}
         </div>
@@ -403,6 +410,41 @@ function PayRow({ title, sub, amount, onClick }: { title: string; sub: string; a
         <span className="text-[14.5px] font-semibold" style={{ color: SF.ink }}>{fmt(amount)} <span className="text-[11px] font-normal">تومان</span></span>
       </SfCard>
     </button>
+  );
+}
+
+/** تاریخچه‌ی واریزی‌های بانکی، ماه‌به‌ماه؛ همین فهرست در صفحه‌ی مدیر («پرسنل و حقوق») هم نشان داده می‌شود. */
+export function PaymentHistory({ items }: { items: PaymentItem[] }) {
+  const { total, byPeriod } = summarizePayments(items);
+  const periods = [...new Set(items.map((p) => p.period))];
+  return (
+    <div className="space-y-2">
+      <SfCard className="flex items-center justify-between !py-3">
+        <span className="text-[12.5px]" style={{ color: '#5E6676' }}>جمع همه‌ی واریزی‌ها</span>
+        <span className="text-[15px] font-semibold" style={{ color: SF.ink }}>{fmt(total)} <span className="text-[11px] font-normal">تومان</span></span>
+      </SfCard>
+      {periods.map((per) => (
+        <SfCard key={per} className="space-y-2 !py-3">
+          <div className="flex items-center justify-between">
+            <p className="sf-hand text-[16px]" style={{ color: SF.navy }}>{toFa(periodLabel(per))}</p>
+            <span className="text-[12.5px]" style={{ color: '#5E6676' }}>{fmt(byPeriod[per] ?? 0)} تومان</span>
+          </div>
+          <ul className="space-y-1.5">
+            {items.filter((p) => p.period === per).map((p) => (
+              <li key={p.id} className="flex items-center justify-between gap-2 text-[13px]">
+                <div className="min-w-0">
+                  <p>{PAYMENT_KIND_LABEL[p.kind] ?? p.title}{p.title && p.title !== PAYMENT_KIND_LABEL[p.kind] ? <span style={{ color: '#5E6676' }}> — {p.title}</span> : null}</p>
+                  <p className="text-[11.5px]" style={{ color: '#5E6676' }}>
+                    {p.paidOn ? `واریز ${toFa(p.paidOn)}` : 'تاریخ واریز ثبت نشده'}{p.hasReceipt ? ' · رسید بانکی دارد' : ''}
+                  </p>
+                </div>
+                <span className="shrink-0 font-semibold" style={{ color: SF.ink }}>{fmt(p.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </SfCard>
+      ))}
+    </div>
   );
 }
 
