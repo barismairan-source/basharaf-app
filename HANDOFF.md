@@ -9,7 +9,7 @@
 
 | | |
 |---|---|
-| **نسخه** | **production روی VPS پارس‌پک** = release `20261103-132059-a9de00` از branch `feat/staff-month-pay` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
+| **نسخه** | **production روی VPS پارس‌پک** = release `20261103-140630-778286` از branch `feat/clock-temp-networks` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
 | **آخرین به‌روزرسانی** | 2026-11-03 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
 | **دیپلوی** | **`https://basharaf.me` روی VPS** (`94.184.45.140`؛ HTTPS تا 2027-01-31؛ `www` → 301؛ `vps.basharaf.me` هم سرو می‌شود). دیپلوی: `SITE=https://basharaf.me ops/server/deploy.sh` (push به main فقط CI تست، بدون لیارا). دیتابیس هنوز Postgres لیارا (آدرس عمومی). **outbox scheduler روشن روی VPS.** |
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-11-03 (۲) — دسترسی موقت ثبت حضور (IP برای افراد خاص با انقضا) + رفع قطعی دیپلوی — روی branch `feat/clock-temp-networks`
+**چه شد:** بررسی کل جریان پنل پرسنل با خواسته‌ی علی (لینک از پنل اصلی، فعال‌سازی هر جا، Face ID، صفحه‌ی صفاسیتی، حضور فقط با IP مغازه): همه ساخته شده بود؛ رمز اضافه نشد (به پیشنهاد ما). رفع شد: (۱) قطعی ۹۰ ثانیه‌ای هر دیپلوی (اتصال زنده‌ی داشبورد باز) → `TimeoutStopSec=10`؛ دیپلوی امروز بدون مکث ری‌استارت شد. (۲) `vps.basharaf.me` → 301 به `basharaf.me` و لینک شخصی با `NEXT_PUBLIC_APP_URL`. (۳) **قابلیت جدید به درخواست علی:** کنار IP ثابت مغازه، «دسترسی موقت»: یک IP برای چند نفر خاص (یا همه) و ۳۰ دقیقه تا ۲۴ ساعت؛ بعد از انقضا خودکار بی‌اثر و از فهرست حذف. migration `db-clock-temp-networks.sql` (دو ستون `employee_id`, `expires_at` + یکتایی فقط برای IP ثابت همگانی) با تأیید علی اجرا شد؛ `networkAppliesTo` در `rules.ts`، `matchBranchNetwork(ip, branch, employeeId)`، API و کارت «IP ثابت شعبه‌ها و دسترسی موقت» در «ورود با مودم». release `20261103-140630-778286`.
+**فایل‌ها:** `project-docs/migrations/db-clock-temp-networks.sql`، `lib/db/schema.ts`، `lib/attendance-clock/{rules,service}.ts`، `app/api/clock/{status,punch}/route.ts`، `app/api/hr/clock/networks/route.ts`، `components/hr/ClockView.tsx`، `tests/unit/clockTempNetwork.test.ts`، `ops/server/basharaf.service`.
+**Build:** tsc ✅ · unit 777/777 ✅ · lint ✅ · build ✅ · deploy ✅ · صفحه در مرورگر دیده شد (فرم و انتخاب افراد).
+**ناتمام:** IP ثابت واقعی مغازه هنوز ثبت نشده؛ ۶ IP قدیمی (بیشترشان شبیه اینترنت همراه) هنوز فعال‌اند — علی در مغازه با «IP همین‌جا» ثابت را ثبت و بقیه را غیرفعال کند. ثبت حضور واقعی با دسترسی موقت تست نشده (فقط تست واحد). branch push نشده.
+**برای جلسه‌ی بعد:** تست سرتاسری روی گوشی در مغازه (ورود/خروج → حضور پیش‌نویس → تأیید → «تا امروز»)؛ پرونده‌های تکراری (فاطمه کلبادی‌نژاد، کریم/صدرا ناطقیان).
+
 ## 📓 2026-11-03 — پنل پرسنل: «این ماه تا امروز» + نرخ ساعتی ۱۰ نفر — روی branch `feat/staff-month-pay`
 **چه شد:** خواسته‌ی علی: پرسنل ساعت کار، روش محاسبه و حقوق تا امروزشان را ببینند. تصمیم‌های علی: آشپزخانه «حقوق ثابت ماه» و «اضافه‌کاری» جدا (چون جدا واریز می‌شوند)، حضور تأییدشده و منتظر تأیید جدا، نرخ‌ها از اکسل مهر، شیفت‌ها از این به بعد در سایت وارد می‌شوند. ساخته شد: `lib/staff-panel/monthToDate.ts` (خالص؛ همان قواعد `statements.ts`؛ مبنا = آخرین ریز کارکرد، وگرنه پرونده)، `lib/staff-panel/monthPayServer.ts`، `GET /api/me/month-pay` (Face ID)، کارت «… — تا امروز» در بخش حقوق پنل (`MonthToDateCard`)، «امروز تا الان X کار کرده‌اید» و لینک به حقوق در خانه. با تأیید علی ۱۰ نرخ در `employee_hourly_rates` از ۱ آبان (2026-10-23) ثبت شد (آشپزخانه حقوق÷۲۰۸، سالن حقوق÷۱۹۲؛ دلیل در ستون reason) — بدون نرخ، ورود/خروج گوشی به حضور تبدیل نمی‌شد (`NO_ACTIVE_RATE`). release `20261103-132059-a9de00`.
 **فایل‌ها:** `lib/staff-panel/monthToDate.ts`، `lib/staff-panel/monthPayServer.ts`، `app/api/me/month-pay/route.ts`، `components/me/MeClient.tsx`، `tests/unit/staffMonthToDate.test.ts`.
@@ -115,11 +122,4 @@
 **Build:** tsc ✅ (با `.next/types`) · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا (`npm ci --omit=dev`) ✅ · smoke test محلی build: صفحات عمومی ۲۰۰، redirect به login، API ۴۰۱، logout کوکی‌ها را پاک می‌کند ✅. تست با دیتابیس/کاربر واقعی انجام نشده.
 **ناتمام:** push نشده (منتظر تأیید کاربر). ⚠️ WIP استودیو رسپی (untracked) هنوز سبک Next 14 است — قبل از commit آن، همین codemod روی `app/studio`، `app/api/recipe-studio`، `lib/recipe-studio` اجرا شود. ⚠️ `feat/tx-idempotency` باید روی این branch rebase شود.
 **برای جلسه‌ی بعد:** بعد از deploy: چک‌لیست `~/Claude-Projects/CHECKLIST-merge-fix-branch.md` + ورود/خروج، پنل پرسنل `/me`، ثبت حضور `/clock`، پرداخت `/pay`.
-
-## 📓 2026-10-30 (۲) — رفع رزومه/SSRF و پیش‌فاکتور + Idempotency تراکنش (branch جدا)
-**چه شد:** با تأیید کاربر: (الف) `db-hr-job-titles.sql` بازنویسی‌شده به نسخه‌ی commit‌شده برگشت (نسخه‌ی تغییرکرده در `~/Claude-Projects/_audit/preserved/` نگه داشته شد). (ب) `resumeUrl` فرم `/apply` فقط data URI با نوع مجاز؛ route رزومه فقط https روی Supabase پروژه را redirect می‌کند و `resumes-zip` دیگر URL دلخواه را سمت سرور fetch نمی‌کند (SSRF) — fb10613. (ج) **باگ مالی:** repo کلاینت `status`/`invoiceCode` را نمی‌فرستاد → پیش‌فاکتور مدیر کل فوراً تأیید و روی موجودی صندوق اعمال می‌شد و کد فاکتور گم می‌شد — cde097b. (د) Idempotency-Key برای ثبت تراکنش روی branch جدای `feat/tx-idempotency` (پشت flag، نیازمند migration).
-**فایل‌ها:** `lib/recruitment/resumeUrl.ts`، `lib/validations/recruitment.ts`، `app/api/recruitment/[id]/resume/route.ts`، `app/api/recruitment/resumes-zip/route.ts`، `lib/repos/api.ts`، `tests/unit/resume-url.test.ts`، `tests/unit/transactions-repo-body.test.ts`.
-**Build:** tsc ✅ · unit 762/762 ✅ (روی feat: 770) · lint ۰ خطا · build ✅.
-**ناتمام:** هیچ‌کدام push نشده. ⚠️ پیش‌فاکتورهایی که قبلاً مدیر کل ثبت کرده احتمالاً به‌عنوان تراکنش تأییدشده روی موجودی اثر گذاشته‌اند — بررسی داده‌ی production با کاربر (فقط خواندن).
-**برای جلسه‌ی بعد:** ترتیب merge: اول `fix/branch-scope-all-roles`، بعد `feat/tx-idempotency`. فعال‌سازی idempotency: push کد → اجرای `project-docs/migrations/db-idempotency-keys.sql` → `TX_IDEMPOTENCY_ENABLED=1` در Liara.
 
