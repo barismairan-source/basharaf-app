@@ -1,0 +1,82 @@
+/**
+ * «این ماه تا امروز» — حقوقِ ماهِ جاری بر اساس حضورِ ثبت‌شده تا همین لحظه، با همان روش اکسل‌های حقوق
+ * (statements.ts): آشپزخانه حقوق ثابت ماه + اضافه‌کاری بالای ۲۰۸ ساعت (جدا واریز می‌شوند)، سالن روزانه.
+ * دو عدد جدا: فقط حضورِ تأییدشده‌ی مدیر، و با حضورهای منتظر تأیید (تا نفر بلافاصله بعد از ثبت حضور ببیند).
+ * توابع خالص‌اند (بدون DB).
+ */
+import {
+  HALL_BASE_DAYS, HALL_BONUS_EVERY_SHIFTS, OVERTIME_MULTIPLIER, STANDARD_MONTH_HOURS,
+  computeDailyStatement, computeHourlyStatement, describeBasis,
+  type StatementBasis, type StatementLine, type StatementModel,
+} from './statements';
+
+export interface MonthRow { workDate: string; workedMinutes: number; status: string; attendanceType: string }
+
+export interface MonthPart {
+  minutes: number;
+  days: number;
+  total: number;
+  lines: StatementLine[];
+  /** ساعتی: ساعت تا شروع اضافه‌کاری (۰ یعنی وارد اضافه‌کاری شده). */
+  hoursToOvertime?: number;
+  /** روزانه: روز محاسبه‌شده (حضور + تشویقی). */
+  paidDays?: number;
+}
+
+export interface MonthToDate {
+  model: StatementModel;
+  basis: StatementBasis;
+  basisText: string[];
+  confirmed: MonthPart;
+  withPending: MonthPart;
+}
+
+const WORKED = new Set(['present', 'holiday_work', 'off_day_work']);
+
+/** جمع دقیقه و روزهای کاریِ متمایز (چند حضور در یک روز = یک روز). */
+export function tally(rows: MonthRow[]): { minutes: number; days: number } {
+  const worked = rows.filter((r) => WORKED.has(r.attendanceType));
+  return { minutes: worked.reduce((a, r) => a + r.workedMinutes, 0), days: new Set(worked.map((r) => r.workDate)).size };
+}
+
+function part(basis: StatementBasis, minutes: number, days: number): MonthPart {
+  if (basis.model === 'hourly') {
+    const hours = Math.round((minutes / 60) * 100) / 100;
+    const s = computeHourlyStatement({ agreedSalary: basis.agreedSalary, weeklyHours: [hours], standardHours: basis.standardHours, multiplier: basis.overtimeMultiplier, rounding: basis.rounding });
+    const standard = basis.standardHours ?? STANDARD_MONTH_HOURS;
+    return { minutes, days, total: s.total, lines: s.lines, hoursToOvertime: Math.max(0, Math.round((standard - hours) * 100) / 100) };
+  }
+  const s = computeDailyStatement({ agreedSalary: basis.agreedSalary, presentDays: days, baseDays: basis.baseDays, bonusEvery: basis.bonusEveryShifts, rounding: basis.rounding, fullSalary: basis.fullSalary });
+  return { minutes, days, total: s.total, lines: s.lines, paidDays: s.paidDays };
+}
+
+export function computeMonthToDate(basis: StatementBasis, rows: MonthRow[]): MonthToDate {
+  const confirmed = tally(rows.filter((r) => r.status !== 'draft'));
+  const all = tally(rows);
+  return {
+    model: basis.model, basis, basisText: describeBasis(basis),
+    confirmed: part(basis, confirmed.minutes, confirmed.days),
+    withPending: part(basis, all.minutes, all.days),
+  };
+}
+
+/**
+ * مبنای حقوق یک نفر: آخرین ریز کارکرد واردشده (همان روش و حقوق توافقی اکسل)، وگرنه از پرونده‌ی خودش
+ * (آشپزخانه → ساعتی با حقوق ماهانه یا نرخ × ۲۰۸؛ سالن → روزانه). بدون حقوق → null.
+ */
+export function resolveBasis(input: {
+  latestStatementBasis?: StatementBasis | null;
+  section: string | null;
+  baseMonthlySalary?: number | null;
+  hourlyRate?: number | null;
+}): StatementBasis | null {
+  const b = input.latestStatementBasis;
+  if (b && b.agreedSalary > 0) return b;
+  const salary = input.baseMonthlySalary && input.baseMonthlySalary > 0 ? input.baseMonthlySalary
+    : input.hourlyRate && input.hourlyRate > 0 ? Math.round(input.hourlyRate * STANDARD_MONTH_HOURS) : null;
+  if (!salary) return null;
+  if (input.section === 'سالن') {
+    return { model: 'daily', agreedSalary: salary, baseDays: HALL_BASE_DAYS, dailyRate: Math.round(salary / HALL_BASE_DAYS), bonusEveryShifts: HALL_BONUS_EVERY_SHIFTS, rounding: 1000 };
+  }
+  return { model: 'hourly', agreedSalary: salary, standardHours: STANDARD_MONTH_HOURS, hourlyRate: Math.round(salary / STANDARD_MONTH_HOURS), overtimeMultiplier: OVERTIME_MULTIPLIER, rounding: 1000 };
+}

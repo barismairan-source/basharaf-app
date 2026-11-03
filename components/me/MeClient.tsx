@@ -11,6 +11,7 @@ import { optionsStillFresh } from '@/lib/attendance-clock/client-utils';
 import { formatMinutes, periodLabel, shiftPeriod, toLatinDigits } from '@/lib/staff-panel/pure';
 import type { StatementBasis, StatementLine, StatementWeek } from '@/lib/staff-panel/statements';
 import { PAYMENT_KIND_LABEL, summarizePayments, type PaymentItem } from '@/lib/staff-panel/payments';
+import type { MonthToDate } from '@/lib/staff-panel/monthToDate';
 import { BottomNav, Doodle, EmptyDoodle, HoursBar, SF, SectionTitle, SfCard, Stat, WeekDays, WeekLegend } from './parts';
 
 type Tab = 'home' | 'attendance' | 'pay' | 'profile';
@@ -77,6 +78,7 @@ export function MeClient() {
   const [stmts, setStmts] = useState<StmtRow[] | null>(null);
   const [slips, setSlips] = useState<SlipRow[] | null>(null);
   const [payments, setPayments] = useState<PaymentItem[] | null>(null);
+  const [monthPay, setMonthPay] = useState<MonthToDate | null | undefined>(undefined);
   const [stmt, setStmt] = useState<StmtDetail | null>(null);
   const [slip, setSlip] = useState<SlipDetail | null>(null);
 
@@ -109,15 +111,17 @@ export function MeClient() {
   }, [noDevice]);
 
   const loadPay = useCallback(async () => {
-    const [a, b, c] = await Promise.all([
+    const [a, b, c, d] = await Promise.all([
       call<{ statements: StmtRow[] }>('/api/me/statements'), call<{ payslips: SlipRow[] }>('/api/me/payslips'), call<{ payments: PaymentItem[] }>('/api/me/payments'),
+      call<{ month: MonthToDate | null }>(`/api/me/month-pay?period=${currentPeriod}`),
     ]);
-    if (a.status === 403 || b.status === 403 || c.status === 403) { setUnlocked(false); setStmts(null); setSlips(null); setPayments(null); return; }
+    if (a.status === 403 || b.status === 403 || c.status === 403 || d.status === 403) { setUnlocked(false); setStmts(null); setSlips(null); setPayments(null); setMonthPay(undefined); return; }
+    setMonthPay(d.ok ? d.body.month : null);
     if (a.ok) setStmts(a.body.statements); else setError((a.body as any)?.error ?? 'خطا');
     if (b.ok) setSlips(b.body.payslips); else setError((b.body as any)?.error ?? 'خطا');
     // تاریخچه‌ی واریز اختیاری است: اگر نیامد، بقیه‌ی بخش حقوق باز هم نشان داده شود
     setPayments(c.ok ? c.body.payments : []);
-  }, []);
+  }, [currentPeriod]);
   useEffect(() => { if (tab === 'pay' && unlocked && stmts === null) void loadPay(); }, [tab, unlocked, stmts, loadPay]);
 
   // گزینه‌های Face ID از قبل گرفته شود تا پنجره‌ی Face ID بلافاصله بعد از لمس باز شود (Safari)
@@ -202,6 +206,11 @@ export function MeClient() {
   const todayShifts = shifts?.shifts.filter((s) => s.workDate === today) ?? [];
   const upcoming = shifts?.shifts.filter((s) => s.workDate !== today) ?? [];
   const inNow = clock?.state?.kind === 'in';
+  // ورود و خروج‌های امروز (ورود باز تا همین لحظه حساب می‌شود)
+  const todayWorked = (clock?.today ?? []).reduce((a, s) => {
+    const end = s.outAt ? new Date(s.outAt).getTime() : Date.now();
+    return a + Math.max(0, Math.round((end - new Date(s.inAt).getTime()) / 60000));
+  }, 0);
 
   const LockBox = (
     <SfCard className="space-y-3 text-center">
@@ -245,6 +254,7 @@ export function MeClient() {
               </div>
               <Doodle name="cutleryCream" size={34} className="opacity-90" />
             </div>
+            {todayWorked > 0 && <p className="text-[13px]">امروز تا الان {faMinutes(todayWorked)} کار کرده‌اید</p>}
             {todayShifts.length > 0 ? (
               <ul className="space-y-1 text-[13px]">
                 {todayShifts.map((s) => (
@@ -262,6 +272,9 @@ export function MeClient() {
             <Stat value={faMinutes(monthSummary?.confirmedMinutes ?? 0)} label="تأییدشده" />
             <Stat value={faMinutes(monthSummary?.pendingMinutes ?? 0)} label="منتظر تأیید مدیر" />
           </SfCard>
+          <button type="button" onClick={() => { setTab('pay'); window.scrollTo({ top: 0 }); }} className="block w-full text-center text-[12.5px] underline" style={{ color: SF.goldText }}>
+            حقوق این ماه تا امروز را در بخش «حقوق» ببینید
+          </button>
 
           <div className="space-y-2">
             <SectionTitle>شیفت‌های پیش رو</SectionTitle>
@@ -338,6 +351,7 @@ export function MeClient() {
           ) : (
             <>
               <SectionTitle aside={<Button size="sm" variant="ghost" icon={Lock} onClick={lockAgain}>قفل کردن</Button>}>حقوق من</SectionTitle>
+              {monthPay !== undefined && <MonthToDateCard m={monthPay} period={currentPeriod} />}
               {stmts === null || slips === null || payments === null ? <p className="text-center text-[13px] text-muted">در حال بارگذاری…</p> : stmts.length + slips.length + payments.length === 0 ? (
                 <SfCard><EmptyDoodle doodle="sieve" title="هنوز ریز حقوقی برای شما ثبت نشده" sub="بعد از ثبت یا تأیید مدیر اینجا نشان داده می‌شود." /></SfCard>
               ) : (
@@ -410,6 +424,69 @@ function PayRow({ title, sub, amount, onClick }: { title: string; sub: string; a
         <span className="text-[14.5px] font-semibold" style={{ color: SF.ink }}>{fmt(amount)} <span className="text-[11px] font-normal">تومان</span></span>
       </SfCard>
     </button>
+  );
+}
+
+/**
+ * «این ماه تا امروز»: ساعت/روز کار و حقوقی که تا همین حالا به آن رسیده‌اید، با همان روش حقوق خودتان.
+ * آشپزخانه: حقوق ثابت ماه و اضافه‌کاری (بالای ۲۰۸ ساعت) جدا، چون جدا واریز می‌شوند. سالن: روزانه.
+ */
+export function MonthToDateCard({ m, period }: { m: MonthToDate | null; period: string }) {
+  const [why, setWhy] = useState(false);
+  if (!m) {
+    return <SfCard><p className="text-[13px]" style={{ color: '#5E6676' }}>حقوق توافقی شما هنوز در سیستم ثبت نشده؛ بعد از ثبت مدیر، حقوق این ماه اینجا حساب می‌شود.</p></SfCard>;
+  }
+  const c = m.confirmed, w = m.withPending;
+  const pending = w.minutes > c.minutes;
+  const hourly = m.model === 'hourly';
+  const standard = m.basis.standardHours ?? 208;
+  const hours = (min: number) => Math.round((min / 60) * 10) / 10;
+  return (
+    <SfCard className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="sf-hand text-[17px]" style={{ color: SF.navy }}>{toFa(periodLabel(period))} — تا امروز</p>
+        <Chip>{hourly ? 'ساعتی' : 'روزانه'}</Chip>
+      </div>
+      {hourly ? (
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-[13px]"><span>ساعت کار تأییدشده</span><span className="font-semibold">{toFa(hours(c.minutes))} از {toFa(standard)} ساعت</span></div>
+          <HoursBar value={hours(w.minutes)} max={standard} />
+          {pending && <p className="text-[11.5px]" style={{ color: '#5E6676' }}>با حضورهای منتظر تأیید: {toFa(hours(w.minutes))} ساعت</p>}
+          <p className="text-[11.5px]" style={{ color: '#5E6676' }}>
+            {(w.hoursToOvertime ?? 0) > 0 ? `${toFa(w.hoursToOvertime ?? 0)} ساعت دیگر تا شروع اضافه‌کاری` : 'وارد اضافه‌کاری شده‌اید'}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-1.5 text-[13px]">
+          <div className="flex justify-between"><span>روز حضور تأییدشده</span><span className="font-semibold">{toFa(c.days)} روز</span></div>
+          {c.paidDays !== undefined && c.paidDays !== c.days && <div className="flex justify-between"><span>روز محاسبه‌شده (با تشویقی)</span><span>{toFa(c.paidDays)} روز</span></div>}
+          {pending && <p className="text-[11.5px]" style={{ color: '#5E6676' }}>با حضورهای منتظر تأیید: {toFa(w.days)} روز</p>}
+        </div>
+      )}
+      <ul className="space-y-1.5 border-t pt-2 text-[13px]" style={{ borderColor: '#E9E5DB' }}>
+        {c.lines.map((l) => (
+          <li key={l.label} className="flex justify-between gap-2">
+            <span>{l.label}{l.detail ? <span className="text-[11.5px]" style={{ color: '#5E6676' }}> ({toFa(l.detail)})</span> : null}</span>
+            <span className="font-semibold">{fmt(l.amount)}</span>
+          </li>
+        ))}
+        {hourly && !c.lines.some((l) => l.label === 'اضافه‌کاری') && (
+          <li className="flex justify-between gap-2"><span>اضافه‌کاری</span><span style={{ color: '#5E6676' }}>هنوز نه</span></li>
+        )}
+      </ul>
+      <div className="rounded-xl px-3 py-2" style={{ background: SF.cream }}>
+        <div className="flex items-center justify-between">
+          <span className="text-[12.5px]" style={{ color: SF.navy }}>جمع تا امروز (تأییدشده)</span>
+          <span className="sf-hand text-[22px]" style={{ color: SF.navy }}>{fmt(c.total)} <span className="text-[11px]">تومان</span></span>
+        </div>
+        {pending && w.total !== c.total && (
+          <p className="text-[11.5px]" style={{ color: '#5E6676' }}>با حضورهای منتظر تأیید: {fmt(w.total)} تومان</p>
+        )}
+      </div>
+      {hourly && <p className="text-[11.5px]" style={{ color: '#5E6676' }}>حقوق ثابت ماه کامل پرداخت می‌شود؛ اضافه‌کاری جدا واریز می‌شود.</p>}
+      <button type="button" className="text-[12.5px] underline" style={{ color: SF.goldText }} onClick={() => setWhy((v) => !v)}>حقوق من بر چه اساسی حساب می‌شود؟</button>
+      {why && <ul className="list-disc space-y-1 ps-5 text-[12.5px]" style={{ color: SF.ink }}>{m.basisText.map((t) => <li key={t}>{toFa(t)}</li>)}</ul>}
+    </SfCard>
   );
 }
 
