@@ -182,7 +182,8 @@ export function ClockView() {
     setError(null);
     try {
       const b = await api<{ path: string; employeeName: string }>('/api/hr/clock/links', { method: 'POST', body: JSON.stringify({ employeeId: p.employeeId }) });
-      const url = `${window.location.origin}${b.path}`;
+      // همیشه با نشانی اصلی سایت: کلید گوشی و Face ID به همان نشانی‌ای بسته‌اند که لینک با آن باز می‌شود
+      const url = `${(process.env.NEXT_PUBLIC_APP_URL || window.location.origin).replace(/\/$/, '')}${b.path}`;
       const qr = await QRCode.toDataURL(url, { margin: 1, width: 240 });
       setIssued({ name: b.employeeName, url, qr });
       loadSetup();

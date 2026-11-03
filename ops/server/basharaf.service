@@ -20,6 +20,9 @@ Environment=HOSTNAME=127.0.0.1
 ExecStart=/usr/local/bin/node server.js
 Restart=always
 RestartSec=3
+# Next waits for every open connection before it exits; a dashboard left open (live updates) keeps one
+# open forever, so a restart hung for the default 90 s. Give in-flight requests 10 s, then stop.
+TimeoutStopSec=10
 # leave room for meeez and nginx on a small server
 MemoryHigh=900M
 MemoryMax=1200M
