@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api-error';
 import { computeDerivedFields, assertNoAttendanceOverlap, NEW_ATTENDANCE_CANDIDATE_ID } from '@/lib/payroll/attendanceEntryHelpers';
 import { ipMatchesCidr } from './ip';
 import {
-  clockStateFrom, decideClock, pairToEntryFields, pickClosestAssignment, tehranParts,
+  clockStateFrom, decideClock, networkAppliesTo, pairToEntryFields, pickClosestAssignment, tehranParts,
   type ClockAction, type ClockState, type OpenClockIn,
 } from './rules';
 
@@ -109,26 +109,35 @@ export interface MatchedNetwork { networkId: string; branchId: string; branchNam
 
 /**
  * IP به کدام شبکه‌ی فعال شعبه می‌خورد؟ اگر به چند شعبه بخورد، شعبه‌ی خود نفر اولویت دارد.
+ * دسترسی موقت فقط برای همان نفر و تا زمان انقضایش حساب می‌شود.
  */
-export async function matchBranchNetwork(ip: string, preferBranchId: string | null): Promise<MatchedNetwork | null> {
+export async function matchBranchNetwork(ip: string, preferBranchId: string | null, employeeId: string | null): Promise<MatchedNetwork | null> {
+  const now = new Date();
   const rows = await db.select({
     networkId: schema.branchAttendanceNetworks.id,
     branchId: schema.branchAttendanceNetworks.branchId,
     cidr: schema.branchAttendanceNetworks.cidr,
     branchName: schema.branches.name,
+    employeeId: schema.branchAttendanceNetworks.employeeId,
+    expiresAt: schema.branchAttendanceNetworks.expiresAt,
   }).from(schema.branchAttendanceNetworks)
     .innerJoin(schema.branches, eq(schema.branchAttendanceNetworks.branchId, schema.branches.id))
     .where(eq(schema.branchAttendanceNetworks.isActive, true))
     .orderBy(asc(schema.branchAttendanceNetworks.createdAt));
-  const matches = rows.filter((r) => ipMatchesCidr(ip, r.cidr));
+  const matches = rows.filter((r) => networkAppliesTo(r, employeeId, now) && ipMatchesCidr(ip, r.cidr));
   const pick = matches.find((m) => m.branchId === preferBranchId) ?? matches[0];
   return pick ? { networkId: pick.networkId, branchId: pick.branchId, branchName: pick.branchName } : null;
 }
 
 /** آیا اصلاً شبکه‌ای برای هیچ شعبه‌ای تنظیم شده؟ (برای پیام «هنوز راه‌اندازی نشده») */
 export async function anyNetworkConfigured(): Promise<boolean> {
+  // فقط IP ثابت همگانی «راه‌اندازی» حساب می‌شود؛ دسترسی موقت نه
   const [row] = await db.select({ id: schema.branchAttendanceNetworks.id })
-    .from(schema.branchAttendanceNetworks).where(eq(schema.branchAttendanceNetworks.isActive, true)).limit(1);
+    .from(schema.branchAttendanceNetworks).where(and(
+      eq(schema.branchAttendanceNetworks.isActive, true),
+      isNull(schema.branchAttendanceNetworks.employeeId),
+      isNull(schema.branchAttendanceNetworks.expiresAt),
+    )).limit(1);
   return !!row;
 }
 

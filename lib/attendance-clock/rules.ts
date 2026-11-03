@@ -13,6 +13,19 @@ export const MIN_SHIFT_SECONDS = 60;
 /** مهلت فعال‌سازی لینک شخصی روی گوشی. */
 export const LINK_TTL_HOURS = 72;
 
+/** مدت‌های مجاز دسترسی موقت (دقیقه). */
+export const TEMP_NETWORK_MINUTES = [30, 60, 120, 240, 480, 1440] as const;
+
+/**
+ * آیا این IP مجاز شعبه برای این نفر و همین لحظه معتبر است؟
+ * IP ثابت همگانی: employeeId و expiresAt خالی. دسترسی موقت: فقط همان نفر و فقط تا expiresAt.
+ */
+export function networkAppliesTo(row: { employeeId: string | null; expiresAt: Date | null }, employeeId: string | null, now: Date): boolean {
+  if (row.expiresAt && row.expiresAt.getTime() <= now.getTime()) return false;
+  if (row.employeeId && row.employeeId !== employeeId) return false;
+  return true;
+}
+
 export type ClockAction = 'clock_in' | 'clock_out';
 
 export interface OpenClockIn { id: string; occurredAt: Date }

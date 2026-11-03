@@ -4,13 +4,23 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import QRCode from 'qrcode';
 import { Wifi, Link2, Trash2, Plus, Copy, MapPin, Download, ScanFace } from 'lucide-react';
 import { Button, Card, CardBody, CardHeader, Field, Input, Select, Empty, Chip, JalaliDatePicker, InlineNotice, Switch, useConfirm } from '@/components/ui';
+import { toFa } from '@/lib/utils';
 import { useAppStore } from '@/store';
 import { getTodayJalali, jalaliToDate, dateToJalali, formatTehranTime } from '@/lib/jalali';
 import { useHrBranchFilter } from '@/lib/hr/branchFilterContext';
 import { canDo } from '@/lib/auth/permissions';
 import { csvCell } from '@/lib/attendance-clock/client-utils';
 
-interface Network { id: string; branchId: string; branchName: string; cidr: string; label: string | null }
+interface Network { id: string; branchId: string; branchName: string; cidr: string; label: string | null; employeeId: string | null; employeeName: string | null; expiresAt: string | null }
+
+const TEMP_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 30, label: 'نیم ساعت' }, { value: 60, label: '۱ ساعت' }, { value: 120, label: '۲ ساعت' },
+  { value: 240, label: '۴ ساعت' }, { value: 480, label: '۸ ساعت' }, { value: 1440, label: '۲۴ ساعت' },
+];
+function minutesLeft(iso: string): string {
+  const m = Math.max(0, Math.round((new Date(iso).getTime() - Date.now()) / 60000));
+  return m >= 60 ? `${toFa(Math.floor(m / 60))} ساعت و ${toFa(m % 60)} دقیقه` : `${toFa(m)} دقیقه`;
+}
 interface Person {
   employeeId: string; fullName: string; branchId: string | null; deviceId: string | null;
   status: 'none' | 'pending' | 'expired' | 'active'; lastUsedAt: string | null;
@@ -80,6 +90,8 @@ export function ClockView() {
   const [newBranch, setNewBranch] = useState(user?.assignedBranch ?? '');
   const [newCidr, setNewCidr] = useState('');
   const [newLabel, setNewLabel] = useState('');
+  const [newMinutes, setNewMinutes] = useState(0); // ۰ = IP ثابت بی‌انقضا
+  const [newPeople, setNewPeople] = useState<string[]>([]);
   const [myIp, setMyIp] = useState<{ ip: string | null; reason: string | null; headers: { xRealIp: string | null; xForwardedFor: string | null } } | null>(null);
   const [issued, setIssued] = useState<{ name: string; url: string; qr: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -156,9 +168,13 @@ export function ClockView() {
   async function addNetwork() {
     setError(null);
     try {
-      await api('/api/hr/clock/networks', { method: 'POST', body: JSON.stringify({ branchId: newBranch, cidr: newCidr, label: newLabel || null }) });
-      setNewCidr(''); setNewLabel('');
-      showToast('IP شعبه ثبت شد', 'success');
+      const temp = newMinutes > 0;
+      await api('/api/hr/clock/networks', {
+        method: 'POST',
+        body: JSON.stringify({ branchId: newBranch, cidr: newCidr, label: newLabel || null, ...(temp ? { minutes: newMinutes, employeeIds: newPeople } : {}) }),
+      });
+      setNewCidr(''); setNewLabel(''); setNewPeople([]); setNewMinutes(0);
+      showToast(temp ? 'دسترسی موقت ثبت شد' : 'IP ثابت شعبه ثبت شد', 'success');
       loadSetup();
     } catch (e) { setError((e as Error).message); }
   }
@@ -283,21 +299,40 @@ export function ClockView() {
           </Card>
 
           <Card>
-            <CardHeader title="IP ثابت شعبه‌ها" sub="فقط از این نشانی‌ها ثبت حضور پذیرفته می‌شود" />
+            <CardHeader title="IP ثابت شعبه‌ها و دسترسی موقت" sub="فقط از این نشانی‌ها ثبت حضور پذیرفته می‌شود؛ دسترسی موقت بعد از زمانش خودکار حذف می‌شود" />
             <CardBody className="space-y-4">
-              {networks.length === 0 ? (
-                <InlineNotice tone="warning">هنوز هیچ IPی ثبت نشده؛ تا وقتی ثبت نشود، پرسنل نمی‌توانند حضور بزنند.</InlineNotice>
+              {networks.filter(n => !n.expiresAt && !n.employeeId).length === 0 ? (
+                <InlineNotice tone="warning">هنوز IP ثابتی برای مغازه ثبت نشده؛ تا وقتی ثبت نشود، پرسنل نمی‌توانند حضور بزنند (جز دسترسی موقت).</InlineNotice>
               ) : (
-                <ul className="divide-y divide-border">
-                  {networks.map(n => (
-                    <li key={n.id} className="py-2 flex items-center gap-3 text-[13px]">
-                      <span className="font-medium min-w-[110px]">{n.branchName}</span>
-                      <span dir="ltr" className="font-mono">{n.cidr}</span>
-                      {n.label && <span className="text-muted">{n.label}</span>}
-                      <Button size="sm" variant="danger" icon={Trash2} className="ms-auto" onClick={() => removeNetwork(n)}>غیرفعال</Button>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-1">
+                  <p className="text-[12.5px] font-medium">IP ثابت (برای همه)</p>
+                  <ul className="divide-y divide-border">
+                    {networks.filter(n => !n.expiresAt && !n.employeeId).map(n => (
+                      <li key={n.id} className="py-2 flex items-center gap-3 text-[13px]">
+                        <span className="font-medium min-w-[110px]">{n.branchName}</span>
+                        <span dir="ltr" className="font-mono">{n.cidr}</span>
+                        {n.label && <span className="text-muted">{n.label}</span>}
+                        <Button size="sm" variant="danger" icon={Trash2} className="ms-auto" onClick={() => removeNetwork(n)}>غیرفعال</Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {networks.some(n => n.expiresAt || n.employeeId) && (
+                <div className="space-y-1">
+                  <p className="text-[12.5px] font-medium">دسترسی موقت</p>
+                  <ul className="divide-y divide-border">
+                    {networks.filter(n => n.expiresAt || n.employeeId).map(n => (
+                      <li key={n.id} className="py-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px]">
+                        <span className="font-medium min-w-[110px]">{n.employeeName ?? 'همه'}</span>
+                        <span dir="ltr" className="font-mono">{n.cidr}</span>
+                        {n.expiresAt && <Chip tone="amber">{minutesLeft(n.expiresAt)} مانده</Chip>}
+                        {n.label && <span className="text-muted">{n.label}</span>}
+                        <Button size="sm" variant="danger" icon={Trash2} className="ms-auto" onClick={() => removeNetwork(n)}>حذف</Button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
 
               <div className="rounded-md border border-border p-3 space-y-2">
@@ -330,14 +365,38 @@ export function ClockView() {
                     {branches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
                   </Select>
                 </Field>
-                <Field label="IP ثابت" hint="مثل 5.6.7.8">
+                <Field label="IP" hint="مثل 5.6.7.8">
                   <Input dir="ltr" value={newCidr} onChange={e => setNewCidr(e.target.value)} placeholder="5.6.7.8" />
                 </Field>
-                <Field label="توضیح (اختیاری)">
-                  <Input value={newLabel} onChange={e => setNewLabel(e.target.value)} placeholder="مثلاً خط اصلی" />
+                <Field label="مدت">
+                  <Select value={String(newMinutes)} onChange={e => setNewMinutes(Number(e.target.value))}>
+                    <option value="0">ثابت (همیشه، برای همه)</option>
+                    {TEMP_OPTIONS.map(o => <option key={o.value} value={o.value}>موقت — {o.label}</option>)}
+                  </Select>
                 </Field>
                 <Button variant="primary" icon={Plus} disabled={!newBranch || !newCidr.trim()} onClick={addNetwork}>ثبت IP</Button>
               </div>
+              <Field label="توضیح (اختیاری)">
+                <Input value={newLabel} onChange={e => setNewLabel(e.target.value)} placeholder={newMinutes > 0 ? 'مثلاً وای‌فای مغازه قطع است' : 'مثلاً خط اصلی'} />
+              </Field>
+              {newMinutes > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[12.5px]">برای چه کسانی؟ <span className="text-muted">(هیچ‌کس را انتخاب نکنید = همه)</span></p>
+                  <div className="flex flex-wrap gap-2">
+                    {people.map(p => {
+                      const on = newPeople.includes(p.employeeId);
+                      return (
+                        <button key={p.employeeId} type="button" aria-pressed={on}
+                          onClick={() => setNewPeople(v => on ? v.filter(x => x !== p.employeeId) : [...v, p.employeeId])}
+                          className={`rounded-full border px-3 py-1 text-[12.5px] ${on ? 'border-primary bg-primary text-white' : 'border-border'}`}>
+                          {p.fullName}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11.5px] text-muted">IP هر نفر روی صفحه‌ی ثبت حضور خودش نوشته شده (پایین صفحه «IP: …»).</p>
+                </div>
+              )}
             </CardBody>
           </Card>
 

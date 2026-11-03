@@ -27,7 +27,7 @@ export async function GET(req: Request) {
     } else if (!(await anyNetworkConfigured())) {
       network.reason = 'NOT_CONFIGURED';
     } else {
-      const match = await matchBranchNetwork(ipResult.ip, device?.employeeBranchId ?? null);
+      const match = await matchBranchNetwork(ipResult.ip, device?.employeeBranchId ?? null, device?.employeeId ?? null);
       network = match ? { ok: true, branchName: match.branchName, reason: null } : { ok: false, branchName: null, reason: 'OFF_NETWORK' };
     }
 

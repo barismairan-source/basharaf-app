@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       void audit({ action: 'attendance.clock.rejected', ip: getClientIp(req), meta: { employeeId: device.employeeId, reason: `IP_${ipResult.reason}`, realIp: ipResult.realIp, forwardedIp: ipResult.forwardedIp } });
       throw new ApiError(403, 'نشانی اینترنت شما قابل تشخیص نیست. VPN را خاموش کنید و دوباره امتحان کنید.', 'IP_UNCERTAIN');
     }
-    const network = await matchBranchNetwork(ipResult.ip, device.employeeBranchId);
+    const network = await matchBranchNetwork(ipResult.ip, device.employeeBranchId, device.employeeId);
     if (!network) {
       const configured = await anyNetworkConfigured();
       void audit({ action: 'attendance.clock.rejected', ip: ipResult.ip, meta: { employeeId: device.employeeId, reason: configured ? 'OFF_NETWORK' : 'NOT_CONFIGURED' } });

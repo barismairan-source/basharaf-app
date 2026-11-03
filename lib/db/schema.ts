@@ -1395,10 +1395,15 @@ export const branchAttendanceNetworks = pgTable(
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     deactivatedAt: timestamp('deactivated_at', { withTimezone: true }),
     deactivatedBy: uuid('deactivated_by').references(() => users.id, { onDelete: 'set null' }),
+    // دسترسی موقت: فقط برای همین نفر (خالی = همه) و فقط تا این زمان (خالی = بی‌انقضا)
+    employeeId: uuid('employee_id').references(() => employees.id, { onDelete: 'cascade' }),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
   },
   (t) => ({
     branchIdx: index('branch_attendance_networks_branch_idx').on(t.branchId),
-    activeUniq: uniqueIndex('branch_attendance_networks_active_uniq').on(t.branchId, t.cidr).where(sql`${t.isActive}`),
+    employeeIdx: index('branch_attendance_networks_employee_idx').on(t.employeeId),
+    activeUniq: uniqueIndex('branch_attendance_networks_active_uniq').on(t.branchId, t.cidr)
+      .where(sql`${t.isActive} AND ${t.employeeId} IS NULL AND ${t.expiresAt} IS NULL`),
   })
 );
 
