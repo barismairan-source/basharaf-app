@@ -9,8 +9,8 @@
 
 | | |
 |---|---|
-| **نسخه** | **production روی VPS پارس‌پک** = release `20261102-164716-963979` از branch `feat/staff-payments` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
-| **آخرین به‌روزرسانی** | 2026-11-02 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
+| **نسخه** | **production روی VPS پارس‌پک** = release `20261103-132059-a9de00` از branch `feat/staff-month-pay` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
+| **آخرین به‌روزرسانی** | 2026-11-03 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
 | **دیپلوی** | **`https://basharaf.me` روی VPS** (`94.184.45.140`؛ HTTPS تا 2027-01-31؛ `www` → 301؛ `vps.basharaf.me` هم سرو می‌شود). دیپلوی: `SITE=https://basharaf.me ops/server/deploy.sh` (push به main فقط CI تست، بدون لیارا). دیتابیس هنوز Postgres لیارا (آدرس عمومی). **outbox scheduler روشن روی VPS.** |
 | **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-11-03 — پنل پرسنل: «این ماه تا امروز» + نرخ ساعتی ۱۰ نفر — روی branch `feat/staff-month-pay`
+**چه شد:** خواسته‌ی علی: پرسنل ساعت کار، روش محاسبه و حقوق تا امروزشان را ببینند. تصمیم‌های علی: آشپزخانه «حقوق ثابت ماه» و «اضافه‌کاری» جدا (چون جدا واریز می‌شوند)، حضور تأییدشده و منتظر تأیید جدا، نرخ‌ها از اکسل مهر، شیفت‌ها از این به بعد در سایت وارد می‌شوند. ساخته شد: `lib/staff-panel/monthToDate.ts` (خالص؛ همان قواعد `statements.ts`؛ مبنا = آخرین ریز کارکرد، وگرنه پرونده)، `lib/staff-panel/monthPayServer.ts`، `GET /api/me/month-pay` (Face ID)، کارت «… — تا امروز» در بخش حقوق پنل (`MonthToDateCard`)، «امروز تا الان X کار کرده‌اید» و لینک به حقوق در خانه. با تأیید علی ۱۰ نرخ در `employee_hourly_rates` از ۱ آبان (2026-10-23) ثبت شد (آشپزخانه حقوق÷۲۰۸، سالن حقوق÷۱۹۲؛ دلیل در ستون reason) — بدون نرخ، ورود/خروج گوشی به حضور تبدیل نمی‌شد (`NO_ACTIVE_RATE`). release `20261103-132059-a9de00`.
+**فایل‌ها:** `lib/staff-panel/monthToDate.ts`، `lib/staff-panel/monthPayServer.ts`، `app/api/me/month-pay/route.ts`، `components/me/MeClient.tsx`، `tests/unit/staffMonthToDate.test.ts`.
+**Build:** tsc ✅ · unit 774/774 ✅ · lint ✅ · build ✅ · deploy ✅.
+**ناتمام:** branch push نشده (منتظر تأیید علی). **باگ دیپلوی:** توقف سرویس ۹۰ ثانیه timeout شد (احتمالاً setInterval زمان‌بند outbox پروسه را زنده نگه می‌دارد) → حدود ۹۰ ثانیه قطعی در هر دیپلوی؛ رفع: پاک کردن interval روی SIGTERM در `instrumentation-node.ts` یا `TimeoutStopSec`. نمای پنل از گوشی پرسنل تست نشده (فقط تست واحد). فاطمه کلبادی‌نژاد و صدرا ناطقیان نرخ ندارند (پرونده‌ی تکراری).
+**برای جلسه‌ی بعد:** رفع timeout توقف سرویس؛ شیفت‌ها را علی از «برنامه شیفت» وارد می‌کند؛ اگر بخواهند، «تا امروز» در صفحه‌ی مدیر هم نشان داده شود.
+
 ## 📓 2026-11-02 (۲) — تاریخچه‌ی واریزی پرسنل + رفع منو و پنل پرسنل روی VPS — روی branch `feat/staff-payments`
 **چه شد:** (۱) منوی مشتری `/safasity/menu` روی VPS ۵۰۰ می‌داد (rewrite در middleware به `https://localhost:3001`) → rewrite در `ops/server/nginx-basharaf-proxy.conf`. (۲) پنل پرسنل ۵۰۰ می‌داد (جدول `staff_statements` نبود) → با اجازه‌ی علی migration اجرا و ریز کارکرد مهر ۱۰ نفر وارد شد. (۳) **قابلیت جدید «تاریخچه‌ی واریز»** به تصمیم علی (جدا از حسابداری): جدول `staff_payments` (migration `db-staff-payments.sql`، بدون شبا)، `GET /api/me/payments` (با Face ID) و `GET /api/hr/staff-payments?employeeId=` (`hr.compensation.view` + شعبه)، جمع واریز ماه در `staff-overview`، نمایش در بخش «حقوق» پنل (`PaymentHistory` در `MeClient`) و Sheet «تاریخچه‌ی واریز» در `/hr/staff`. وارد کردن با `scripts/staff-payments-sql.ts --manifest` (هر فایل بانک: ماه، نوع، تاریخ، رسید دارد/ندارد). با تأیید علی: جدول ساخته شد، release `20261102-164716-963979` منتشر شد و **شهریور از ۴ رسید بانکی** وارد شد: ۱۷ ردیف (مرداد/«انتقال گروهی ۳ شهریور» ۴ ردیف ۹۵م، حقوق شهریور ۱۰ ردیف ۱۸۹٫۳م، اضافه‌کاری شهریور ۳ ردیف ۳۳٫۸م)؛ ۸ ردیف کیمیا وحدی/سجاد موسولی/فاطمه کلبادی‌نژاد (پرونده‌ی تکراری) رد شد.
 **فایل‌ها:** `project-docs/migrations/db-staff-payments.sql`، `lib/db/schema.ts`، `lib/staff-panel/payments.ts`، `app/api/me/payments/route.ts`، `app/api/hr/staff-payments/route.ts`، `app/api/hr/staff-overview/route.ts`، `components/me/MeClient.tsx`، `components/hr/StaffOverview.tsx`، `scripts/staff-payments-sql.ts`، `tests/unit/staffPayments.test.ts`، `ops/server/nginx-basharaf-proxy.conf`.
@@ -114,11 +121,4 @@
 **Build:** tsc ✅ · unit 762/762 ✅ (روی feat: 770) · lint ۰ خطا · build ✅.
 **ناتمام:** هیچ‌کدام push نشده. ⚠️ پیش‌فاکتورهایی که قبلاً مدیر کل ثبت کرده احتمالاً به‌عنوان تراکنش تأییدشده روی موجودی اثر گذاشته‌اند — بررسی داده‌ی production با کاربر (فقط خواندن).
 **برای جلسه‌ی بعد:** ترتیب merge: اول `fix/branch-scope-all-roles`، بعد `feat/tx-idempotency`. فعال‌سازی idempotency: push کد → اجرای `project-docs/migrations/db-idempotency-keys.sql` → `TX_IDEMPOTENCY_ENABLED=1` در Liara.
-
-## 📓 2026-10-30 — ممیزی کامل در `~/Claude-Projects` + رفع ۴ نقص دسترسی/یکپارچگی — روی branch `fix/branch-scope-all-roles`
-**چه شد:** پروژه به `~/Claude-Projects/01-Active/basharaf-app` کپی شد (نسخه‌ی کاری از ۲۰۲۶-۱۰-۲۹؛ `~/Documents/basharaf-app` بکاپ ثابت است). ممیزی کامل کد (گزارش: `~/Claude-Projects/_audit/basharaf-app-audit.md`). سه نقص تأییدشده رفع شد: (۱) ۲۵ route فقط `role === 'BranchUser'` را به شعبه محدود می‌کردند و Chef/Warehouse به داده‌ی شعب دیگر دسترسی داشتند → `canUseBranch`/`branchScope` (f1cf927) + تست نگهبان ایستا. (۲) `/api/inventory/expiry` اقلام همه‌ی شعب را برمی‌گرداند → فیلتر شعبه (8182820). (۳) محاسبه‌ی مجدد حقوق وضعیت را بیرون تراکنش چک می‌کرد و می‌توانست اجرای تأییدشده را بازنویسی کند → قفل `FOR UPDATE` و چک مجدد داخل تراکنش (e855187). (۴) رمز پیش‌فرض hard-code `basharaf123` در `lib/repos/api.ts` حذف شد (2e8da9e). ⚠️ seed قدیمی (`v0.9.7-*/basharaf-deploy`) حساب‌هایی با همین رمز می‌ساخت — کاربر باید چک کند در production حسابی با این رمز نمانده باشد. کار WIP استودیو رسپی دست نخورد.
-**فایل‌ها:** ۲۳ فایل زیر `app/api/**` (attendance، shift-assignments، purchase-orders، inventory/*، equipment، maintenance، orders/*، dashboard/overview، transactions/import)، `app/api/inventory/expiry/route.ts`، `app/api/payroll/runs/[id]/calculate/route.ts`، `tests/unit/branch-scope-routes.test.ts`.
-**Build:** tsc ✅ · unit 735/735 ✅ · lint ✅ (۸ warning قدیمی، ۰ خطا) · build ✅ — بدون `DATABASE_URL`. تست‌های integration/e2e اجرا نشدند (دیتابیس آزمایشی لازم است).
-**ناتمام:** branch push/merge نشده (منتظر تأیید کاربر). رفتار جدید: کاربر Chef/Warehouse فقط شعبه‌ی خودش؛ کاربر غیر SuperAdmin بدون شعبه حالا ۴۰۳ می‌گیرد (قبلاً همه‌ی شعب را می‌دید) — قبل از merge با کاربران واقعی چک شود.
-**برای جلسه‌ی بعد:** ⚠️ WIP commit‌نشده روی main: `project-docs/migrations/db-hr-job-titles.sql` با محتوای `db-hr-attendance-integrity.sql` بازنویسی شده (احتمالاً اشتباه) — بدون تأیید کاربر commit نشود. ⚠️ `app/api/recipe-studio/auth/bootstrap` (WIP) احراز هویت ندارد. باقی یافته‌ها (double-submit تراکنش، `resumeUrl` آزاد در `/apply`، نبود منبع واحد migration، rate-limit درون‌حافظه) در `~/Claude-Projects/MASTER_ROADMAP.md`.
 
