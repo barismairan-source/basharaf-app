@@ -9,8 +9,8 @@
 
 | | |
 |---|---|
-| **نسخه** | **production روی VPS پارس‌پک** = release `20261103-140630-778286` از branch `feat/clock-temp-networks` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
-| **آخرین به‌روزرسانی** | 2026-11-03 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
+| **نسخه** | **production روی VPS پارس‌پک** = release `20261104-133518-920685` از branch `feat/staff-pay-shifts` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
+| **آخرین به‌روزرسانی** | 2026-11-04 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
 | **دیپلوی** | **`https://basharaf.me` روی VPS** (`94.184.45.140`؛ HTTPS تا 2027-01-31؛ `www` → 301؛ `vps.basharaf.me` هم سرو می‌شود). دیپلوی: `SITE=https://basharaf.me ops/server/deploy.sh` (push به main فقط CI تست، بدون لیارا). دیتابیس هنوز Postgres لیارا (آدرس عمومی). **outbox scheduler روشن روی VPS.** |
 | **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-11-04 — پنل پرسنل: ساختار حقوق و تب شیفت + جدول هفتگی و تنظیم حقوق برای مدیر — روی branch `feat/staff-pay-shifts`
+**چه شد:** خواسته‌ی علی: هر نفر عنوان و جزئیات حقوق (ثابت و اضافه‌کاری) و شیفت‌هایش را شیک ببیند و مدیر راحت تنظیم کند. **پنل:** بلوک ساختار حقوق در کارت «تا امروز» (`describePayStructure`) و تب جدید «شیفت» (`MyWeekShifts`، هفته از شنبه). **مدیر:** تب پیش‌فرض «جدول هفتگی» در `/hr/time` (`ShiftWeekGrid`، پیش‌فرض‌ها در `lib/hr/shiftPresets.ts`: صبح ۱۰–۱۷، شب ۱۷–۰۰:۳۰ از عکس برنامه‌ی قدیمی؛ ساعت دلخواه؛ کپی از هفته‌ی قبل) و فرم «تنظیم حقوق» روی هر نفر در `/hr/staff` (`hr.compensation.manage`). جدول `staff_pay_settings` (migration `db-staff-pay-settings.sql`، با تأیید علی اجرا شد) مقدم بر ریز کارکرد در `resolveBasis`؛ `PUT /api/hr/staff-pay` نرخ ساعتی را هم از امروز هماهنگ می‌کند. release `20261104-133518-920685`.
+**فایل‌ها:** `project-docs/migrations/db-staff-pay-settings.sql`، `lib/db/schema.ts`، `lib/auth/audit.ts`، `lib/staff-panel/{monthToDate,monthPayServer}.ts`، `lib/hr/shiftPresets.ts`، `app/api/hr/staff-pay/route.ts`، `app/(app)/hr/time/page.tsx`، `components/me/{MeClient,parts}.tsx`، `components/hr/{StaffOverview,ShiftWeekGrid}.tsx`، `tests/unit/staffMonthToDate.test.ts`.
+**Build:** tsc ✅ · unit 783/783 ✅ · lint ✅ · build ✅ · deploy ✅ (ری‌استارت فوری) · جدول هفتگی و فرم حقوق در مرورگر باز و مقدار فرم درست (بدون ذخیره).
+**ناتمام:** ذخیره‌ی فرم حقوق و افزودن شیفت روی production امتحان نشده (عمداً داده ساخته نشد). تب شیفت و کارت حقوق روی گوشی پرسنل دیده نشده. ساعت صبح/شب را علی تأیید کند. branch push نشده.
+**برای جلسه‌ی بعد:** تست سرتاسری در مغازه؛ IP ثابت و غیرفعال کردن ۶ IP قدیمی؛ پرونده‌های تکراری؛ رسیدهای مهر.
+
 ## 📓 2026-11-03 (۲) — دسترسی موقت ثبت حضور (IP برای افراد خاص با انقضا) + رفع قطعی دیپلوی — روی branch `feat/clock-temp-networks`
 **چه شد:** بررسی کل جریان پنل پرسنل با خواسته‌ی علی (لینک از پنل اصلی، فعال‌سازی هر جا، Face ID، صفحه‌ی صفاسیتی، حضور فقط با IP مغازه): همه ساخته شده بود؛ رمز اضافه نشد (به پیشنهاد ما). رفع شد: (۱) قطعی ۹۰ ثانیه‌ای هر دیپلوی (اتصال زنده‌ی داشبورد باز) → `TimeoutStopSec=10`؛ دیپلوی امروز بدون مکث ری‌استارت شد. (۲) `vps.basharaf.me` → 301 به `basharaf.me` و لینک شخصی با `NEXT_PUBLIC_APP_URL`. (۳) **قابلیت جدید به درخواست علی:** کنار IP ثابت مغازه، «دسترسی موقت»: یک IP برای چند نفر خاص (یا همه) و ۳۰ دقیقه تا ۲۴ ساعت؛ بعد از انقضا خودکار بی‌اثر و از فهرست حذف. migration `db-clock-temp-networks.sql` (دو ستون `employee_id`, `expires_at` + یکتایی فقط برای IP ثابت همگانی) با تأیید علی اجرا شد؛ `networkAppliesTo` در `rules.ts`، `matchBranchNetwork(ip, branch, employeeId)`، API و کارت «IP ثابت شعبه‌ها و دسترسی موقت» در «ورود با مودم». release `20261103-140630-778286`.
 **فایل‌ها:** `project-docs/migrations/db-clock-temp-networks.sql`، `lib/db/schema.ts`، `lib/attendance-clock/{rules,service}.ts`، `app/api/clock/{status,punch}/route.ts`، `app/api/hr/clock/networks/route.ts`، `components/hr/ClockView.tsx`، `tests/unit/clockTempNetwork.test.ts`، `ops/server/basharaf.service`.
@@ -115,11 +122,4 @@
 **Build:** محلی tsc ✅ · ۷۶۲ تست ✅ · lint ۰ خطا · build لیارا ✅ · build standalone ✅. روی سرور: build+نصب+health check ✅ (release `20261030-024633-aae6a6`)، `/login` ۲۰۰، API ۴۰۱، رم سرویس ~۲۰۰MB؛ اوج build: رم ۱.۸ از ۲ گیگ + swap ۶۰۰MB، load ۳.۷ روی ۱ هسته → ارتقا به ≥۲ هسته/۴ گیگ توصیه شد. meeez در تمام مدت سالم.
 **ناتمام:** `/etc/basharaf/env` و `build.env` خالی‌اند (سرویس فقط داخلی روی 127.0.0.1 است، بدون Nginx/دامنه). منتظر علی: تغییر رمز root، دسترسی عمومی دیتابیس لیارا، پرکردن `~/Claude-Projects/_work/basharaf-server.env`، رکورد A برای `vps.basharaf.me`.
 **برای جلسه‌ی بعد:** بعد از ورودی‌های علی: آپلود env → `setup-server.sh site vps.basharaf.me` → `SITE=https://vps.basharaf.me ops/server/deploy.sh` → چک‌لیست → سوئیچ DNS با تأیید. branch `ops/vps-deploy` push نشده.
-
-## 📓 2026-10-30 (۳) — ارتقای Next.js 14 → 15.5.28 و React 19 (رفع شکست deploy لیارا) — روی branch `chore/next-15-upgrade`
-**چه شد:** علت شکست همه‌ی deployهای لیارا از ۲۶ اکتبر پیدا شد (لاگ از کاربر): لیارا deploy با Next.js 14.2.35 را به‌خاطر آسیب‌پذیری‌های بحرانی (اجرای کد از راه دور بدون احراز هویت: CVE-2025-55182، CVE-2026-75604، GHSA-2464-fhr4-w9xw) رد می‌کند → production هنوز روی ۱۴.x و آسیب‌پذیر است. ارتقا به Next 15.5.28 (حداقل نسخه‌ی امن ۱۵.x) + React 19. codemod رسمی `next-async-request-api` روی ۸۳ فایل (`params`/`searchParams`/`cookies()`/`headers()` حالا await می‌شوند)؛ ۵ تابع کوکی async شدند؛ `instrumentation.ts` به `instrumentation-node.ts` تقسیم شد چون Next 15 آن را برای Edge هم compile می‌کند (web-push → http/https).
-**فایل‌ها:** `package.json`، `package-lock.json`، `instrumentation.ts`، `instrumentation-node.ts`، ۷۸ فایل زیر `app/`، `lib/auth/{session,customerSession,impersonation}.ts`، `lib/staff-panel/session.ts`، `lib/attendance-clock/service.ts`، `components/admin/ImpersonationBanner.tsx`، `app/pay/PayCard.tsx`. پوشه‌های snapshot قدیمی (`v0.9.*`) دست نخورد.
-**Build:** tsc ✅ (با `.next/types`) · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا (`npm ci --omit=dev`) ✅ · smoke test محلی build: صفحات عمومی ۲۰۰، redirect به login، API ۴۰۱، logout کوکی‌ها را پاک می‌کند ✅. تست با دیتابیس/کاربر واقعی انجام نشده.
-**ناتمام:** push نشده (منتظر تأیید کاربر). ⚠️ WIP استودیو رسپی (untracked) هنوز سبک Next 14 است — قبل از commit آن، همین codemod روی `app/studio`، `app/api/recipe-studio`، `lib/recipe-studio` اجرا شود. ⚠️ `feat/tx-idempotency` باید روی این branch rebase شود.
-**برای جلسه‌ی بعد:** بعد از deploy: چک‌لیست `~/Claude-Projects/CHECKLIST-merge-fix-branch.md` + ورود/خروج، پنل پرسنل `/me`، ثبت حضور `/clock`، پرداخت `/pay`.
 
