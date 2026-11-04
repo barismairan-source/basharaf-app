@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Tabs, TabPanel } from '@/components/ui';
 import { ShiftScheduleView } from '@/components/hr/ShiftScheduleView';
+import { ShiftWeekGrid } from '@/components/hr/ShiftWeekGrid';
 import { AttendanceView } from '@/components/hr/AttendanceView';
 import { ApprovalsView } from '@/components/hr/ApprovalsView';
 import { TimesheetView } from '@/components/hr/TimesheetView';
 import { ClockView } from '@/components/hr/ClockView';
 
-type TimeTab = 'schedule' | 'attendance' | 'clock' | 'approvals' | 'timesheet';
-const VALID_TABS: TimeTab[] = ['schedule', 'attendance', 'clock', 'approvals', 'timesheet'];
+type TimeTab = 'week' | 'schedule' | 'attendance' | 'clock' | 'approvals' | 'timesheet';
+const VALID_TABS: TimeTab[] = ['week', 'schedule', 'attendance', 'clock', 'approvals', 'timesheet'];
 
 /**
  * «زمان و حضور» — فضای کاری یکپارچه‌ی برنامه شیفت + ثبت حضور + تأییدها +
@@ -23,7 +24,7 @@ export default function HrTimePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedTab = searchParams.get('tab') as TimeTab | null;
-  const initialTab: TimeTab = requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'schedule';
+  const initialTab: TimeTab = requestedTab && VALID_TABS.includes(requestedTab) ? requestedTab : 'week';
   const [tab, setTab] = useState<TimeTab>(initialTab);
 
   function handleChange(next: TimeTab) {
@@ -36,12 +37,16 @@ export default function HrTimePage() {
       <div className="max-w-5xl mx-auto space-y-4">
         <Tabs value={tab} onChange={handleChange} aria-label="زمان و حضور"
           items={[
+            { value: 'week', label: 'جدول هفتگی' },
             { value: 'schedule', label: 'برنامه شیفت' },
             { value: 'attendance', label: 'ثبت حضور' },
             { value: 'clock', label: 'ورود با مودم' },
             { value: 'approvals', label: 'تأییدها' },
             { value: 'timesheet', label: 'گزارش کارکرد' },
           ]} />
+        <TabPanel value="week" active={tab === 'week'}>
+          <ShiftWeekGrid />
+        </TabPanel>
         <TabPanel value="schedule" active={tab === 'schedule'}>
           <ShiftScheduleView />
         </TabPanel>

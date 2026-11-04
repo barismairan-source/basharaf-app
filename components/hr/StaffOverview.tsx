@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, ChevronLeft, Users, Search, Link2 } from 'lucide-react';
-import { Button, Card, CardBody, CardHeader, Chip, Empty, Input, InlineNotice, Select, Sheet } from '@/components/ui';
+import { ChevronRight, ChevronLeft, Users, Search, Link2, Settings2 } from 'lucide-react';
+import { Button, Card, CardBody, CardHeader, Chip, Empty, Field as FormField, Input, InlineNotice, Select, Sheet, Switch } from '@/components/ui';
 import { useHrBranchFilter } from '@/lib/hr/branchFilterContext';
+import { useAppStore } from '@/store';
+import { canDo } from '@/lib/auth/permissions';
 import { getTodayJalali, formatTehranTime } from '@/lib/jalali';
 import { fmt, toFa } from '@/lib/utils';
 import { formatMinutes, periodLabel, shiftPeriod, toLatinDigits } from '@/lib/staff-panel/pure';
@@ -40,6 +42,10 @@ export function StaffOverview() {
   const [section, setSection] = useState('');
   const [open, setOpen] = useState<{ name: string; s: StmtDetail } | null>(null);
   const [paid, setPaid] = useState<{ name: string; items: PaymentItem[] } | null>(null);
+  const user = useAppStore((st) => st.user);
+  const canManagePay = canDo(user, 'hr.compensation.manage');
+  const [payFor, setPayFor] = useState<Person | null>(null);
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
     setData(null); setError(null);
@@ -47,7 +53,7 @@ export function StaffOverview() {
     fetch(`/api/hr/staff-overview?${qs}`, { credentials: 'include', cache: 'no-store' })
       .then(async (r) => { const b = await r.json(); if (!r.ok) throw new Error(b?.error ?? 'خطا'); setData(b); })
       .catch((e) => setError(e.message));
-  }, [period, branchId]);
+  }, [period, branchId, reload]);
 
   const sections = useMemo(() => [...new Set((data?.people ?? []).map((p) => p.section).filter(Boolean))] as string[], [data]);
   const shown = useMemo(() => (data?.people ?? []).filter((p) =>
@@ -135,6 +141,11 @@ export function StaffOverview() {
                       )}
                     </div>
                   )}
+                  {canManagePay && (
+                    <div className="flex justify-end">
+                      <Button size="sm" variant="ghost" icon={Settings2} onClick={() => setPayFor(p)}>تنظیم حقوق</Button>
+                    </div>
+                  )}
                   {data.canSeePay && p.payments && p.payments.count > 0 && (
                     <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
                       <span className="text-[12.5px] text-muted">
@@ -162,6 +173,10 @@ export function StaffOverview() {
         )}
       </Sheet>
 
+      <Sheet open={!!payFor} onClose={() => setPayFor(null)} title={payFor ? `تنظیم حقوق ${payFor.fullName}` : undefined} maxHeight="92vh">
+        {payFor && <PaySettingsForm person={payFor} onDone={() => { setPayFor(null); setReload((n) => n + 1); }} />}
+      </Sheet>
+
       <Sheet open={!!paid} onClose={() => setPaid(null)} title={paid ? `واریزی‌های ${paid.name}` : undefined} maxHeight="92vh">
         {paid && (
           <div className="safasity-root rounded-xl px-3 py-3">
@@ -169,6 +184,114 @@ export function StaffOverview() {
           </div>
         )}
       </Sheet>
+    </div>
+  );
+}
+
+/** فرم تنظیم حقوق یک نفر: همان چیزی که خودش در پنلش می‌بیند. */
+function PaySettingsForm({ person, onDone }: { person: Person; onDone: () => void }) {
+  const showToast = useAppStore((st) => st.showToast);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [payTitle, setPayTitle] = useState('');
+  const [model, setModel] = useState<'hourly' | 'daily'>(person.section === 'سالن' ? 'daily' : 'hourly');
+  const [salary, setSalary] = useState('');
+  const [standardHours, setStandardHours] = useState('208');
+  const [multiplier, setMultiplier] = useState('1.4');
+  const [baseDays, setBaseDays] = useState('24');
+  const [bonusEvery, setBonusEvery] = useState('6');
+  const [fullSalary, setFullSalary] = useState(false);
+
+  useEffect(() => {
+    fetch(`/api/hr/staff-pay?employeeId=${person.id}`, { credentials: 'include', cache: 'no-store' })
+      .then(async (r) => {
+        const b = await r.json();
+        if (!r.ok) throw new Error(b?.error ?? 'خطا');
+        setPayTitle(b.payTitle ?? '');
+        if (b.basis) {
+          setModel(b.basis.model); setSalary(String(b.basis.agreedSalary));
+          if (b.basis.standardHours) setStandardHours(String(b.basis.standardHours));
+          if (b.basis.overtimeMultiplier) setMultiplier(String(b.basis.overtimeMultiplier));
+          if (b.basis.baseDays) setBaseDays(String(b.basis.baseDays));
+          if (b.basis.bonusEveryShifts) setBonusEvery(String(b.basis.bonusEveryShifts));
+          setFullSalary(!!b.basis.fullSalary);
+        }
+      })
+      .catch((e) => setError(e.message))
+      .finally(() => setLoaded(true));
+  }, [person.id]);
+
+  const salaryN = Number(salary.replace(/[,\s]/g, ''));
+  const hourly = model === 'hourly';
+  const rate = hourly && salaryN > 0 && Number(standardHours) > 0 ? Math.round(salaryN / Number(standardHours)) : 0;
+  const daily = !hourly && salaryN > 0 && Number(baseDays) > 0 ? Math.round(salaryN / Number(baseDays)) : 0;
+
+  async function save() {
+    setBusy(true); setError(null);
+    try {
+      const r = await fetch('/api/hr/staff-pay', {
+        method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: person.id, payTitle: payTitle || null, model, agreedSalary: salaryN,
+          standardHours: Number(standardHours), overtimeMultiplier: Number(multiplier),
+          baseDays: Number(baseDays), bonusEveryShifts: Number(bonusEvery), fullSalary,
+        }),
+      });
+      const b = await r.json();
+      if (!r.ok) throw new Error(b?.error ?? 'خطا');
+      showToast('حقوق ذخیره شد', 'success');
+      onDone();
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+
+  if (!loaded) return <p className="text-[13px] text-muted">در حال بارگذاری…</p>;
+  return (
+    <div className="space-y-3 pb-2">
+      {error && <InlineNotice tone="danger" onDismiss={() => setError(null)}>{error}</InlineNotice>}
+      <FormField label="عنوان حقوق (اختیاری)" hint="در پنل خودش دیده می‌شود">
+        <Input value={payTitle} onChange={(e) => setPayTitle(e.target.value)} placeholder="مثلاً حقوق پایه‌ی آشپزخانه" />
+      </FormField>
+      <div className="grid grid-cols-2 gap-3">
+        <FormField label="روش محاسبه">
+          <Select value={model} onChange={(e) => setModel(e.target.value as 'hourly' | 'daily')}>
+            <option value="hourly">ساعتی (حقوق ثابت + اضافه‌کاری)</option>
+            <option value="daily">روزانه</option>
+          </Select>
+        </FormField>
+        <FormField label={hourly ? 'حقوق ثابت ماهانه (تومان)' : 'حقوق توافقی ماهانه (تومان)'}>
+          <Input dir="ltr" inputMode="numeric" value={salary} onChange={(e) => setSalary(e.target.value)} placeholder="30000000" />
+        </FormField>
+      </div>
+      {hourly ? (
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="ساعت مبنای ماه"><Input dir="ltr" inputMode="numeric" value={standardHours} onChange={(e) => setStandardHours(e.target.value)} /></FormField>
+          <FormField label="ضریب اضافه‌کاری"><Input dir="ltr" inputMode="decimal" value={multiplier} onChange={(e) => setMultiplier(e.target.value)} /></FormField>
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="روز مبنای ماه"><Input dir="ltr" inputMode="numeric" value={baseDays} onChange={(e) => setBaseDays(e.target.value)} /></FormField>
+            <FormField label="هر چند شیفت، یک روز تشویقی"><Input dir="ltr" inputMode="numeric" value={bonusEvery} onChange={(e) => setBonusEvery(e.target.value)} /></FormField>
+          </div>
+          <div className="flex items-center gap-3 text-[13px]">
+            <Switch checked={fullSalary} onCheckedChange={setFullSalary} aria-label="حقوق کامل" />
+            <span>حقوق کامل ماه، بدون توجه به روز حضور</span>
+          </div>
+        </>
+      )}
+      {salaryN > 0 && (
+        <div className="rounded-lg border border-border bg-bg px-3 py-2 text-[12.5px] space-y-0.5">
+          {hourly ? (
+            <>
+              <p>نرخ هر ساعت: <b>{fmt(rate)}</b> تومان</p>
+              <p>هر ساعت اضافه‌کاری: <b>{fmt(Math.round(rate * Number(multiplier)))}</b> تومان</p>
+            </>
+          ) : fullSalary ? <p>هر ماه <b>{fmt(salaryN)}</b> تومان</p> : <p>مبلغ هر روز: <b>{fmt(daily)}</b> تومان</p>}
+        </div>
+      )}
+      <p className="text-[11.5px] text-muted">از امروز در پنل این نفر اعمال می‌شود. ریز کارکرد ماه‌های گذشته، فیش‌ها و حسابداری عوض نمی‌شوند.</p>
+      <Button variant="primary" className="w-full" disabled={busy || !(salaryN > 0)} onClick={save}>{busy ? 'در حال ذخیره…' : 'ذخیره'}</Button>
     </div>
   );
 }

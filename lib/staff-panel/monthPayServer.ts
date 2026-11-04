@@ -3,7 +3,7 @@ import { db, schema } from '@/lib/db/client';
 import { jalaliMonthRange } from '@/lib/jalali';
 import { DEFAULT_ROLES } from '@/types/payroll';
 import { sectionOfRole } from './pure';
-import { computeMonthToDate, resolveBasis, type MonthToDate } from './monthToDate';
+import { computeMonthToDate, resolveBasis, settingsToBasis, type MonthToDate } from './monthToDate';
 import type { StatementBasis } from './statements';
 
 /**
@@ -14,9 +14,10 @@ export async function loadMonthToDate(employeeId: string, period: string): Promi
   const range = jalaliMonthRange(period);
   if (!range) return null;
   const today = new Date(new Date().toISOString().slice(0, 10) + 'T00:00:00Z');
-  const [emp, [stmt], [rate], rows] = await Promise.all([
+  const [emp, [settings], [stmt], [rate], rows] = await Promise.all([
     db.select({ role: schema.employees.role, baseMonthlySalary: schema.employees.baseMonthlySalary })
       .from(schema.employees).where(eq(schema.employees.id, employeeId)).limit(1).then((r) => r[0]),
+    db.select().from(schema.staffPaySettings).where(eq(schema.staffPaySettings.employeeId, employeeId)).limit(1),
     db.select({ basis: schema.staffStatements.basis }).from(schema.staffStatements)
       .where(and(eq(schema.staffStatements.employeeId, employeeId), lte(schema.staffStatements.periodYearMonth, period)))
       .orderBy(desc(schema.staffStatements.periodYearMonth)).limit(1),
@@ -38,11 +39,12 @@ export async function loadMonthToDate(employeeId: string, period: string): Promi
   ]);
   if (!emp) return null;
   const basis = resolveBasis({
+    settingsBasis: settings ? settingsToBasis(settings) : null,
     latestStatementBasis: (stmt?.basis as StatementBasis | undefined) ?? null,
     section: sectionOfRole(emp.role, DEFAULT_ROLES.find((r) => r.value === emp.role)?.label ?? emp.role),
     baseMonthlySalary: Number(emp.baseMonthlySalary) || null,
     hourlyRate: rate ? Number(rate.hourlyRate) : null,
   });
   if (!basis) return null;
-  return computeMonthToDate(basis, rows.map((r) => ({ ...r, workDate: r.workDate.toISOString().slice(0, 10) })));
+  return computeMonthToDate(basis, rows.map((r) => ({ ...r, workDate: r.workDate.toISOString().slice(0, 10) })), settings?.payTitle ?? null);
 }

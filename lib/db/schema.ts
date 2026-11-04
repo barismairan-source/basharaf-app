@@ -1517,6 +1517,22 @@ export const staffPayments = pgTable(
 );
 export type StaffPayment = typeof staffPayments.$inferSelect;
 
+// ─── staff_pay_settings — تنظیم حقوق هر نفر از صفحه‌ی مدیر؛ مبنای «این ماه تا امروز» در پنل پرسنل ──
+export const staffPaySettings = pgTable('staff_pay_settings', {
+  employeeId: uuid('employee_id').primaryKey().references(() => employees.id, { onDelete: 'cascade' }),
+  payTitle: text('pay_title'),
+  model: text('model').notNull(), // 'hourly' | 'daily'
+  agreedSalary: bigint('agreed_salary', { mode: 'number' }).notNull(),
+  standardHours: integer('standard_hours').notNull().default(208),
+  overtimeMultiplier: numeric('overtime_multiplier', { precision: 4, scale: 2 }).notNull().default('1.40'),
+  baseDays: integer('base_days').notNull().default(24),
+  bonusEveryShifts: integer('bonus_every_shifts').notNull().default(6),
+  fullSalary: boolean('full_salary').notNull().default(false),
+  updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+export type StaffPaySetting = typeof staffPaySettings.$inferSelect;
+
 export type BranchAttendanceNetwork = typeof branchAttendanceNetworks.$inferSelect;
 export type AttendanceClockDevice = typeof attendanceClockDevices.$inferSelect;
 export type AttendanceClockEvent = typeof attendanceClockEvents.$inferSelect;

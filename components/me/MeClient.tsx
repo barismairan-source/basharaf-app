@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { ChevronRight, ChevronLeft, Lock, ScanFace, Timer, CalendarClock } from 'lucide-react';
 import { startAuthentication, startRegistration, browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { Button, Chip, InlineNotice } from '@/components/ui';
-import { dateToJalali, getTodayJalali, formatTehranTime } from '@/lib/jalali';
+import { dateToJalali, getTodayJalali, formatTehranTime, todayIsoTehran } from '@/lib/jalali';
 import { fmt, toFa } from '@/lib/utils';
 import { optionsStillFresh } from '@/lib/attendance-clock/client-utils';
 import { formatMinutes, periodLabel, shiftPeriod, toLatinDigits } from '@/lib/staff-panel/pure';
@@ -14,7 +14,7 @@ import { PAYMENT_KIND_LABEL, summarizePayments, type PaymentItem } from '@/lib/s
 import type { MonthToDate } from '@/lib/staff-panel/monthToDate';
 import { BottomNav, Doodle, EmptyDoodle, HoursBar, SF, SectionTitle, SfCard, Stat, WeekDays, WeekLegend } from './parts';
 
-type Tab = 'home' | 'attendance' | 'pay' | 'profile';
+type Tab = 'home' | 'shifts' | 'attendance' | 'pay' | 'profile';
 
 interface AttEntry { id: string; workDate: string; clockIn: string | null; clockOut: string | null; workedMinutes: number; overtimeMinutes: number; overtimeApproved: boolean; attendanceType: string; status: 'draft' | 'confirmed' | 'locked' }
 interface AttSummary { confirmedMinutes: number; pendingMinutes: number; days: number }
@@ -30,6 +30,7 @@ const TYPE_LABEL: Record<string, string> = { present: 'حضور', absent: 'غی�
 const INSURANCE: Record<string, string> = { insured: 'بیمه‌شده', uninsured: 'بدون بیمه' };
 const NAV = [
   { value: 'home', label: 'خانه', doodle: 'table' },
+  { value: 'shifts', label: 'شیفت', doodle: 'cutlery' },
   { value: 'attendance', label: 'حضور', doodle: 'notebook' },
   { value: 'pay', label: 'حقوق', doodle: 'sieve' },
   { value: 'profile', label: 'من', doodle: 'chair' },
@@ -300,6 +301,8 @@ export function MeClient() {
         </div>
       )}
 
+      {tab === 'shifts' && <MyWeekShifts />}
+
       {tab === 'attendance' && (
         <div className="space-y-3">
           <SectionTitle>حضور و غیاب</SectionTitle>
@@ -427,6 +430,66 @@ function PayRow({ title, sub, amount, onClick }: { title: string; sub: string; a
   );
 }
 
+/** شنبه‌ی هفته‌ی یک تاریخ ISO (هفته‌ی ایرانی از شنبه شروع می‌شود). */
+export function weekStartIso(iso: string): string {
+  const d = new Date(iso + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 1) % 7));
+  return d.toISOString().slice(0, 10);
+}
+export function addDaysIso(iso: string, n: number): string {
+  return new Date(Date.parse(iso + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+}
+
+/** برنامه‌ی هفته: هر روز با شیفت‌هایش، با جابه‌جایی بین هفته‌ها. */
+function MyWeekShifts() {
+  const today = todayIsoTehran();
+  const [start, setStart] = useState(() => weekStartIso(today));
+  const [shifts, setShifts] = useState<Shift[] | null>(null);
+  const end = addDaysIso(start, 6);
+  useEffect(() => {
+    setShifts(null);
+    call<{ shifts: Shift[] }>(`/api/me/shifts?from=${start}&to=${end}`).then((r) => setShifts(r.ok ? r.body.shifts : []));
+  }, [start, end]);
+  const days = Array.from({ length: 7 }, (_, i) => addDaysIso(start, i));
+  const totalMinutes = (shifts ?? []).reduce((a, s) => a + s.plannedMinutes, 0);
+  return (
+    <div className="space-y-3">
+      <SectionTitle>برنامه‌ی من</SectionTitle>
+      <SfCard className="flex items-center justify-between !py-2.5">
+        <Button size="sm" variant="ghost" icon={ChevronRight} aria-label="هفته‌ی قبل" onClick={() => setStart(addDaysIso(start, -7))} />
+        <div className="text-center">
+          <p className="sf-hand text-[16px]" style={{ color: SF.navy }}>{start === weekStartIso(today) ? 'این هفته' : `${toFa(isoToJalali(start))}`}</p>
+          <p className="text-[11.5px]" style={{ color: '#5E6676' }}>{shifts ? `${faMinutes(totalMinutes)} برنامه` : ' '}</p>
+        </div>
+        <Button size="sm" variant="ghost" icon={ChevronLeft} aria-label="هفته‌ی بعد" onClick={() => setStart(addDaysIso(start, 7))} />
+      </SfCard>
+      {shifts === null ? <p className="text-center text-[13px] text-muted">در حال بارگذاری…</p> : (
+        <ul className="space-y-1.5">
+          {days.map((d) => {
+            const mine = shifts.filter((s) => s.workDate === d);
+            const isToday = d === today;
+            return (
+              <li key={d}>
+                <SfCard className={`flex items-center justify-between gap-3 !py-2.5 ${isToday ? 'ring-2 ring-[#B38B59]' : ''}`}>
+                  <div>
+                    <p className="text-[13.5px] font-medium" style={{ color: SF.ink }}>{weekday(d)}{isToday ? ' (امروز)' : ''}</p>
+                    <p className="text-[11.5px]" style={{ color: '#5E6676' }}>{toFa(isoToJalali(d))}</p>
+                  </div>
+                  {mine.length === 0 ? <span className="text-[12.5px]" style={{ color: '#9AA0AC' }}>آف</span> : (
+                    <div className="space-y-0.5 text-end">
+                      {mine.map((s) => <p key={s.id} className="text-[13.5px]" style={{ color: SF.navy }}>{toFa(s.startTime)} تا {toFa(s.endTime)}{s.crossesMidnight ? ' (فردا)' : ''}</p>)}
+                    </div>
+                  )}
+                </SfCard>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /**
  * «این ماه تا امروز»: ساعت/روز کار و حقوقی که تا همین حالا به آن رسیده‌اید، با همان روش حقوق خودتان.
  * آشپزخانه: حقوق ثابت ماه و اضافه‌کاری (بالای ۲۰۸ ساعت) جدا، چون جدا واریز می‌شوند. سالن: روزانه.
@@ -447,6 +510,15 @@ export function MonthToDateCard({ m, period }: { m: MonthToDate | null; period: 
         <p className="sf-hand text-[17px]" style={{ color: SF.navy }}>{toFa(periodLabel(period))} — تا امروز</p>
         <Chip>{hourly ? 'ساعتی' : 'روزانه'}</Chip>
       </div>
+      {m.payTitle && <p className="text-[13px] font-medium" style={{ color: SF.goldText }}>{m.payTitle}</p>}
+      <dl className="space-y-1.5 rounded-xl px-3 py-2.5 text-[12.5px]" style={{ background: SF.cream }}>
+        {m.structure.map((r) => (
+          <div key={r.label} className="flex items-baseline justify-between gap-3">
+            <dt style={{ color: '#5E6676' }}>{toFa(r.label)}</dt>
+            <dd className="text-end font-medium" style={{ color: SF.ink }}>{toFa(r.value)}</dd>
+          </div>
+        ))}
+      </dl>
       {hourly ? (
         <div className="space-y-1.5">
           <div className="flex justify-between text-[13px]"><span>ساعت کار تأییدشده</span><span className="font-semibold">{toFa(hours(c.minutes))} از {toFa(standard)} ساعت</span></div>

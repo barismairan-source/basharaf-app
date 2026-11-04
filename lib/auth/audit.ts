@@ -79,6 +79,7 @@ export type AuditAction =
   | 'attendance.settings.updated'
   | 'attendance.faceIdExempt.changed'
   | 'staff.panel.unlocked'
+  | 'staff.pay.updated'
   | 'staff.payslip.viewed';
 
 export async function audit(params: {

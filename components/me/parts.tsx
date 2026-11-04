@@ -135,7 +135,7 @@ export interface NavItem<T extends string> { value: T; label: string; doodle: Do
 export function BottomNav<T extends string>({ value, onChange, items }: { value: T; onChange: (v: T) => void; items: ReadonlyArray<NavItem<T>> }) {
   return (
     <nav aria-label="بخش‌های پنل من" className="fixed inset-x-0 bottom-0 z-20 border-t" style={{ background: 'rgba(251,249,244,0.96)', borderColor: SF.line, paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      <ul className="mx-auto grid max-w-md grid-cols-4">
+      <ul className="mx-auto grid max-w-md" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` }}>
         {items.map((it) => {
           const active = it.value === value;
           return (

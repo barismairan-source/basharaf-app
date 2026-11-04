@@ -27,9 +27,15 @@ export interface MonthToDate {
   model: StatementModel;
   basis: StatementBasis;
   basisText: string[];
+  /** ساختار حقوق: عنوان‌ها و مبلغ‌های ثابت (حقوق ثابت، نرخ ساعت، نرخ اضافه‌کاری، …) */
+  structure: PayStructureRow[];
+  /** عنوانی که مدیر برای حقوق این نفر گذاشته (اختیاری) */
+  payTitle: string | null;
   confirmed: MonthPart;
   withPending: MonthPart;
 }
+
+export interface PayStructureRow { label: string; value: string }
 
 const WORKED = new Set(['present', 'holiday_work', 'off_day_work']);
 
@@ -50,26 +56,67 @@ function part(basis: StatementBasis, minutes: number, days: number): MonthPart {
   return { minutes, days, total: s.total, lines: s.lines, paidDays: s.paidDays };
 }
 
-export function computeMonthToDate(basis: StatementBasis, rows: MonthRow[]): MonthToDate {
+/** عنوان‌ها و عددهای ثابت حقوق یک نفر، برای نمایش به خودش. مبلغ‌ها به تومان. */
+export function describePayStructure(b: StatementBasis): PayStructureRow[] {
+  const t = (n: number) => `${Math.round(n).toLocaleString('en-US')} تومان`;
+  if (b.model === 'hourly') {
+    const standard = b.standardHours ?? STANDARD_MONTH_HOURS;
+    const mult = b.overtimeMultiplier ?? OVERTIME_MULTIPLIER;
+    const rate = b.agreedSalary / standard;
+    return [
+      { label: 'حقوق ثابت ماهانه', value: t(b.agreedSalary) },
+      { label: 'ساعت مبنای ماه', value: `${standard} ساعت` },
+      { label: 'نرخ هر ساعت', value: t(rate) },
+      { label: `اضافه‌کاری (هر ساعت بالای ${standard})`, value: `${t(rate * mult)} (${mult.toLocaleString('en-US')} برابر)` },
+    ];
+  }
+  const base = b.baseDays ?? HALL_BASE_DAYS;
+  if (b.fullSalary) return [{ label: 'حقوق ثابت ماهانه', value: t(b.agreedSalary) }, { label: 'روش', value: 'حقوق کامل ماه' }];
+  return [
+    { label: 'حقوق توافقی ماهانه', value: t(b.agreedSalary) },
+    { label: 'مبلغ هر روز', value: `${t(b.agreedSalary / base)} (حقوق ÷ ${base})` },
+    { label: 'روز تشویقی', value: `هر ${b.bonusEveryShifts ?? HALL_BONUS_EVERY_SHIFTS} شیفت، یک روز` },
+  ];
+}
+
+/** نرخ ساعتی که برای تبدیل ورود/خروج به حضور لازم است: ساعتی حقوق÷ساعت مبنا، روزانه حقوق÷(روز مبنا×۸). */
+export function hourlyRateForBasis(b: StatementBasis): number {
+  const hours = b.model === 'hourly' ? (b.standardHours ?? STANDARD_MONTH_HOURS) : (b.baseDays ?? HALL_BASE_DAYS) * 8;
+  return Math.round(b.agreedSalary / hours);
+}
+
+export function settingsToBasis(s: {
+  model: string; agreedSalary: number; standardHours: number; overtimeMultiplier: number | string;
+  baseDays: number; bonusEveryShifts: number; fullSalary: boolean;
+}): StatementBasis {
+  if (s.model === 'daily') {
+    return { model: 'daily', agreedSalary: s.agreedSalary, baseDays: s.baseDays, dailyRate: Math.round(s.agreedSalary / s.baseDays), bonusEveryShifts: s.bonusEveryShifts, rounding: 1000, ...(s.fullSalary ? { fullSalary: true } : {}) };
+  }
+  return { model: 'hourly', agreedSalary: s.agreedSalary, standardHours: s.standardHours, hourlyRate: Math.round(s.agreedSalary / s.standardHours), overtimeMultiplier: Number(s.overtimeMultiplier), rounding: 1000 };
+}
+
+export function computeMonthToDate(basis: StatementBasis, rows: MonthRow[], payTitle: string | null = null): MonthToDate {
   const confirmed = tally(rows.filter((r) => r.status !== 'draft'));
   const all = tally(rows);
   return {
-    model: basis.model, basis, basisText: describeBasis(basis),
+    model: basis.model, basis, basisText: describeBasis(basis), structure: describePayStructure(basis), payTitle,
     confirmed: part(basis, confirmed.minutes, confirmed.days),
     withPending: part(basis, all.minutes, all.days),
   };
 }
 
 /**
- * مبنای حقوق یک نفر: آخرین ریز کارکرد واردشده (همان روش و حقوق توافقی اکسل)، وگرنه از پرونده‌ی خودش
+ * مبنای حقوق یک نفر: تنظیم مدیر، وگرنه آخرین ریز کارکرد واردشده (همان روش و حقوق توافقی اکسل)، وگرنه از پرونده‌ی خودش
  * (آشپزخانه → ساعتی با حقوق ماهانه یا نرخ × ۲۰۸؛ سالن → روزانه). بدون حقوق → null.
  */
 export function resolveBasis(input: {
+  settingsBasis?: StatementBasis | null;
   latestStatementBasis?: StatementBasis | null;
   section: string | null;
   baseMonthlySalary?: number | null;
   hourlyRate?: number | null;
 }): StatementBasis | null {
+  if (input.settingsBasis) return input.settingsBasis;
   const b = input.latestStatementBasis;
   if (b && b.agreedSalary > 0) return b;
   const salary = input.baseMonthlySalary && input.baseMonthlySalary > 0 ? input.baseMonthlySalary
