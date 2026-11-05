@@ -70,6 +70,7 @@
 **فایل‌ها:** `project-docs/migrations/db-staff-pay-settings.sql`، `lib/db/schema.ts`، `lib/auth/audit.ts`، `lib/staff-panel/{monthToDate,monthPayServer}.ts`، `lib/hr/shiftPresets.ts`، `app/api/hr/staff-pay/route.ts`، `app/(app)/hr/time/page.tsx`، `components/me/{MeClient,parts}.tsx`، `components/hr/{StaffOverview,ShiftWeekGrid}.tsx`، `tests/unit/staffMonthToDate.test.ts`.
 **Build:** tsc ✅ · unit 783/783 ✅ · lint ✅ · build ✅ · deploy ✅ (ری‌استارت فوری) · جدول هفتگی و فرم حقوق در مرورگر باز و مقدار فرم درست (بدون ذخیره).
 **ناتمام:** ذخیره‌ی فرم حقوق و افزودن شیفت روی production امتحان نشده (عمداً داده ساخته نشد). تب شیفت و کارت حقوق روی گوشی پرسنل دیده نشده. ساعت صبح/شب را علی تأیید کند. branch push نشده.
+**ادامه (2026-11-05):** صفحه‌ی استاتیک سفارش‌گیر پرسنل به درخواست علی روی basharaf.me نصب شد: فایل‌ها در `/srv/basharaf-order-app/`، تنظیم nginx در `/etc/nginx/snippets/basharaf-order-app.conf` (include در بلوک basharaf.me؛ پشتیبان `/root/basharaf-nginx.before-order-app`). **آدرس عمداً اینجا نوشته نشده** چون این repo عمومی است؛ آدرس را فقط از همان فایل روی سرور بخوانید. برای تغییر منو: فایل‌ها را در همان پوشه عوض کن و VERSION در sw.js را بالا ببر؛ به دیپلوی برنامه ربطی ندارد. **هشدار: repo عمومی است** و این ژورنال نام پرسنل و مبلغ‌های حقوق دارد — منتظر تصمیم علی برای خصوصی کردن.
 **برای جلسه‌ی بعد:** تست سرتاسری در مغازه؛ IP ثابت و غیرفعال کردن ۶ IP قدیمی؛ پرونده‌های تکراری؛ رسیدهای مهر.
 
 ## 📓 2026-11-03 (۲) — دسترسی موقت ثبت حضور (IP برای افراد خاص با انقضا) + رفع قطعی دیپلوی — روی branch `feat/clock-temp-networks`
