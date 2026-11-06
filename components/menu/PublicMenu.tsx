@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { LanguageToggle } from '@/components/menu/LanguageToggle';
 import { MenuSection } from '@/components/menu/MenuSection';
+import { MenuShare } from '@/components/menu/MenuShare';
 import { useLanguage } from '@/lib/menu/i18n';
 import { DEFAULT_FA_FONT, DEFAULT_EN_FONT } from '@/lib/menu/fonts';
 import type { MenuSection as MenuSectionType, MenuSettings } from '@/types';
@@ -51,6 +52,7 @@ export function PublicMenu({ channel }: { channel: MenuChannel }) {
   return (
     <div className={['menu-root', mounted ? 'animate-fade-in' : ''].join(' ')}>
       <LanguageToggle />
+      <MenuShare />
       <div className="mx-auto max-w-2xl px-6 pb-24 pt-20 sm:px-8 sm:pt-28">
         <Link href="/safasity" aria-label="صفاسیتی" className="mx-auto mb-10 block w-fit">
           <Image src="/safasity/wordmark.png" alt="صفاسیتی" width={150} height={52} priority className="h-auto w-[150px]" />

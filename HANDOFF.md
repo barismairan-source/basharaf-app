@@ -10,7 +10,7 @@
 | | |
 |---|---|
 | **نسخه** | **production روی VPS پارس‌پک** = release `20261104-133518-920685` از branch `feat/staff-pay-shifts` (push نشده). اپ لیارا Stop؛ فقط دیتابیس لیارا مانده. |
-| **آخرین به‌روزرسانی** | 2026-11-04 (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
+| **آخرین به‌روزرسانی** | 2026-11-06؛ آیکون QR منو commit شده ولی **هنوز دیپلوی نشده** چون SSH از اینترنت فعلی مک وصل نمی‌شود (مسیر کاری: `~/Claude-Projects/01-Active/basharaf-app` + worktree `~/Claude-Projects/_work/basharaf-next15`) |
 | **Build/tsc** | روی `chore/next-15-upgrade`: tsc ✅ · unit 762/762 ✅ · lint ۰ خطا · build ✅ · build شبیه لیارا ✅ |
 | **دیپلوی** | **`https://basharaf.me` روی VPS** (`94.184.45.140`؛ HTTPS تا 2027-01-31؛ `www` → 301؛ `vps.basharaf.me` هم سرو می‌شود). دیپلوی: `SITE=https://basharaf.me ops/server/deploy.sh` (push به main فقط CI تست، بدون لیارا). دیتابیس هنوز Postgres لیارا (آدرس عمومی). **outbox scheduler روشن روی VPS.** |
 | **کار نیمه‌تمام (in-progress)** | ۱) استودیو رسپی (WIP commit‌نشده؛ ۱۰ صفحه placeholder، migrationها اجرا نشده، bootstrap بدون auth). |
@@ -65,6 +65,13 @@
 
 ## 📓 ژورنال نشست‌ها (جدیدترین بالا — حداکثر ۷ ورودی)
 
+## 📓 2026-11-06 — آیکون کوچک QR و اشتراک‌گذاری بالای منوی عمومی — branch `feat/menu-share-qr`
+**چه شد:** خواسته‌ی علی: آیکون خیلی کوچک بالای منو که کد QR منو را نشان بدهد. `MenuShare` روبه‌روی دکمه‌ی زبان اضافه شد: پنجره با QR آدرس همان صفحه (عمومی یا بیرون‌بر)، لینک، «کپی لینک» و «ارسال» (فقط جایی که مرورگر پشتیبانی کند). کتابخانه‌ی qrcode فقط موقع باز شدن پنجره بار می‌شود. علی گزارش داد «منو باز نمی‌شود»؛ منوی عمومی، بیرون‌بر و `/menu` در تست من باز شدند و متن چنین پیامی در کد نیست؛ علت پیدا نشد و علی هنوز نگفته کدام منو و چه می‌بیند.
+**فایل‌ها:** `components/menu/MenuShare.tsx`، `components/menu/PublicMenu.tsx`.
+**Build:** tsc ✅ · unit 783/783 ✅ · lint ✅ · build ✅ · QR و بستن با Esc در نسخه‌ی محلی بدون دیتابیس ✅.
+**ناتمام:** **دیپلوی نشده.** از اینترنت فعلی مک، IP مستقیم سرور (`94.184.45.140`) روی پورت‌های ۲۲، ۸۰ و ۴۴۳ جواب نمی‌دهد ولی سایت از CDN باز است. اسکن با گوشی واقعی، «ارسال»، «کپی لینک» و حالت انگلیسی پنجره امتحان نشده.
+**برای جلسه‌ی بعد:** وقتی SSH وصل شد از همین commit دیپلوی کن: `SITE=https://basharaf.me ops/server/deploy.sh`؛ بعد آیکون را روی `/safasity/menu` چک کن.
+
 ## 📓 2026-11-04 — پنل پرسنل: ساختار حقوق و تب شیفت + جدول هفتگی و تنظیم حقوق برای مدیر — روی branch `feat/staff-pay-shifts`
 **چه شد:** خواسته‌ی علی: هر نفر عنوان و جزئیات حقوق (ثابت و اضافه‌کاری) و شیفت‌هایش را شیک ببیند و مدیر راحت تنظیم کند. **پنل:** بلوک ساختار حقوق در کارت «تا امروز» (`describePayStructure`) و تب جدید «شیفت» (`MyWeekShifts`، هفته از شنبه). **مدیر:** تب پیش‌فرض «جدول هفتگی» در `/hr/time` (`ShiftWeekGrid`، پیش‌فرض‌ها در `lib/hr/shiftPresets.ts`: صبح ۱۰–۱۷، شب ۱۷–۰۰:۳۰ از عکس برنامه‌ی قدیمی؛ ساعت دلخواه؛ کپی از هفته‌ی قبل) و فرم «تنظیم حقوق» روی هر نفر در `/hr/staff` (`hr.compensation.manage`). جدول `staff_pay_settings` (migration `db-staff-pay-settings.sql`، با تأیید علی اجرا شد) مقدم بر ریز کارکرد در `resolveBasis`؛ `PUT /api/hr/staff-pay` نرخ ساعتی را هم از امروز هماهنگ می‌کند. release `20261104-133518-920685`.
 **فایل‌ها:** `project-docs/migrations/db-staff-pay-settings.sql`، `lib/db/schema.ts`، `lib/auth/audit.ts`، `lib/staff-panel/{monthToDate,monthPayServer}.ts`، `lib/hr/shiftPresets.ts`، `app/api/hr/staff-pay/route.ts`، `app/(app)/hr/time/page.tsx`، `components/me/{MeClient,parts}.tsx`، `components/hr/{StaffOverview,ShiftWeekGrid}.tsx`، `tests/unit/staffMonthToDate.test.ts`.
@@ -116,11 +123,3 @@
 **ادامه (همان روز):** نیم‌سرورها به رجیستری رسید و `vps.basharaf.me` → `94.184.45.140`. با تأیید علی `setup-server.sh site vps.basharaf.me` اجرا شد: فایل جدای `/etc/nginx/sites-available/basharaf`، گواهی Let's Encrypt (تا 2027-01-30)، `nginx -t` سبز و reload؛ meeez سالم ماند. `SITE=https://vps.basharaf.me ops/server/deploy.sh`: tsc/lint/vitest محلی سبز، build روی سرور، release `20261101-151236-eb997b` زنده. تست بدون ورود: `/login`، `/apply`، `/reserve`، `/me`، `/clock`، `/pay` ۲۰۰؛ `/dashboard` → login؛ APIهای محافظت‌شده ۴۰۱؛ HTTP → HTTPS. نکته: `app/layout.tsx` (`metadataBase`) و `app/pay/PayCard.tsx` آدرس `https://basharaf.me` را hard-code دارند — بعد از سوئیچ درست است. خطاهای «Server Reference ID» در لاگ از رباط‌های اسکنر اینترنتی است، نه از برنامه.
 
 **تست با ورود (2026-11-02، فقط خواندنی):** علی خودش در مرورگر داخلی وارد شد؛ Claude فقط صفحه‌ها را خواند (هیچ ثبت/ذخیره/حذفی نزد). `/dashboard` (۱۳ پرسنل فعال، ۱۰۱ تراکنش، موجودی حساب شرکا)، `/inventory`، `/hr/payroll` (دوره تیر محاسبه‌شده، اردیبهشت تأییدشده)، `/transactions` (۱۰۱ از ۱۰۱) درست بار شدند؛ خطای console صفر؛ لاگ سرور در همان بازه بدون خطا. تست‌های نوشتنی و نقش‌های دیگر چک‌لیست هنوز با علی است.
-
-## 📓 2026-10-30 (۴) — انتقال به VPS پارس‌پک: زیرساخت آماده، تست داخلی سبز — روی branch `ops/vps-deploy`
-**چه شد:** تصمیم علی: basharaf-app از لیارا به همان VPS meeez می‌رود؛ دیتابیس فعلاً روی Postgres لیارا می‌ماند. `ops/server/` اضافه شد (سرویس systemd روی ۳۰۰۱ با سخت‌گیری‌های meeez، قالب Nginx، `basharaf-release` با build روی سرور + سوئیچ اتمی + برگشت خودکار، `deploy.sh` از مک با `git archive`، `setup-server.sh`، `env.template` فقط نام متغیرها). `next.config.mjs`: خروجی standalone با `NEXT_OUTPUT=standalone` (build لیارا بی‌تغییر) و `serverExternalPackages` (کلید قدیمی در Next 15 خوانده نمی‌شد). `OUTBOX_SCHEDULER=off` تا در دوره‌ی موازی اعلان/پیامک دوبار نرود. روی سرور: swap ۲ گیگ، کاربر `basharaf`، پوشه‌ها، سرویس. build روی سرور چون `sharp` native است و مک arm64.
-**فایل‌ها:** `ops/server/*`، `next.config.mjs`، `instrumentation-node.ts`.
-**Build:** محلی tsc ✅ · ۷۶۲ تست ✅ · lint ۰ خطا · build لیارا ✅ · build standalone ✅. روی سرور: build+نصب+health check ✅ (release `20261030-024633-aae6a6`)، `/login` ۲۰۰، API ۴۰۱، رم سرویس ~۲۰۰MB؛ اوج build: رم ۱.۸ از ۲ گیگ + swap ۶۰۰MB، load ۳.۷ روی ۱ هسته → ارتقا به ≥۲ هسته/۴ گیگ توصیه شد. meeez در تمام مدت سالم.
-**ناتمام:** `/etc/basharaf/env` و `build.env` خالی‌اند (سرویس فقط داخلی روی 127.0.0.1 است، بدون Nginx/دامنه). منتظر علی: تغییر رمز root، دسترسی عمومی دیتابیس لیارا، پرکردن `~/Claude-Projects/_work/basharaf-server.env`، رکورد A برای `vps.basharaf.me`.
-**برای جلسه‌ی بعد:** بعد از ورودی‌های علی: آپلود env → `setup-server.sh site vps.basharaf.me` → `SITE=https://vps.basharaf.me ops/server/deploy.sh` → چک‌لیست → سوئیچ DNS با تأیید. branch `ops/vps-deploy` push نشده.
-
