@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # One-time (idempotent) setup of basharaf-app on the meeez VPS. Run as root on the server from a copy of ops/server:
-#   rsync -a ops/server/ root@94.184.45.140:/root/basharaf-ops/
-#   ssh root@94.184.45.140 bash /root/basharaf-ops/setup-server.sh base
-#   ssh root@94.184.45.140 bash /root/basharaf-ops/setup-server.sh site vps.basharaf.me            # staging name
-#   ssh root@94.184.45.140 bash /root/basharaf-ops/setup-server.sh site basharaf.me www.basharaf.me # after the DNS switch
+#   rsync -a ops/server/ root@94.184.46.223:/root/basharaf-ops/
+#   ssh root@94.184.46.223 bash /root/basharaf-ops/setup-server.sh base
+#   ssh root@94.184.46.223 bash /root/basharaf-ops/setup-server.sh site vps.basharaf.me            # staging name
+#   ssh root@94.184.46.223 bash /root/basharaf-ops/setup-server.sh site basharaf.me www.basharaf.me # after the DNS switch
 # Nothing here touches meeez, and nothing here contains a secret.
 set -euo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)

@@ -7,7 +7,7 @@
 # The server builds it (see basharaf-release), switches atomically and rolls back if the health check fails.
 set -euo pipefail
 
-HOST=94.184.45.140
+HOST=94.184.46.223
 SITE=${SITE:-https://basharaf.me}
 SSH=(ssh -i "$HOME/.ssh/meeez_deploy" -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=15 -o ServerAliveInterval=30)
 

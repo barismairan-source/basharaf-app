@@ -6,7 +6,7 @@
 
 | بخش | مقدار |
 |---|---|
-| سرور | پارس‌پک `94.184.45.140`، Ubuntu 24.04، x86_64 (کنار meeez) |
+| سرور | پارس‌پک `94.184.46.223`، Ubuntu 24.04، x86_64 (کنار meeez) |
 | سرویس | `basharaf.service`، کاربر سیستمی `basharaf` (بدون ورود)، `127.0.0.1:3001` (meeez روی ۳۰۰۰) |
 | کد | `/srv/basharaf/releases/<نام>` (مالک `deploy`)، نسخه‌ی فعال `/srv/basharaf/current`، cache در `/srv/basharaf/cache` |
 | تنظیمات | `/etc/basharaf/env` (root، 600، همه‌ی secretها، systemd می‌خواند) و `/etc/basharaf/build.env` (root:deploy، 640، فقط `NEXT_PUBLIC_*`) |
@@ -26,22 +26,22 @@ SITE=https://vps.basharaf.me ops/server/deploy.sh      # دوره‌ی تست
 برگشت دستی و وضعیت:
 
 ```bash
-ssh -i ~/.ssh/meeez_deploy deploy@94.184.45.140 basharaf-release rollback
-ssh -i ~/.ssh/meeez_deploy deploy@94.184.45.140 basharaf-release status
+ssh -i ~/.ssh/meeez_deploy deploy@94.184.46.223 basharaf-release rollback
+ssh -i ~/.ssh/meeez_deploy deploy@94.184.46.223 basharaf-release status
 ```
 
 ## راه‌اندازی یک‌باره (انجام‌شده در ۲۰۲۶-۱۰-۳۰، idempotent)
 
 ```bash
-rsync -a ops/server/ root@94.184.45.140:/root/basharaf-ops/
-ssh root@94.184.45.140 bash /root/basharaf-ops/setup-server.sh base
+rsync -a ops/server/ root@94.184.46.223:/root/basharaf-ops/
+ssh root@94.184.46.223 bash /root/basharaf-ops/setup-server.sh base
 # بعد از ساختن رکورد A برای نام تست:
-ssh root@94.184.45.140 bash /root/basharaf-ops/setup-server.sh site vps.basharaf.me
+ssh root@94.184.46.223 bash /root/basharaf-ops/setup-server.sh site vps.basharaf.me
 ```
 
 ## دوره‌ی موازی با لیارا و سوئیچ
 
 1. در `/etc/basharaf/env` مقدار `OUTBOX_SCHEDULER=off` است تا اعلان/پیامک از هر دو سرور دوبار نرود.
 2. تست روی `https://vps.basharaf.me` با همان دیتابیس و چک‌لیست `~/Claude-Projects/CHECKLIST-merge-fix-branch.md`.
-3. سوئیچ (با تأیید علی): `setup-server.sh site basharaf.me www.basharaf.me` آماده می‌شود، رکورد DNS `basharaf.me` به `94.184.45.140` تغییر می‌کند، بعد از انتشار DNS `OUTBOX_SCHEDULER` حذف و `systemctl restart basharaf`. اپ لیارا تا اطمینان روشن می‌ماند (برگشت = برگرداندن DNS).
+3. سوئیچ (با تأیید علی): `setup-server.sh site basharaf.me www.basharaf.me` آماده می‌شود، رکورد DNS `basharaf.me` به `94.184.46.223` تغییر می‌کند، بعد از انتشار DNS `OUTBOX_SCHEDULER` حذف و `systemctl restart basharaf`. اپ لیارا تا اطمینان روشن می‌ماند (برگشت = برگرداندن DNS).
 4. بعد از سوئیچ، job `deploy` در `.github/workflows/liara.yml` حذف یا غیرفعال شود تا push به main دیگر به لیارا نرود.
